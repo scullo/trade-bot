@@ -40,6 +40,7 @@ HTML_PAGE = """
             --text-muted: #64748b;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { overflow-anchor: none; }
         body {
             background: radial-gradient(circle at 50% 0%, #111827 0%, #080b11 75%);
             background-attachment: fixed;
@@ -209,7 +210,8 @@ HTML_PAGE = """
             border-color: var(--red);
             transform: scale(1.06);
         }
-        .tv-modal-body {
+        .tv-modal-html, body { overflow-anchor: none; }
+        body {
             flex: 1;
             display: flex;
             overflow: hidden;
@@ -232,7 +234,8 @@ HTML_PAGE = """
             gap: 12px;
         }
         @media (max-width: 960px) {
-            .tv-modal-body { flex-direction: column; }
+            .tv-modal-html, body { overflow-anchor: none; }
+        body { flex-direction: column; }
             .tv-sidebar-area { width: 100%; height: 260px; border-left: none; border-top: 1px solid #1e2638; }
         }
         @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(1.3); } }
@@ -368,12 +371,15 @@ HTML_PAGE = """
             border: 1px solid var(--border);
             border-radius: 16px;
             padding: 18px 20px;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
             position: relative;
             display: flex;
             flex-direction: column;
+            justify-content: space-between;
             backdrop-filter: blur(12px);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+            min-height: 480px;
+            contain: layout style;
         }
         .coin-card:hover {
             border-color: rgba(59, 130, 246, 0.4);
@@ -515,11 +521,11 @@ HTML_PAGE = """
         }
 
         /* CANLI DINAMIK ANALIZ CUMLESI */
-        .analysis-box { background: rgba(0, 0, 0, 0.6); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: 13.5px; line-height: 1.55; color: #f1f5f9; margin-bottom: 14px; border-left: 4px solid var(--blue); }
-        .analysis-title { font-size: 12.5px; font-weight: 800; text-transform: uppercase; margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
+        .analysis-box { background: rgba(0, 0, 0, 0.6); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 12.5px; line-height: 1.45; color: #f1f5f9; margin-bottom: 10px; border-left: 4px solid var(--blue); min-height: 75px; max-height: 75px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start; }
+        .analysis-title { font-size: 12px; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
 
         /* BOT PUSU & EYLEM PLANI */
-        .action-plan-box { background: rgba(240, 185, 11, 0.08); border: 1px solid rgba(240, 185, 11, 0.35); border-radius: 10px; padding: 12px 14px; font-size: 13px; line-height: 1.55; color: #ffffff; margin-bottom: 14px; }
+        .action-plan-box { background: rgba(240, 185, 11, 0.08); border: 1px solid rgba(240, 185, 11, 0.35); border-radius: 10px; padding: 10px 14px; font-size: 12.5px; line-height: 1.45; color: #ffffff; margin-bottom: 12px; min-height: 75px; max-height: 75px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start; }
         .action-plan-title { font-size: 11.5px; font-weight: 800; text-transform: uppercase; color: var(--yellow); margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
 
         .levels-table { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
@@ -762,7 +768,8 @@ HTML_PAGE = """
             color: #f3ba2f;
             border: 1px solid rgba(243, 186, 47, 0.4);
         }
-        .settings-body {
+        .settings-html, body { overflow-anchor: none; }
+        body {
             padding: 20px 24px;
             overflow-y: auto;
             flex: 1;
@@ -1800,95 +1807,78 @@ HTML_PAGE = """
             }
         }
 
+        // ZERO-JITTER RAF BATCHING ENGINE (60 FPS ROCK SOLID)
+        let pendingPriceMap = {};
+        let isRafActive = false;
+        let lastSummaryFlush = 0;
+
         function updatePriceInPlace(symbol, price) {
-            try {
-                const safeId = symbol.replace(/[^a-zA-Z0-9]/g, '_');
-                const el = document.getElementById('p-' + safeId);
-                const oldPrice = livePrices[symbol] || price;
-                livePrices[symbol] = price;
-
-                const fmtP = '$' + (function(n){ if (n >= 1000) return n.toFixed(2); if (n >= 1) return n.toFixed(4); if (n >= 0.01) return n.toFixed(5); return n.toFixed(6); })(Number(price));
-
-                if (el) {
-                    el.innerText = fmtP;
-                    if (price > oldPrice) {
-                        el.className = 'card-price tick-up';
-                        setTimeout(() => { if (el) el.className = 'card-price'; }, 100);
-                    } else if (price < oldPrice) {
-                        el.className = 'card-price tick-down';
-                        setTimeout(() => { if (el) el.className = 'card-price'; }, 100);
-                    }
-                }
-
-                const hasPos = appState.open_positions && appState.open_positions[symbol];
-
-                if (appState.symbols && appState.symbols[symbol]) {
-                    const coin = appState.symbols[symbol];
-                    const levels = coin.levels || {};
-                    const cam = levels.camarilla || {};
-                    const intel = generateDetailedIntelligence(symbol, price, cam, levels, hasPos);
-                    
-                    const titleEl = document.getElementById('atitle-' + safeId);
-                    const textEl = document.getElementById('atext-' + safeId);
-                    const planEl = document.getElementById('plantext-' + safeId);
-                    if (titleEl) {
-                        titleEl.style.color = intel.color;
-                        titleEl.innerHTML = `<span>●</span> ${intel.tag}`;
-                    }
-                    if (textEl) {
-                        textEl.innerHTML = intel.statusText;
-                    }
-                    if (planEl) {
-                        planEl.innerHTML = intel.actionPlan;
-                    }
-                }
-
-                // DIRECT TARGETED POSITION DOM UPDATE (NO FLICKER, ZERO LAG)
-                if (hasPos) {
-                    const metrics = computePositionPnL(hasPos, price);
-                    const isWin = metrics.isWin;
-                    const isLoss = metrics.isLoss;
-
-                    // Update Active Positions Panel Elements
-                    const posCard = document.getElementById('pos-card-' + safeId);
-                    const posPnl = document.getElementById('pos-pnl-' + safeId);
-                    const posCurP = document.getElementById('pos-cur-price-' + safeId);
-
-                    if (posCard) {
-                        posCard.className = `active-pos-card ${isLoss ? 'pos-card-loss' : (isWin ? 'pos-card-profit' : '')}`;
-                    }
-                    if (posPnl) {
-                        posPnl.style.color = isLoss ? 'var(--red)' : (isWin ? 'var(--green)' : '#ffffff');
-                        posPnl.innerText = `${metrics.roePct >= 0 ? '+' : ''}${metrics.roePct.toFixed(2)}% ROE (${metrics.pnlUsdt >= 0 ? '+' : ''}${metrics.pnlUsdt.toFixed(2)} $)`;
-                    }
-                    if (posCurP) {
-                        posCurP.innerText = `$${metrics.curP.toFixed(4)}`;
-                    }
-
-                    // Update Watchlist Card Border & Pill
-                    const gridCard = document.getElementById('card-' + safeId);
-                    const pill = document.getElementById('pill-' + safeId);
-                    const banner = document.getElementById('pos-banner-' + safeId);
-                    if (gridCard) {
-                        gridCard.className = `coin-card ${isLoss ? 'has-active-pos-loss' : (isWin ? 'has-active-pos-profit' : '')}`;
-                    }
-                    if (banner) {
-                        banner.className = `card-pos-banner ${isLoss ? 'banner-loss' : 'banner-profit'}`;
-                    }
-                    if (pill) {
-                        pill.className = isLoss ? 'pos-pill-loss' : 'pos-pill-profit';
-                        pill.innerText = `⚡ ${hasPos.side} (${metrics.roePct >= 0 ? '+' : ''}${metrics.roePct.toFixed(2)}% ROE)`;
-                    }
-
-                    updateFinancialSummary();
-                }
-
-                tickCounts++;
-                const tickEl = document.getElementById('tick-counter');
-                if (tickEl) tickEl.innerText = `● Canlı Fiyat Akıyor (İşlenen Tick: ${tickCounts})`;
-            } catch (err) {
-                console.error("updatePriceInPlace error:", err);
+            pendingPriceMap[symbol] = price;
+            if (!isRafActive) {
+                isRafActive = true;
+                requestAnimationFrame(flushBatchPrices);
             }
+        }
+
+        function formatFastPrice(n) {
+            n = Number(n);
+            if (n >= 1000) return n.toFixed(2);
+            if (n >= 1) return n.toFixed(4);
+            if (n >= 0.01) return n.toFixed(5);
+            return n.toFixed(6);
+        }
+
+        function flushBatchPrices() {
+            isRafActive = false;
+            const now = Date.now();
+            let hasOpenPosUpdate = false;
+
+            for (const symbol in pendingPriceMap) {
+                try {
+                    const price = pendingPriceMap[symbol];
+                    livePrices[symbol] = price;
+                    const safeId = symbol.replace(/[^a-zA-Z0-9]/g, '_');
+                    const el = document.getElementById('p-' + safeId);
+
+                    if (el) {
+                        el.innerText = '$' + formatFastPrice(price);
+                    }
+
+                    const hasPos = appState.open_positions && appState.open_positions[symbol];
+                    if (hasPos) {
+                        hasOpenPosUpdate = true;
+                        const metrics = computePositionPnL(hasPos, price);
+                        const isWin = metrics.isWin;
+                        const isLoss = metrics.isLoss;
+
+                        const posPnl = document.getElementById('pos-pnl-' + safeId);
+                        const posCurP = document.getElementById('pos-cur-price-' + safeId);
+                        const pill = document.getElementById('pill-' + safeId);
+
+                        if (posPnl) {
+                            posPnl.style.color = isLoss ? 'var(--red)' : (isWin ? 'var(--green)' : '#ffffff');
+                            posPnl.innerText = `${metrics.roePct >= 0 ? '+' : ''}${metrics.roePct.toFixed(2)}% ROE (${metrics.pnlUsdt >= 0 ? '+' : ''}${metrics.pnlUsdt.toFixed(2)} $)`;
+                        }
+                        if (posCurP) {
+                            posCurP.innerText = `$${metrics.curP.toFixed(4)}`;
+                        }
+                        if (pill) {
+                            pill.className = isLoss ? 'pos-pill-loss' : 'pos-pill-profit';
+                            pill.innerText = `⚡ ${hasPos.side} (${metrics.roePct >= 0 ? '+' : ''}${metrics.roePct.toFixed(2)}% ROE)`;
+                        }
+                    }
+                    tickCounts++;
+                } catch(e) {}
+            }
+            pendingPriceMap = {};
+
+            if (hasOpenPosUpdate && (now - lastSummaryFlush > 400)) {
+                lastSummaryFlush = now;
+                updateFinancialSummary();
+            }
+
+            const tickEl = document.getElementById('tick-counter');
+            if (tickEl) tickEl.innerText = `● Canlı Fiyat Akıyor (İşlenen Tick: ${tickCounts})`;
         }
 
         function renderPositions() {
