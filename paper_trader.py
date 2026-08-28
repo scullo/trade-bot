@@ -46,10 +46,12 @@ class PaperTrader:
                 content_str = base64.b64decode(content_b64).decode("utf-8")
                 data = json.loads(content_str)
                 self.balance = float(data.get("balance", self.initial_balance))
+                if self.balance > 500000.0 or self.balance <= 0:
+                    self.balance = float(self.initial_balance)
                 self.open_positions = data.get("open_positions", {})
                 self.history = data.get("history", [])
                 loaded = True
-                print(f">> [GITHUB PERSISTENCE] trade_history.json GitHub'dan yuklendi (SHA: {self._github_sha[:8]}...)")
+                print(f">> [GITHUB PERSISTENCE] trade_history.json GitHub'dan yuklendi (SHA: {self._github_sha[:8]}...) Bakiye: {self.balance}")
             except Exception as e:
                 print(f">> [GITHUB PERSISTENCE] GitHub'dan yuklenemedi: {e}")
 
@@ -59,10 +61,12 @@ class PaperTrader:
                 with open(HISTORY_FILE, "r", encoding="utf-8-sig") as f:
                     data = json.load(f)
                     self.balance = float(data.get("balance", self.initial_balance))
+                    if self.balance > 500000.0 or self.balance <= 0:
+                        self.balance = float(self.initial_balance)
                     self.open_positions = data.get("open_positions", {})
                     self.history = data.get("history", [])
                     loaded = True
-                    print(f">> [LOCAL] trade_history.json lokal dosyadan yuklendi.")
+                    print(f">> [LOCAL] trade_history.json lokal dosyadan yuklendi. Bakiye: {self.balance}")
             except Exception as e:
                 print(f">> Gecmis yuklenirken hata: {e}")
 
