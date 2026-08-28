@@ -3141,6 +3141,27 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
+    async def api_debug_fetch(request):
+        import aiohttp
+        results = {}
+        async with aiohttp.ClientSession() as session:
+            test_urls = {
+                "fapi": "https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=1d&limit=2",
+                "fapi1": "https://fapi1.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=1d&limit=2",
+                "spot": "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=2",
+                "data_binance": "https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=2"
+            }
+            for name, url in test_urls.items():
+                try:
+                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=4)) as r:
+                        text = await r.text()
+                        results[name] = {"status": r.status, "body": text[:150]}
+                except Exception as e:
+                    results[name] = {"error": str(e)}
+        return web.json_response(results)
+
+    app.router.add_get('/api/debug_fetch', api_debug_fetch)
+
     app.router.add_get('/api/live/status', api_live_status)
     app.router.add_post('/api/live/test_connection', api_live_test_connection)
     app.router.add_post('/api/live/save_config', api_live_save_config)
