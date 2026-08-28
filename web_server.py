@@ -40,7 +40,6 @@ HTML_PAGE = """
             --text-muted: #64748b;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { overflow-anchor: none; }
         body {
             background: radial-gradient(circle at 50% 0%, #111827 0%, #080b11 75%);
             background-attachment: fixed;
@@ -210,8 +209,7 @@ HTML_PAGE = """
             border-color: var(--red);
             transform: scale(1.06);
         }
-        .tv-modal-html, body { overflow-anchor: none; }
-        body {
+        .tv-modal-body {
             flex: 1;
             display: flex;
             overflow: hidden;
@@ -234,8 +232,7 @@ HTML_PAGE = """
             gap: 12px;
         }
         @media (max-width: 960px) {
-            .tv-modal-html, body { overflow-anchor: none; }
-        body { flex-direction: column; }
+            .tv-modal-body { flex-direction: column; }
             .tv-sidebar-area { width: 100%; height: 260px; border-left: none; border-top: 1px solid #1e2638; }
         }
         @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(1.3); } }
