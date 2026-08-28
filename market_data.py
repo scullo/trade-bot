@@ -76,7 +76,7 @@ class MarketDataManager:
                                 d1 = await r1.json()
                                 if isinstance(d1, list) and len(d1) > 0:
                                     df_1d = pd.DataFrame(d1, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'qav', 'num_trades', 'taker_base', 'taker_quote', 'ignore'])
-                                    for col in ['open', 'high', 'low', 'close', 'volume']:
+                                    for col in ['timestamp', 'open', 'high', 'low', 'close', 'volume']:
                                         df_1d[col] = df_1d[col].astype(float)
                         
                         async with session.get(url_5m, timeout=aiohttp.ClientTimeout(total=4)) as r2:
@@ -84,7 +84,7 @@ class MarketDataManager:
                                 d2 = await r2.json()
                                 if isinstance(d2, list) and len(d2) > 0:
                                     df_5m = pd.DataFrame(d2, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'qav', 'num_trades', 'taker_base', 'taker_quote', 'ignore'])
-                                    for col in ['open', 'high', 'low', 'close', 'volume']:
+                                    for col in ['timestamp', 'open', 'high', 'low', 'close', 'volume']:
                                         df_5m[col] = df_5m[col].astype(float)
                         
                         if df_1d is not None and df_5m is not None and not df_1d.empty and not df_5m.empty:
