@@ -1053,10 +1053,20 @@ HTML_PAGE = """
     </div>
 
     <div class="section-header">
-        <div class="section-title">📊 CANLI PUSU & SEVİYE ANALİZ HAVUZU</div>
-        <div style="font-size:12.5px; color:var(--green); font-weight:700; background:rgba(14,203,129,0.1); border:1px solid rgba(14,203,129,0.3); padding:5px 14px; border-radius:20px; font-family:'JetBrains Mono', monospace; display:flex; align-items:center; gap:8px;">
-            <span style="width:7px; height:7px; background:var(--green); border-radius:50%; box-shadow:0 0 8px var(--green);"></span>
-            100 PARİTE 5M MUM & LİKİDİTE TARAMASI AKTİF
+        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+            <div class="section-title">📊 CANLI PUSU & SEVİYE ANALİZ HAVUZU</div>
+            <div id="watchlist-search-count-badge" style="display:none; font-size:12px; font-weight:800; color:#58a6ff; background:rgba(56,139,253,0.15); border:1px solid rgba(56,139,253,0.3); padding:4px 12px; border-radius:12px;"></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div class="search-wrap" style="width:260px;">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="watchlist-search-input" class="coin-search-input" placeholder="Analiz kartlarında ara (örn: ENA, BTC)..." oninput="handleSearch(this.value)" autocomplete="off" />
+                <button id="watchlist-search-clear-btn" class="search-clear-btn" onclick="clearSearch()" style="display:none;" title="Aramayı Temizle">✕</button>
+            </div>
+            <div style="font-size:12px; color:var(--green); font-weight:700; background:rgba(14,203,129,0.1); border:1px solid rgba(14,203,129,0.3); padding:6px 14px; border-radius:20px; font-family:'JetBrains Mono', monospace; display:flex; align-items:center; gap:8px;">
+                <span style="width:7px; height:7px; background:var(--green); border-radius:50%; box-shadow:0 0 8px var(--green);"></span>
+                100 PARİTE 5M MUM & LİKİDİTE TARAMASI AKTİF
+            </div>
         </div>
     </div>
     <div class="watchlist-grid" id="watchlist-container"></div>
@@ -1215,18 +1225,29 @@ HTML_PAGE = """
 
         let searchQuery = '';
 
-        function handleSearch(val) {
-            searchQuery = (val || '').trim().toUpperCase();
-            const clearBtn = document.getElementById('search-clear-btn');
-            if (clearBtn) {
-                clearBtn.style.display = searchQuery ? 'block' : 'none';
-            }
+        function handleSearch(query) {
+            searchQuery = (query || '').trim().toUpperCase();
+            
+            const topInput = document.getElementById('coin-search-input');
+            const cardInput = document.getElementById('watchlist-search-input');
+            const topClear = document.getElementById('search-clear-btn');
+            const cardClear = document.getElementById('watchlist-search-clear-btn');
+
+            if (topInput && topInput.value.toUpperCase() !== searchQuery) topInput.value = query;
+            if (cardInput && cardInput.value.toUpperCase() !== searchQuery) cardInput.value = query;
+
+            if (topClear) topClear.style.display = searchQuery ? 'block' : 'none';
+            if (cardClear) cardClear.style.display = searchQuery ? 'block' : 'none';
+
             renderCoinManager();
+            renderCards();
         }
 
         function clearSearch() {
-            const input = document.getElementById('coin-search-input');
-            if (input) input.value = '';
+            const topInput = document.getElementById('coin-search-input');
+            const cardInput = document.getElementById('watchlist-search-input');
+            if (topInput) topInput.value = '';
+            if (cardInput) cardInput.value = '';
             handleSearch('');
         }
 
@@ -1504,15 +1525,43 @@ HTML_PAGE = """
                     return;
                 }
 
-                // 1. AYIRMA: Açık Pozisyonlu Coinler (HER ZAMAN EN ÜSTTE) vs Diğer Aktif Coinler
-                const posCoins = allActiveSymbols.filter(s => appState.open_positions && appState.open_positions[s]);
-                const otherCoins = allActiveSymbols.filter(s => !(appState.open_positions && appState.open_positions[s]));
+                let displaySymbols = [];
+                const searchBadge = document.getElementById('watchlist-search-count-badge');
 
-                // 2. Açık pozisyonlu coinlerin TAMAMI her zaman render edilir (limit tanımaz)
-                // 3. Diğer coinler visibleCardsCount kotası kadar render edilir (kasma/lag önlenir)
-                const remainingSlots = Math.max(0, visibleCardsCount - posCoins.length);
-                const visibleOtherCoins = otherCoins.slice(0, remainingSlots);
-                const displaySymbols = [...posCoins, ...visibleOtherCoins];
+                if (searchQuery) {
+                    const matchedSymbols = allActiveSymbols.filter(s => {
+                        const clean = s.replace('/USDT', '').toUpperCase();
+                        return clean.includes(searchQuery) || s.toUpperCase().includes(searchQuery);
+                    });
+                    displaySymbols = matchedSymbols;
+                    
+                    if (searchBadge) {
+                        searchBadge.style.display = 'inline-block';
+                        searchBadge.innerText = `🔍 "${searchQuery}" ile Eşleşen: ${matchedSymbols.length} Parite`;
+                    }
+
+                    if (displaySymbols.length === 0) {
+                        const inAllCoins = (appState.all_coins || []).find(c => c.symbol.replace('/USDT','').toUpperCase() === searchQuery || c.symbol.toUpperCase().includes(searchQuery));
+                        let activateBtn = '';
+                        if (inAllCoins) {
+                            activateBtn = `<button onclick="toggleSymbol('${inAllCoins.symbol}', true)" style="margin-top:12px; background:linear-gradient(135deg, #0ecb81, #059669); border:none; color:#07090e; font-weight:800; padding:8px 18px; border-radius:8px; cursor:pointer;">⚡ ${inAllCoins.symbol} Paritesini Aktif Et ve İzle</button><br>`;
+                        }
+                        cont.innerHTML = `
+                            <div style="grid-column: 1 / -1; color: #94a3b8; text-align:center; padding: 60px 20px; font-size:15px; line-height:1.6;">
+                                "${searchQuery}" ile eşleşen aktif analiz kartı bulunamadı.<br>
+                                ${activateBtn}
+                                <button onclick="clearSearch()" style="margin-top:10px; background:rgba(56,139,253,0.15); border:1px solid var(--blue); color:#58a6ff; font-weight:700; padding:6px 14px; border-radius:8px; cursor:pointer;">✕ Aramayı Temizle</button>
+                            </div>`;
+                        return;
+                    }
+                } else {
+                    if (searchBadge) searchBadge.style.display = 'none';
+                    const posCoins = allActiveSymbols.filter(s => appState.open_positions && appState.open_positions[s]);
+                    const otherCoins = allActiveSymbols.filter(s => !(appState.open_positions && appState.open_positions[s]));
+                    const remainingSlots = Math.max(0, visibleCardsCount - posCoins.length);
+                    const visibleOtherCoins = otherCoins.slice(0, remainingSlots);
+                    displaySymbols = [...posCoins, ...visibleOtherCoins];
+                }
 
                 let html = '';
 
