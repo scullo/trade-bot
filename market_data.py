@@ -15,7 +15,7 @@ class MarketDataManager:
         self.exchange = ccxt.binanceusdm({
             'enableRateLimit': True
         })
-        self.semaphore = asyncio.Semaphore(15)
+        self.semaphore = asyncio.Semaphore(25)
         self.candles_5m = {s: pd.DataFrame() for s in all_symbols}
         self.candles_1d = {s: pd.DataFrame() for s in all_symbols}
         self.levels = {s: {} for s in all_symbols}
@@ -52,25 +52,70 @@ class MarketDataManager:
 
     async def fetch_single_symbol(self, symbol: str):
         async with self.semaphore:
-            try:
-                clean_sym = self._clean_symbol(symbol)
+            clean_sym = self._clean_symbol(symbol)
+            clean_raw = clean_sym.replace('/', '').replace(':USDT', '')
+            
+            # Direct fast Binance public futures REST API with fallback mirrors
+            endpoints = [
+                f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_raw}",
+                f"https://fapi1.binance.com/fapi/v1/klines?symbol={clean_raw}",
+                f"https://fapi2.binance.com/fapi/v1/klines?symbol={clean_raw}",
+                f"https://fapi3.binance.com/fapi/v1/klines?symbol={clean_raw}"
+            ]
+            
+            df_1d = None
+            df_5m = None
+            
+            async with aiohttp.ClientSession() as session:
+                for base_url in endpoints:
+                    try:
+                        url_1d = f"{base_url}&interval=1d&limit=30"
+                        url_5m = f"{base_url}&interval=5m&limit=500"
+                        async with session.get(url_1d, timeout=aiohttp.ClientTimeout(total=4)) as r1:
+                            if r1.status == 200:
+                                d1 = await r1.json()
+                                if isinstance(d1, list) and len(d1) > 0:
+                                    df_1d = pd.DataFrame(d1, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'qav', 'num_trades', 'taker_base', 'taker_quote', 'ignore'])
+                                    for col in ['open', 'high', 'low', 'close', 'volume']:
+                                        df_1d[col] = df_1d[col].astype(float)
+                        
+                        async with session.get(url_5m, timeout=aiohttp.ClientTimeout(total=4)) as r2:
+                            if r2.status == 200:
+                                d2 = await r2.json()
+                                if isinstance(d2, list) and len(d2) > 0:
+                                    df_5m = pd.DataFrame(d2, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'qav', 'num_trades', 'taker_base', 'taker_quote', 'ignore'])
+                                    for col in ['open', 'high', 'low', 'close', 'volume']:
+                                        df_5m[col] = df_5m[col].astype(float)
+                        
+                        if df_1d is not None and df_5m is not None and not df_1d.empty and not df_5m.empty:
+                            break
+                    except Exception:
+                        continue
 
-                # 1. Gunluk mum verisi (30 gun)
-                ohlcv_1d = await self.exchange.fetch_ohlcv(clean_sym, timeframe="1d", limit=30)
-                df_1d = pd.DataFrame(ohlcv_1d, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+            if df_1d is not None and df_5m is not None and not df_1d.empty and not df_5m.empty:
                 self.candles_1d[symbol] = df_1d
-
-                # 2. 5m mum verisi (1500 mum = ~5.2 gun)
-                ohlcv_5m = await self.exchange.fetch_ohlcv(clean_sym, timeframe=self.timeframe, limit=1500)
-                df_5m = pd.DataFrame(ohlcv_5m, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
                 self.candles_5m[symbol] = df_5m
-
                 self.current_prices[symbol] = float(df_5m['close'].iloc[-1])
                 self.recalculate_levels(symbol)
                 status = "AKTIF" if symbol in self.active_symbols else "HAZIR"
                 print(f"   [{status}] {symbol} seviyeleri esitlendi. Fiyat: {self.current_prices[symbol]}")
-            except Exception as e:
-                print(f"   [HATA] {symbol} verisi alinamadi: {e}")
+            else:
+                # CCXT fallback
+                try:
+                    ohlcv_1d = await self.exchange.fetch_ohlcv(clean_sym, timeframe="1d", limit=30)
+                    df_1d = pd.DataFrame(ohlcv_1d, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+                    self.candles_1d[symbol] = df_1d
+
+                    ohlcv_5m = await self.exchange.fetch_ohlcv(clean_sym, timeframe=self.timeframe, limit=500)
+                    df_5m = pd.DataFrame(ohlcv_5m, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+                    self.candles_5m[symbol] = df_5m
+
+                    self.current_prices[symbol] = float(df_5m['close'].iloc[-1])
+                    self.recalculate_levels(symbol)
+                    status = "AKTIF" if symbol in self.active_symbols else "HAZIR"
+                    print(f"   [{status}] {symbol} CCXT ile esitlendi. Fiyat: {self.current_prices[symbol]}")
+                except Exception as e:
+                    print(f"   [HATA] {symbol} verisi alinamadi: {e}")
 
     async def toggle_symbol(self, symbol: str, is_active: bool):
         if is_active:
