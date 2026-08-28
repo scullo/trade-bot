@@ -1,5 +1,6 @@
 import asyncio
 import os
+import time
 from config import ALL_AVAILABLE_SYMBOLS, DEFAULT_ACTIVE_SYMBOLS, TIMEFRAME, INITIAL_BALANCE, LEVERAGE, POSITION_SIZE_USDT
 from market_data import MarketDataManager
 from paper_trader import PaperTrader
