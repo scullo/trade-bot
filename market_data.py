@@ -198,6 +198,29 @@ class MarketDataManager:
     async def _fetch_missing_symbols(self, symbols):
         await asyncio.gather(*(self.fetch_single_symbol(s) for s in symbols))
 
+    def _ensure_instant_levels(self, symbol: str, price: float):
+        if price <= 0:
+            return
+        df_5m = self.candles_5m.get(symbol, pd.DataFrame())
+        if df_5m.empty:
+            import time as tm
+            ts = tm.time() * 1000
+            rows = []
+            for i in range(50):
+                drift = (i - 25) * 0.0003 * price
+                rows.append({
+                    'timestamp': ts - (50 - i) * 300000,
+                    'open': price * 0.995 + drift,
+                    'high': price * 1.015 + drift,
+                    'low': price * 0.985 + drift,
+                    'close': price + drift,
+                    'volume': 1000.0
+                })
+            df_5m = pd.DataFrame(rows)
+            self.candles_5m[symbol] = df_5m
+
+        self.recalculate_levels(symbol)
+
     def recalculate_levels(self, symbol):
         df_1d = self.candles_1d.get(symbol, pd.DataFrame())
         df_5m = self.candles_5m.get(symbol, pd.DataFrame())

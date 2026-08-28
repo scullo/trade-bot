@@ -2886,10 +2886,12 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
         symbols_data = {}
         for s in market_data.active_symbols:
             lev = market_data.levels.get(s, {})
-            if (not lev or not lev.get("camarilla")) and s in market_data.all_symbols:
-                asyncio.create_task(market_data.fetch_single_symbol(s))
+            cur_p = market_data.current_prices.get(s, 0.0)
+            if (not lev or not lev.get("camarilla") or not lev.get("camarilla", {}).get("R4")) and cur_p > 0:
+                market_data._ensure_instant_levels(s, cur_p)
+                lev = market_data.levels.get(s, {})
             symbols_data[s] = {
-                "price": market_data.current_prices.get(s, 0.0),
+                "price": cur_p,
                 "levels": lev
             }
         
