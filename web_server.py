@@ -2077,7 +2077,15 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
 
             } catch (err) {
                 console.error("renderNativeChart error:", err);
-                if (spinner) spinner.innerHTML = `<span style="color:var(--red)">Hata: ${err.message}</span>`;
+                if (spinner) {
+                    spinner.style.display = 'flex';
+                    spinner.innerHTML = `
+                        <div style="text-align:center; padding:20px; font-family:'JetBrains Mono', monospace;">
+                            <div style="color:var(--yellow); font-size:13.5px; font-weight:700; margin-bottom:12px;">⚡ ${cleanSym} mum verisi yükleniyor...</div>
+                            <button onclick="renderNativeChart('${cleanSym}')" style="background:var(--blue); border:none; color:#fff; font-weight:800; padding:8px 18px; border-radius:8px; cursor:pointer; font-size:12px;">🔄 Grafiği Yenile</button>
+                        </div>
+                    `;
+                }
             }
         }
 
@@ -2854,17 +2862,28 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
         try:
             from indicators import calculate_anchored_vwap_series
             from config import LOOKBACK_DAYS_AVWAP
+            import pandas as pd
             sym = request.query.get("symbol", "BTC/USDT")
-            clean_sym = sym.replace(':USDT', '')
+            clean_sym = sym.replace(':USDT', '').strip()
             if '/' not in clean_sym and not clean_sym.endswith('/USDT'):
                 clean_sym = clean_sym + '/USDT'
             
-            if clean_sym not in market_data.candles_5m or market_data.candles_5m[clean_sym] is None or market_data.candles_5m[clean_sym].empty:
-                await market_data.fetch_single_symbol(clean_sym)
-            
             df_5m = market_data.candles_5m.get(clean_sym)
             if df_5m is None or df_5m.empty:
-                return web.json_response({"status": "error", "message": "Mum verisi bulunamadi"}, status=404)
+                await market_data.fetch_single_symbol(clean_sym)
+                df_5m = market_data.candles_5m.get(clean_sym)
+            
+            # Direct fallback fetch if not in cache yet
+            if df_5m is None or df_5m.empty:
+                ex_sym = market_data._clean_symbol(clean_sym)
+                ohlcv = await market_data.exchange.fetch_ohlcv(ex_sym, timeframe='5m', limit=500)
+                if ohlcv and len(ohlcv) > 0:
+                    df_5m = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+                    market_data.candles_5m[clean_sym] = df_5m
+                    market_data.recalculate_levels(clean_sym)
+            
+            if df_5m is None or df_5m.empty:
+                return web.json_response({"status": "error", "message": "Mum verisi henüz hazır değil, lütfen 1 saniye sonra tekrar deneyin"}, status=503)
             
             display_df = df_5m.iloc[-500:].copy()
             candles = []
