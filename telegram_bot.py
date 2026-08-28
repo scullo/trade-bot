@@ -138,6 +138,13 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
         chart_buf = None
         if df_5m is not None and not df_5m.empty:
             try:
+                entry_ts = record.get("entry_timestamp")
+                if not entry_ts and record.get("entry_time"):
+                    try:
+                        entry_ts = datetime.strptime(record["entry_time"], "%Y-%m-%d %H:%M:%S").timestamp()
+                    except Exception:
+                        entry_ts = None
+
                 chart_buf = generate_trade_chart_image(
                     symbol=record["symbol"],
                     df_5m=df_5m,
@@ -145,6 +152,7 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
                     side=record["side"],
                     entry_price=record["entry_price"],
                     exit_price=record["exit_price"],
+                    entry_timestamp=entry_ts,
                     reason=record["close_reason"],
                     is_closed=True,
                     net_pnl=net_pnl,

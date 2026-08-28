@@ -166,26 +166,56 @@ def generate_trade_chart_image(
         # Sağ kenar etiket metni
         ax.text(n_bars + 1.6, adj_y, f"{lbl} (${orig_p:.4f})", color=c, fontsize=8.3, fontweight='bold', va='center', zorder=6)
 
-    # 4. Giriş & Çıkış İşaretleri (Kristal Netliğinde Ayrım)
+    # 4. GİRİŞ VE ÇIKIŞ SEVİYELERİ BİRLİKTE (KRİSTAL NETLİĞİNDE GÖSTERİM)
     is_actually_closed = is_closed or (exit_price is not None and exit_price > 0)
 
+    # Giriş İndeksi Bul
+    entry_idx = max(0, n_bars - 12) if is_actually_closed else (n_bars - 1)
+    if entry_timestamp and entry_timestamp > 0:
+        entry_ts_ms = entry_timestamp * 1000 if entry_timestamp < 1e11 else entry_timestamp
+        best_diff = float('inf')
+        for idx, ts in enumerate(display_timestamps):
+            diff = abs(ts - entry_ts_ms)
+            if diff < best_diff:
+                best_diff = diff
+                entry_idx = idx
+
+    # 4a. GİRİŞ SEVİYESİ ÇİZGİSİ & ROZETİ
     if entry_price and entry_price > 0:
         entry_col = '#10b981' if side == 'LONG' else '#f43f5e'
         marker = '^' if side == 'LONG' else 'v'
-        entry_idx = max(0, n_bars - 8) if is_actually_closed else (n_bars - 1)
-        ax.plot([-0.5, n_bars - 0.5], [entry_price, entry_price], color=entry_col, linestyle='--', linewidth=1.8, alpha=0.9, zorder=6)
-        ax.scatter(entry_idx, entry_price, color=entry_col, s=200, marker=marker, edgecolors='#ffffff', linewidth=1.8, zorder=7)
+        
+        # Giriş yatay seviye çizgisi
+        ax.plot([-0.5, n_bars - 0.5], [entry_price, entry_price], color=entry_col, linestyle='--', linewidth=2.0, alpha=0.9, zorder=6)
+        
+        # Giriş mum işaretçisi
+        ax.scatter(entry_idx, entry_price, color=entry_col, s=220, marker=marker, edgecolors='#ffffff', linewidth=2.0, zorder=8)
         ax.text(entry_idx - 1.2, entry_price, f"GİRİŞ: ${entry_price:.4f} ({side})", color='#ffffff', fontsize=9.2, fontweight='heavy', ha='right', va='center',
-                bbox=dict(boxstyle='round,pad=0.35', facecolor=entry_col, edgecolor='#ffffff', linewidth=1.0, alpha=0.95), zorder=8)
+                bbox=dict(boxstyle='round,pad=0.35', facecolor=entry_col, edgecolor='#ffffff', linewidth=1.2, alpha=0.95), zorder=9)
 
+    # 4b. ÇIKIŞ SEVİYESİ ÇİZGİSİ & ROZETİ + TİCARET BAĞLANTI BANDI
     if is_actually_closed and exit_price and exit_price > 0:
         is_profit = (net_pnl is not None and net_pnl >= 0) or (exit_price > entry_price if side == 'LONG' else exit_price < entry_price)
         exit_col = '#10b981' if is_profit else '#f43f5e'
-        exit_icon = 'KÂR ALINDI' if is_profit else 'STOP EDİLDİ'
-        ax.plot([-0.5, n_bars - 0.5], [exit_price, exit_price], color=exit_col, linestyle='-.', linewidth=2.0, alpha=0.95, zorder=6)
-        ax.scatter(n_bars - 1, exit_price, color=exit_col, s=220, marker='X', edgecolors='#ffffff', linewidth=2.0, zorder=7)
-        ax.text(n_bars - 1.2, exit_price, f"{exit_icon}: ${exit_price:.4f}", color='#ffffff', fontsize=9.5, fontweight='heavy', ha='right', va='center',
-                bbox=dict(boxstyle='round,pad=0.38', facecolor=exit_col, edgecolor='#ffffff', linewidth=1.2, alpha=0.95), zorder=8)
+        exit_icon = 'KÂR ALINDI (TP)' if is_profit else 'STOP EDİLDİ'
+        exit_idx = n_bars - 1
+
+        # Çıkış yatay seviye çizgisi
+        ax.plot([-0.5, n_bars - 0.5], [exit_price, exit_price], color=exit_col, linestyle='-.', linewidth=2.2, alpha=0.95, zorder=6)
+        
+        # Çıkış mum işaretçisi
+        ax.scatter(exit_idx, exit_price, color=exit_col, s=240, marker='X', edgecolors='#ffffff', linewidth=2.2, zorder=8)
+        ax.text(exit_idx - 1.2, exit_price, f"{exit_icon}: ${exit_price:.4f}", color='#ffffff', fontsize=9.5, fontweight='heavy', ha='right', va='center',
+                bbox=dict(boxstyle='round,pad=0.38', facecolor=exit_col, edgecolor='#ffffff', linewidth=1.4, alpha=0.95), zorder=9)
+
+        # GİRİŞ ➔ ÇIKIŞ YÖRÜNGE BAĞLANTISI (Trade Trajectory Line & Shading)
+        if entry_price and entry_price > 0:
+            ax.annotate('', xy=(exit_idx, exit_price), xytext=(entry_idx, entry_price),
+                        arrowprops=dict(arrowstyle='->,head_width=0.4,head_length=0.6', color=exit_col, linewidth=2.5, linestyle='-', alpha=0.9),
+                        zorder=7)
+            fill_x = np.array([entry_idx, exit_idx, exit_idx, entry_idx])
+            fill_y = np.array([entry_price, entry_price, exit_price, exit_price])
+            ax.fill(fill_x, fill_y, color=exit_col, alpha=0.10, zorder=2)
 
     # 5. Zaman ve Fiyat Eksen Formatlama
     time_indices = np.linspace(0, n_bars - 1, 7, dtype=int)
