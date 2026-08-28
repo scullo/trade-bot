@@ -1719,23 +1719,25 @@ HTML_PAGE = """
             try {
                 const safeId = symbol.replace(/[^a-zA-Z0-9]/g, '_');
                 const el = document.getElementById('p-' + safeId);
-                if (!el) return;
-
                 const oldPrice = livePrices[symbol] || price;
                 livePrices[symbol] = price;
-                el.innerText = '$' + (function(n){ if (n >= 1000) return n.toFixed(2); if (n >= 1) return n.toFixed(4); if (n >= 0.01) return n.toFixed(5); return n.toFixed(6); })(Number(price));
 
-                if (price > oldPrice) {
-                    el.className = 'card-price tick-up';
-                    setTimeout(() => { el.className = 'card-price'; }, 100);
-                } else if (price < oldPrice) {
-                    el.className = 'card-price tick-down';
-                    setTimeout(() => { el.className = 'card-price'; }, 100);
+                const fmtP = '$' + (function(n){ if (n >= 1000) return n.toFixed(2); if (n >= 1) return n.toFixed(4); if (n >= 0.01) return n.toFixed(5); return n.toFixed(6); })(Number(price));
+
+                if (el) {
+                    el.innerText = fmtP;
+                    if (price > oldPrice) {
+                        el.className = 'card-price tick-up';
+                        setTimeout(() => { if (el) el.className = 'card-price'; }, 100);
+                    } else if (price < oldPrice) {
+                        el.className = 'card-price tick-down';
+                        setTimeout(() => { if (el) el.className = 'card-price'; }, 100);
+                    }
                 }
 
                 const hasPos = appState.open_positions && appState.open_positions[symbol];
 
-                if (appState.symbols[symbol]) {
+                if (appState.symbols && appState.symbols[symbol]) {
                     const coin = appState.symbols[symbol];
                     const levels = coin.levels || {};
                     const cam = levels.camarilla || {};
@@ -1744,10 +1746,14 @@ HTML_PAGE = """
                     const titleEl = document.getElementById('atitle-' + safeId);
                     const textEl = document.getElementById('atext-' + safeId);
                     const planEl = document.getElementById('plantext-' + safeId);
-                    if (titleEl && textEl && planEl) {
+                    if (titleEl) {
                         titleEl.style.color = intel.color;
                         titleEl.innerHTML = `<span>●</span> ${intel.tag}`;
+                    }
+                    if (textEl) {
                         textEl.innerHTML = intel.statusText;
+                    }
+                    if (planEl) {
                         planEl.innerHTML = intel.actionPlan;
                     }
                 }
@@ -1793,7 +1799,8 @@ HTML_PAGE = """
                 }
 
                 tickCounts++;
-                document.getElementById('tick-counter').innerText = `● Canlı Fiyat Akıyor (İşlenen Tick: ${tickCounts})`;
+                const tickEl = document.getElementById('tick-counter');
+                if (tickEl) tickEl.innerText = `● Canlı Fiyat Akıyor (İşlenen Tick: ${tickCounts})`;
             } catch (err) {
                 console.error("updatePriceInPlace error:", err);
             }
@@ -2047,6 +2054,34 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 const levels = data.levels || {};
                 const cam = levels.camarilla || {};
 
+                // Update sidebar levels directly from candles API response
+                const sidebarTbl = document.querySelector('#tv-sidebar-content .levels-table');
+                if (sidebarTbl && cam && cam.R4) {
+                    function fmtLvl(val) {
+                        if (!val || isNaN(val) || Number(val) <= 0) return '-';
+                        const n = Number(val);
+                        if (n >= 1000) return n.toFixed(2);
+                        if (n >= 1) return n.toFixed(4);
+                        if (n >= 0.01) return n.toFixed(5);
+                        return n.toFixed(6);
+                    }
+                    sidebarTbl.innerHTML = `
+                        <tr><td class="lvl-lbl">R5 (Zirve Hedef)</td><td class="lvl-num" style="color:var(--yellow)">${fmtLvl(cam.R5)}</td></tr>
+                        <tr><td class="lvl-lbl">R4 (Breakout Tetik)</td><td class="lvl-num" style="color:#ffa726; font-weight:800">${fmtLvl(cam.R4)}</td></tr>
+                        <tr><td class="lvl-lbl">Tepe AVWAP (Kırmızı)</td><td class="lvl-num" style="color:var(--red); font-weight:800">${fmtLvl(levels.tepe_avwap)}</td></tr>
+                        <tr><td class="lvl-lbl">mVAH (Aylık Tavan)</td><td class="lvl-num" style="color:var(--cyan); font-weight:800">${fmtLvl(levels.mvah)}</td></tr>
+                        <tr><td class="lvl-lbl">Yukarı nPOC (Hedef)</td><td class="lvl-num" style="color:#f0f6fc; font-weight:700">${fmtLvl(levels.above_npoc)}</td></tr>
+                        <tr><td class="lvl-lbl">R3 (Direnç)</td><td class="lvl-num">${fmtLvl(cam.R3)}</td></tr>
+                        <tr><td class="lvl-lbl">Pivot (P)</td><td class="lvl-num" style="color:#fff; font-weight:800">${fmtLvl(cam.P)}</td></tr>
+                        <tr><td class="lvl-lbl">mPOC (Aylık Hacim)</td><td class="lvl-num" style="color:var(--purple); font-weight:800">${fmtLvl(levels.mpoc)}</td></tr>
+                        <tr><td class="lvl-lbl">S3 (Destek)</td><td class="lvl-num">${fmtLvl(cam.S3)}</td></tr>
+                        <tr><td class="lvl-lbl">Aşağı nPOC (Hedef)</td><td class="lvl-num" style="color:#f0f6fc; font-weight:700">${fmtLvl(levels.below_npoc)}</td></tr>
+                        <tr><td class="lvl-lbl">Dip AVWAP (Beyaz)</td><td class="lvl-num" style="color:#fff; font-weight:800">${fmtLvl(levels.dip_avwap)}</td></tr>
+                        <tr><td class="lvl-lbl">S4 (Breakdown Tetik)</td><td class="lvl-num" style="color:var(--green); font-weight:800">${fmtLvl(cam.S4)}</td></tr>
+                        <tr><td class="lvl-lbl">mVAL (Aylık Taban)</td><td class="lvl-num" style="color:var(--blue)">${fmtLvl(levels.mval)}</td></tr>
+                    `;
+                }
+
                 function addPriceLine(price, color, title, lineStyle) {
                     if (!price || isNaN(price) || Number(price) <= 0) return;
                     candleSeries.createPriceLine({
@@ -2145,8 +2180,8 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 const modal = document.getElementById('tv-modal-overlay');
                 if (!modal) return;
                 
-                const fullSym = cleanSym + '/USDT';
-                const coinData = (appState.symbols && appState.symbols[fullSym]) ? appState.symbols[fullSym] : {};
+                const fullSym = cleanSym.includes('/') ? cleanSym : cleanSym + '/USDT';
+                const coinData = (appState.symbols && (appState.symbols[fullSym] || appState.symbols[cleanSym])) ? (appState.symbols[fullSym] || appState.symbols[cleanSym]) : {};
                 const levels = coinData.levels || {};
                 const cam = levels.camarilla || {};
                 const price = Number(livePrices[fullSym] || coinData.price || 0);
