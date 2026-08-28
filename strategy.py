@@ -217,8 +217,8 @@ class StrategyEngine:
             )
             return
         elif res:
-            free_bal = self.paper_trader.get_free_balance()
-            await self.notifier.notify_position_opened(res, free_balance=free_bal)
+            levels = self.market_data.levels.get(symbol) if self.market_data else None
+            await self._notify_open(res, levels=levels)
 
     # =========================================================================
     # SEVIYE GUNCELLEME — Gun degisiminde acik pozisyon TP/Stop guncelleme
