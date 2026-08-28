@@ -1723,14 +1723,11 @@ HTML_PAGE = """
                         const cleanSym = symbol.replace('/USDT', '');
                         html += `
                         <div class="coin-card ${posClass}" id="card-${safeId}">
-                            <!-- MULTI-ROW CARD HEAD: ZERO OVERLAP GUARANTEE -->
-                            <div class="card-head" onclick="openTradingViewModal('${cleanSym}')" style="cursor:pointer;" title="${cleanSym} Canlı TradingView Grafiğini & Seviyelerini Aç">
+                            <!-- CLEAN CARD HEAD: SYMBOL + GRAFIK BUTTON -->
+                            <div class="card-head">
                                 <div class="card-top-row">
-                                    <div class="card-symbol-wrap">
-                                        <span class="card-symbol">${cleanSym}</span>
-                                        <span class="symbol-tag">PERP</span>
-                                    </div>
-                                    <button class="btn-open-chart" onclick="event.stopPropagation(); openTradingViewModal('${cleanSym}')" title="${cleanSym} Canlı Grafiği Aç">📈 Grafik</button>
+                                    <span class="card-symbol" onclick="openTradingViewModal('${cleanSym}')" style="cursor:pointer;" title="${cleanSym} Grafiğini Aç">${cleanSym}</span>
+                                    <button class="btn-open-chart" onclick="openTradingViewModal('${cleanSym}')" title="${cleanSym} Canlı Grafiği Aç">📈 Grafik</button>
                                 </div>
                                 <div class="card-price-row">
                                     <span class="price-label-mini">CANLI FİYAT</span>
