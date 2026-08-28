@@ -152,7 +152,31 @@ class PaperTrader:
         self.save_history()
         return True
 
-    def open_position(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT"):
+    def update_tick_telemetry(self, symbol: str, current_price: float):
+        # Her fiyat hareketinde MFE (Max Kar) ve MAE (Max Zarar) derinligini anlik kaydeder
+        if symbol not in self.open_positions:
+            return
+        pos = self.open_positions[symbol]
+        side = pos["side"]
+        entry = pos["entry_price"]
+        lev = pos["leverage"]
+
+        if current_price > pos.get("peak_price", entry):
+            pos["peak_price"] = current_price
+        if current_price < pos.get("trough_price", entry):
+            pos["trough_price"] = current_price
+
+        if side == "LONG":
+            mfe_roe = ((pos["peak_price"] - entry) / entry) * lev * 100.0
+            mae_roe = ((entry - pos["trough_price"]) / entry) * lev * 100.0
+        else:
+            mfe_roe = ((entry - pos["trough_price"]) / entry) * lev * 100.0
+            mae_roe = ((pos["peak_price"] - entry) / entry) * lev * 100.0
+
+        pos["max_mfe_roe"] = round(max(pos.get("max_mfe_roe", 0.0), mfe_roe), 2)
+        pos["max_mae_roe"] = round(max(pos.get("max_mae_roe", 0.0), mae_roe), 2)
+
+    def open_position(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None):
         if symbol in self.open_positions:
             return None
 
@@ -173,6 +197,26 @@ class PaperTrader:
         entry_timestamp = time.time()
         entry_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+        # Risk hesabi (1R degeri)
+        risk_dist = abs(entry_price - soft_stop) if soft_stop else (entry_price * 0.01)
+        initial_risk_usdt = round((risk_dist / entry_price) * position_value, 4)
+
+        # Snapshot temizleme (JSON uyumlu hale getirme)
+        clean_snapshot = {}
+        if snapshot_levels and isinstance(snapshot_levels, dict):
+            cam = snapshot_levels.get("camarilla", {})
+            clean_snapshot = {
+                "P": cam.get("P", 0.0), "R3": cam.get("R3", 0.0), "R4": cam.get("R4", 0.0), "R5": cam.get("R5", 0.0),
+                "S3": cam.get("S3", 0.0), "S4": cam.get("S4", 0.0), "S5": cam.get("S5", 0.0),
+                "tepe_avwap": snapshot_levels.get("tepe_avwap", 0.0),
+                "dip_avwap": snapshot_levels.get("dip_avwap", 0.0),
+                "mpoc": snapshot_levels.get("mpoc", 0.0),
+                "mval": snapshot_levels.get("mval", 0.0),
+                "mvah": snapshot_levels.get("mvah", 0.0),
+                "above_npoc": snapshot_levels.get("above_npoc", 0.0),
+                "below_npoc": snapshot_levels.get("below_npoc", 0.0)
+            }
+
         pos = {
             "id": f"TRD-{len(self.history) + len(self.open_positions) + 1:04d}",
             "symbol": symbol,
@@ -190,13 +234,22 @@ class PaperTrader:
             "tp1": float(tp1) if tp1 else 0.0,
             "tp2": float(tp2) if tp2 else 0.0,
             "trade_type": trade_type,
+            "setup_id": setup_id or ("SETUP_" + trade_type),
+            "confluence_count": len(confluence_list or []) or 1,
+            "confluence_list": confluence_list or [reason.split('(')[0].strip()],
+            "initial_risk_usdt": initial_risk_usdt,
+            "snapshot_levels": clean_snapshot,
+            "peak_price": float(entry_price),
+            "trough_price": float(entry_price),
+            "max_mfe_roe": 0.0,
+            "max_mae_roe": 0.0,
             "reason": reason,
             "is_half_closed": False
         }
 
         self.open_positions[symbol] = pos
         self.save_history()
-        print(f">> [POZISYON ACILDI] {symbol} {side} @ {entry_price} | Marjin: {margin}$ ({self.leverage}x)")
+        print(f">> [POZISYON ACILDI] {symbol} {side} @ {entry_price} | Marjin: {margin}$ ({self.leverage}x) | Setup: {pos['setup_id']}")
         return pos
 
     def close_position(self, symbol: str, exit_price: float, close_reason: str, is_partial: bool = False):

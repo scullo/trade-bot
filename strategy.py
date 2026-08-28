@@ -201,11 +201,12 @@ class StrategyEngine:
     # =========================================================================
     # POZISYON ACMA YARDIMCISI
     # =========================================================================
-    async def _handle_open(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT"):
+    async def _handle_open(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None):
         res = await self._safe_open_position(
             symbol=symbol, side=side, entry_price=entry_price,
             reason=reason, soft_stop=soft_stop, hard_stop=hard_stop,
-            tp1=tp1, tp2=tp2, trade_type=trade_type
+            tp1=tp1, tp2=tp2, trade_type=trade_type,
+            snapshot_levels=snapshot_levels, setup_id=setup_id, confluence_list=confluence_list
         )
         if isinstance(res, dict) and res.get("error") == "INSUFFICIENT_BALANCE":
             await self.notifier.notify_insufficient_balance(
@@ -426,7 +427,9 @@ class StrategyEngine:
                     symbol=symbol, side="LONG", entry_price=close_price,
                     reason="Taze R4 Breakout + Tepe AVWAP Ustu Onay",
                     soft_stop=soft_stop, hard_stop=hard_stop,
-                    tp1=tp1, tp2=tp2, trade_type="BREAKOUT"
+                    tp1=tp1, tp2=tp2, trade_type="BREAKOUT",
+                    snapshot_levels=levels, setup_id="SETUP_1_R4_BREAKOUT",
+                    confluence_list=["R4_Breakout", "Tepe_AVWAP_Ustu"]
                 )
                 return
 
@@ -448,7 +451,9 @@ class StrategyEngine:
                     symbol=symbol, side="SHORT", entry_price=close_price,
                     reason="Taze S4 Breakdown + Dip AVWAP Alti Onay",
                     soft_stop=soft_stop, hard_stop=hard_stop,
-                    tp1=tp1, tp2=tp2, trade_type="BREAKOUT"
+                    tp1=tp1, tp2=tp2, trade_type="BREAKOUT",
+                    snapshot_levels=levels, setup_id="SETUP_2_S4_BREAKDOWN",
+                    confluence_list=["S4_Breakdown", "Dip_AVWAP_Alti"]
                 )
                 return
 
@@ -469,7 +474,9 @@ class StrategyEngine:
                 symbol=symbol, side="LONG", entry_price=close_price,
                 reason=f"S3 Destek Sekmesi (İlk Hedef {target_name}: ${tp1:.4f})",
                 soft_stop=soft_stop, hard_stop=hard_stop,
-                tp1=tp1, tp2=tp2, trade_type="SCALP"
+                tp1=tp1, tp2=tp2, trade_type="SCALP",
+                snapshot_levels=levels, setup_id="SETUP_3_S3_BOUNCE",
+                confluence_list=["S3_Support", f"Target_{target_name}"]
             )
             return
 
@@ -490,7 +497,9 @@ class StrategyEngine:
                 symbol=symbol, side="SHORT", entry_price=close_price,
                 reason=f"R3 Direnc Tepkisi (İlk Hedef {target_name}: ${tp1:.4f})",
                 soft_stop=soft_stop, hard_stop=hard_stop,
-                tp1=tp1, tp2=tp2, trade_type="SCALP"
+                tp1=tp1, tp2=tp2, trade_type="SCALP",
+                snapshot_levels=levels, setup_id="SETUP_4_R3_REJECTION",
+                confluence_list=["R3_Resistance", f"Target_{target_name}"]
             )
             return
 
@@ -506,7 +515,9 @@ class StrategyEngine:
                 symbol=symbol, side="LONG", entry_price=close_price,
                 reason="R4 Destek Retest Sekmesi (Support Flip)",
                 soft_stop=soft_stop, hard_stop=hard_stop,
-                tp1=r5, trade_type="SCALP"
+                tp1=r5, trade_type="SCALP",
+                snapshot_levels=levels, setup_id="SETUP_5_R4_SUPPORT_FLIP",
+                confluence_list=["R4_Retest", "Support_Flip"]
             )
             return
 
@@ -524,7 +535,9 @@ class StrategyEngine:
                 symbol=symbol, side="LONG", entry_price=close_price,
                 reason="mVAH Aylik Direnc Kirilimi (Macro Breakout)",
                 soft_stop=soft_stop, hard_stop=hard_stop,
-                tp1=target, trade_type="BREAKOUT"
+                tp1=target, trade_type="BREAKOUT",
+                snapshot_levels=levels, setup_id="SETUP_6_MVAH_MACRO_BREAKOUT",
+                confluence_list=["mVAH_Breakout", "Volume_Profile_Expansion"]
             )
             return
 
@@ -540,7 +553,9 @@ class StrategyEngine:
                 symbol=symbol, side="SHORT", entry_price=close_price,
                 reason="S4 Direnc Retest Sekmesi (Resistance Flip)",
                 soft_stop=soft_stop, hard_stop=hard_stop,
-                tp1=s5, trade_type="SCALP"
+                tp1=s5, trade_type="SCALP",
+                snapshot_levels=levels, setup_id="SETUP_7_S4_RESISTANCE_FLIP",
+                confluence_list=["S4_Retest", "Resistance_Flip"]
             )
             return
 
@@ -558,7 +573,9 @@ class StrategyEngine:
                 symbol=symbol, side="SHORT", entry_price=close_price,
                 reason="mVAL Aylik Destek Kirilimi (Macro Breakdown)",
                 soft_stop=soft_stop, hard_stop=hard_stop,
-                tp1=target, trade_type="BREAKOUT"
+                tp1=target, trade_type="BREAKOUT",
+                snapshot_levels=levels, setup_id="SETUP_8_MVAL_MACRO_BREAKDOWN",
+                confluence_list=["mVAL_Breakdown", "Volume_Profile_Collapse"]
             )
             return
 
@@ -588,7 +605,9 @@ class StrategyEngine:
                 symbol=symbol, side="LONG", entry_price=close_price,
                 reason=reason_text,
                 soft_stop=soft_stop, hard_stop=hard_stop,
-                tp1=tp1_target, tp2=tp2_target, trade_type="SCALP"
+                tp1=tp1_target, tp2=tp2_target, trade_type="SCALP",
+                snapshot_levels=levels, setup_id="SETUP_9_BELOW_NPOC_BOUNCE",
+                confluence_list=["nPOC_Sweep", f"Target_{target_name}"]
             )
             return
 
@@ -618,6 +637,8 @@ class StrategyEngine:
                 symbol=symbol, side="SHORT", entry_price=close_price,
                 reason=reason_text,
                 soft_stop=soft_stop, hard_stop=hard_stop,
-                tp1=tp1_target, tp2=tp2_target, trade_type="SCALP"
+                tp1=tp1_target, tp2=tp2_target, trade_type="SCALP",
+                snapshot_levels=levels, setup_id="SETUP_10_ABOVE_NPOC_REJECTION",
+                confluence_list=["nPOC_Rejection", f"Target_{target_name}"]
             )
             return

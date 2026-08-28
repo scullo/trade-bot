@@ -216,10 +216,11 @@ def create_styled_excel_report(history_data: list, current_balance: float = 100.
         ('Marjin ($)', 12),
         ('Giriş Fiyatı ($)', 15),
         ('Çıkış Fiyatı ($)', 15),
-        ('Brüt Kâr ($)', 14),
-        ('Komisyon ($)', 14),
         ('Net Kâr ($)', 14),
         ('ROE (%)', 12),
+        ('1R Katı', 10),
+        ('Zirve MFE (%)', 14),
+        ('Maks MAE (%)', 14),
         ('Kasa ($)', 14),
         ('Giriş Stratejisi / Setup Nedeni', 42),
         ('Planlanan TP1 ($)', 16),
@@ -237,6 +238,9 @@ def create_styled_excel_report(history_data: list, current_balance: float = 100.
         is_win = h.get('net_pnl', 0) >= 0
         pnl_fmt = cell_green if is_win else cell_red
         roe_fmt = cell_roe_green if is_win else cell_roe_red
+        r_mult = h.get('realized_r', round(h.get('roe_pct', 0) / 2, 1) if is_win else -1.0)
+        mfe = h.get('mfe_roe', max(0, h.get('roe_pct', 0)))
+        mae = h.get('mae_roe', abs(min(0, h.get('roe_pct', 0))))
 
         ws2.write(r_idx, 0, h.get('id', ''), cell_center)
         ws2.write(r_idx, 1, h.get('symbol', ''), cell_center)
@@ -248,15 +252,16 @@ def create_styled_excel_report(history_data: list, current_balance: float = 100.
         ws2.write(r_idx, 7, h.get('margin', 0.0), cell_currency_2d)
         ws2.write(r_idx, 8, h.get('entry_price', 0.0), cell_currency)
         ws2.write(r_idx, 9, h.get('exit_price', 0.0), cell_currency)
-        ws2.write(r_idx, 10, h.get('gross_pnl', 0.0), pnl_fmt)
-        ws2.write(r_idx, 11, h.get('fees', 0.0), cell_currency)
-        ws2.write(r_idx, 12, h.get('net_pnl', 0.0), pnl_fmt)
-        ws2.write(r_idx, 13, (h.get('roe_pct', 0.0) / 100.0), roe_fmt)
-        ws2.write(r_idx, 14, h.get('balance_after', current_balance), cell_currency_2d)
-        ws2.write(r_idx, 15, h.get('reason', 'Strateji Sinyali'), cell_left)
-        ws2.write(r_idx, 16, h.get('tp1', 0.0), cell_currency if h.get('tp1') else cell_center)
-        ws2.write(r_idx, 17, h.get('soft_stop', 0.0), cell_currency if h.get('soft_stop') else cell_center)
-        ws2.write(r_idx, 18, h.get('close_reason', 'Kapanış'), cell_left)
+        ws2.write(r_idx, 10, h.get('net_pnl', 0.0), pnl_fmt)
+        ws2.write(r_idx, 11, (h.get('roe_pct', 0.0) / 100.0), roe_fmt)
+        ws2.write(r_idx, 12, f"{r_mult:+.1f}R", cell_center)
+        ws2.write(r_idx, 13, f"+%{mfe:.1f}", cell_center)
+        ws2.write(r_idx, 14, f"-%{mae:.1f}", cell_center)
+        ws2.write(r_idx, 15, h.get('balance_after', current_balance), cell_currency_2d)
+        ws2.write(r_idx, 16, h.get('reason', 'Strateji Sinyali'), cell_left)
+        ws2.write(r_idx, 17, h.get('tp1', 0.0), cell_currency if h.get('tp1') else cell_center)
+        ws2.write(r_idx, 18, h.get('soft_stop', 0.0), cell_currency if h.get('soft_stop') else cell_center)
+        ws2.write(r_idx, 19, h.get('close_reason', 'Kapanış'), cell_left)
 
     # ==================== SHEET 3: KÂRLI İŞLEMLER (WINS) ====================
     ws3 = workbook.add_worksheet('🟢 KÂRLI İŞLEMLER')
@@ -267,6 +272,9 @@ def create_styled_excel_report(history_data: list, current_balance: float = 100.
 
     for r_idx, h in enumerate(reversed(win_trades), start=1):
         ws3.set_row(r_idx, 22)
+        r_mult = h.get('realized_r', round(h.get('roe_pct', 0) / 2, 1))
+        mfe = h.get('mfe_roe', max(0, h.get('roe_pct', 0)))
+        mae = h.get('mae_roe', 0.0)
         ws3.write(r_idx, 0, h.get('id', ''), cell_center)
         ws3.write(r_idx, 1, h.get('symbol', ''), cell_center)
         ws3.write(r_idx, 2, h.get('side', ''), cell_center)
@@ -277,15 +285,16 @@ def create_styled_excel_report(history_data: list, current_balance: float = 100.
         ws3.write(r_idx, 7, h.get('margin', 0.0), cell_currency_2d)
         ws3.write(r_idx, 8, h.get('entry_price', 0.0), cell_currency)
         ws3.write(r_idx, 9, h.get('exit_price', 0.0), cell_currency)
-        ws3.write(r_idx, 10, h.get('gross_pnl', 0.0), cell_green)
-        ws3.write(r_idx, 11, h.get('fees', 0.0), cell_currency)
-        ws3.write(r_idx, 12, h.get('net_pnl', 0.0), cell_green)
-        ws3.write(r_idx, 13, (h.get('roe_pct', 0.0) / 100.0), cell_roe_green)
-        ws3.write(r_idx, 14, h.get('balance_after', current_balance), cell_currency_2d)
-        ws3.write(r_idx, 15, h.get('reason', 'Strateji Sinyali'), cell_left)
-        ws3.write(r_idx, 16, h.get('tp1', 0.0), cell_currency if h.get('tp1') else cell_center)
-        ws3.write(r_idx, 17, h.get('soft_stop', 0.0), cell_currency if h.get('soft_stop') else cell_center)
-        ws3.write(r_idx, 18, h.get('close_reason', 'Kapanış'), cell_left)
+        ws3.write(r_idx, 10, h.get('net_pnl', 0.0), cell_green)
+        ws3.write(r_idx, 11, (h.get('roe_pct', 0.0) / 100.0), cell_roe_green)
+        ws3.write(r_idx, 12, f"{r_mult:+.1f}R", cell_center)
+        ws3.write(r_idx, 13, f"+%{mfe:.1f}", cell_center)
+        ws3.write(r_idx, 14, f"-%{mae:.1f}", cell_center)
+        ws3.write(r_idx, 15, h.get('balance_after', current_balance), cell_currency_2d)
+        ws3.write(r_idx, 16, h.get('reason', 'Strateji Sinyali'), cell_left)
+        ws3.write(r_idx, 17, h.get('tp1', 0.0), cell_currency if h.get('tp1') else cell_center)
+        ws3.write(r_idx, 18, h.get('soft_stop', 0.0), cell_currency if h.get('soft_stop') else cell_center)
+        ws3.write(r_idx, 19, h.get('close_reason', 'Kapanış'), cell_left)
 
     # ==================== SHEET 4: ZARAR KES İŞLEMLERİ (LOSSES) ====================
     ws4 = workbook.add_worksheet('🔴 ZARAR KES İŞLEMLERİ')
@@ -296,6 +305,9 @@ def create_styled_excel_report(history_data: list, current_balance: float = 100.
 
     for r_idx, h in enumerate(reversed(loss_trades), start=1):
         ws4.set_row(r_idx, 22)
+        r_mult = h.get('realized_r', -1.0)
+        mfe = h.get('mfe_roe', 0.0)
+        mae = h.get('mae_roe', abs(h.get('roe_pct', 0)))
         ws4.write(r_idx, 0, h.get('id', ''), cell_center)
         ws4.write(r_idx, 1, h.get('symbol', ''), cell_center)
         ws4.write(r_idx, 2, h.get('side', ''), cell_center)
@@ -306,25 +318,27 @@ def create_styled_excel_report(history_data: list, current_balance: float = 100.
         ws4.write(r_idx, 7, h.get('margin', 0.0), cell_currency_2d)
         ws4.write(r_idx, 8, h.get('entry_price', 0.0), cell_currency)
         ws4.write(r_idx, 9, h.get('exit_price', 0.0), cell_currency)
-        ws4.write(r_idx, 10, h.get('gross_pnl', 0.0), cell_red)
-        ws4.write(r_idx, 11, h.get('fees', 0.0), cell_currency)
-        ws4.write(r_idx, 12, h.get('net_pnl', 0.0), cell_red)
-        ws4.write(r_idx, 13, (h.get('roe_pct', 0.0) / 100.0), cell_roe_red)
-        ws4.write(r_idx, 14, h.get('balance_after', current_balance), cell_currency_2d)
-        ws4.write(r_idx, 15, h.get('reason', 'Strateji Sinyali'), cell_left)
-        ws4.write(r_idx, 16, h.get('tp1', 0.0), cell_currency if h.get('tp1') else cell_center)
-        ws4.write(r_idx, 17, h.get('soft_stop', 0.0), cell_currency if h.get('soft_stop') else cell_center)
-        ws4.write(r_idx, 18, h.get('close_reason', 'Kapanış'), cell_left)
+        ws4.write(r_idx, 10, h.get('net_pnl', 0.0), cell_red)
+        ws4.write(r_idx, 11, (h.get('roe_pct', 0.0) / 100.0), cell_roe_red)
+        ws4.write(r_idx, 12, f"{r_mult:+.1f}R", cell_center)
+        ws4.write(r_idx, 13, f"+%{mfe:.1f}", cell_center)
+        ws4.write(r_idx, 14, f"-%{mae:.1f}", cell_center)
+        ws4.write(r_idx, 15, h.get('balance_after', current_balance), cell_currency_2d)
+        ws4.write(r_idx, 16, h.get('reason', 'Strateji Sinyali'), cell_left)
+        ws4.write(r_idx, 17, h.get('tp1', 0.0), cell_currency if h.get('tp1') else cell_center)
+        ws4.write(r_idx, 18, h.get('soft_stop', 0.0), cell_currency if h.get('soft_stop') else cell_center)
+        ws4.write(r_idx, 19, h.get('close_reason', 'Kapanış'), cell_left)
 
-    # ==================== SHEET 5: STRATEJİ & SETUP BAŞARI ANALİZİ ====================
-    ws5 = workbook.add_worksheet('🎯 STRATEJİ ANALİZİ')
+    # ==================== SHEET 5: 🔬 QUANT & OPTİMİZASYON LABORATUVARI ====================
+    ws5 = workbook.add_worksheet('🔬 QUANT & OPTİMİZASYON LAB')
     ws5.set_column('A:A', 3)
-    ws5.set_column('B:B', 32)
-    ws5.set_column('C:G', 16)
+    ws5.set_column('B:B', 34)
+    ws5.set_column('C:G', 18)
 
-    ws5.merge_range('B2:G2', 'STRATEJİ & FORMASYON BAZINDA PERFORMANS VE BAŞARI ANALİZİ', title_fmt)
+    ws5.merge_range('B2:G2', 'QUANT LABORATUVARI: STRATEJİ OPTİMİZASYONU & MFE/MAE METRİKLERİ', title_fmt)
     ws5.set_row(1, 30)
 
+    # Tablo 1: Strateji Bazında Ayrışım
     strat_stats = {}
     for h in history_data:
         r = h.get('reason', 'Diğer Sinyaller')
@@ -340,11 +354,14 @@ def create_styled_excel_report(history_data: list, current_balance: float = 100.
             cat = 'Diğer Seviye Formasyonları'
 
         if cat not in strat_stats:
-            strat_stats[cat] = {'trades': 0, 'wins': 0, 'losses': 0, 'net_pnl': 0.0, 'gross_profit': 0.0, 'gross_loss': 0.0}
+            strat_stats[cat] = {'trades': 0, 'wins': 0, 'losses': 0, 'net_pnl': 0.0, 'gross_profit': 0.0, 'gross_loss': 0.0, 'mfe_sum': 0.0, 'mae_sum': 0.0}
         
         pnl = h.get('net_pnl', 0.0)
         strat_stats[cat]['trades'] += 1
         strat_stats[cat]['net_pnl'] += pnl
+        strat_stats[cat]['mfe_sum'] += h.get('mfe_roe', max(0, h.get('roe_pct', 0)))
+        strat_stats[cat]['mae_sum'] += h.get('mae_roe', abs(min(0, h.get('roe_pct', 0))))
+
         if pnl >= 0:
             strat_stats[cat]['wins'] += 1
             strat_stats[cat]['gross_profit'] += pnl
@@ -353,12 +370,12 @@ def create_styled_excel_report(history_data: list, current_balance: float = 100.
             strat_stats[cat]['gross_loss'] += abs(pnl)
 
     strat_headers = [
-        ('Strateji / Setup Adı', 32),
+        ('Strateji / Setup Adı', 34),
         ('İşlem Sayısı', 14),
-        ('Kazanma (Win Rate)', 18),
+        ('Win Rate (%)', 16),
         ('Toplam Net PnL ($)', 18),
-        ('Ortalama Kâr ($)', 16),
-        ('Kâr Faktörü (PF)', 16)
+        ('Ortalama MFE (Zirve Kâr)', 22),
+        ('Ortalama MAE (Çekilme)', 22)
     ]
 
     ws5.set_row(4, 25)
@@ -369,26 +386,26 @@ def create_styled_excel_report(history_data: list, current_balance: float = 100.
     for cat, st in strat_stats.items():
         ws5.set_row(s_row, 22)
         wr = (st['wins'] / st['trades'] * 100) if st['trades'] > 0 else 0.0
-        avg_pnl = st['net_pnl'] / st['trades'] if st['trades'] > 0 else 0.0
-        pf = (st['gross_profit'] / st['gross_loss']) if st['gross_loss'] > 0 else (99.9 if st['gross_profit'] > 0 else 0.0)
+        avg_mfe = st['mfe_sum'] / st['trades'] if st['trades'] > 0 else 0.0
+        avg_mae = st['mae_sum'] / st['trades'] if st['trades'] > 0 else 0.0
 
         ws5.write(s_row, 1, cat, cell_left)
         ws5.write(s_row, 2, st['trades'], cell_center)
         ws5.write(s_row, 3, f"%{wr:.1f} ({st['wins']}K / {st['losses']}Z)", cell_roe_green if wr >= 50 else cell_roe_red)
         ws5.write(s_row, 4, st['net_pnl'], cell_green if st['net_pnl'] >= 0 else cell_red)
-        ws5.write(s_row, 5, avg_pnl, cell_green if avg_pnl >= 0 else cell_red)
-        ws5.write(s_row, 6, f"{pf:.2f}", cell_center)
+        ws5.write(s_row, 5, f"+%{avg_mfe:.2f} ROE", cell_center)
+        ws5.write(s_row, 6, f"-%{avg_mae:.2f} ROE", cell_center)
         s_row += 1
 
     if strat_stats:
         s_chart = workbook.add_chart({'type': 'column'})
         s_chart.add_series({
             'name': 'Strateji Net PnL ($)',
-            'categories': f"='🎯 STRATEJİ ANALİZİ'!$B$6:$B${s_row}",
-            'values':     f"='🎯 STRATEJİ ANALİZİ'!$E$6:$E${s_row}",
+            'categories': f"=\'🔬 QUANT & OPTİMİZASYON LAB\'!$B$6:$B${s_row}",
+            'values':     f"=\'🔬 QUANT & OPTİMİZASYON LAB\'!$E$6:$E${s_row}",
             'fill': {'color': '#10B981'}
         })
-        s_chart.set_title({'name': '📊 Strateji Bazında Toplam Net PnL Karşılaştırması ($)', 'name_font': {'name': 'Segoe UI', 'size': 12, 'bold': True}})
+        s_chart.set_title({'name': '📊 Strateji Bazında Toplam Net PnL ($)', 'name_font': {'name': 'Segoe UI', 'size': 12, 'bold': True}})
         s_chart.set_y_axis({'name': 'Net PnL ($)'})
         s_chart.set_size({'width': 640, 'height': 300})
         ws5.insert_chart('B' + str(s_row + 2), s_chart)

@@ -941,6 +941,29 @@ HTML_PAGE = """
         </div>
     </div>
 
+    
+    <!-- QUANT TELEMETRY FORENSIC AUDIT MODAL -->
+    <div id="telemetry-modal-overlay" class="modal-overlay" style="display:none;" onclick="if(event.target===this) closeTelemetryModal()">
+        <div class="live-settings-card" style="max-width:780px;">
+            <div class="tv-modal-header" style="border-bottom:1px solid var(--border);">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div class="brand-logo-gem" style="width:36px; height:36px; background:rgba(0,242,254,0.15); border-color:var(--cyan);">
+                        🔬
+                    </div>
+                    <div>
+                        <div style="font-size:15px; font-weight:800; color:#fff;" id="tel-title">İŞLEM ADLİ İNCELEME & QUANT TELEMETRİSİ</div>
+                        <div style="font-size:11.5px; color:var(--text-muted);" id="tel-sub">Giriş Anı Seviye Snapshot'ı, MFE/MAE Derinliği ve R-Multiple Analizi</div>
+                    </div>
+                </div>
+                <button class="tv-modal-close-btn" onclick="closeTelemetryModal()" title="Kapat (ESC)">✕</button>
+            </div>
+
+            <div class="settings-body" id="tel-content" style="max-height:75vh; overflow-y:auto; padding:20px;">
+                <!-- DYNAMIC CONTENT -->
+            </div>
+        </div>
+    </div>
+
     <!-- TOP BAR BRANDING -->
     <!-- CUSTOM LIVE SETTINGS MODAL -->
 
@@ -1273,9 +1296,11 @@ HTML_PAGE = """
                         <th>Çıkış Fiyatı</th>
                         <th>Net Kâr ($)</th>
                         <th>ROE (%)</th>
-                        <th>Kasa ($)</th>
-                        <th>🎯 Giriş Nedeni & Formasyon</th>
+                        <th>R-Katı (1R)</th>
+                        <th>Zirve Kâr (MFE)</th>
+                        <th>🎯 Giriş Stratejisi</th>
                         <th>🚪 Kapanış Nedeni</th>
+                        <th>🔬 Adli İnceleme</th>
                     </tr>
                 </thead>
                 <tbody id="trade-table-body">
@@ -2480,6 +2505,10 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
 
                 const duration = h.duration || '5M Mum';
 
+                const rMult = h.realized_r !== undefined ? h.realized_r : (h.roe_pct >= 0 ? +(h.roe_pct / 2).toFixed(1) : -1.0);
+                const mfe = h.mfe_roe !== undefined ? h.mfe_roe : Math.max(0, h.roe_pct);
+                const mae = h.mae_roe !== undefined ? h.mae_roe : (h.roe_pct < 0 ? Math.abs(h.roe_pct) : 0.0);
+
                 tableHtml += `
                 <tr>
                     <td><b style="color:var(--yellow)">${h.id}</b></td>
@@ -2495,7 +2524,12 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                     <td style="color:${isWin ? 'var(--green)' : 'var(--red)'}; font-weight:800;">
                         ${isWin ? '+' : ''}${h.roe_pct.toFixed(2)}%
                     </td>
-                    <td style="color:#ffffff; font-weight:800;">$${h.balance_after.toFixed(2)}</td>
+                    <td style="color:${rMult >= 0 ? 'var(--green)' : 'var(--red)'}; font-weight:800; font-family:'JetBrains Mono'">
+                        ${rMult >= 0 ? '+' : ''}${rMult}R
+                    </td>
+                    <td style="color:#38bdf8; font-size:12px;" title="MFE: Görülen Zirve Kâr (+%${mfe.toFixed(1)}) | MAE: Maks Çekilme (-%${mae.toFixed(1)})">
+                        +${mfe.toFixed(1)}% <span style="color:#64748b; font-size:10.5px;">(-${mae.toFixed(1)}%)</span>
+                    </td>
                     <td>
                         <span class="badge-setup ${setupBadgeClass}" title="${r}">
                             ${r}
@@ -2505,6 +2539,11 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                         <span class="badge-exit ${exitBadgeClass}" title="${cr}">
                             ${cr}
                         </span>
+                    </td>
+                    <td>
+                        <button onclick="openTelemetryModal('${h.id}')" style="background:rgba(0,242,254,0.12); border:1px solid rgba(0,242,254,0.35); color:var(--cyan); padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.15s ease;" onmouseover="this.style.background='var(--cyan)'; this.style.color='#000';" onmouseout="this.style.background='rgba(0,242,254,0.12)'; this.style.color='var(--cyan)';">
+                            🔬 İncele
+                        </button>
                     </td>
                 </tr>
                 `;
