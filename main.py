@@ -38,8 +38,9 @@ async def main():
     market_data.on_tick_callback = on_tick
     market_data.on_candle_close_callback = on_candle_close
 
+    init_task = asyncio.create_task(market_data.initialize())
     await start_server(market_data, trader_manager, notifier, live_trader=live_trader)
-    await market_data.initialize()
+    await init_task
 
     # Saatlik otomatik Telegram Kasa & Portföy Raporlayıcıyı Başlat
     asyncio.create_task(notifier.start_hourly_scheduler(trader_manager, initial_balance=INITIAL_BALANCE))
