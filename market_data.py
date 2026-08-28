@@ -43,14 +43,13 @@ class MarketDataManager:
         }
         return multiplier_coins.get(clean, clean)
 
-    def _get_multiplier(self, symbol: str) -> float:
+    def _get_spot_multiplier(self, symbol: str) -> float:
         clean = symbol.replace('/', '').replace(':USDT', '')
         multiplier_coins = ['1000PEPE', '1000BONK', '1000SHIB', '1000FLOKI', '1000SATS', '1000RATS', '1000LUNC', '1000XEC', '1000CHEEMS', '1000WHY', '1000CAT', '1000NEIRO', 'PEPE', 'BONK', 'SHIB', 'FLOKI', 'SATS', 'RATS', 'LUNC', 'XEC', 'CHEEMS', 'WHY', 'CAT', 'NEIRO']
         if any(k in clean for k in multiplier_coins):
-            if '1000' not in symbol:
-                return 0.001
-        elif 'MOG' in clean and '1000000' not in symbol:
-            return 0.000001
+            return 1000.0
+        elif 'MOG' in clean:
+            return 1000000.0
         return 1.0
 
     async def initialize(self):
@@ -64,134 +63,96 @@ class MarketDataManager:
         async with self.semaphore:
             clean_sym = self._clean_symbol(symbol)
             clean_raw = clean_sym.replace('/', '').replace(':USDT', '')
-            bybit_sym = clean_raw if clean_raw.endswith('USDT') else f"{clean_raw}USDT"
+            fapi_sym = clean_raw if clean_raw.endswith('USDT') else f"{clean_raw}USDT"
             raw_spot = symbol.replace('/', '').replace(':USDT', '')
             spot_clean = raw_spot.replace('1000000', '').replace('1000', '')
-            mult = self._get_multiplier(symbol)
+            spot_mult = self._get_spot_multiplier(symbol)
             now_ms = time.time() * 1000
 
             df_1d = None
             df_5m = None
 
             async with aiohttp.ClientSession() as session:
-                # 1. Bybit Linear Futures (Primary - Fresh 24/7 Futures Data)
-                try:
-                    url_1d_b = f"https://api.bybit.com/v5/market/kline?category=linear&symbol={bybit_sym}&interval=D&limit=30"
-                    url_5m_b = f"https://api.bybit.com/v5/market/kline?category=linear&symbol={bybit_sym}&interval=5&limit=200"
-                    async with session.get(url_1d_b, timeout=aiohttp.ClientTimeout(total=4)) as r1:
-                        if r1.status == 200:
-                            res1 = await r1.json()
-                            l1 = res1.get('result', {}).get('list', [])
-                            if l1:
-                                rows_1d = [[float(x[0]), float(x[1]), float(x[2]), float(x[3]), float(x[4]), float(x[5])] for x in reversed(l1)]
-                                df_1d = pd.DataFrame(rows_1d, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-                    
-                    async with session.get(url_5m_b, timeout=aiohttp.ClientTimeout(total=4)) as r2:
-                        if r2.status == 200:
-                            res2 = await r2.json()
-                            l2 = res2.get('result', {}).get('list', [])
-                            if l2:
-                                rows_5m = [[float(x[0]), float(x[1]), float(x[2]), float(x[3]), float(x[4]), float(x[5])] for x in reversed(l2)]
-                                df_5m = pd.DataFrame(rows_5m, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-                    
-                    # Verify Freshness (< 15 mins)
-                    if df_5m is not None and not df_5m.empty:
-                        if (now_ms - float(df_5m['timestamp'].iloc[-1])) > (15 * 60 * 1000):
-                            df_1d, df_5m = None, None
-                except Exception:
-                    pass
-
-                # 2. Binance Futures REST API (Secondary Futures)
-                if df_1d is None or df_5m is None or df_1d.empty or df_5m.empty:
+                # 1. Binance Vision (Spot with freshness check < 15 mins and correct multiplier)
+                for base_sym in [spot_clean, raw_spot]:
                     try:
-                        url_1d = f"https://fapi.binance.com/fapi/v1/klines?symbol={bybit_sym}&interval=1d&limit=30"
-                        url_5m = f"https://fapi.binance.com/fapi/v1/klines?symbol={bybit_sym}&interval=5m&limit=500"
-                        async with session.get(url_1d, timeout=aiohttp.ClientTimeout(total=4)) as r1:
+                        url_1d_v = f"https://data-api.binance.vision/api/v3/klines?symbol={base_sym}&interval=1d&limit=30"
+                        url_5m_v = f"https://data-api.binance.vision/api/v3/klines?symbol={base_sym}&interval=5m&limit=200"
+                        t_1d, t_5m = None, None
+                        async with session.get(url_1d_v, timeout=aiohttp.ClientTimeout(total=2)) as r1:
                             if r1.status == 200:
                                 d1 = await r1.json()
                                 if isinstance(d1, list) and len(d1) > 0:
-                                    df_1d = pd.DataFrame(d1, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'qav', 'num_trades', 'taker_base', 'taker_quote', 'ignore'])
-                                    for col in ['timestamp', 'open', 'high', 'low', 'close', 'volume']:
-                                        df_1d[col] = df_1d[col].astype(float) * (mult if col != 'volume' and col != 'timestamp' else 1.0)
+                                    t_1d = pd.DataFrame(d1, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'qav', 'num_trades', 'taker_base', 'taker_quote', 'ignore'])
+                                    for col in ['open', 'high', 'low', 'close']:
+                                        t_1d[col] = t_1d[col].astype(float) * spot_mult
+                                    for col in ['timestamp', 'volume']:
+                                        t_1d[col] = t_1d[col].astype(float)
                         
-                        async with session.get(url_5m, timeout=aiohttp.ClientTimeout(total=4)) as r2:
+                        async with session.get(url_5m_v, timeout=aiohttp.ClientTimeout(total=2)) as r2:
                             if r2.status == 200:
                                 d2 = await r2.json()
                                 if isinstance(d2, list) and len(d2) > 0:
-                                    df_5m = pd.DataFrame(d2, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'qav', 'num_trades', 'taker_base', 'taker_quote', 'ignore'])
-                                    for col in ['timestamp', 'open', 'high', 'low', 'close', 'volume']:
-                                        df_5m[col] = df_5m[col].astype(float) * (mult if col != 'volume' and col != 'timestamp' else 1.0)
+                                    t_5m = pd.DataFrame(d2, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'qav', 'num_trades', 'taker_base', 'taker_quote', 'ignore'])
+                                    for col in ['open', 'high', 'low', 'close']:
+                                        t_5m[col] = t_5m[col].astype(float) * spot_mult
+                                    for col in ['timestamp', 'volume']:
+                                        t_5m[col] = t_5m[col].astype(float)
                         
-                        # Verify Freshness
-                        if df_5m is not None and not df_5m.empty:
-                            if (now_ms - float(df_5m['timestamp'].iloc[-1])) > (15 * 60 * 1000):
-                                df_1d, df_5m = None, None
+                        if t_5m is not None and not t_5m.empty:
+                            if (now_ms - float(t_5m['timestamp'].iloc[-1])) <= (15 * 60 * 1000): # Fresh!
+                                df_1d, df_5m = t_1d, t_5m
+                                break
                     except Exception:
                         pass
 
-                # 3. Binance Vision (Spot Fallback with STRICT Freshness Check < 15 mins)
+                # 2. Gate.io Futures (100% unblocked, fresh 24/7 Futures for XMR, LIT, HYPE, etc.)
                 if df_1d is None or df_5m is None or df_1d.empty or df_5m.empty:
-                    vision_urls = [
-                        f"https://data-api.binance.vision/api/v3/klines?symbol={spot_clean}",
-                        f"https://data-api.binance.vision/api/v3/klines?symbol={raw_spot}"
-                    ]
-                    for base_url in vision_urls:
+                    for gate_sym in [clean_raw, spot_clean, raw_spot]:
                         try:
-                            url_1d = f"{base_url}&interval=1d&limit=30"
-                            url_5m = f"{base_url}&interval=5m&limit=500"
+                            url_1d_g = f"https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract={gate_sym}_USDT&interval=1d&limit=30"
+                            url_5m_g = f"https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract={gate_sym}_USDT&interval=5m&limit=200"
                             t_1d, t_5m = None, None
-                            async with session.get(url_1d, timeout=aiohttp.ClientTimeout(total=3)) as r1:
+                            async with session.get(url_1d_g, timeout=aiohttp.ClientTimeout(total=3)) as r1:
                                 if r1.status == 200:
                                     d1 = await r1.json()
                                     if isinstance(d1, list) and len(d1) > 0:
-                                        t_1d = pd.DataFrame(d1, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'qav', 'num_trades', 'taker_base', 'taker_quote', 'ignore'])
-                                        for col in ['timestamp', 'open', 'high', 'low', 'close', 'volume']:
-                                            t_1d[col] = t_1d[col].astype(float) * (mult if col != 'volume' and col != 'timestamp' else 1.0)
+                                        rows_1d = [[float(x['t'])*1000, float(x['o']), float(x['h']), float(x['l']), float(x['c']), float(x['v'])] for x in d1]
+                                        t_1d = pd.DataFrame(rows_1d, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
                             
-                            async with session.get(url_5m, timeout=aiohttp.ClientTimeout(total=3)) as r2:
+                            async with session.get(url_5m_g, timeout=aiohttp.ClientTimeout(total=3)) as r2:
                                 if r2.status == 200:
                                     d2 = await r2.json()
                                     if isinstance(d2, list) and len(d2) > 0:
-                                        t_5m = pd.DataFrame(d2, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'qav', 'num_trades', 'taker_base', 'taker_quote', 'ignore'])
-                                        for col in ['timestamp', 'open', 'high', 'low', 'close', 'volume']:
-                                            t_5m[col] = t_5m[col].astype(float) * (mult if col != 'volume' and col != 'timestamp' else 1.0)
+                                        rows_5m = [[float(x['t'])*1000, float(x['o']), float(x['h']), float(x['l']), float(x['c']), float(x['v'])] for x in d2]
+                                        t_5m = pd.DataFrame(rows_5m, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
                             
-                            # STRICT FRESHNESS CHECK: MUST BE UNDER 15 MINUTES OLD
                             if t_5m is not None and not t_5m.empty:
-                                age_ms = now_ms - float(t_5m['timestamp'].iloc[-1])
-                                if age_ms <= (15 * 60 * 1000): # Fresh!
-                                    df_1d, df_5m = t_1d, t_5m
-                                    break
+                                df_1d, df_5m = t_1d, t_5m
+                                break
                         except Exception:
                             pass
 
-                # 4. Bybit Ticker Price Fallback (Guaranteed price)
-                if (df_1d is None or df_1d.empty) and (df_5m is None or df_5m.empty):
+                # 3. Bybit Linear (Backup Futures)
+                if df_1d is None or df_5m is None or df_1d.empty or df_5m.empty:
                     try:
-                        url_t = f"https://api.bybit.com/v5/market/tickers?category=linear&symbol={bybit_sym}"
-                        async with session.get(url_t, timeout=aiohttp.ClientTimeout(total=3)) as rt:
-                            if rt.status == 200:
-                                dt = await rt.json()
-                                list_t = dt.get('result', {}).get('list', [])
-                                if list_t:
-                                    last_p = float(list_t[0].get('lastPrice', 0.0))
-                                    if last_p > 0:
-                                        df_5m = pd.DataFrame([{
-                                            'timestamp': time.time() * 1000,
-                                            'open': last_p * 0.995,
-                                            'high': last_p * 1.015,
-                                            'low': last_p * 0.985,
-                                            'close': last_p,
-                                            'volume': 10000.0
-                                        }])
-                                        df_1d = pd.DataFrame([{
-                                            'timestamp': time.time() * 1000 - 86400000,
-                                            'open': last_p * 0.98,
-                                            'high': last_p * 1.04,
-                                            'low': last_p * 0.96,
-                                            'close': last_p,
-                                            'volume': 100000.0
-                                        }])
+                        url_1d_b = f"https://api.bybit.com/v5/market/kline?category=linear&symbol={fapi_sym}&interval=D&limit=30"
+                        url_5m_b = f"https://api.bybit.com/v5/market/kline?category=linear&symbol={fapi_sym}&interval=5&limit=200"
+                        async with session.get(url_1d_b, timeout=aiohttp.ClientTimeout(total=3)) as r1:
+                            if r1.status == 200:
+                                res1 = await r1.json()
+                                l1 = res1.get('result', {}).get('list', [])
+                                if l1:
+                                    rows_1d = [[float(x[0]), float(x[1]), float(x[2]), float(x[3]), float(x[4]), float(x[5])] for x in reversed(l1)]
+                                    df_1d = pd.DataFrame(rows_1d, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+                        
+                        async with session.get(url_5m_b, timeout=aiohttp.ClientTimeout(total=3)) as r2:
+                            if r2.status == 200:
+                                res2 = await r2.json()
+                                l2 = res2.get('result', {}).get('list', [])
+                                if l2:
+                                    rows_5m = [[float(x[0]), float(x[1]), float(x[2]), float(x[3]), float(x[4]), float(x[5])] for x in reversed(l2)]
+                                    df_5m = pd.DataFrame(rows_5m, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
                     except Exception:
                         pass
 
@@ -200,32 +161,13 @@ class MarketDataManager:
             if df_5m is not None and not df_5m.empty and (df_1d is None or df_1d.empty):
                 df_1d = df_5m.copy()
 
-            if (df_1d is None or df_1d.empty) and (df_5m is None or df_5m.empty):
-                cur_p = self.current_prices.get(symbol, 1.0)
-                if cur_p <= 0: cur_p = 1.0
-                df_5m = pd.DataFrame([{
-                    'timestamp': time.time() * 1000,
-                    'open': cur_p * 0.995,
-                    'high': cur_p * 1.015,
-                    'low': cur_p * 0.985,
-                    'close': cur_p,
-                    'volume': 10000.0
-                }])
-                df_1d = pd.DataFrame([{
-                    'timestamp': time.time() * 1000 - 86400000,
-                    'open': cur_p * 0.98,
-                    'high': cur_p * 1.04,
-                    'low': cur_p * 0.96,
-                    'close': cur_p,
-                    'volume': 100000.0
-                }])
-
-            self.candles_1d[symbol] = df_1d
-            self.candles_5m[symbol] = df_5m
-            self.current_prices[symbol] = float(df_5m['close'].iloc[-1])
-            self.recalculate_levels(symbol)
-            status = "AKTIF" if symbol in self.active_symbols else "HAZIR"
-            print(f"   [{status}] {symbol} seviyeleri esitlendi. Fiyat: {self.current_prices[symbol]}")
+            if df_1d is not None and df_5m is not None and not df_1d.empty and not df_5m.empty:
+                self.candles_1d[symbol] = df_1d
+                self.candles_5m[symbol] = df_5m
+                self.current_prices[symbol] = float(df_5m['close'].iloc[-1])
+                self.recalculate_levels(symbol)
+                status = "AKTIF" if symbol in self.active_symbols else "HAZIR"
+                print(f"   [{status}] {symbol} seviyeleri esitlendi. Fiyat: {self.current_prices[symbol]}")
 
     async def toggle_symbol(self, symbol: str, is_active: bool):
         if is_active:
@@ -338,103 +280,74 @@ class MarketDataManager:
             async def fetch_and_eval(s):
                 async with sem:
                     try:
-                        ex_s = self._clean_symbol(s).replace('/', '').replace(':USDT', '')
-                        bybit_s = ex_s if ex_s.endswith('USDT') else f"{ex_s}USDT"
+                        clean_sym = self._clean_symbol(s)
+                        clean_raw = clean_sym.replace('/', '').replace(':USDT', '')
+                        fapi_sym = clean_raw if clean_raw.endswith('USDT') else f"{clean_raw}USDT"
                         raw_s = s.replace('/', '').replace(':USDT', '')
-                        mult = self._get_multiplier(s)
+                        spot_mult = self._get_spot_multiplier(s)
                         
                         cur_candle = None
                         prev_candle = None
 
-                        # 1. Bybit Linear Fallback (Primary Futures)
-                        try:
-                            url_b = f"https://api.bybit.com/v5/market/kline?category=linear&symbol={bybit_s}&interval=5&limit=4"
-                            async with session.get(url_b, timeout=aiohttp.ClientTimeout(total=4)) as res:
-                                if res.status == 200:
-                                    data_b = await res.json()
-                                    l = data_b.get('result', {}).get('list', [])
-                                    if isinstance(l, list) and len(l) >= 2:
-                                        closed_k = l[1]
-                                        prev_k = l[2] if len(l) >= 3 else closed_k
-                                        cur_candle = {
-                                            'timestamp': float(closed_k[0]),
-                                            'open': float(closed_k[1]),
-                                            'high': float(closed_k[2]),
-                                            'low': float(closed_k[3]),
-                                            'close': float(closed_k[4]),
-                                            'volume': float(closed_k[5])
-                                        }
-                                        prev_candle = {
-                                            'timestamp': float(prev_k[0]),
-                                            'open': float(prev_k[1]),
-                                            'high': float(prev_k[2]),
-                                            'low': float(prev_k[3]),
-                                            'close': float(prev_k[4]),
-                                            'volume': float(prev_k[5])
-                                        }
-                        except Exception:
-                            pass
-
-                        # 2. Binance Futures Fallback
-                        if cur_candle is None:
+                        # 1. Binance Vision
+                        for sym_attempt in [raw_s.replace('1000000', '').replace('1000', ''), raw_s]:
                             try:
-                                url_f = f"https://fapi.binance.com/fapi/v1/klines?symbol={bybit_s}&interval=5m&limit=4"
-                                async with session.get(url_f, timeout=aiohttp.ClientTimeout(total=4)) as res:
+                                url_v = f"https://data-api.binance.vision/api/v3/klines?symbol={sym_attempt}&interval=5m&limit=4"
+                                async with session.get(url_v, timeout=aiohttp.ClientTimeout(total=2)) as res:
                                     if res.status == 200:
                                         kl = await res.json()
                                         if isinstance(kl, list) and len(kl) >= 2:
                                             closed_k = kl[-2]
-                                            prev_k = kl[-3] if len(kl) >= 3 else closed_k
-                                            cur_candle = {
-                                                'timestamp': closed_k[0],
-                                                'open': float(closed_k[1]) * mult,
-                                                'high': float(closed_k[2]) * mult,
-                                                'low': float(closed_k[3]) * mult,
-                                                'close': float(closed_k[4]) * mult,
-                                                'volume': float(closed_k[5])
-                                            }
-                                            prev_candle = {
-                                                'timestamp': prev_k[0],
-                                                'open': float(prev_k[1]) * mult,
-                                                'high': float(prev_k[2]) * mult,
-                                                'low': float(prev_k[3]) * mult,
-                                                'close': float(prev_k[4]) * mult,
-                                                'volume': float(prev_k[5])
-                                            }
+                                            if (now_ms - float(closed_k[0])) <= (15 * 60 * 1000): # Fresh!
+                                                prev_k = kl[-3] if len(kl) >= 3 else closed_k
+                                                cur_candle = {
+                                                    'timestamp': closed_k[0],
+                                                    'open': float(closed_k[1]) * spot_mult,
+                                                    'high': float(closed_k[2]) * spot_mult,
+                                                    'low': float(closed_k[3]) * spot_mult,
+                                                    'close': float(closed_k[4]) * spot_mult,
+                                                    'volume': float(closed_k[5])
+                                                }
+                                                prev_candle = {
+                                                    'timestamp': prev_k[0],
+                                                    'open': float(prev_k[1]) * spot_mult,
+                                                    'high': float(prev_k[2]) * spot_mult,
+                                                    'low': float(prev_k[3]) * spot_mult,
+                                                    'close': float(prev_k[4]) * spot_mult,
+                                                    'volume': float(prev_k[5])
+                                                }
+                                                break
                             except Exception:
                                 pass
 
-                        # 3. Binance Vision Fallback (With Freshness Check)
+                        # 2. Gate.io Futures Fallback
                         if cur_candle is None:
-                            for sym_attempt in [raw_s.replace('1000000', '').replace('1000', ''), raw_s]:
-                                try:
-                                    url_v = f"https://data-api.binance.vision/api/v3/klines?symbol={sym_attempt}&interval=5m&limit=4"
-                                    async with session.get(url_v, timeout=aiohttp.ClientTimeout(total=3)) as res:
-                                        if res.status == 200:
-                                            kl = await res.json()
-                                            if isinstance(kl, list) and len(kl) >= 2:
-                                                closed_k = kl[-2]
-                                                if (now_ms - float(closed_k[0])) <= (15 * 60 * 1000): # Fresh only!
-                                                    prev_k = kl[-3] if len(kl) >= 3 else closed_k
-                                                    cur_candle = {
-                                                        'timestamp': closed_k[0],
-                                                        'open': float(closed_k[1]) * mult,
-                                                        'high': float(closed_k[2]) * mult,
-                                                        'low': float(closed_k[3]) * mult,
-                                                        'close': float(closed_k[4]) * mult,
-                                                        'volume': float(closed_k[5])
-                                                    }
-                                                    prev_candle = {
-                                                        'timestamp': prev_k[0],
-                                                        'open': float(prev_k[1]) * mult,
-                                                        'high': float(prev_k[2]) * mult,
-                                                        'low': float(prev_k[3]) * mult,
-                                                        'close': float(prev_k[4]) * mult,
-                                                        'volume': float(prev_k[5])
-                                                    }
-                                                    break
-                                except Exception:
-                                    pass
+                            try:
+                                url_g = f"https://api.gateio.ws/api/v4/futures/usdt/candlesticks?contract={clean_raw}_USDT&interval=5m&limit=4"
+                                async with session.get(url_g, timeout=aiohttp.ClientTimeout(total=3)) as res:
+                                    if res.status == 200:
+                                        d_g = await res.json()
+                                        if isinstance(d_g, list) and len(d_g) >= 2:
+                                            closed_k = d_g[-2]
+                                            prev_k = d_g[-3] if len(d_g) >= 3 else closed_k
+                                            cur_candle = {
+                                                'timestamp': float(closed_k['t']) * 1000,
+                                                'open': float(closed_k['o']),
+                                                'high': float(closed_k['h']),
+                                                'low': float(closed_k['l']),
+                                                'close': float(closed_k['c']),
+                                                'volume': float(closed_k['v'])
+                                            }
+                                            prev_candle = {
+                                                'timestamp': float(prev_k['t']) * 1000,
+                                                'open': float(prev_k['o']),
+                                                'high': float(prev_k['h']),
+                                                'low': float(prev_k['l']),
+                                                'close': float(prev_k['c']),
+                                                'volume': float(prev_k['v'])
+                                            }
+                            except Exception:
+                                pass
 
                         if cur_candle is not None and prev_candle is not None:
                             self.current_prices[s] = cur_candle['close']
@@ -513,13 +426,12 @@ class MarketDataManager:
                                         raw_s = payload.get('s', '').upper()
                                         if raw_s in symbol_map:
                                             norm_s = symbol_map[raw_s]
-                                            mult = self._get_multiplier(norm_s)
                                             new_candle = {
                                                 'timestamp': kline.get('t'),
-                                                'open': float(kline.get('o')) * mult,
-                                                'high': float(kline.get('h')) * mult,
-                                                'low': float(kline.get('l')) * mult,
-                                                'close': float(kline.get('c')) * mult,
+                                                'open': float(kline.get('o')),
+                                                'high': float(kline.get('h')),
+                                                'low': float(kline.get('l')),
+                                                'close': float(kline.get('c')),
                                                 'volume': float(kline.get('v'))
                                             }
                                             prev_candle = self.candles_5m[norm_s].iloc[-1].to_dict() if not self.candles_5m[norm_s].empty else new_candle
