@@ -240,12 +240,43 @@ class StrategyEngine:
         else:
             session_str = "🗽 NEW YORK (ABD)"
 
+        # ── 4. HACIM PATLAMA KATSAYISI (Volume Surge Ratio) ──
+        vol_surge = 1.0
+        if len(candles) >= 20:
+            vols = [c.get('volume', 0.0) for c in candles[-21:-1]]
+            avg_vol = sum(vols) / len(vols) if vols else 1.0
+            cur_vol = candles[-1].get('volume', 0.0) if candles else 1.0
+            vol_surge = round(cur_vol / avg_vol, 2) if avg_vol > 0 else 1.0
+
+        # ── 5. CONFLUENCE (ÇAKIŞMA) SKORU ──
+        c_count = min(4, max(1, len(confluence_list or [1])))
+        conf_labels = {1: "1/4 (Tekil Teyit)", 2: "2/4 (Çift Teyit)", 3: "3/4 (Güçlü Confluence)", 4: "4/4 (Maksimum Kurumsal Teyit)"}
+        conf_score_str = conf_labels.get(c_count, f"{c_count}/4")
+
+        # ── 6. ÜST ZAMAN DİLİMİ (HTF) MAKRO UYUMU ──
+        mpoc_val = snaps.get('mpoc', 0.0)
+        if side == "LONG":
+            if mpoc_val > 0 and entry_price > mpoc_val and (tepe_av == 0 or entry_price > tepe_av):
+                htf_str = "🟢 TREND YÖNÜNDE (1H Boğa Uyumu)"
+            elif mpoc_val > 0 and entry_price < mpoc_val:
+                htf_str = "🟡 DİP TEPKİSİ (Mean Reversion)"
+            else:
+                htf_str = "⚪ NÖTR MAKRO"
+        else:
+            if mpoc_val > 0 and entry_price < mpoc_val and (dip_av == 0 or entry_price < dip_av):
+                htf_str = "🔴 TREND YÖNÜNDE (1H Ayı Uyumu)"
+            elif mpoc_val > 0 and entry_price > mpoc_val:
+                htf_str = "🟠 TEPE REDDİ (Mean Reversion)"
+            else:
+                htf_str = "⚪ NÖTR MAKRO"
+
         res = await self._safe_open_position(
             symbol=symbol, side=side, entry_price=entry_price,
             reason=reason, soft_stop=soft_stop, hard_stop=hard_stop,
             tp1=tp1, tp2=tp2, trade_type=trade_type,
             snapshot_levels=snapshot_levels, setup_id=setup_id, confluence_list=confluence_list,
-            atr_pct=atr_pct, trend_regime=trend_regime, session=session_str
+            atr_pct=atr_pct, trend_regime=trend_regime, session=session_str,
+            volume_surge=vol_surge, confluence_score=conf_score_str, htf_alignment=htf_str
         )
         if isinstance(res, dict) and res.get("error") == "INSUFFICIENT_BALANCE":
             await self.notifier.notify_insufficient_balance(

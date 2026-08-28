@@ -176,7 +176,7 @@ class PaperTrader:
         pos["max_mfe_roe"] = round(max(pos.get("max_mfe_roe", 0.0), mfe_roe), 2)
         pos["max_mae_roe"] = round(max(pos.get("max_mae_roe", 0.0), mae_roe), 2)
 
-    def open_position(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None, atr_pct: float = 1.0, trend_regime: str = "YATAY", session: str = "LONDRA"):
+    def open_position(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None, atr_pct: float = 1.0, trend_regime: str = "YATAY", session: str = "LONDRA", volume_surge: float = 1.0, confluence_score: str = "2/4", htf_alignment: str = "TREND YÖNÜNDE"):
         if symbol in self.open_positions:
             return None
 
@@ -243,6 +243,9 @@ class PaperTrader:
             "trend_regime": trend_regime,
             "session": session,
             "tp1_hit": False,
+            "volume_surge": float(volume_surge),
+            "confluence_score": confluence_score,
+            "htf_alignment": htf_alignment,
             "peak_price": float(entry_price),
             "trough_price": float(entry_price),
             "max_mfe_roe": 0.0,

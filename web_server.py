@@ -3048,10 +3048,11 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                             <b>• Giriş Gerekçesi / Formasyon:</b> <span style="color:#ffffff;">${item.reason}</span><br>
                             <b>• Kapanış Tetikleyicisi:</b> <span style="color:#fbc531;">${item.close_reason}</span><br>
                             <b>• Giriş Anı Trend Rejimi:</b> <span style="color:#a5f3fc; font-weight:700;">${item.trend_regime || 'Belirleniyor'}</span> | <b>Volatilite (ATR):</b> <span style="color:#fde047; font-weight:700;">%${item.atr_pct !== undefined ? item.atr_pct : '1.2'}</span><br>
-                            <b>• Piyasa Seansı:</b> <span style="color:#e2e8f0;">${item.session || 'Küresel Seans'}</span> | <b>Kademeli TP1 Durumu:</b> <span style="color:#86efac; font-weight:700;">${item.tp1_hit || (item.id.includes('TP1') ? 'EVET (%50 Kilitlendi)' : 'HAYIR')}</span><br>
+                            <b>• Hacim Patlama Katsayısı:</b> <span style="color:#38bdf8; font-weight:700;">${item.volume_surge || '1.0'}x Ort. Hacim</span> | <b>Confluence Güç Skoru:</b> <span style="color:#c084fc; font-weight:700;">${item.confluence_score || '2/4'}</span><br>
+                            <b>• Makro Uyum (1H/4H):</b> <span style="color:#fcd34d; font-weight:700;">${item.htf_alignment || 'Nötr'}</span> | <b>Piyasa Seansı:</b> <span style="color:#e2e8f0;">${item.session || 'Küresel Seans'}</span><br>
+                            <b>• Kademeli TP1 Durumu:</b> <span style="color:#86efac; font-weight:700;">${item.tp1_hit || (item.id.includes('TP1') ? 'EVET (%50 Kilitlendi)' : 'HAYIR')}</span> | <b>Çıkış Verimliliği:</b> %${eff.toFixed(1)}<br>
                             <b>• Giriş / Çıkış Fiyatı:</b> $${item.entry_price} ➔ $${item.exit_price} | <b>Komisyon:</b> $${item.fees.toFixed(4)}<br>
-                            <b>• Planlanan Hedef (TP1):</b> ${item.tp1 ? '$' + item.tp1 : 'Yok'} | <b>Planlanan Stop:</b> ${item.soft_stop ? '$' + item.soft_stop : 'Yok'}<br>
-                            <b>• Çıkış Verimliliği:</b> %${eff.toFixed(1)} (Zirve kârın cebe aktarılma başarısı)
+                            <b>• Planlanan Hedef (TP1):</b> ${item.tp1 ? '$' + item.tp1 : 'Yok'} | <b>Planlanan Stop:</b> ${item.soft_stop ? '$' + item.soft_stop : 'Yok'}
                         </div>
                     </div>
 
