@@ -50,6 +50,16 @@ class MarketDataManager:
         }
         return multiplier_coins.get(clean, clean)
 
+    def _get_multiplier(self, symbol: str) -> float:
+        clean = symbol.replace('/', '').replace(':USDT', '')
+        multiplier_coins = ['1000PEPE', '1000BONK', '1000SHIB', '1000FLOKI', '1000SATS', '1000RATS', '1000LUNC', '1000XEC', '1000CHEEMS', '1000WHY', '1000CAT', '1000NEIRO', 'PEPE', 'BONK', 'SHIB', 'FLOKI', 'SATS', 'RATS', 'LUNC', 'XEC', 'CHEEMS', 'WHY', 'CAT', 'NEIRO']
+        if any(k in clean for k in multiplier_coins):
+            if '1000' not in symbol:
+                return 0.001
+        elif 'MOG' in clean and '1000000' not in symbol:
+            return 0.000001
+        return 1.0
+
     async def fetch_single_symbol(self, symbol: str):
         async with self.semaphore:
             clean_sym = self._clean_symbol(symbol)
@@ -57,18 +67,13 @@ class MarketDataManager:
             raw_spot = symbol.replace('/', '').replace(':USDT', '')
             spot_clean = raw_spot.replace('1000000', '').replace('1000', '')
 
-            mult = 1.0
-            if '1000PEPE' in clean_raw or '1000BONK' in clean_raw or '1000SHIB' in clean_raw or '1000FLOKI' in clean_raw or '1000SATS' in clean_raw or '1000RATS' in clean_raw or '1000LUNC' in clean_raw or '1000XEC' in clean_raw or '1000CHEEMS' in clean_raw or '1000WHY' in clean_raw or '1000CAT' in clean_raw or '1000NEIRO' in clean_raw:
-                mult = 1000.0
-            elif '1000000MOG' in clean_raw:
-                mult = 1000000.0
-
+            mult = self._get_multiplier(symbol)
             df_1d = None
             df_5m = None
             applied_mult = 1.0
 
             async with aiohttp.ClientSession() as session:
-                # 1. Binance Vision (Global unblocked for Spot/Major pairs)
+                # 1. Binance Vision
                 vision_urls = [
                     (f"https://data-api.binance.vision/api/v3/klines?symbol={spot_clean}", mult),
                     (f"https://data-api.binance.vision/api/v3/klines?symbol={raw_spot}", mult)
@@ -94,57 +99,42 @@ class MarketDataManager:
                                         df_5m[col] = df_5m[col].astype(float)
                         
                         if df_1d is not None and df_5m is not None and not df_1d.empty and not df_5m.empty:
-                            applied_mult = m_val
+                            applied_mult = 1.0 / m_val
                             break
                     except Exception:
-                        continue
-
-                # 2. Bybit Linear Futures (Global unblocked for all futures-exclusive coins like APR, MAGMA, FARTCOIN, HYPE)
-                if df_1d is None or df_5m is None or df_1d.empty or df_5m.empty:
-                    try:
-                        bybit_sym = clean_raw
-                        url_1d_b = f"https://api.bybit.com/v5/market/kline?category=linear&symbol={bybit_sym}&interval=D&limit=30"
-                        url_5m_b = f"https://api.bybit.com/v5/market/kline?category=linear&symbol={bybit_sym}&interval=5&limit=200"
-                        
-                        async with session.get(url_1d_b, timeout=aiohttp.ClientTimeout(total=3)) as r1:
-                            if r1.status == 200:
-                                res1 = await r1.json()
-                                l1 = res1.get('result', {}).get('list', [])
-                                if l1:
-                                    rows_1d = [[float(x[0]), float(x[1]), float(x[2]), float(x[3]), float(x[4]), float(x[5])] for x in reversed(l1)]
-                                    df_1d = pd.DataFrame(rows_1d, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-                        
-                        async with session.get(url_5m_b, timeout=aiohttp.ClientTimeout(total=3)) as r2:
-                            if r2.status == 200:
-                                res2 = await r2.json()
-                                l2 = res2.get('result', {}).get('list', [])
-                                if l2:
-                                    rows_5m = [[float(x[0]), float(x[1]), float(x[2]), float(x[3]), float(x[4]), float(x[5])] for x in reversed(l2)]
-                                    df_5m = pd.DataFrame(rows_5m, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-                    except Exception:
                         pass
 
-                # 3. Direct Binance Futures fallback
+                # 2. Binance Futures REST API Fallback
                 if df_1d is None or df_5m is None or df_1d.empty or df_5m.empty:
-                    try:
-                        url_1d = f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_raw}&interval=1d&limit=30"
-                        url_5m = f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_raw}&interval=5m&limit=500"
-                        async with session.get(url_1d, timeout=aiohttp.ClientTimeout(total=3)) as r1:
-                            if r1.status == 200:
-                                d1 = await r1.json()
-                                if isinstance(d1, list) and len(d1) > 0:
-                                    df_1d = pd.DataFrame(d1, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'qav', 'num_trades', 'taker_base', 'taker_quote', 'ignore'])
-                                    for col in ['timestamp', 'open', 'high', 'low', 'close', 'volume']:
-                                        df_1d[col] = df_1d[col].astype(float)
-                        async with session.get(url_5m, timeout=aiohttp.ClientTimeout(total=3)) as r2:
-                            if r2.status == 200:
-                                d2 = await r2.json()
-                                if isinstance(d2, list) and len(d2) > 0:
-                                    df_5m = pd.DataFrame(d2, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'qav', 'num_trades', 'taker_base', 'taker_quote', 'ignore'])
-                                    for col in ['timestamp', 'open', 'high', 'low', 'close', 'volume']:
-                                        df_5m[col] = df_5m[col].astype(float)
-                    except Exception:
-                        pass
+                    fut_urls = [
+                        (f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_raw}", mult),
+                        (f"https://fapi.binance.com/fapi/v1/klines?symbol={raw_spot}", mult)
+                    ]
+                    for base_url, m_val in fut_urls:
+                        try:
+                            url_1d = f"{base_url}&interval=1d&limit=30"
+                            url_5m = f"{base_url}&interval=5m&limit=500"
+                            async with session.get(url_1d, timeout=aiohttp.ClientTimeout(total=3)) as r1:
+                                if r1.status == 200:
+                                    d1 = await r1.json()
+                                    if isinstance(d1, list) and len(d1) > 0:
+                                        df_1d = pd.DataFrame(d1, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'qav', 'num_trades', 'taker_base', 'taker_quote', 'ignore'])
+                                        for col in ['timestamp', 'open', 'high', 'low', 'close', 'volume']:
+                                            df_1d[col] = df_1d[col].astype(float)
+                            
+                            async with session.get(url_5m, timeout=aiohttp.ClientTimeout(total=3)) as r2:
+                                if r2.status == 200:
+                                    d2 = await r2.json()
+                                    if isinstance(d2, list) and len(d2) > 0:
+                                        df_5m = pd.DataFrame(d2, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'qav', 'num_trades', 'taker_base', 'taker_quote', 'ignore'])
+                                        for col in ['timestamp', 'open', 'high', 'low', 'close', 'volume']:
+                                            df_5m[col] = df_5m[col].astype(float)
+                            
+                            if df_1d is not None and df_5m is not None and not df_1d.empty and not df_5m.empty:
+                                applied_mult = 1.0 / m_val
+                                break
+                        except Exception:
+                            pass
 
             if df_1d is not None and df_5m is not None and not df_1d.empty and not df_5m.empty:
                 if applied_mult != 1.0:
@@ -160,22 +150,16 @@ class MarketDataManager:
             else:
                 cur_p = self.current_prices.get(symbol, 0.0)
                 if cur_p > 0:
-                    import time as tm
-                    h = cur_p * 1.03
-                    l = cur_p * 0.97
-                    c = cur_p
                     df_dummy = pd.DataFrame([{
-                        'timestamp': tm.time() * 1000,
+                        'timestamp': time.time() * 1000,
                         'open': cur_p * 0.99,
-                        'high': h,
-                        'low': l,
-                        'close': c,
+                        'high': cur_p * 1.03,
+                        'low': cur_p * 0.97,
+                        'close': cur_p,
                         'volume': 1000.0
                     }])
                     self.candles_5m[symbol] = df_dummy
                     self.recalculate_levels(symbol)
-                    status = "AKTIF" if symbol in self.active_symbols else "HAZIR"
-                    print(f"   [{status}] {symbol} anlik fiyat ile esitlendi. Fiyat: {cur_p}")
 
     async def toggle_symbol(self, symbol: str, is_active: bool):
         if is_active:
@@ -197,29 +181,6 @@ class MarketDataManager:
 
     async def _fetch_missing_symbols(self, symbols):
         await asyncio.gather(*(self.fetch_single_symbol(s) for s in symbols))
-
-    def _ensure_instant_levels(self, symbol: str, price: float):
-        if price <= 0:
-            return
-        df_5m = self.candles_5m.get(symbol, pd.DataFrame())
-        if df_5m.empty:
-            import time as tm
-            ts = tm.time() * 1000
-            rows = []
-            for i in range(50):
-                drift = (i - 25) * 0.0003 * price
-                rows.append({
-                    'timestamp': ts - (50 - i) * 300000,
-                    'open': price * 0.995 + drift,
-                    'high': price * 1.015 + drift,
-                    'low': price * 0.985 + drift,
-                    'close': price + drift,
-                    'volume': 1000.0
-                })
-            df_5m = pd.DataFrame(rows)
-            self.candles_5m[symbol] = df_5m
-
-        self.recalculate_levels(symbol)
 
     def recalculate_levels(self, symbol):
         df_1d = self.candles_1d.get(symbol, pd.DataFrame())
@@ -285,8 +246,51 @@ class MarketDataManager:
             "below_nval": float(naked_lines.get("below_nval", 0.0))
         }
 
+    async def poll_all_candles_once(self):
+        """100 Paritenin son kapanmis 5M mumlarini aninda REST uzerinden paralel tara ve stratejiye ilet."""
+        sem = asyncio.Semaphore(20)
+        async with aiohttp.ClientSession() as session:
+            async def fetch_and_eval(s):
+                async with sem:
+                    try:
+                        ex_s = self._clean_symbol(s).replace('/', '').replace(':USDT', '')
+                        url = f"https://fapi.binance.com/fapi/v1/klines?symbol={ex_s}&interval=5m&limit=3"
+                        async with session.get(url, timeout=4) as res:
+                            if res.status == 200:
+                                kl = await res.json()
+                                if len(kl) >= 2:
+                                    closed_k = kl[-2]
+                                    mult = self._get_multiplier(s)
+                                    cur_candle = {
+                                        'timestamp': closed_k[0],
+                                        'open': float(closed_k[1]) * mult,
+                                        'high': float(closed_k[2]) * mult,
+                                        'low': float(closed_k[3]) * mult,
+                                        'close': float(closed_k[4]) * mult,
+                                        'volume': float(closed_k[5])
+                                    }
+                                    prev_k = kl[-3] if len(kl) >= 3 else closed_k
+                                    prev_candle = {
+                                        'timestamp': prev_k[0],
+                                        'open': float(prev_k[1]) * mult,
+                                        'high': float(prev_k[2]) * mult,
+                                        'low': float(prev_k[3]) * mult,
+                                        'close': float(prev_k[4]) * mult,
+                                        'volume': float(prev_k[5])
+                                    }
+                                    if s in self.candles_5m and not self.candles_5m[s].empty:
+                                        last_ts = self.candles_5m[s]['timestamp'].iloc[-1]
+                                        if cur_candle['timestamp'] > last_ts:
+                                            self.candles_5m[s] = pd.concat([self.candles_5m[s], pd.DataFrame([cur_candle])], ignore_index=True)
+                                            self.recalculate_levels(s)
+                                    if self.on_candle_close_callback and s in self.active_symbols:
+                                        await self.on_candle_close_callback(s, cur_candle, prev_candle)
+                    except Exception:
+                        pass
+
+            await asyncio.gather(*(fetch_and_eval(s) for s in list(self.active_symbols)))
+
     async def start_websocket(self):
-        # 1. Hizli sembol eslestirme sozlugu olustur
         symbol_map = {}
         for s in self.all_symbols:
             clean = self._clean_symbol(s).replace('/', '').replace(':USDT', '').upper()
@@ -349,12 +353,13 @@ class MarketDataManager:
                                         raw_s = payload.get('s', '').upper()
                                         if raw_s in symbol_map:
                                             norm_s = symbol_map[raw_s]
+                                            mult = self._get_multiplier(norm_s)
                                             new_candle = {
                                                 'timestamp': kline.get('t'),
-                                                'open': float(kline.get('o')),
-                                                'high': float(kline.get('h')),
-                                                'low': float(kline.get('l')),
-                                                'close': float(kline.get('c')),
+                                                'open': float(kline.get('o')) * mult,
+                                                'high': float(kline.get('h')) * mult,
+                                                'low': float(kline.get('l')) * mult,
+                                                'close': float(kline.get('c')) * mult,
                                                 'volume': float(kline.get('v'))
                                             }
                                             prev_candle = self.candles_5m[norm_s].iloc[-1].to_dict() if not self.candles_5m[norm_s].empty else new_candle
@@ -362,10 +367,21 @@ class MarketDataManager:
                                             self.recalculate_levels(norm_s)
                                             if self.on_candle_close_callback and norm_s in self.active_symbols:
                                                 await self.on_candle_close_callback(norm_s, new_candle, prev_candle)
+                                elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
+                                    break
+                except Exception:
+                    await asyncio.sleep(2)
+
         # Worker 3: 5M Periyodik REST Mum Senkronizasyonu (Ultra Hizli Paralel 100 Parite Taramasi)
         async def candle_poller_worker():
             last_scanned_slot = -1
-            sem = asyncio.Semaphore(20)
+            # Sunucu baslar baslamaz aninda ilk taramayi yap
+            try:
+                print(">> [İLK BAŞLANGIÇ TARAMASI] 100 Parite için son kapanmış 5M mumlar taranıyor...")
+                await self.poll_all_candles_once()
+            except Exception as e:
+                print(f">> [ILK TARAMA HATA]: {e}")
+
             while True:
                 try:
                     now_sec = time.time()
@@ -374,41 +390,7 @@ class MarketDataManager:
                         last_scanned_slot = current_5m_slot
                         now_str = datetime.now().strftime('%H:%M:%S')
                         print(f">> [5M MUM TARAMASI] {now_str} — 100 Paritede yeni 5M mum kapandi, strateji kontrolleri baslatiliyor...")
-                        async with aiohttp.ClientSession() as session:
-                            async def fetch_and_eval(s):
-                                async with sem:
-                                    try:
-                                        ex_s = self._clean_symbol(s).replace('/', '').replace(':USDT', '')
-                                        url = f"https://fapi.binance.com/fapi/v1/klines?symbol={ex_s}&interval=5m&limit=3"
-                                        async with session.get(url, timeout=4) as res:
-                                            if res.status == 200:
-                                                kl = await res.json()
-                                                if len(kl) >= 2:
-                                                    closed_k = kl[-2]
-                                                    mult = self.applied_multipliers.get(s, 1.0)
-                                                    cur_candle = {
-                                                        'timestamp': closed_k[0],
-                                                        'open': float(closed_k[1]) * mult,
-                                                        'high': float(closed_k[2]) * mult,
-                                                        'low': float(closed_k[3]) * mult,
-                                                        'close': float(closed_k[4]) * mult,
-                                                        'volume': float(closed_k[5])
-                                                    }
-                                                    prev_k = kl[-3] if len(kl) >= 3 else closed_k
-                                                    prev_candle = {
-                                                        'timestamp': prev_k[0],
-                                                        'open': float(prev_k[1]) * mult,
-                                                        'high': float(prev_k[2]) * mult,
-                                                        'low': float(prev_k[3]) * mult,
-                                                        'close': float(prev_k[4]) * mult,
-                                                        'volume': float(prev_k[5])
-                                                    }
-                                                    if self.on_candle_close_callback:
-                                                        await self.on_candle_close_callback(s, cur_candle, prev_candle)
-                                    except Exception:
-                                        pass
-
-                            await asyncio.gather(*(fetch_and_eval(s) for s in list(self.active_symbols)))
+                        await self.poll_all_candles_once()
                     await asyncio.sleep(4)
                 except Exception as e:
                     print(f">> [MUM TARAYICI HATA]: {e}")

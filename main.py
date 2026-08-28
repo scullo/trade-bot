@@ -43,8 +43,12 @@ async def main():
     await start_server(market_data, trader_manager, notifier, live_trader=live_trader)
     await init_task
 
-    # Sistem Hazır — İşlemler tamamen canlı 5M mum kapanışlarıyla doğal olarak açılacaktır
-    print(">> [SİSTEM HAZIR] 100 Parite seviyeleri hesaplandı. Canlı 5M mum kapanışları ve pusu kurulumları dinleniyor...")
+    # Sistem Hazır — İlk 5M Mum Taramasını Yap
+    print(">> [SİSTEM HAZIR] 100 Parite seviyeleri hesaplandı. İlk 5M mum taraması başlatılıyor...")
+    try:
+        await market_data.poll_all_candles_once()
+    except Exception as e:
+        print(f">> [ILK TARAMA UYARI]: {e}")
 
     # Saatlik otomatik Telegram Kasa & Portföy Raporlayıcıyı Başlat
     asyncio.create_task(notifier.start_hourly_scheduler(trader_manager, initial_balance=INITIAL_BALANCE))
