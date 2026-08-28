@@ -28,25 +28,34 @@ class TelegramNotifier:
         except Exception as e:
             print(f">> Telegram gonderim hatasi: {e}")
 
-    async def send_photo(self, photo_bytes: io.BytesIO, caption: str):
+    async def send_photo(self, photo_data, caption: str):
         if not self.token or not self.chat_id:
             return
-        if not photo_bytes:
+        if not photo_data:
             await self.send_message(caption)
             return
 
         try:
-            photo_bytes.seek(0)
+            if isinstance(photo_data, bytes):
+                buf = io.BytesIO(photo_data)
+            elif isinstance(photo_data, io.BytesIO):
+                buf = photo_data
+                buf.seek(0)
+            else:
+                await self.send_message(caption)
+                return
+
             data = aiohttp.FormData()
             data.add_field('chat_id', str(self.chat_id))
             data.add_field('caption', caption[:1024])
             data.add_field('parse_mode', 'HTML')
-            data.add_field('photo', photo_bytes, filename='trade_chart.png', content_type='image/png')
+            data.add_field('photo', buf, filename='trade_chart.png', content_type='image/png')
 
             async with aiohttp.ClientSession() as session:
-                async with session.post(self.photo_url, data=data, timeout=12) as resp:
+                async with session.post(self.photo_url, data=data, timeout=15) as resp:
                     if resp.status != 200:
-                        print(f">> Telegram sendPhoto Hatasi (HTTP {resp.status}), metin olarak iletiliyor...")
+                        err_text = await resp.text()
+                        print(f">> Telegram sendPhoto Hatasi (HTTP {resp.status}): {err_text}, metin olarak iletiliyor...")
                         await self.send_message(caption)
         except Exception as e:
             print(f">> Telegram sendPhoto istisnasi: {e}, metin gonderiliyor...")
