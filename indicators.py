@@ -127,66 +127,113 @@ def calculate_volume_profile(df_candles: pd.DataFrame, num_rows: int = 24, value
 
 def get_tradingview_naked_lines(df_5m: pd.DataFrame, current_price: float) -> dict:
     """
-    TradingView Gunluk VP ile 1:1 ayni: Her tamamlanan gunun (00:00 UTC) VP'sini cikarir,
-    sonraki barlarda test edilmemis (naked) POC, VAH ve VAL seviyelerini tespit eder.
+    TradingView Hacim Profili (Volume Profile) & Naked Lines:
+    1. Multi-Session (12h/24h) test edilmemis (unmitigated) POC'leri tespit eder.
+    2. Fiyatın ustundeki ve altindaki en yuksek hacim dugumlerini (HVN / Naked POC) ve
+       Deger Alani uclarini (Naked VAH / Naked VAL) hesaplar.
     """
-    if df_5m.empty or len(df_5m) < 288:
-        return {"above_npoc": 0.0, "below_npoc": 0.0, "above_nvah": 0.0, "below_nval": 0.0}
+    if df_5m.empty or len(df_5m) < 10:
+        return {"above_npoc": 0.0, "below_npoc": 0.0, "above_nvah": 0.0, "below_nvah": 0.0, "above_nval": 0.0, "below_nval": 0.0}
 
     df = df_5m.copy()
-    df['dt'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True)
-    df['date'] = df['dt'].dt.date
+    min_p = float(df['low'].min())
+    max_p = float(df['high'].max())
     
-    unique_dates = df['date'].unique()
-    # Bugun haric gecmis tamamlanmis gunler
-    past_dates = unique_dates[:-1] if len(unique_dates) > 1 else unique_dates
-    
+    if max_p <= min_p:
+        return {"above_npoc": 0.0, "below_npoc": 0.0, "above_nvah": 0.0, "below_nvah": 0.0, "above_nval": 0.0, "below_nval": 0.0}
+
+    # 1. Multi-Session test edilmemis (unmitigated) POC tespiti
+    chunk_size = 144
     unmitigated_pocs = []
-    unmitigated_vahs = []
-    unmitigated_vals = []
-
-    for d in past_dates:
-        day_candles = df[df['date'] == d]
-        if len(day_candles) < 50:
+    total_candles = len(df)
+    
+    for start_i in range(0, max(1, total_candles - chunk_size), chunk_size):
+        end_i = min(total_candles, start_i + chunk_size)
+        chunk = df.iloc[start_i:end_i]
+        if len(chunk) < 20:
             continue
+        
+        c_min = chunk['low'].min()
+        c_max = chunk['high'].max()
+        c_bins = 30
+        c_step = (c_max - c_min) / c_bins if c_max > c_min else 1.0
+        c_vols = np.zeros(c_bins)
+        
+        for _, r in chunk.iterrows():
+            idx = max(0, min(c_bins - 1, int((r['close'] - c_min) / c_step)))
+            c_vols[idx] += r['volume']
             
-        vp = calculate_volume_profile(day_candles, num_rows=24, value_area_pct=0.68)
-        poc = vp["POC"]
-        vah = vp["VAH"]
-        val = vp["VAL"]
+        c_poc_idx = np.argmax(c_vols)
+        c_poc = c_min + (c_poc_idx + 0.5) * c_step
         
-        day_end_time = day_candles['timestamp'].iloc[-1]
-        future_candles = df[df['timestamp'] > day_end_time]
-        
-        if future_candles.empty:
-            unmitigated_pocs.append(poc)
-            unmitigated_vahs.append(vah)
-            unmitigated_vals.append(val)
+        if end_i < total_candles:
+            future = df.iloc[end_i:]
+            if not ((future['low'] <= c_poc) & (future['high'] >= c_poc)).any():
+                unmitigated_pocs.append(c_poc)
         else:
-            # POC test edildi mi?
-            if not ((future_candles['low'] <= poc) & (future_candles['high'] >= poc)).any():
-                unmitigated_pocs.append(poc)
-            # VAH test edildi mi?
-            if not ((future_candles['low'] <= vah) & (future_candles['high'] >= vah)).any():
-                unmitigated_vahs.append(vah)
-            # VAL test edildi mi?
-            if not ((future_candles['low'] <= val) & (future_candles['high'] >= val)).any():
-                unmitigated_vals.append(val)
+            unmitigated_pocs.append(c_poc)
 
+    # 2. Genel Hacim Profili ve HVN Düğümleri
+    num_bins = 50
+    step = (max_p - min_p) / num_bins
+    bin_vols = np.zeros(num_bins)
+    
+    for _, r in df.iterrows():
+        idx_s = max(0, min(num_bins - 1, int((r['low'] - min_p) / step)))
+        idx_e = max(0, min(num_bins - 1, int((r['high'] - min_p) / step)))
+        cnt = max(1, idx_e - idx_s + 1)
+        for b in range(idx_s, idx_e + 1):
+            bin_vols[b] += r['volume'] / cnt
+            
+    bin_centers = np.array([min_p + (b + 0.5) * step for b in range(num_bins)])
+    poc_idx = np.argmax(bin_vols)
+    main_poc = float(bin_centers[poc_idx])
+    
+    tot_vol = np.sum(bin_vols)
+    va_target = tot_vol * 0.68
+    cur_va = bin_vols[poc_idx]
+    up_i, dn_i = poc_idx, poc_idx
+    
+    while cur_va < va_target:
+        v_up = bin_vols[up_i + 1] if up_i + 1 < num_bins else 0
+        v_dn = bin_vols[dn_i - 1] if dn_i - 1 >= 0 else 0
+        if v_up == 0 and v_dn == 0:
+            break
+        if v_up >= v_dn and up_i + 1 < num_bins:
+            up_i += 1
+            cur_va += v_up
+        elif dn_i - 1 >= 0:
+            dn_i -= 1
+            cur_va += v_dn
+        else:
+            break
+            
+    vah = float(bin_centers[up_i])
+    val = float(bin_centers[dn_i])
+    
+    hvn_peaks = []
+    mean_v = np.mean(bin_vols)
+    for i in range(1, num_bins - 1):
+        if bin_vols[i] > bin_vols[i-1] and bin_vols[i] > bin_vols[i+1] and bin_vols[i] > mean_v * 0.7:
+            hvn_peaks.append(float(bin_centers[i]))
+            
     above_pocs = [p for p in unmitigated_pocs if p > current_price]
     below_pocs = [p for p in unmitigated_pocs if p < current_price]
-
-    above_vahs = [v for v in unmitigated_vahs if v > current_price]
-    below_vahs = [v for v in unmitigated_vahs if v < current_price]
-
-    above_vals = [v for v in unmitigated_vals if v > current_price]
-    below_vals = [v for v in unmitigated_vals if v < current_price]
-
+    
+    above_hvns = [p for p in hvn_peaks if p > current_price]
+    below_hvns = [p for p in hvn_peaks if p < current_price]
+    
+    above_npoc = min(above_pocs) if above_pocs else (min(above_hvns) if above_hvns else (main_poc if main_poc > current_price else max_p * 0.995))
+    below_npoc = max(below_pocs) if below_pocs else (max(below_hvns) if below_hvns else (main_poc if main_poc < current_price else min_p * 1.005))
+    
+    above_nvah = vah if vah > current_price else (max_p * 0.99)
+    below_nval = val if val < current_price else (min_p * 1.01)
+    
     return {
-        "above_npoc": min(above_pocs) if above_pocs else 0.0,
-        "below_npoc": max(below_pocs) if below_pocs else 0.0,
-        "above_nvah": min(above_vahs) if above_vahs else 0.0,
-        "below_nvah": max(below_vahs) if below_vahs else 0.0,
-        "above_nval": min(above_vals) if above_vals else 0.0,
-        "below_nval": max(below_vals) if below_vals else 0.0
+        "above_npoc": float(above_npoc),
+        "below_npoc": float(below_npoc),
+        "above_nvah": float(above_nvah),
+        "below_nvah": float(vah if vah < current_price else 0.0),
+        "above_nval": float(val if val > current_price else 0.0),
+        "below_nval": float(below_nval)
     }
