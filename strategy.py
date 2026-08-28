@@ -453,34 +453,44 @@ class StrategyEngine:
                 return
 
         # ─────────────────────────────────────────────────────────────────
-        # SETUP 3: S3 DESTEK TEPKISI LONG (Scalp — Hedef Pivot P)
+        # SETUP 3: S3 DESTEK TEPKISI LONG (Scalp — Kademeli Kilit Hedef)
         # Mum S3'e dokunur ama ustunde kapatir, Pivot P altinda
         # ─────────────────────────────────────────────────────────────────
         if current_candle['low'] <= s3 and close_price > s3 and close_price < p:
             buffer = (s3 - s4) * BUFFER_RATIO
             soft_stop = s3 - buffer
             hard_stop = s4
+            up_targets = [lvl for lvl in [dip_avwap, tepe_avwap, mpoc, p] if lvl and lvl > close_price * 1.004]
+            up_targets.sort()
+            tp1 = up_targets[0] if up_targets else p
+            tp2 = p if p > tp1 else (mpoc if mpoc > tp1 else None)
+            target_name = "AVWAP" if (tp1 in [dip_avwap, tepe_avwap]) else ("mPOC" if tp1 == mpoc else "Pivot P")
             await self._handle_open(
                 symbol=symbol, side="LONG", entry_price=close_price,
-                reason="S3 Destek Sekmesi (Hedef Pivot P)",
+                reason=f"S3 Destek Sekmesi (İlk Hedef {target_name}: ${tp1:.4f})",
                 soft_stop=soft_stop, hard_stop=hard_stop,
-                tp1=p, trade_type="SCALP"
+                tp1=tp1, tp2=tp2, trade_type="SCALP"
             )
             return
 
         # ─────────────────────────────────────────────────────────────────
-        # SETUP 4: R3 DIRENC TEPKISI SHORT (Scalp — Hedef Pivot P)
+        # SETUP 4: R3 DIRENC TEPKISI SHORT (Scalp — Kademeli Kilit Hedef)
         # Mum R3'e dokunur ama altinda kapatir, Pivot P ustunde
         # ─────────────────────────────────────────────────────────────────
         if current_candle['high'] >= r3 and close_price < r3 and close_price > p:
             buffer = (r4 - r3) * BUFFER_RATIO
             soft_stop = r3 + buffer
             hard_stop = r4
+            down_targets = [lvl for lvl in [tepe_avwap, dip_avwap, mpoc, p] if lvl and lvl < close_price * 0.996]
+            down_targets.sort(reverse=True)
+            tp1 = down_targets[0] if down_targets else p
+            tp2 = p if p < tp1 else (mpoc if (mpoc > 0 and mpoc < tp1) else None)
+            target_name = "AVWAP" if (tp1 in [tepe_avwap, dip_avwap]) else ("mPOC" if tp1 == mpoc else "Pivot P")
             await self._handle_open(
                 symbol=symbol, side="SHORT", entry_price=close_price,
-                reason="R3 Direnc Tepkisi (Hedef Pivot P)",
+                reason=f"R3 Direnc Tepkisi (İlk Hedef {target_name}: ${tp1:.4f})",
                 soft_stop=soft_stop, hard_stop=hard_stop,
-                tp1=p, trade_type="SCALP"
+                tp1=tp1, tp2=tp2, trade_type="SCALP"
             )
             return
 
@@ -553,41 +563,61 @@ class StrategyEngine:
             return
 
         # ─────────────────────────────────────────────────────────────────
-        # SETUP 9: AŞAĞI nPOC / nVAL LİKİDİTE SÜPÜRMESİ LONG (Naked Support Bounce) [YENİ]
+        # SETUP 9: AŞAĞI nPOC / nVAL LİKİDİTE SÜPÜRMESİ LONG (Smart Multi-Target)
         # Fiyat önceki günlerin dokunulmamış POC/VAL seviyesine inip fitil bırakır ve üstünde kapatır
         # ─────────────────────────────────────────────────────────────────
         support_npoc = below_npoc if (below_npoc and below_npoc > 0) else below_nval
         if support_npoc and support_npoc > 0 and current_candle['low'] <= support_npoc and close_price > support_npoc and close_price < p:
-            is_confluence = abs(s3 - support_npoc) / support_npoc <= 0.005 if s3 > 0 else False
-            reason_text = "S3 + nPOC Çift Destek Sekmesi (Hedef Pivot P)" if is_confluence else f"Aşağı nPOC (${support_npoc:.4f}) Likidite Sekmesi (Hedef Pivot P)"
             buffer = (p - support_npoc) * BUFFER_RATIO if (p > support_npoc) else (support_npoc * 0.004)
             soft_stop = support_npoc - buffer
             hard_stop = s4 if (s4 > 0 and s4 < support_npoc) else (support_npoc - buffer * 2)
-            tp_target = p if p > close_price else (mpoc if (mpoc > close_price) else close_price * 1.01)
+
+            # Smart Multi-Target: En yakin ilk direnci TP1, nihai hedefi TP2 yap
+            up_targets = [
+                lvl for lvl in [mval, s4, dip_avwap, tepe_avwap, mpoc, s3, p, above_npoc, r3, r4, r5]
+                if lvl and lvl > close_price * 1.004
+            ]
+            up_targets.sort()
+            tp1_target = up_targets[0] if up_targets else (p if p > close_price else close_price * 1.01)
+            tp2_target = up_targets[-1] if len(up_targets) > 1 else (p if p > tp1_target else None)
+
+            target_name = "mVAL" if tp1_target == mval else ("S4" if tp1_target == s4 else ("AVWAP" if (tp1_target in [dip_avwap, tepe_avwap]) else ("mPOC" if tp1_target == mpoc else ("S3" if tp1_target == s3 else "Pivot P"))))
+            reason_text = f"Aşağı nPOC (${support_npoc:.4f}) Sekmesi (İlk Hedef {target_name}: ${tp1_target:.4f})"
+
             await self._handle_open(
                 symbol=symbol, side="LONG", entry_price=close_price,
                 reason=reason_text,
                 soft_stop=soft_stop, hard_stop=hard_stop,
-                tp1=tp_target, trade_type="SCALP"
+                tp1=tp1_target, tp2=tp2_target, trade_type="SCALP"
             )
             return
 
         # ─────────────────────────────────────────────────────────────────
-        # SETUP 10: YUKARI nPOC / nVAH LİKİDİTE REDDİ SHORT (Naked Resistance Rejection) [YENİ]
+        # SETUP 10: YUKARI nPOC / nVAH LİKİDİTE REDDİ SHORT (Smart Multi-Target)
         # Fiyat önceki günlerin dokunulmamış POC/VAH seviyesine iğne atıp altında kapatır
         # ─────────────────────────────────────────────────────────────────
         resist_npoc = above_npoc if (above_npoc and above_npoc > 0) else above_nvah
         if resist_npoc and resist_npoc > 0 and current_candle['high'] >= resist_npoc and close_price < resist_npoc and close_price > p:
-            is_confluence = abs(r3 - resist_npoc) / resist_npoc <= 0.005 if r3 > 0 else False
-            reason_text = "R3 + nPOC Çift Direnç Reddi (Hedef Pivot P)" if is_confluence else f"Yukarı nPOC (${resist_npoc:.4f}) Direnç Reddi (Hedef Pivot P)"
             buffer = (resist_npoc - p) * BUFFER_RATIO if (resist_npoc > p) else (resist_npoc * 0.004)
             soft_stop = resist_npoc + buffer
             hard_stop = r4 if (r4 > 0 and r4 > resist_npoc) else (resist_npoc + buffer * 2)
-            tp_target = p if p < close_price else (mpoc if (mpoc > 0 and mpoc < close_price) else close_price * 0.99)
+
+            # Smart Multi-Target: En yakin ilk destegi TP1, nihai hedefi TP2 yap
+            down_targets = [
+                lvl for lvl in [mvah, r4, tepe_avwap, dip_avwap, mpoc, r3, p, below_npoc, s3, s4, s5]
+                if lvl and lvl < close_price * 0.996
+            ]
+            down_targets.sort(reverse=True)
+            tp1_target = down_targets[0] if down_targets else (p if p < close_price else close_price * 0.99)
+            tp2_target = down_targets[-1] if len(down_targets) > 1 else (p if p < tp1_target else None)
+
+            target_name = "mVAH" if tp1_target == mvah else ("R4" if tp1_target == r4 else ("AVWAP" if (tp1_target in [tepe_avwap, dip_avwap]) else ("mPOC" if tp1_target == mpoc else ("R3" if tp1_target == r3 else "Pivot P"))))
+            reason_text = f"Yukarı nPOC (${resist_npoc:.4f}) Reddi (İlk Hedef {target_name}: ${tp1_target:.4f})"
+
             await self._handle_open(
                 symbol=symbol, side="SHORT", entry_price=close_price,
                 reason=reason_text,
                 soft_stop=soft_stop, hard_stop=hard_stop,
-                tp1=tp_target, trade_type="SCALP"
+                tp1=tp1_target, tp2=tp2_target, trade_type="SCALP"
             )
             return

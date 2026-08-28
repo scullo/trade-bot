@@ -521,11 +521,11 @@ HTML_PAGE = """
         }
 
         /* CANLI DINAMIK ANALIZ CUMLESI */
-        .analysis-box { background: rgba(0, 0, 0, 0.6); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 12.5px; line-height: 1.45; color: #f1f5f9; margin-bottom: 10px; border-left: 4px solid var(--blue); min-height: 75px; max-height: 75px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start; }
+        .analysis-box { background: rgba(0, 0, 0, 0.6); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 12.5px; line-height: 1.45; color: #f1f5f9; margin-bottom: 10px; border-left: 4px solid var(--blue); min-height: 60px; display: flex; flex-direction: column; justify-content: flex-start; }
         .analysis-title { font-size: 12px; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
 
         /* BOT PUSU & EYLEM PLANI */
-        .action-plan-box { background: rgba(240, 185, 11, 0.08); border: 1px solid rgba(240, 185, 11, 0.35); border-radius: 10px; padding: 10px 14px; font-size: 12.5px; line-height: 1.45; color: #ffffff; margin-bottom: 12px; min-height: 75px; max-height: 75px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start; }
+        .action-plan-box { background: rgba(240, 185, 11, 0.08); border: 1px solid rgba(240, 185, 11, 0.35); border-radius: 10px; padding: 10px 14px; font-size: 12.5px; line-height: 1.45; color: #ffffff; margin-bottom: 12px; min-height: 60px; display: flex; flex-direction: column; justify-content: flex-start; }
         .action-plan-title { font-size: 11.5px; font-weight: 800; text-transform: uppercase; color: var(--yellow); margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
 
         .levels-table { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
@@ -1188,7 +1188,7 @@ HTML_PAGE = """
                 <div class="panel-title">⚡ Aktif Çalışan Pozisyonlar</div>
                 <span style="font-size:13.5px; font-weight:800; background:var(--card-bg); border:1px solid var(--border); padding:5px 12px; border-radius:12px; font-family:'JetBrains Mono'" id="pos-count">0 / 3 AÇIK</span>
             </div>
-            <div id="positions-container">
+            <div id="positions-container" style="max-height:680px; overflow-y:auto; padding-right:6px;">
                 <div style="color: #94a3b8; text-align:center; padding: 100px 20px; font-size:15px; line-height:1.6;">
                     Şu an açık pozisyon bulunmuyor.<br><span style="color:var(--yellow)">● 5M Mum kapanışları, taze kırılımlar ve destek dönüşleri taranıyor...</span>
                 </div>
