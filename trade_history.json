@@ -1,5 +1,5 @@
 {
-  "balance": 99967.52884723942,
+  "balance": 99968.26343734408,
   "open_positions": {
     "PEPE/USDT": {
       "id": "TRD-0001",
@@ -18,7 +18,7 @@
       "tp1": 0.0038933333333333333,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.0037) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.0037) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "ACE/USDT": {
@@ -38,7 +38,7 @@
       "tp1": 0.20903333333333332,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.1913) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.1913) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "RENDER/USDT": {
@@ -58,7 +58,7 @@
       "tp1": 1.538,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($1.4480) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($1.4480) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "VIRTUAL/USDT": {
@@ -78,7 +78,7 @@
       "tp1": 0.7452,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.6865) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.6865) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "AVAX/USDT": {
@@ -98,7 +98,7 @@
       "tp1": 7.469,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($7.2795) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($7.2795) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "HUMA/USDT": {
@@ -141,7 +141,7 @@
       "tp1": 0.23216666666666666,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.2182) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.2182) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "KERNEL/USDT": {
@@ -161,7 +161,7 @@
       "tp1": 0.04246666666666666,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.0377) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.0377) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "ADA/USDT": {
@@ -181,7 +181,7 @@
       "tp1": 0.21296666666666667,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.2022) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.2022) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "MOVE/USDT": {
@@ -201,7 +201,7 @@
       "tp1": 0.009033333333333332,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "Yukar\u0131 nPOC ($0.0091) Diren\u00e7 Reddi (Hedef Pivot P)",
+      "reason": "Yukarı nPOC ($0.0091) Direnç Reddi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "JST/USDT": {
@@ -221,7 +221,7 @@
       "tp1": 0.09822666666666667,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.0975) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.0975) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "FLOKI/USDT": {
@@ -241,7 +241,7 @@
       "tp1": 0.02677,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.0254) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.0254) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "LTC/USDT": {
@@ -261,7 +261,7 @@
       "tp1": 49.946666666666665,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($49.0350) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($49.0350) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "FET/USDT": {
@@ -281,7 +281,7 @@
       "tp1": 0.16563333333333333,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.1520) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.1520) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "BONK/USDT": {
@@ -301,7 +301,7 @@
       "tp1": 0.00312,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.0030) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.0030) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "JTO/USDT": {
@@ -321,7 +321,7 @@
       "tp1": 0.5241333333333333,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.4822) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.4822) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "LINK/USDT": {
@@ -341,7 +341,7 @@
       "tp1": 11.783333333333331,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($11.3970) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($11.3970) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "GALA/USDT": {
@@ -381,7 +381,7 @@
       "tp1": 0.36496666666666666,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.3570) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.3570) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "PENGU/USDT": {
@@ -401,7 +401,7 @@
       "tp1": 0.009591666666666667,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.0092) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.0092) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "CRV/USDT": {
@@ -421,7 +421,7 @@
       "tp1": 0.3248,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.3049) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.3049) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "SOL/USDT": {
@@ -441,7 +441,7 @@
       "tp1": 106.75333333333333,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($103.4686) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($103.4686) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "BOME/USDT": {
@@ -461,7 +461,7 @@
       "tp1": 0.0010328333333333335,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.0010) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.0010) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "PROM/USDT": {
@@ -502,7 +502,7 @@
       "tp1": 0.7119666666666666,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.6770) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.6770) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "POL/USDT": {
@@ -522,7 +522,7 @@
       "tp1": 0.10816666666666667,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.1070) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.1070) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "TRX/USDT": {
@@ -542,7 +542,7 @@
       "tp1": 0.3367,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "Yukar\u0131 nPOC ($0.3413) Diren\u00e7 Reddi (Hedef Pivot P)",
+      "reason": "Yukarı nPOC ($0.3413) Direnç Reddi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "APT/USDT": {
@@ -562,7 +562,7 @@
       "tp1": 0.5736666666666667,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.5387) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.5387) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "PYTH/USDT": {
@@ -582,7 +582,7 @@
       "tp1": 0.04881333333333333,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.0465) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.0465) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "COTI/USDT": {
@@ -622,7 +622,7 @@
       "tp1": 1.5336666666666667,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($1.4772) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($1.4772) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "HBAR/USDT": {
@@ -642,7 +642,7 @@
       "tp1": 0.07847666666666667,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.0761) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.0761) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "DYDX/USDT": {
@@ -662,7 +662,7 @@
       "tp1": 0.11755,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.1096) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.1096) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "SHIB/USDT": {
@@ -682,7 +682,7 @@
       "tp1": 0.005403333333333334,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.0052) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.0052) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "CHIP/USDT": {
@@ -702,7 +702,7 @@
       "tp1": 0.03929,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "Yukar\u0131 nPOC ($0.0421) Diren\u00e7 Reddi (Hedef Pivot P)",
+      "reason": "Yukarı nPOC ($0.0421) Direnç Reddi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "ETHFI/USDT": {
@@ -722,7 +722,7 @@
       "tp1": 0.5764,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.5289) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.5289) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "MANTRA/USDT": {
@@ -742,7 +742,7 @@
       "tp1": 0.00416,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "Yukar\u0131 nPOC ($0.0043) Diren\u00e7 Reddi (Hedef Pivot P)",
+      "reason": "Yukarı nPOC ($0.0043) Direnç Reddi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "XPL/USDT": {
@@ -762,7 +762,7 @@
       "tp1": 0.08877333333333333,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.0834) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.0834) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "ZEC/USDT": {
@@ -802,7 +802,7 @@
       "tp1": 0.3758333333333333,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.3526) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.3526) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "XRP/USDT": {
@@ -822,7 +822,7 @@
       "tp1": 1.4400000000000002,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($1.3783) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($1.3783) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "LUNC/USDT": {
@@ -842,7 +842,7 @@
       "tp1": 0.05448333333333333,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.0522) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.0522) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "EDEN/USDT": {
@@ -862,7 +862,7 @@
       "tp1": 0.06145333333333333,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "Yukar\u0131 nPOC ($0.0698) Diren\u00e7 Reddi (Hedef Pivot P)",
+      "reason": "Yukarı nPOC ($0.0698) Direnç Reddi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "BICO/USDT": {
@@ -882,7 +882,7 @@
       "tp1": 0.027386666666666667,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.0228) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.0228) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "BLUR/USDT": {
@@ -902,7 +902,7 @@
       "tp1": 0.016353333333333334,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.0159) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.0159) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "DOT/USDT": {
@@ -922,7 +922,7 @@
       "tp1": 0.8803333333333333,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.8437) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.8437) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "INJ/USDT": {
@@ -942,7 +942,7 @@
       "tp1": 5.483999999999999,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($5.1143) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($5.1143) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "TIA/USDT": {
@@ -962,7 +962,7 @@
       "tp1": 0.3566666666666667,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.3406) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.3406) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "ASTER/USDT": {
@@ -982,7 +982,7 @@
       "tp1": 0.7116666666666666,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "S3 + nPOC \u00c7ift Destek Sekmesi (Hedef Pivot P)",
+      "reason": "S3 + nPOC Çift Destek Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "BNB/USDT": {
@@ -1002,7 +1002,7 @@
       "tp1": 709.5633333333334,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($688.8169) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($688.8169) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "XLM/USDT": {
@@ -1022,7 +1022,7 @@
       "tp1": 0.1859333333333333,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.1777) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.1777) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "ZRO/USDT": {
@@ -1042,7 +1042,7 @@
       "tp1": 1.1963333333333332,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($1.0913) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($1.0913) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "ARB/USDT": {
@@ -1062,7 +1062,7 @@
       "tp1": 0.09166666666666666,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.0874) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.0874) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "SAND/USDT": {
@@ -1082,7 +1082,7 @@
       "tp1": 0.041743333333333334,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.0387) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.0387) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "AXS/USDT": {
@@ -1102,7 +1102,7 @@
       "tp1": 0.9423333333333334,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.8937) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.8937) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "RUNE/USDT": {
@@ -1122,7 +1122,7 @@
       "tp1": 0.541,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.4731) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.4731) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "CAKE/USDT": {
@@ -1142,7 +1142,7 @@
       "tp1": 1.7486666666666668,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($1.6995) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($1.6995) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "AMP/USDT": {
@@ -1182,7 +1182,7 @@
       "tp1": 39.43,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($37.7005) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($37.7005) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "WLFI/USDT": {
@@ -1202,7 +1202,7 @@
       "tp1": 0.05906666666666666,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.0575) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($0.0575) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "GIGGLE/USDT": {
@@ -1222,7 +1222,7 @@
       "tp1": 37.53333333333333,
       "tp2": 0.0,
       "trade_type": "SCALP",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($36.0657) Likidite Sekmesi (Hedef Pivot P)",
+      "reason": "Aşağı nPOC ($36.0657) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
     },
     "GMX/USDT": {
@@ -1244,6 +1244,26 @@
       "trade_type": "SCALP",
       "reason": "S4 Direnc Retest Sekmesi (Resistance Flip)",
       "is_half_closed": false
+    },
+    "ETC/USDT": {
+      "id": "TRD-0103",
+      "symbol": "ETC/USDT",
+      "side": "SHORT",
+      "entry_price": 7.5,
+      "margin": 100.0,
+      "leverage": 5,
+      "position_value": 500.0,
+      "quantity": 66.66666666666667,
+      "entry_fee": 0.25,
+      "entry_time": "2026-08-28 20:20:01",
+      "entry_timestamp": 1787948401.0625448,
+      "soft_stop": 7.519833333333334,
+      "hard_stop": 7.597212903225806,
+      "tp1": 7.35,
+      "tp2": 0.0,
+      "trade_type": "BREAKOUT",
+      "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
+      "is_half_closed": false
     }
   },
   "history": [
@@ -1263,7 +1283,9 @@
       "entry_time": "2026-08-28 19:31:44",
       "exit_time": "2026-08-28 19:32:01",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.1340)"
+      "close_reason": "Sert Stop Tetiklendi ($0.1340)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0022",
@@ -1281,7 +1303,9 @@
       "entry_time": "2026-08-28 19:35:05",
       "exit_time": "2026-08-28 19:35:05",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.0720)"
+      "close_reason": "Sert Stop Tetiklendi ($0.0720)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0024",
@@ -1299,7 +1323,9 @@
       "entry_time": "2026-08-28 19:35:07",
       "exit_time": "2026-08-28 19:35:12",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.0057)"
+      "close_reason": "Sert Stop Tetiklendi ($0.0057)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0027",
@@ -1316,8 +1342,10 @@
       "balance_after": 99997.34,
       "entry_time": "2026-08-28 19:35:09",
       "exit_time": "2026-08-28 19:35:13",
-      "reason": "mVAH Aylik Direnc Kirilimi (Macro Breakout)",
-      "close_reason": "Sert Stop Tetiklendi ($0.3426)"
+      "reason": "mVAH Aylik Dirençc Kirilimi (Macro Breakout)",
+      "close_reason": "Sert Stop Tetiklendi ($0.3426)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0023",
@@ -1335,7 +1363,9 @@
       "entry_time": "2026-08-28 19:35:06",
       "exit_time": "2026-08-28 19:35:13",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.0457)"
+      "close_reason": "Sert Stop Tetiklendi ($0.0457)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0030",
@@ -1352,8 +1382,10 @@
       "balance_after": 99997.59,
       "entry_time": "2026-08-28 19:40:05",
       "exit_time": "2026-08-28 19:40:10",
-      "reason": "Yukar\u0131 nPOC ($0.0083) Diren\u00e7 Reddi (Hedef Pivot P)",
-      "close_reason": "TP Hedefine Ulasildi ($0.0083)"
+      "reason": "Yukarıı nPOC ($0.0083) Dirençç Reddi (Hedef Pivot P)",
+      "close_reason": "TP Hedefine Ulasildi ($0.0083)",
+      "trade_type": "SCALP",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0028",
@@ -1370,8 +1402,10 @@
       "balance_after": 99998.54,
       "entry_time": "2026-08-28 19:35:10",
       "exit_time": "2026-08-28 19:42:04",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.2585) Likidite Sekmesi (Hedef Pivot P)",
-      "close_reason": "TP Hedefine Ulasildi ($0.2593)"
+      "reason": "Aşağı nPOC ($0.2585) Likidite Sekmesi (Hedef Pivot P)",
+      "close_reason": "TP Hedefine Ulasildi ($0.2593)",
+      "trade_type": "SCALP",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0032",
@@ -1388,8 +1422,10 @@
       "balance_after": 100002.42,
       "entry_time": "2026-08-28 19:40:08",
       "exit_time": "2026-08-28 19:42:50",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.8948) Likidite Sekmesi (Hedef Pivot P)",
-      "close_reason": "TP Hedefine Ulasildi ($0.9257)"
+      "reason": "Aşağı nPOC ($0.8948) Likidite Sekmesi (Hedef Pivot P)",
+      "close_reason": "TP Hedefine Ulasildi ($0.9257)",
+      "trade_type": "SCALP",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0035",
@@ -1406,8 +1442,10 @@
       "balance_after": 100002.74,
       "entry_time": "2026-08-28 19:40:21",
       "exit_time": "2026-08-28 19:44:17",
-      "reason": "Yukar\u0131 nPOC ($0.1629) Diren\u00e7 Reddi (Hedef Pivot P)",
-      "close_reason": "TP Hedefine Ulasildi ($0.1617)"
+      "reason": "Yukarıı nPOC ($0.1629) Dirençç Reddi (Hedef Pivot P)",
+      "close_reason": "TP Hedefine Ulasildi ($0.1617)",
+      "trade_type": "SCALP",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0043",
@@ -1424,8 +1462,10 @@
       "balance_after": 100003.6,
       "entry_time": "2026-08-28 19:45:07",
       "exit_time": "2026-08-28 19:45:11",
-      "reason": "Yukar\u0131 nPOC ($0.0083) Diren\u00e7 Reddi (Hedef Pivot P)",
-      "close_reason": "TP Hedefine Ulasildi ($0.0083)"
+      "reason": "Yukarıı nPOC ($0.0083) Dirençç Reddi (Hedef Pivot P)",
+      "close_reason": "TP Hedefine Ulasildi ($0.0083)",
+      "trade_type": "SCALP",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0047",
@@ -1443,7 +1483,9 @@
       "entry_time": "2026-08-28 19:45:22",
       "exit_time": "2026-08-28 19:45:28",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.0457)"
+      "close_reason": "Sert Stop Tetiklendi ($0.0457)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0048",
@@ -1461,7 +1503,9 @@
       "entry_time": "2026-08-28 19:45:23",
       "exit_time": "2026-08-28 19:45:30",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.0057)"
+      "close_reason": "Sert Stop Tetiklendi ($0.0057)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0051",
@@ -1479,7 +1523,9 @@
       "entry_time": "2026-08-28 19:48:35",
       "exit_time": "2026-08-28 19:48:41",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.0457)"
+      "close_reason": "Sert Stop Tetiklendi ($0.0457)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0042",
@@ -1497,7 +1543,9 @@
       "entry_time": "2026-08-28 19:45:06",
       "exit_time": "2026-08-28 19:48:45",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "TP Hedefine Ulasildi ($1.6963)"
+      "close_reason": "TP Hedefine Ulasildi ($1.6963)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0050",
@@ -1514,8 +1562,10 @@
       "balance_after": 100005.07,
       "entry_time": "2026-08-28 19:48:32",
       "exit_time": "2026-08-28 19:48:49",
-      "reason": "Yukar\u0131 nPOC ($0.0083) Diren\u00e7 Reddi (Hedef Pivot P)",
-      "close_reason": "TP Hedefine Ulasildi ($0.0083)"
+      "reason": "Yukarıı nPOC ($0.0083) Dirençç Reddi (Hedef Pivot P)",
+      "close_reason": "TP Hedefine Ulasildi ($0.0083)",
+      "trade_type": "SCALP",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0053",
@@ -1532,8 +1582,10 @@
       "balance_after": 100005.93,
       "entry_time": "2026-08-28 19:48:56",
       "exit_time": "2026-08-28 19:49:01",
-      "reason": "Yukar\u0131 nPOC ($0.0083) Diren\u00e7 Reddi (Hedef Pivot P)",
-      "close_reason": "TP Hedefine Ulasildi ($0.0083)"
+      "reason": "Yukarıı nPOC ($0.0083) Dirençç Reddi (Hedef Pivot P)",
+      "close_reason": "TP Hedefine Ulasildi ($0.0083)",
+      "trade_type": "SCALP",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0054",
@@ -1551,7 +1603,9 @@
       "entry_time": "2026-08-28 19:49:04",
       "exit_time": "2026-08-28 19:49:07",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.0457)"
+      "close_reason": "Sert Stop Tetiklendi ($0.0457)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0052",
@@ -1569,7 +1623,9 @@
       "entry_time": "2026-08-28 19:48:52",
       "exit_time": "2026-08-28 19:49:11",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "TP Hedefine Ulasildi ($1.6963)"
+      "close_reason": "TP Hedefine Ulasildi ($1.6963)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0055",
@@ -1587,7 +1643,9 @@
       "entry_time": "2026-08-28 19:49:16",
       "exit_time": "2026-08-28 19:49:19",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "TP Hedefine Ulasildi ($1.6963)"
+      "close_reason": "TP Hedefine Ulasildi ($1.6963)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0056",
@@ -1605,7 +1663,9 @@
       "entry_time": "2026-08-28 19:50:03",
       "exit_time": "2026-08-28 19:50:06",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.0445)"
+      "close_reason": "Sert Stop Tetiklendi ($0.0445)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0057",
@@ -1623,7 +1683,9 @@
       "entry_time": "2026-08-28 19:50:10",
       "exit_time": "2026-08-28 19:50:13",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.1340)"
+      "close_reason": "Sert Stop Tetiklendi ($0.1340)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0007",
@@ -1640,8 +1702,10 @@
       "balance_after": 100004.37,
       "entry_time": "2026-08-28 19:31:39",
       "exit_time": "2026-08-28 19:50:17",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($0.0160) Likidite Sekmesi (Hedef Pivot P)",
-      "close_reason": "Yumusak Stop (Mum Seviye Altinda Kapandi)"
+      "reason": "Aşağı nPOC ($0.0160) Likidite Sekmesi (Hedef Pivot P)",
+      "close_reason": "Yumuşak Stop (Mum Seviye Altinda Kapandi)",
+      "trade_type": "SCALP",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0046",
@@ -1658,8 +1722,10 @@
       "balance_after": 100002.31,
       "entry_time": "2026-08-28 19:45:20",
       "exit_time": "2026-08-28 19:50:24",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($798.4600) Likidite Sekmesi (Hedef Pivot P)",
-      "close_reason": "Yumusak Stop (Mum Seviye Altinda Kapandi)"
+      "reason": "Aşağı nPOC ($798.4600) Likidite Sekmesi (Hedef Pivot P)",
+      "close_reason": "Yumuşak Stop (Mum Seviye Altinda Kapandi)",
+      "trade_type": "SCALP",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0064",
@@ -1677,7 +1743,9 @@
       "entry_time": "2026-08-28 19:54:17",
       "exit_time": "2026-08-28 19:54:32",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.1340)"
+      "close_reason": "Sert Stop Tetiklendi ($0.1340)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0066",
@@ -1695,7 +1763,9 @@
       "entry_time": "2026-08-28 19:54:25",
       "exit_time": "2026-08-28 19:54:36",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.0445)"
+      "close_reason": "Sert Stop Tetiklendi ($0.0445)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0014",
@@ -1712,8 +1782,10 @@
       "balance_after": 99979.35,
       "entry_time": "2026-08-28 19:31:45",
       "exit_time": "2026-08-28 20:01:00",
-      "reason": "Yukar\u0131 nPOC ($0.0005) Diren\u00e7 Reddi (Hedef Pivot P)",
-      "close_reason": "Yumusak Stop (Mum Seviye Ustunde Kapandi)"
+      "reason": "Yukarıı nPOC ($0.0005) Dirençç Reddi (Hedef Pivot P)",
+      "close_reason": "Yumuşak Stop (Mum Seviye Ustunde Kapandi)",
+      "trade_type": "SCALP",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0079",
@@ -1731,7 +1803,9 @@
       "entry_time": "2026-08-28 20:00:31",
       "exit_time": "2026-08-28 20:01:03",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.1340)"
+      "close_reason": "Sert Stop Tetiklendi ($0.1340)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0087",
@@ -1749,7 +1823,9 @@
       "entry_time": "2026-08-28 20:01:10",
       "exit_time": "2026-08-28 20:01:23",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.1340)"
+      "close_reason": "Sert Stop Tetiklendi ($0.1340)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0091",
@@ -1767,7 +1843,9 @@
       "entry_time": "2026-08-28 20:01:33",
       "exit_time": "2026-08-28 20:01:37",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.1340)"
+      "close_reason": "Sert Stop Tetiklendi ($0.1340)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0093",
@@ -1785,7 +1863,9 @@
       "entry_time": "2026-08-28 20:03:28",
       "exit_time": "2026-08-28 20:03:42",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.1340)"
+      "close_reason": "Sert Stop Tetiklendi ($0.1340)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0096",
@@ -1803,7 +1883,9 @@
       "entry_time": "2026-08-28 20:03:47",
       "exit_time": "2026-08-28 20:03:52",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.1340)"
+      "close_reason": "Sert Stop Tetiklendi ($0.1340)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0097",
@@ -1821,7 +1903,9 @@
       "entry_time": "2026-08-28 20:05:04",
       "exit_time": "2026-08-28 20:05:07",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.0042)"
+      "close_reason": "Sert Stop Tetiklendi ($0.0042)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0034",
@@ -1838,8 +1922,10 @@
       "balance_after": 99968.65,
       "entry_time": "2026-08-28 19:40:18",
       "exit_time": "2026-08-28 20:05:10",
-      "reason": "A\u015fa\u011f\u0131 nPOC ($7.5817) Likidite Sekmesi (Hedef Pivot P)",
-      "close_reason": "Yumusak Stop (Mum Seviye Altinda Kapandi)"
+      "reason": "Aşağı nPOC ($7.5817) Likidite Sekmesi (Hedef Pivot P)",
+      "close_reason": "Yumuşak Stop (Mum Seviye Altinda Kapandi)",
+      "trade_type": "SCALP",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0098",
@@ -1857,7 +1943,9 @@
       "entry_time": "2026-08-28 20:05:15",
       "exit_time": "2026-08-28 20:05:18",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.0057)"
+      "close_reason": "Sert Stop Tetiklendi ($0.0057)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0086",
@@ -1874,8 +1962,10 @@
       "balance_after": 99966.16,
       "entry_time": "2026-08-28 20:01:07",
       "exit_time": "2026-08-28 20:05:22",
-      "reason": "R3 Direnc Tepkisi (Hedef Pivot P)",
-      "close_reason": "Yumusak Stop (Mum Seviye Ustunde Kapandi)"
+      "reason": "R3 Dirençc Tepkisi (Hedef Pivot P)",
+      "close_reason": "Yumuşak Stop (Mum Seviye Ustunde Kapandi)",
+      "trade_type": "SCALP",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0100",
@@ -1893,7 +1983,9 @@
       "entry_time": "2026-08-28 20:10:14",
       "exit_time": "2026-08-28 20:10:20",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.0042)"
+      "close_reason": "Sert Stop Tetiklendi ($0.0042)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0101",
@@ -1911,7 +2003,9 @@
       "entry_time": "2026-08-28 20:13:46",
       "exit_time": "2026-08-28 20:13:54",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.0042)"
+      "close_reason": "Sert Stop Tetiklendi ($0.0042)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0045",
@@ -1929,7 +2023,9 @@
       "entry_time": "2026-08-28 19:45:15",
       "exit_time": "2026-08-28 20:15:02",
       "reason": "Taze S4 Breakdown + Dip AVWAP Alti Onay",
-      "close_reason": "Yumusak Stop (Mum Seviye Ustunde Kapandi)"
+      "close_reason": "Yumuşak Stop (Mum Seviye Ustunde Kapandi)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0102",
@@ -1947,7 +2043,9 @@
       "entry_time": "2026-08-28 20:15:06",
       "exit_time": "2026-08-28 20:15:11",
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "close_reason": "Sert Stop Tetiklendi ($0.1172)"
+      "close_reason": "Sert Stop Tetiklendi ($0.1172)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     },
     {
       "id": "TRD-0006",
@@ -1964,8 +2062,50 @@
       "balance_after": 99967.53,
       "entry_time": "2026-08-28 19:31:38",
       "exit_time": "2026-08-28 20:15:49",
-      "reason": "Yukar\u0131 nPOC ($0.0012) Diren\u00e7 Reddi (Hedef Pivot P)",
-      "close_reason": "Sert Stop Tetiklendi ($0.0011)"
+      "reason": "Yukarıı nPOC ($0.0012) Dirençç Reddi (Hedef Pivot P)",
+      "close_reason": "Sert Stop Tetiklendi ($0.0011)",
+      "trade_type": "SCALP",
+      "duration": "5M Mum Takibi"
+    },
+    {
+      "id": "TRD-0104",
+      "symbol": "ENA/USDT",
+      "side": "SHORT",
+      "leverage": 5,
+      "margin": 100.0,
+      "entry_price": 0.1587,
+      "exit_price": 0.158305,
+      "gross_pnl": 1.2445,
+      "fees": 0.4994,
+      "net_pnl": 0.7451,
+      "roe_pct": 0.75,
+      "balance_after": 99968.27,
+      "entry_time": "2026-08-28 20:20:04",
+      "exit_time": "2026-08-28 20:20:11",
+      "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
+      "close_reason": "Sert Stop Tetiklendi ($0.1340)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
+    },
+    {
+      "id": "TRD-0105",
+      "symbol": "SEI/USDT",
+      "side": "SHORT",
+      "leverage": 5,
+      "margin": 100.0,
+      "entry_price": 0.04599,
+      "exit_price": 0.045945,
+      "gross_pnl": 0.4892,
+      "fees": 0.4998,
+      "net_pnl": -0.0105,
+      "roe_pct": -0.01,
+      "balance_after": 99968.26,
+      "entry_time": "2026-08-28 20:20:08",
+      "exit_time": "2026-08-28 20:20:15",
+      "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
+      "close_reason": "Sert Stop Tetiklendi ($0.0457)",
+      "trade_type": "BREAKOUT",
+      "duration": "5M Mum Takibi"
     }
   ]
 }
