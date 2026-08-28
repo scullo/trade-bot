@@ -286,65 +286,89 @@ class MarketDataManager:
         }
 
     async def start_websocket(self):
-        streams = []
+        # 1. Hizli sembol eslestirme sozlugu olustur
+        symbol_map = {}
         for s in self.all_symbols:
-            clean_full = self._clean_symbol(s)
-            clean_stream = clean_full.replace('/', '').lower().replace(':usdt', '')
-            streams.append(f"{clean_stream}@bookTicker")
-            streams.append(f"{clean_stream}@kline_5m")
+            clean = self._clean_symbol(s).replace('/', '').replace(':USDT', '').upper()
+            symbol_map[clean] = s
+            if clean.startswith('SHIB'): symbol_map['1000SHIBUSDT'] = s
+            if clean.startswith('PEPE'): symbol_map['1000PEPEUSDT'] = s
+            if clean.startswith('BONK'): symbol_map['1000BONKUSDT'] = s
+            if clean.startswith('FLOKI'): symbol_map['1000FLOKIUSDT'] = s
 
-        stream_url = f"wss://fstream.binance.com/stream?streams={'/'.join(streams)}"
-        print(f">> Canli Binance Futures WebSocket baslatiliyor ({len(self.all_symbols)} Parite Stream)...")
+        print(f">> [WEBSOCKET] Ultra Hizli Hibrit Akis Baslatiliyor ({len(self.all_symbols)} Parite)...")
 
-        while True:
-            try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.ws_connect(stream_url, heartbeat=10) as ws:
-                        print(">> [CANLI] Binance Global WebSocket AKTIF - Fiyatlar anlik akiyor.")
-                        async for msg in ws:
-                            if msg.type == aiohttp.WSMsgType.TEXT:
-                                data = json.loads(msg.data)
-                                stream_name = data.get('stream', '').lower()
-                                payload = data.get('data', {})
+        # Worker 1: Global !bookTicker yayini (Tum coinler tek yuksek hizli sokette anlik akar)
+        async def bookticker_worker():
+            url = "wss://fstream.binance.com/ws/!bookTicker"
+            while True:
+                try:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.ws_connect(url, heartbeat=10) as ws:
+                            print(">> [CANLI] Global !bookTicker Fiyat Akisi AKTIF.")
+                            async for msg in ws:
+                                if msg.type == aiohttp.WSMsgType.TEXT:
+                                    data = json.loads(msg.data)
+                                    raw_s = data.get('s', '').upper()
+                                    if raw_s in symbol_map:
+                                        norm_s = symbol_map[raw_s]
+                                        bid = float(data.get('b', 0.0))
+                                        ask = float(data.get('a', 0.0))
+                                        price = (bid + ask) / 2.0 if (bid and ask) else (bid or ask)
+                                        if price > 0:
+                                            self.current_prices[norm_s] = price
+                                            if self.on_tick_callback:
+                                                await self.on_tick_callback(norm_s, price)
+                                elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
+                                    break
+                except Exception as e:
+                    print(f">> [UYARI] bookTicker WebSocket yenileniyor: {e}")
+                    await asyncio.sleep(2)
 
-                                if '@bookticker' in stream_name:
-                                    symbol_raw = payload.get('s', '').upper()
-                                    for s in self.all_symbols:
-                                        clean_match = self._clean_symbol(s).replace('/', '').replace(':USDT', '').upper()
-                                        if clean_match == symbol_raw or s.replace('/', '').replace(':USDT', '').upper() == symbol_raw:
-                                            bid = float(payload.get('b', 0.0))
-                                            ask = float(payload.get('a', 0.0))
-                                            price = (bid + ask) / 2.0 if (bid and ask) else (bid or ask)
-                                            if price > 0:
-                                                self.current_prices[s] = price
-                                                if self.on_tick_callback:
-                                                    await self.on_tick_callback(s, price)
+        # Worker 2: K-Line 5M Kapanis Taramasi (25'erli paketler halinde paralel baglantilar)
+        kline_streams = []
+        for s in self.all_symbols:
+            clean_stream = self._clean_symbol(s).replace('/', '').lower().replace(':usdt', '')
+            kline_streams.append(f"{clean_stream}@kline_5m")
 
-                                elif '@kline' in stream_name:
+        chunk_size = 25
+        kline_chunks = [kline_streams[i:i + chunk_size] for i in range(0, len(kline_streams), chunk_size)]
+
+        async def kline_worker(chunk):
+            url = f"wss://fstream.binance.com/stream?streams={'/'.join(chunk)}"
+            while True:
+                try:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.ws_connect(url, heartbeat=10) as ws:
+                            async for msg in ws:
+                                if msg.type == aiohttp.WSMsgType.TEXT:
+                                    data = json.loads(msg.data)
+                                    payload = data.get('data', {})
                                     kline = payload.get('k', {})
                                     if kline.get('x', False):
-                                        symbol_raw = payload.get('s', '').upper()
-                                        for s in self.all_symbols:
-                                            clean_match = self._clean_symbol(s).replace('/', '').replace(':USDT', '').upper()
-                                            if clean_match == symbol_raw or s.replace('/', '').replace(':USDT', '').upper() == symbol_raw:
-                                                new_candle = {
-                                                    'timestamp': kline.get('t'),
-                                                    'open': float(kline.get('o')),
-                                                    'high': float(kline.get('h')),
-                                                    'low': float(kline.get('l')),
-                                                    'close': float(kline.get('c')),
-                                                    'volume': float(kline.get('v'))
-                                                }
-                                                prev_candle = self.candles_5m[s].iloc[-1].to_dict() if not self.candles_5m[s].empty else new_candle
-                                                self.candles_5m[s] = pd.concat([self.candles_5m[s], pd.DataFrame([new_candle])], ignore_index=True)
-                                                self.recalculate_levels(s)
-                                                if self.on_candle_close_callback and s in self.active_symbols:
-                                                    await self.on_candle_close_callback(s, new_candle, prev_candle)
-                            elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
-                                break
-            except Exception as e:
-                print(f">> [UYARI] WebSocket baglantisi yenileniyor: {e}")
-                await asyncio.sleep(2)
+                                        raw_s = payload.get('s', '').upper()
+                                        if raw_s in symbol_map:
+                                            norm_s = symbol_map[raw_s]
+                                            new_candle = {
+                                                'timestamp': kline.get('t'),
+                                                'open': float(kline.get('o')),
+                                                'high': float(kline.get('h')),
+                                                'low': float(kline.get('l')),
+                                                'close': float(kline.get('c')),
+                                                'volume': float(kline.get('v'))
+                                            }
+                                            prev_candle = self.candles_5m[norm_s].iloc[-1].to_dict() if not self.candles_5m[norm_s].empty else new_candle
+                                            self.candles_5m[norm_s] = pd.concat([self.candles_5m[norm_s], pd.DataFrame([new_candle])], ignore_index=True)
+                                            self.recalculate_levels(norm_s)
+                                            if self.on_candle_close_callback and norm_s in self.active_symbols:
+                                                await self.on_candle_close_callback(norm_s, new_candle, prev_candle)
+                                elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
+                                    break
+                except Exception:
+                    await asyncio.sleep(2)
+
+        tasks = [bookticker_worker()] + [kline_worker(c) for c in kline_chunks]
+        await asyncio.gather(*tasks)
 
     async def close(self):
         await self.exchange.close()
