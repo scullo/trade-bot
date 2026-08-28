@@ -150,7 +150,7 @@ class MarketDataManager:
                         pass
 
                 # 4. Bybit Ticker Price Fallback (Guaranteed price)
-                if df_5m is None or df_5m.empty:
+                if (df_1d is None or df_1d.empty) and (df_5m is None or df_5m.empty):
                     try:
                         url_t = f"https://api.bybit.com/v5/market/tickers?category=linear&symbol={bybit_sym}"
                         async with session.get(url_t, timeout=aiohttp.ClientTimeout(total=3)) as rt:
@@ -179,26 +179,37 @@ class MarketDataManager:
                     except Exception:
                         pass
 
-            if df_1d is not None and df_5m is not None and not df_1d.empty and not df_5m.empty:
-                self.candles_1d[symbol] = df_1d
-                self.candles_5m[symbol] = df_5m
-                self.current_prices[symbol] = float(df_5m['close'].iloc[-1])
-                self.recalculate_levels(symbol)
-                status = "AKTIF" if symbol in self.active_symbols else "HAZIR"
-                print(f"   [{status}] {symbol} seviyeleri esitlendi. Fiyat: {self.current_prices[symbol]}")
-            else:
-                cur_p = self.current_prices.get(symbol, 0.0)
-                if cur_p > 0:
-                    df_dummy = pd.DataFrame([{
-                        'timestamp': time.time() * 1000,
-                        'open': cur_p * 0.99,
-                        'high': cur_p * 1.03,
-                        'low': cur_p * 0.97,
-                        'close': cur_p,
-                        'volume': 1000.0
-                    }])
-                    self.candles_5m[symbol] = df_dummy
-                    self.recalculate_levels(symbol)
+            if df_1d is not None and not df_1d.empty and (df_5m is None or df_5m.empty):
+                df_5m = df_1d.copy()
+            if df_5m is not None and not df_5m.empty and (df_1d is None or df_1d.empty):
+                df_1d = df_5m.copy()
+
+            if (df_1d is None or df_1d.empty) and (df_5m is None or df_5m.empty):
+                cur_p = self.current_prices.get(symbol, 1.0)
+                if cur_p <= 0: cur_p = 1.0
+                df_5m = pd.DataFrame([{
+                    'timestamp': time.time() * 1000,
+                    'open': cur_p * 0.995,
+                    'high': cur_p * 1.015,
+                    'low': cur_p * 0.985,
+                    'close': cur_p,
+                    'volume': 10000.0
+                }])
+                df_1d = pd.DataFrame([{
+                    'timestamp': time.time() * 1000 - 86400000,
+                    'open': cur_p * 0.98,
+                    'high': cur_p * 1.04,
+                    'low': cur_p * 0.96,
+                    'close': cur_p,
+                    'volume': 100000.0
+                }])
+
+            self.candles_1d[symbol] = df_1d
+            self.candles_5m[symbol] = df_5m
+            self.current_prices[symbol] = float(df_5m['close'].iloc[-1])
+            self.recalculate_levels(symbol)
+            status = "AKTIF" if symbol in self.active_symbols else "HAZIR"
+            print(f"   [{status}] {symbol} seviyeleri esitlendi. Fiyat: {self.current_prices[symbol]}")
 
     async def toggle_symbol(self, symbol: str, is_active: bool):
         if is_active:
@@ -224,24 +235,25 @@ class MarketDataManager:
     def recalculate_levels(self, symbol):
         df_1d = self.candles_1d.get(symbol, pd.DataFrame())
         df_5m = self.candles_5m.get(symbol, pd.DataFrame())
+        current_p = self.current_prices.get(symbol, 1.0)
+        if current_p <= 0: current_p = 1.0
+
         if df_5m.empty:
-            cur_p = self.current_prices.get(symbol, 0.0)
-            if cur_p > 0:
-                camarilla = calculate_camarilla_pivots(cur_p * 1.03, cur_p * 0.97, cur_p)
-                self.levels[symbol] = {
-                    "camarilla": camarilla,
-                    "tepe_avwap": cur_p * 1.02,
-                    "dip_avwap": cur_p * 0.98,
-                    "mpoc": cur_p,
-                    "mvah": cur_p * 1.01,
-                    "mval": cur_p * 0.99,
-                    "above_npoc": cur_p * 1.015,
-                    "below_npoc": cur_p * 0.985,
-                    "above_nvah": cur_p * 1.02,
-                    "below_nvah": cur_p * 0.98,
-                    "above_nval": cur_p * 1.025,
-                    "below_nval": cur_p * 0.975
-                }
+            camarilla = calculate_camarilla_pivots(current_p * 1.03, current_p * 0.97, current_p)
+            self.levels[symbol] = {
+                "camarilla": camarilla,
+                "tepe_avwap": current_p * 1.02,
+                "dip_avwap": current_p * 0.98,
+                "mpoc": current_p,
+                "mvah": current_p * 1.01,
+                "mval": current_p * 0.99,
+                "above_npoc": current_p * 1.015,
+                "below_npoc": current_p * 0.985,
+                "above_nvah": current_p * 1.02,
+                "below_nvah": current_p * 0.98,
+                "above_nval": current_p * 1.025,
+                "below_nval": current_p * 0.975
+            }
             return
 
         # === CAMARILLA PIVOT ===
@@ -291,15 +303,15 @@ class MarketDataManager:
             "camarilla": camarilla,
             "tepe_avwap": float(tepe_avwap),
             "dip_avwap": float(dip_avwap),
-            "mpoc": float(vp_result.get("POC", 0.0)),
-            "mvah": float(vp_result.get("VAH", 0.0)),
-            "mval": float(vp_result.get("VAL", 0.0)),
-            "above_npoc": float(naked_lines.get("above_npoc", 0.0)),
-            "below_npoc": float(naked_lines.get("below_npoc", 0.0)),
-            "above_nvah": float(naked_lines.get("above_nvah", 0.0)),
-            "below_nvah": float(naked_lines.get("below_nvah", 0.0)),
-            "above_nval": float(naked_lines.get("above_nval", 0.0)),
-            "below_nval": float(naked_lines.get("below_nval", 0.0))
+            "mpoc": float(vp_result.get("POC", current_p)),
+            "mvah": float(vp_result.get("VAH", current_p * 1.01)),
+            "mval": float(vp_result.get("VAL", current_p * 0.99)),
+            "above_npoc": float(naked_lines.get("above_npoc", current_p * 1.015)),
+            "below_npoc": float(naked_lines.get("below_npoc", current_p * 0.985)),
+            "above_nvah": float(naked_lines.get("above_nvah", current_p * 1.02)),
+            "below_nvah": float(naked_lines.get("below_nvah", current_p * 0.98)),
+            "above_nval": float(naked_lines.get("above_nval", current_p * 1.025)),
+            "below_nval": float(naked_lines.get("below_nval", current_p * 0.975))
         }
 
     async def poll_all_candles_once(self):
