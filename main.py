@@ -42,6 +42,16 @@ async def main():
     await start_server(market_data, trader_manager, notifier, live_trader=live_trader)
     await init_task
 
+    # 100 paritede son kapanmış 5M mumları tara ve oluşmuş formasyonları anında pozisyona al
+    print(">> [BAŞLANGIÇ TARAMASI] 100 Paritenin son mum kapanışları taranıyor...")
+    for s in list(market_data.active_symbols):
+        df_5m = market_data.candles_5m.get(s)
+        lev = market_data.levels.get(s, {})
+        if df_5m is not None and len(df_5m) >= 2 and lev and lev.get('camarilla', {}).get('R4'):
+            cur = df_5m.iloc[-1].to_dict()
+            prev = df_5m.iloc[-2].to_dict()
+            await strategy.evaluate_candle_close(s, cur, prev, lev)
+
     # Saatlik otomatik Telegram Kasa & Portföy Raporlayıcıyı Başlat
     asyncio.create_task(notifier.start_hourly_scheduler(trader_manager, initial_balance=INITIAL_BALANCE))
 
