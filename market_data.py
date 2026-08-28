@@ -160,35 +160,44 @@ class MarketDataManager:
     def recalculate_levels(self, symbol):
         df_1d = self.candles_1d.get(symbol, pd.DataFrame())
         df_5m = self.candles_5m.get(symbol, pd.DataFrame())
-        if df_1d.empty or df_5m.empty:
+        if df_5m.empty:
             return
 
         # === CAMARILLA PIVOT ===
-        prev_day = df_1d.iloc[-2] if len(df_1d) >= 2 else df_1d.iloc[-1]
-        camarilla = calculate_camarilla_pivots(prev_day['high'], prev_day['low'], prev_day['close'])
+        if not df_1d.empty:
+            prev_day = df_1d.iloc[-2] if len(df_1d) >= 2 else df_1d.iloc[-1]
+            camarilla = calculate_camarilla_pivots(prev_day['high'], prev_day['low'], prev_day['close'])
+        else:
+            camarilla = calculate_camarilla_pivots(df_5m['high'].max(), df_5m['low'].min(), df_5m['close'].iloc[-1])
 
         # === ANCHORED VWAP ===
-        lookback_count = min(LOOKBACK_DAYS_AVWAP, len(df_1d))
-        lookback_days = df_1d.iloc[-lookback_count:]
-        max_high_idx = lookback_days['high'].idxmax()
-        min_low_idx = lookback_days['low'].idxmin()
+        if not df_1d.empty:
+            lookback_count = min(LOOKBACK_DAYS_AVWAP, len(df_1d))
+            lookback_days = df_1d.iloc[-lookback_count:]
+            max_high_idx = lookback_days['high'].idxmax()
+            min_low_idx = lookback_days['low'].idxmin()
 
-        tepe_time = lookback_days.loc[max_high_idx, 'timestamp']
-        dip_time = lookback_days.loc[min_low_idx, 'timestamp']
+            tepe_time = lookback_days.loc[max_high_idx, 'timestamp']
+            dip_time = lookback_days.loc[min_low_idx, 'timestamp']
 
-        earliest_5m_ts = df_5m['timestamp'].iloc[0]
+            earliest_5m_ts = df_5m['timestamp'].iloc[0]
 
-        if tepe_time >= earliest_5m_ts:
-            tepe_idx_5m = (df_5m['timestamp'] - tepe_time).abs().idxmin()
-            tepe_avwap = float(calculate_anchored_vwap(df_5m, tepe_idx_5m))
+            if tepe_time >= earliest_5m_ts:
+                tepe_idx_5m = (df_5m['timestamp'] - tepe_time).abs().idxmin()
+                tepe_avwap = float(calculate_anchored_vwap(df_5m, tepe_idx_5m))
+            else:
+                tepe_avwap = float(calculate_anchored_vwap(df_5m, 0))
+
+            if dip_time >= earliest_5m_ts:
+                dip_idx_5m = (df_5m['timestamp'] - dip_time).abs().idxmin()
+                dip_avwap = float(calculate_anchored_vwap(df_5m, dip_idx_5m))
+            else:
+                dip_avwap = float(calculate_anchored_vwap(df_5m, 0))
         else:
-            tepe_avwap = float(calculate_anchored_vwap(df_5m, 0))
-
-        if dip_time >= earliest_5m_ts:
-            dip_idx_5m = (df_5m['timestamp'] - dip_time).abs().idxmin()
-            dip_avwap = float(calculate_anchored_vwap(df_5m, dip_idx_5m))
-        else:
-            dip_avwap = float(calculate_anchored_vwap(df_5m, 0))
+            high_idx = df_5m['high'].idxmax()
+            low_idx = df_5m['low'].idxmin()
+            tepe_avwap = float(calculate_anchored_vwap(df_5m, high_idx))
+            dip_avwap = float(calculate_anchored_vwap(df_5m, low_idx))
 
         # === VOLUME PROFILE ===
         vp_result = calculate_volume_profile(df_5m, num_rows=30, value_area_pct=0.68)
