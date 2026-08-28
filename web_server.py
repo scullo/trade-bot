@@ -2610,13 +2610,18 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
             } catch(e) {}
         }
 
+        let lastRenderedPositionsKey = '';
+        let lastRenderedHistoryLen = -1;
+        let lastRenderedCoinsKey = '';
+        let lastRenderedSymbolsCount = -1;
+
         async function syncBackendState() {
             try {
                 const res = await fetch('/api/data');
                 const data = await res.json();
                 appState = data;
 
-                // Always sync prices from backend if available
+                // 1. Sync prices in memory
                 if (appState.symbols) {
                     for (const s in appState.symbols) {
                         const p = appState.symbols[s].price;
@@ -2633,10 +2638,43 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                     }
                 }
 
-                renderCoinManager();
-                renderCards();
-                renderPositions();
-                renderHistoryTable();
+                // 2. Only re-render Coin Manager if coin list or active status changed
+                const currentCoinsKey = (appState.all_coins || []).map(c => c.symbol + ':' + c.active).join(',');
+                if (currentCoinsKey !== lastRenderedCoinsKey) {
+                    lastRenderedCoinsKey = currentCoinsKey;
+                    renderCoinManager();
+                }
+
+                // 3. Only re-render Watchlist Cards if symbols count changed or empty
+                const currentSymbolsCount = Object.keys(appState.symbols || {}).length;
+                const watchlistCont = document.getElementById('watchlist-container');
+                if (currentSymbolsCount !== lastRenderedSymbolsCount || (watchlistCont && watchlistCont.children.length === 0)) {
+                    lastRenderedSymbolsCount = currentSymbolsCount;
+                    renderCards();
+                }
+
+                // 4. Only re-render Open Positions if position IDs or count changed
+                const currentPosKey = Object.keys(appState.open_positions || {}).sort().join(',');
+                if (currentPosKey !== lastRenderedPositionsKey) {
+                    lastRenderedPositionsKey = currentPosKey;
+                    renderPositions();
+                }
+
+                // 5. Only re-render History Table if history length changed
+                const currentHistLen = (appState.history || []).length;
+                if (currentHistLen !== lastRenderedHistoryLen) {
+                    lastRenderedHistoryLen = currentHistLen;
+                    renderHistoryTable();
+                }
+
+                // 6. Smooth in-place updates (Zero DOM destruction, Zero scroll jumping!)
+                updateFinancialSummary();
+                for (const s in appState.open_positions) {
+                    const curP = Number(livePrices[s] || (appState.symbols[s] ? appState.symbols[s].price : 0));
+                    if (curP > 0) {
+                        updatePriceInPlace(s, curP);
+                    }
+                }
             } catch(e) {
                 console.error(e);
             }
