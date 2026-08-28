@@ -1666,6 +1666,7 @@ HTML_PAGE = """
                                 <div id="plantext-${safeId}">${intel.actionPlan}</div>
                             </div>
 
+                            ${(cam && cam.R4) ? `
                             <table class="levels-table">
                                 <tr><td class="lvl-lbl">R5 (Zirve Hedef)</td><td class="lvl-num" style="color:var(--yellow)">${formatPriceClean(cam.R5)}</td></tr>
                                 <tr><td class="lvl-lbl">R4 (Breakout Tetik)</td><td class="lvl-num" style="color:#ffa726; font-weight:800">${formatPriceClean(cam.R4)}</td></tr>
@@ -1682,7 +1683,12 @@ HTML_PAGE = """
                                 <tr><td class="lvl-lbl">Dip AVWAP (Beyaz)</td><td class="lvl-num" style="color:#fff; font-weight:800">${formatPriceClean(levels.dip_avwap)}</td></tr>
                                 <tr><td class="lvl-lbl">S4 (Breakdown Tetik)</td><td class="lvl-num" style="color:var(--green); font-weight:800">${formatPriceClean(cam.S4)}</td></tr>
                                 <tr><td class="lvl-lbl">mVAL (Aylık Taban)</td><td class="lvl-num" style="color:var(--blue)">${formatPriceClean(levels.mval)}</td></tr>
-                            </table>
+                            </table>` : `
+                            <div style="padding:22px 10px; text-align:center; background:rgba(255,255,255,0.02); border-radius:10px; border:1px dashed rgba(255,255,255,0.08); margin-top:6px;">
+                                <div style="font-size:12px; color:var(--yellow); font-weight:700; font-family:'JetBrains Mono'">⚡ Göstergeler & Seviyeler Hesaplanıyor...</div>
+                                <div style="font-size:11px; color:#64748b; margin-top:4px;">5M mumlar işlendikçe seviyeler otomatik dolacaktır</div>
+                            </div>
+                            `}`}
                         </div>
                         `;
                     } catch (e) {
@@ -2788,9 +2794,12 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
     async def api_data(request):
         symbols_data = {}
         for s in market_data.active_symbols:
+            lev = market_data.levels.get(s, {})
+            if (not lev or not lev.get("camarilla")) and s in market_data.all_symbols:
+                asyncio.create_task(market_data.fetch_single_symbol(s))
             symbols_data[s] = {
                 "price": market_data.current_prices.get(s, 0.0),
-                "levels": market_data.levels.get(s, {})
+                "levels": lev
             }
         
         all_coins = []
