@@ -2968,7 +2968,112 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
             `;
         }
 
-async function init() {
+
+        function openTelemetryModal(tradeId) {
+            try {
+                const hList = appState.history || [];
+                const item = hList.find(h => h.id === tradeId);
+                if (!item) {
+                    alert("İşlem kaydı bulunamadı: " + tradeId);
+                    return;
+                }
+
+                const modal = document.getElementById('telemetry-modal-overlay');
+                const title = document.getElementById('tel-title');
+                const sub = document.getElementById('tel-sub');
+                const content = document.getElementById('tel-content');
+
+                if (!modal || !content) return;
+
+                title.innerHTML = `🔬 ${item.symbol} (${item.side} ${item.leverage}x) — ${item.id}`;
+                sub.innerHTML = `Giriş: ${item.entry_time} | Çıkış: ${item.exit_time} | Süre: ${item.duration || '5M Mum'}`;
+
+                const isWin = item.net_pnl >= 0;
+                const rMult = item.realized_r !== undefined ? item.realized_r : (item.roe_pct >= 0 ? +(item.roe_pct / 2).toFixed(1) : -1.0);
+                const mfe = item.mfe_roe !== undefined ? item.mfe_roe : Math.max(0, item.roe_pct);
+                const mae = item.mae_roe !== undefined ? item.mae_roe : (item.roe_pct < 0 ? Math.abs(item.roe_pct) : 0.0);
+                const eff = item.exit_efficiency_pct !== undefined ? item.exit_efficiency_pct : (isWin ? 90.0 : 0.0);
+
+                let snaps = item.snapshot_levels || {};
+                // Fallback to coin's current levels if snapshot was before this update
+                if (Object.keys(snaps).length === 0 && appState.symbols && appState.symbols[item.symbol]) {
+                    const cLevels = appState.symbols[item.symbol].levels || {};
+                    const cam = cLevels.camarilla || {};
+                    snaps = {
+                        "Pivot P": cam.P, "S3": cam.S3, "S4": cam.S4, "R3": cam.R3, "R4": cam.R4,
+                        "Tepe AVWAP": cLevels.tepe_avwap, "Dip AVWAP": cLevels.dip_avwap,
+                        "mPOC": cLevels.mpoc, "mVAL": cLevels.mval, "mVAH": cLevels.mvah
+                    };
+                }
+
+                let snapHtml = '';
+                for (const [key, val] of Object.entries(snaps)) {
+                    if (val && typeof val === 'number' && val > 0) {
+                        snapHtml += `
+                        <div style="background:rgba(255,255,255,0.04); border:1px solid var(--border); padding:8px 12px; border-radius:8px; font-size:12px; display:flex; justify-content:space-between; align-items:center;">
+                            <span style="color:#94a3b8; font-weight:700;">${key}:</span>
+                            <b style="color:#fff; font-family:'JetBrains Mono';">$${val.toFixed(4)}</b>
+                        </div>`;
+                    }
+                }
+                if (!snapHtml) {
+                    snapHtml = '<div style="color:#64748b; font-size:12px; grid-column:1/-1;">Bu işlem için anlık seviye verisi taze işlemlerle birlikte dolacaktır.</div>';
+                }
+
+                content.innerHTML = `
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-bottom:18px;">
+                        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:12px; text-align:center;">
+                            <div style="font-size:11px; color:#94a3b8; margin-bottom:4px;">NET PNL & ROE</div>
+                            <div style="font-size:15px; font-weight:800; color:${isWin ? 'var(--green)' : 'var(--red)'}; font-family:'JetBrains Mono';">${isWin ? '+' : ''}${item.net_pnl.toFixed(2)}$ (${isWin ? '+' : ''}${item.roe_pct.toFixed(2)}%)</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:12px; text-align:center;">
+                            <div style="font-size:11px; color:#94a3b8; margin-bottom:4px;">R-MULTIPLE (1R)</div>
+                            <div style="font-size:15px; font-weight:800; color:${rMult >= 0 ? 'var(--green)' : 'var(--red)'}; font-family:'JetBrains Mono';">${rMult >= 0 ? '+' : ''}${rMult}R</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:12px; text-align:center;">
+                            <div style="font-size:11px; color:#94a3b8; margin-bottom:4px;">ZİRVE KÂR (MFE)</div>
+                            <div style="font-size:15px; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono';">+${mfe.toFixed(2)}% ROE</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:12px; text-align:center;">
+                            <div style="font-size:11px; color:#94a3b8; margin-bottom:4px;">MAKS ÇEKİLME (MAE)</div>
+                            <div style="font-size:15px; font-weight:800; color:#f43f5e; font-family:'JetBrains Mono';">-${mae.toFixed(2)}% ROE</div>
+                        </div>
+                    </div>
+
+                    <div style="background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:14px; margin-bottom:18px;">
+                        <div style="font-size:13px; font-weight:800; color:#38bdf8; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                            🎯 STRATEJİ, GİRİŞ & ÇIKIŞ GEREKÇESİ
+                        </div>
+                        <div style="font-size:12.5px; color:#f1f5f9; line-height:1.7;">
+                            <b>• Giriş Gerekçesi / Formasyon:</b> <span style="color:#ffffff;">${item.reason}</span><br>
+                            <b>• Kapanış Tetikleyicisi:</b> <span style="color:#fbc531;">${item.close_reason}</span><br>
+                            <b>• Giriş / Çıkış Fiyatı:</b> $${item.entry_price} ➔ $${item.exit_price} | <b>Komisyon:</b> $${item.fees.toFixed(4)}<br>
+                            <b>• Planlanan Hedef (TP1):</b> ${item.tp1 ? '$' + item.tp1 : 'Yok'} | <b>Planlanan Stop:</b> ${item.soft_stop ? '$' + item.soft_stop : 'Yok'}<br>
+                            <b>• Çıkış Verimliliği:</b> %${eff.toFixed(1)} (Zirve kârın cebe aktarılma başarısı)
+                        </div>
+                    </div>
+
+                    <div style="font-size:13px; font-weight:800; color:#fff; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                        📸 GİRİŞ ANINDAKİ KURUMSAL SEVİYE SNAPSHOT'I
+                    </div>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap:8px;">
+                        ${snapHtml}
+                    </div>
+                `;
+
+                modal.style.display = 'flex';
+            } catch(err) {
+                console.error("openTelemetryModal error:", err);
+                alert("İnceleme penceresi açılırken hata oluştu: " + err.message);
+            }
+        }
+
+        function closeTelemetryModal() {
+            const modal = document.getElementById('telemetry-modal-overlay');
+            if (modal) modal.style.display = 'none';
+        }
+
+        async function init() {
             if (false) {
                 const grid = document.getElementById('coin-chips-container');
                 const btn = document.getElementById('pool-collapse-btn');
