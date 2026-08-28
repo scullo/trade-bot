@@ -1,5 +1,5 @@
 {
-  "balance": 99966.15639131199,
+  "balance": 99965.16892379358,
   "open_positions": {
     "PEPE/USDT": {
       "id": "TRD-0001",
@@ -136,15 +136,16 @@
       "entry_fee": 0.25,
       "entry_time": "2026-08-28 19:31:40",
       "entry_timestamp": 1787945500.5961032,
-      "soft_stop": 0.024775150000000003,
-      "hard_stop": 0.025873249999999997,
+      "soft_stop": 0.024431750000000002,
+      "hard_stop": 0.024431750000000002,
       "tp1": 0.023370515075376883,
       "tp2": 0.0,
       "trade_type": "BREAKOUT",
       "reason": "Taze S4 Breakdown + Dip AVWAP Alti Onay",
       "is_half_closed": false,
       "_trail_be": true,
-      "_trail_30": true
+      "_trail_30": true,
+      "_trail_50": true
     },
     "JUP/USDT": {
       "id": "TRD-0009",
@@ -1266,6 +1267,26 @@
       "trade_type": "SCALP",
       "reason": "A\u015fa\u011f\u0131 nPOC ($36.0657) Likidite Sekmesi (Hedef Pivot P)",
       "is_half_closed": false
+    },
+    "GMX/USDT": {
+      "id": "TRD-0099",
+      "symbol": "GMX/USDT",
+      "side": "SHORT",
+      "entry_price": 7.6,
+      "margin": 100.0,
+      "leverage": 5,
+      "position_value": 500.0,
+      "quantity": 65.78947368421053,
+      "entry_fee": 0.25,
+      "entry_time": "2026-08-28 20:10:10",
+      "entry_timestamp": 1787947810.4980211,
+      "soft_stop": 7.6271249999999995,
+      "hard_stop": 7.7055,
+      "tp1": 7.411637583892617,
+      "tp2": 0.0,
+      "trade_type": "SCALP",
+      "reason": "S4 Direnc Retest Sekmesi (Resistance Flip)",
+      "is_half_closed": false
     }
   },
   "history": [
@@ -1898,6 +1919,24 @@
       "exit_time": "2026-08-28 20:05:22",
       "reason": "R3 Direnc Tepkisi (Hedef Pivot P)",
       "close_reason": "Yumusak Stop (Mum Seviye Ustunde Kapandi)"
+    },
+    {
+      "id": "TRD-0100",
+      "symbol": "PUMP/USDT",
+      "side": "SHORT",
+      "leverage": 5,
+      "margin": 100.0,
+      "entry_price": 0.004618,
+      "exit_price": 0.0046225,
+      "gross_pnl": -0.4872,
+      "fees": 0.5002,
+      "net_pnl": -0.9875,
+      "roe_pct": -0.99,
+      "balance_after": 99965.17,
+      "entry_time": "2026-08-28 20:10:14",
+      "exit_time": "2026-08-28 20:10:20",
+      "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
+      "close_reason": "Sert Stop Tetiklendi ($0.0042)"
     }
   ]
 }
