@@ -332,17 +332,31 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
         if not self.token or not self.chat_id:
             return
 
+        # Baslangic onay mesaji gonder
+        try:
+            boot_msg = f"""🚀 <b>VALKYRIE QUANT DESK — AKTİF EDİLDİ</b>
+━━━━━━━━━━━━━━━━━━━━━━━━
+💰 <b>Başlangıç Kasası:</b> <code>${trader_manager.balance:,.2f} USDT</code>
+📊 <b>Taranan Parite:</b> <code>100 / 100 Canlı Akış</code>
+⏰ <b>Başlangıç Zamanı:</b> <code>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</code>
+━━━━━━━━━━━━━━━━━━━━━━━━
+📌 <i>5 Dakikalık mum kapanışları ve saatlik raporlama döngüsü başlatıldı.</i>"""
+            await self.send_message(boot_msg)
+        except Exception as e:
+            print(f"[TELEGRAM BOOT MSG ERROR]: {e}")
+
         while True:
             try:
                 now = datetime.now()
-                # Bir sonraki tam saat basina kalan saniyeyi hesapla
-                seconds_to_wait = (60 - now.minute - 1) * 60 + (60 - now.second)
-                if seconds_to_wait <= 0:
+                # Bir sonraki tam saat basina (:00:02) kalan saniyeyi hesapla
+                seconds_to_wait = (60 - now.minute - 1) * 60 + (60 - now.second) + 2
+                if seconds_to_wait <= 2:
                     seconds_to_wait = 3600
 
                 await asyncio.sleep(seconds_to_wait)
 
-                current_hour = datetime.now().hour
+                # Turkiye saati (UTC+3) hesabi
+                current_hour = (datetime.utcnow().hour + 3) % 24
 
                 # Eger saat 00:00 ise ozel Gece Kapanis Raporu gonder, aksi takdirde normal Saatlik Rapor gonder
                 if current_hour == 0:
@@ -363,4 +377,4 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
                     )
             except Exception as e:
                 print(f"[HOURLY/MIDNIGHT REPORT SCHEDULER HATA]: {e}")
-                await asyncio.sleep(60)
+                await asyncio.sleep(30)

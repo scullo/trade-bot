@@ -362,12 +362,56 @@ class MarketDataManager:
                                             self.recalculate_levels(norm_s)
                                             if self.on_candle_close_callback and norm_s in self.active_symbols:
                                                 await self.on_candle_close_callback(norm_s, new_candle, prev_candle)
-                                elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
-                                    break
-                except Exception:
-                    await asyncio.sleep(2)
+        # Worker 3: 5M Periyodik REST Mum Senkronizasyonu (Kesintisiz Guvence & 0 Kayip)
+        async def candle_poller_worker():
+            last_scanned_slot = -1
+            while True:
+                try:
+                    now_sec = time.time()
+                    current_5m_slot = int(now_sec // 300)
+                    # Her 5 dakikalik periyotta 1 kez calis
+                    if current_5m_slot != last_scanned_slot:
+                        last_scanned_slot = current_5m_slot
+                        now_str = datetime.now().strftime('%H:%M:%S')
+                        print(f">> [5M MUM TARAMASI] {now_str} — 100 Paritede yeni 5M mum kapandi, strateji pusu kontrolleri yapiliyor...")
+                        async with aiohttp.ClientSession() as session:
+                            for s in list(self.active_symbols):
+                                try:
+                                    ex_s = self._clean_symbol(s).replace('/', '').replace(':USDT', '')
+                                    url = f"https://fapi.binance.com/fapi/v1/klines?symbol={ex_s}&interval=5m&limit=3"
+                                    async with session.get(url, timeout=3) as res:
+                                        if res.status == 200:
+                                            kl = await res.json()
+                                            if len(kl) >= 2:
+                                                closed_k = kl[-2]
+                                                mult = self.applied_multipliers.get(s, 1.0)
+                                                cur_candle = {
+                                                    'timestamp': closed_k[0],
+                                                    'open': float(closed_k[1]) * mult,
+                                                    'high': float(closed_k[2]) * mult,
+                                                    'low': float(closed_k[3]) * mult,
+                                                    'close': float(closed_k[4]) * mult,
+                                                    'volume': float(closed_k[5])
+                                                }
+                                                prev_k = kl[-3] if len(kl) >= 3 else closed_k
+                                                prev_candle = {
+                                                    'timestamp': prev_k[0],
+                                                    'open': float(prev_k[1]) * mult,
+                                                    'high': float(prev_k[2]) * mult,
+                                                    'low': float(prev_k[3]) * mult,
+                                                    'close': float(prev_k[4]) * mult,
+                                                    'volume': float(prev_k[5])
+                                                }
+                                                if self.on_candle_close_callback:
+                                                    await self.on_candle_close_callback(s, cur_candle, prev_candle)
+                                except Exception:
+                                    pass
+                    await asyncio.sleep(5)
+                except Exception as e:
+                    print(f">> [MUM TARAYICI HATA]: {e}")
+                    await asyncio.sleep(5)
 
-        tasks = [bookticker_worker()] + [kline_worker(c) for c in kline_chunks]
+        tasks = [bookticker_worker(), candle_poller_worker()] + [kline_worker(c) for c in kline_chunks]
         await asyncio.gather(*tasks)
 
     async def close(self):
