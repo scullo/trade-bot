@@ -64,6 +64,7 @@ class MarketDataManager:
         async with self.semaphore:
             clean_sym = self._clean_symbol(symbol)
             clean_raw = clean_sym.replace('/', '').replace(':USDT', '')
+            bybit_sym = clean_raw if clean_raw.endswith('USDT') else f"{clean_raw}USDT"
             raw_spot = symbol.replace('/', '').replace(':USDT', '')
             spot_clean = raw_spot.replace('1000000', '').replace('1000', '')
             mult = self._get_multiplier(symbol)
@@ -105,8 +106,8 @@ class MarketDataManager:
                 # 2. Bybit Linear Fallback (Futures-exclusive coins)
                 if df_1d is None or df_5m is None or df_1d.empty or df_5m.empty:
                     try:
-                        url_1d_b = f"https://api.bybit.com/v5/market/kline?category=linear&symbol={clean_raw}&interval=D&limit=30"
-                        url_5m_b = f"https://api.bybit.com/v5/market/kline?category=linear&symbol={clean_raw}&interval=5&limit=200"
+                        url_1d_b = f"https://api.bybit.com/v5/market/kline?category=linear&symbol={bybit_sym}&interval=D&limit=30"
+                        url_5m_b = f"https://api.bybit.com/v5/market/kline?category=linear&symbol={bybit_sym}&interval=5&limit=200"
                         async with session.get(url_1d_b, timeout=aiohttp.ClientTimeout(total=3)) as r1:
                             if r1.status == 200:
                                 res1 = await r1.json()
@@ -301,7 +302,8 @@ class MarketDataManager:
                         # 2. Bybit Linear Fallback (Futures-exclusive coins)
                         if cur_candle is None:
                             try:
-                                url_b = f"https://api.bybit.com/v5/market/kline?category=linear&symbol={ex_s}&interval=5&limit=4"
+                                bybit_s = ex_s if ex_s.endswith('USDT') else f"{ex_s}USDT"
+                                url_b = f"https://api.bybit.com/v5/market/kline?category=linear&symbol={bybit_s}&interval=5&limit=4"
                                 async with session.get(url_b, timeout=aiohttp.ClientTimeout(total=3)) as res:
                                     if res.status == 200:
                                         data_b = await res.json()
