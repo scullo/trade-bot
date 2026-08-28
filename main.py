@@ -42,14 +42,26 @@ async def main():
     await start_server(market_data, trader_manager, notifier, live_trader=live_trader)
     await init_task
 
-    # 100 paritede son kapanmış 5M mumları tara ve oluşmuş formasyonları anında pozisyona al
-    print(">> [BAŞLANGIÇ TARAMASI] 100 Paritenin son mum kapanışları taranıyor...")
+    # 100 paritede son kapanmış 5M mumları tara (Sadece son 5 dakika içinde kapanmış TAZE mumlar değerlendirilir)
+    print(">> [BAŞLANGIÇ TARAMASI] 100 Paritenin taze mum kapanışları taranıyor...")
+    now_ms = time.time() * 1000
     for s in list(market_data.active_symbols):
         df_5m = market_data.candles_5m.get(s)
         lev = market_data.levels.get(s, {})
         if df_5m is not None and len(df_5m) >= 2 and lev and lev.get('camarilla', {}).get('R4'):
             cur = df_5m.iloc[-1].to_dict()
             prev = df_5m.iloc[-2].to_dict()
+
+            # 1. Tazelik Koruması: Mum en fazla 5.5 dakika önce kapanmış olmalı (Eski mumlarla geç girilmez)
+            candle_age_sec = (now_ms - cur.get('timestamp', now_ms)) / 1000.0
+            if candle_age_sec > 330:
+                continue
+
+            # 2. Fiyat Kayma Koruması: Canlı fiyat ile mum kapanış fiyatı arasında %0.3'ten fazla sapma olmamalı
+            cur_p = market_data.current_prices.get(s, cur['close'])
+            if cur_p > 0 and abs(cur_p - cur['close']) / cur['close'] > 0.003:
+                continue
+
             await strategy.evaluate_candle_close(s, cur, prev, lev)
 
     # Saatlik otomatik Telegram Kasa & Portföy Raporlayıcıyı Başlat
