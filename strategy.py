@@ -1,0 +1,593 @@
+import time
+from config import (
+    BUFFER_RATIO, MAX_OPEN_POSITIONS,
+    TRAILING_BREAKEVEN_ROE, TRAILING_LOCK_30_ROE, TRAILING_LOCK_50_ROE,
+    SCALP_MAX_HOLD_CANDLES
+)
+
+class StrategyEngine:
+    def __init__(self, paper_trader, notifier, market_data=None):
+        self.market_data = market_data
+        self.paper_trader = paper_trader
+        self.notifier = notifier
+        self.peak_prices = {}  # symbol -> trailing icin en iyi fiyat
+
+    async def _notify_open(self, pos: dict, levels: dict = None):
+        if not self.notifier:
+            return
+        symbol = pos.get("symbol", "")
+        df_5m = self.market_data.candles_5m.get(symbol) if self.market_data else None
+        await self.notifier.notify_position_opened(
+            pos=pos,
+            free_balance=self.paper_trader.get_free_balance(),
+            df_5m=df_5m,
+            levels=levels
+        )
+
+    async def _notify_close(self, record: dict, is_manual: bool = False, levels: dict = None):
+        if not self.notifier or not record:
+            return
+        symbol = record.get("symbol", "")
+        df_5m = self.market_data.candles_5m.get(symbol) if self.market_data else None
+        await self.notifier.notify_position_closed(
+            record=record,
+            is_manual=is_manual,
+            df_5m=df_5m,
+            levels=levels
+        )
+
+
+    async def _safe_close_position(self, *args, **kwargs):
+        res = self.paper_trader.close_position(*args, **kwargs)
+        if hasattr(res, '__await__'):
+            return await res
+        return res
+
+    async def _safe_open_position(self, *args, **kwargs):
+        res = self.paper_trader.open_position(*args, **kwargs)
+        if hasattr(res, '__await__'):
+            return await res
+        return res
+
+    # =========================================================================
+    # TICK SEVIYESI: Sert Stop + TP + Trailing Stop (Her fiyat guncellenmesinde)
+    # =========================================================================
+    async def evaluate_tick(self, symbol: str, current_price: float, levels: dict):
+        """Milisaniyelik anlik sert stop, TP ve trailing stop kontrolleri."""
+        if symbol not in self.paper_trader.open_positions:
+            return
+
+        pos = self.paper_trader.open_positions[symbol]
+        side = pos["side"]
+        trade_type = pos.get("trade_type")
+        tp1 = pos.get("tp1") or 0.0
+        tp2 = pos.get("tp2") or 0.0
+        hard_stop = pos.get("hard_stop") or 0.0
+
+        # ── 1. SERT STOP KONTROLU (Felaket Korumasi — Aninda Kapat) ──────────
+        if side == "LONG" and hard_stop > 0 and current_price <= hard_stop:
+            record = await self._safe_close_position(symbol, current_price, f"Sert Stop Tetiklendi (${hard_stop:.4f})")
+            if record:
+                await self._notify_close(record, levels=levels)
+                self._cleanup_tracking(symbol)
+            return
+
+        elif side == "SHORT" and hard_stop > 0 and current_price >= hard_stop:
+            record = await self._safe_close_position(symbol, current_price, f"Sert Stop Tetiklendi (${hard_stop:.4f})")
+            if record:
+                await self._notify_close(record, levels=levels)
+                self._cleanup_tracking(symbol)
+            return
+
+        # ── 2. TAKE-PROFIT (KAR ALMA) KONTROLU ──────────────────────────────
+        if side == "LONG":
+            if tp1 > 0 and current_price >= tp1:
+                if trade_type == "SCALP" or not tp2:
+                    record = await self._safe_close_position(symbol, current_price, f"TP Hedefine Ulasildi (${tp1:.4f})")
+                    if record:
+                        await self._notify_close(record, levels=levels)
+                        self._cleanup_tracking(symbol)
+                elif trade_type == "BREAKOUT" and not pos.get("is_half_closed"):
+                    record = await self._safe_close_position(symbol, current_price, f"TP1 Alindi (%50 Kapatildi)", is_partial=True)
+                    if record:
+                        await self._notify_close(record, levels=levels)
+
+            elif tp2 > 0 and pos.get("is_half_closed") and current_price >= tp2:
+                record = await self._safe_close_position(symbol, current_price, f"TP2 Final Hedefe Ulasildi (${tp2:.4f})")
+                if record:
+                    await self._notify_close(record, levels=levels)
+                    self._cleanup_tracking(symbol)
+
+        elif side == "SHORT":
+            if tp1 > 0 and current_price <= tp1:
+                if trade_type == "SCALP" or not tp2:
+                    record = await self._safe_close_position(symbol, current_price, f"TP Hedefine Ulasildi (${tp1:.4f})")
+                    if record:
+                        await self._notify_close(record, levels=levels)
+                        self._cleanup_tracking(symbol)
+                elif trade_type == "BREAKOUT" and not pos.get("is_half_closed"):
+                    record = await self._safe_close_position(symbol, current_price, f"TP1 Alindi (%50 Kapatildi)", is_partial=True)
+                    if record:
+                        await self._notify_close(record, levels=levels)
+
+            elif tp2 > 0 and pos.get("is_half_closed") and current_price <= tp2:
+                record = await self._safe_close_position(symbol, current_price, f"TP2 Final Hedefe Ulasildi (${tp2:.4f})")
+                if record:
+                    await self._notify_close(record, levels=levels)
+                    self._cleanup_tracking(symbol)
+
+        # ── 3. TRAILING STOP (KAR KORUMA MEKANIZMASI) ────────────────────────
+        if symbol in self.paper_trader.open_positions:
+            self._apply_trailing_stop(symbol, self.paper_trader.open_positions[symbol], current_price)
+
+    # =========================================================================
+    # TRAILING STOP — ROE esiklerine gore stop seviyelerini sikilastirir
+    # =========================================================================
+    def _apply_trailing_stop(self, symbol: str, pos: dict, current_price: float):
+        side = pos["side"]
+        entry = pos["entry_price"]
+        margin = pos["margin"]
+        leverage = pos["leverage"]
+
+        # ROE hesapla
+        if side == "LONG":
+            price_pct = ((current_price - entry) / entry) * 100.0
+        else:
+            price_pct = ((entry - current_price) / entry) * 100.0
+        roe = price_pct * leverage
+
+        if roe <= 0:
+            return  # Zarardayken trailing yapma
+
+        # Peak fiyat takibi (trailing mesafe hesabi icin)
+        if symbol not in self.peak_prices:
+            self.peak_prices[symbol] = current_price
+        if side == "LONG" and current_price > self.peak_prices[symbol]:
+            self.peak_prices[symbol] = current_price
+        elif side == "SHORT" and current_price < self.peak_prices[symbol]:
+            self.peak_prices[symbol] = current_price
+
+        updated = False
+
+        # ── ASAMA 1: ROE >= %6 → Soft stop breakeven'e (giris fiyatina) ─────
+        if roe >= TRAILING_BREAKEVEN_ROE and not pos.get("_trail_be"):
+            if side == "LONG":
+                new_stop = entry * 1.001  # Giris + kucuk tampon
+                if new_stop > pos["soft_stop"]:
+                    pos["soft_stop"] = new_stop
+            else:
+                new_stop = entry * 0.999  # Giris - kucuk tampon
+                if new_stop < pos["soft_stop"]:
+                    pos["soft_stop"] = new_stop
+            pos["_trail_be"] = True
+            updated = True
+            print(f">> [TRAILING] {symbol} ★ Breakeven koruma AKTIF (ROE: {roe:.1f}%)")
+
+        # ── ASAMA 2: ROE >= %12 → Karin %30'unu kilitle ─────────────────────
+        if roe >= TRAILING_LOCK_30_ROE and not pos.get("_trail_30"):
+            peak = self.peak_prices[symbol]
+            if side == "LONG":
+                lock_price = entry + (peak - entry) * 0.3
+                pos["soft_stop"] = max(pos["soft_stop"], lock_price)
+            else:
+                lock_price = entry - (entry - peak) * 0.3
+                pos["soft_stop"] = min(pos["soft_stop"], lock_price)
+            pos["_trail_30"] = True
+            updated = True
+            print(f">> [TRAILING] {symbol} ★★ %30 kar kilidi AKTIF (ROE: {roe:.1f}%)")
+
+        # ── ASAMA 3: ROE >= %20 → Hard stop ile karin %50'sini kilitle ───────
+        if roe >= TRAILING_LOCK_50_ROE and not pos.get("_trail_50"):
+            peak = self.peak_prices[symbol]
+            if side == "LONG":
+                lock_price = entry + (peak - entry) * 0.5
+                pos["hard_stop"] = max(pos["hard_stop"], lock_price)
+                pos["soft_stop"] = max(pos["soft_stop"], lock_price)
+            else:
+                lock_price = entry - (entry - peak) * 0.5
+                pos["hard_stop"] = min(pos["hard_stop"], lock_price)
+                pos["soft_stop"] = min(pos["soft_stop"], lock_price)
+            pos["_trail_50"] = True
+            updated = True
+            print(f">> [TRAILING] {symbol} ★★★ %50 SERT kar kilidi AKTIF (ROE: {roe:.1f}%)")
+
+        if updated:
+            self.paper_trader.save_history()
+
+    def _cleanup_tracking(self, symbol: str):
+        """Pozisyon kapandiginda tracking verilerini temizle."""
+        self.peak_prices.pop(symbol, None)
+
+    # =========================================================================
+    # POZISYON ACMA YARDIMCISI
+    # =========================================================================
+    async def _handle_open(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT"):
+        res = await self._safe_open_position(
+            symbol=symbol, side=side, entry_price=entry_price,
+            reason=reason, soft_stop=soft_stop, hard_stop=hard_stop,
+            tp1=tp1, tp2=tp2, trade_type=trade_type
+        )
+        if isinstance(res, dict) and res.get("error") == "INSUFFICIENT_BALANCE":
+            await self.notifier.notify_insufficient_balance(
+                symbol=symbol,
+                side=side,
+                reason=reason,
+                required_margin=res["required_margin"],
+                current_balance=res["current_balance"]
+            )
+            return
+        elif res:
+            free_bal = self.paper_trader.get_free_balance()
+            await self.notifier.notify_position_opened(res, free_balance=free_bal)
+
+    # =========================================================================
+    # SEVIYE GUNCELLEME — Gun degisiminde acik pozisyon TP/Stop guncelleme
+    # =========================================================================
+    async def _refresh_position_levels(self, symbol: str, pos: dict, close_price: float, levels: dict) -> bool:
+        """
+        Camarilla seviyeleri gun degisiminde guncellendiginde,
+        acik pozisyonun TP1/TP2/Stop degerlerini yeni seviyelere gore gunceller.
+        Eger hedef coktan asilmissa pozisyonu kapatir.
+        Returns True if position was closed.
+        """
+        cam = levels.get("camarilla", {})
+        p = cam.get("P", 0)
+        r3, r4, r5 = cam.get("R3", 0), cam.get("R4", 0), cam.get("R5", 0)
+        s3, s4, s5 = cam.get("S3", 0), cam.get("S4", 0), cam.get("S5", 0)
+
+        side = pos["side"]
+        reason = pos.get("reason", "")
+        old_tp1 = pos.get("tp1", 0)
+        entry = pos["entry_price"]
+
+        # Trailing aktifse stop seviyelerini zayiflatma
+        trail_active = pos.get("_trail_be", False)
+
+        # ── SCALP SHORT (R3 Direnc Tepkisi → hedef Pivot P) ─────────────────
+        if "R3 Direnc" in reason and side == "SHORT":
+            if p > 0 and abs(old_tp1 - p) > 0.0001:
+                if close_price <= p:
+                    # Fiyat yeni Pivot'un altinda → hedef coktan asildi → kapat
+                    record = await self._safe_close_position(
+                        symbol, close_price,
+                        f"Pivot Kayma — Hedef Asildi (Yeni P: ${p:.4f}, Eski TP: ${old_tp1:.4f})")
+                    if record:
+                        await self._notify_close(record, levels=levels)
+                        self._cleanup_tracking(symbol)
+                    return True
+                else:
+                    # Yeni hedefe guncelle
+                    pos["tp1"] = p
+                    print(f">> [SEVIYE GUNCELLEME] {symbol} SHORT TP1: {old_tp1:.4f} → {p:.4f}")
+            # Stop guncelle (trailing yoksa)
+            if r3 > 0 and r4 > 0 and not trail_active:
+                pos["soft_stop"] = r3 + (r4 - r3) * BUFFER_RATIO
+                pos["hard_stop"] = r4
+
+        # ── SCALP LONG (S3 Destek Sekmesi → hedef Pivot P) ──────────────────
+        elif "S3 Destek" in reason and side == "LONG":
+            if p > 0 and abs(old_tp1 - p) > 0.0001:
+                if close_price >= p:
+                    record = await self._safe_close_position(
+                        symbol, close_price,
+                        f"Pivot Kayma — Hedef Asildi (Yeni P: ${p:.4f}, Eski TP: ${old_tp1:.4f})")
+                    if record:
+                        await self._notify_close(record, levels=levels)
+                        self._cleanup_tracking(symbol)
+                    return True
+                else:
+                    pos["tp1"] = p
+                    print(f">> [SEVIYE GUNCELLEME] {symbol} LONG TP1: {old_tp1:.4f} → {p:.4f}")
+            if s3 > 0 and s4 > 0 and not trail_active:
+                pos["soft_stop"] = s3 - (s3 - s4) * BUFFER_RATIO
+                pos["hard_stop"] = s4
+
+        # ── BREAKOUT LONG (R4 Breakout) ──────────────────────────────────────
+        elif "R4 Breakout" in reason and side == "LONG":
+            if r5 > 0 and abs(old_tp1 - r5) > 0.0001:
+                pos["tp1"] = r5
+                print(f">> [SEVIYE GUNCELLEME] {symbol} LONG TP1: {old_tp1:.4f} → {r5:.4f}")
+            if r4 > 0 and r3 > 0 and not trail_active:
+                pos["soft_stop"] = r4 - (r4 - r3) * BUFFER_RATIO
+                pos["hard_stop"] = r3
+
+        # ── BREAKOUT SHORT (S4 Breakdown) ────────────────────────────────────
+        elif "S4 Breakdown" in reason and side == "SHORT":
+            if s5 > 0 and abs(old_tp1 - s5) > 0.0001:
+                pos["tp1"] = s5
+                print(f">> [SEVIYE GUNCELLEME] {symbol} SHORT TP1: {old_tp1:.4f} → {s5:.4f}")
+            if s4 > 0 and s3 > 0 and not trail_active:
+                pos["soft_stop"] = s4 + (s3 - s4) * BUFFER_RATIO
+                pos["hard_stop"] = s3
+
+        # ── R4 Destek Retest LONG ────────────────────────────────────────────
+        elif "R4 Destek Retest" in reason and side == "LONG":
+            if r5 > 0 and abs(old_tp1 - r5) > 0.0001:
+                pos["tp1"] = r5
+            if r4 > 0 and r3 > 0 and not trail_active:
+                pos["soft_stop"] = r4 - (r4 - r3) * BUFFER_RATIO
+                pos["hard_stop"] = r3
+
+        # ── S4 Direnc Retest SHORT ───────────────────────────────────────────
+        elif "S4 Direnc Retest" in reason and side == "SHORT":
+            if s5 > 0 and abs(old_tp1 - s5) > 0.0001:
+                pos["tp1"] = s5
+            if s4 > 0 and s3 > 0 and not trail_active:
+                pos["soft_stop"] = s4 + (s3 - s4) * BUFFER_RATIO
+                pos["hard_stop"] = s3
+
+        # ── nPOC SCALP POZISYONLAR (Hedef Pivot P) ─────────────────────────
+        elif "nPOC" in reason or "Likidite" in reason:
+            if p > 0 and abs(old_tp1 - p) > 0.0001:
+                if (side == "SHORT" and close_price <= p) or (side == "LONG" and close_price >= p):
+                    record = await self._safe_close_position(
+                        symbol, close_price,
+                        f"Pivot Kayma — Hedef Asildi (Yeni P: ${p:.4f}, Eski TP: ${old_tp1:.4f})")
+                    if record:
+                        await self._notify_close(record, levels=levels)
+                        self._cleanup_tracking(symbol)
+                    return True
+                else:
+                    pos["tp1"] = p
+                    print(f">> [SEVIYE GUNCELLEME] {symbol} nPOC {side} TP1: {old_tp1:.4f} → {p:.4f}")
+
+        # ── mVAH / mVAL Macro pozisyonlar ───────────────────────────────────
+        # Bu pozisyonlarin hedefleri nPOC/nVAH bazli, Camarilla'ya bagli degil
+        # Guncelleme gerekmez
+
+        self.paper_trader.save_history()
+        return False
+
+    # =========================================================================
+    # MUM KAPANISI: Yumusak Stop + Seviye Guncelleme + Zaman Asimi + Yeni Giris
+    # =========================================================================
+    async def evaluate_candle_close(self, symbol: str, current_candle: dict, prev_candle: dict, levels: dict):
+        """5 Dakikalik mum kapandiginda tum kontroller."""
+        close_price = current_candle['close']
+        prev_close = prev_candle['close'] if prev_candle else close_price
+
+        cam = levels.get("camarilla", {})
+        tepe_avwap = levels.get("tepe_avwap") or 0.0
+        dip_avwap = levels.get("dip_avwap") or 0.0
+        mvah = levels.get("mvah") or 0.0
+        mval = levels.get("mval") or 0.0
+        above_npoc = levels.get("above_npoc")
+        below_npoc = levels.get("below_npoc")
+        above_nvah = levels.get("above_nvah")
+        below_nval = levels.get("below_nval")
+
+        # ═══════════════════════════════════════════════════════════════════
+        # BOLUM 1: ACIK POZISYON YONETIMI
+        # ═══════════════════════════════════════════════════════════════════
+        if symbol in self.paper_trader.open_positions:
+            pos = self.paper_trader.open_positions[symbol]
+            soft_stop = pos.get("soft_stop", 0.0)
+            side = pos["side"]
+
+            # 1a. YUMUSAK STOP KONTROL
+            if side == "LONG" and close_price < soft_stop:
+                record = await self._safe_close_position(symbol, close_price, f"Yumusak Stop (Mum Seviye Altinda Kapandi)")
+                if record:
+                    await self._notify_close(record, levels=levels)
+                    self._cleanup_tracking(symbol)
+                return
+            elif side == "SHORT" and close_price > soft_stop:
+                record = await self._safe_close_position(symbol, close_price, f"Yumusak Stop (Mum Seviye Ustunde Kapandi)")
+                if record:
+                    await self._notify_close(record, levels=levels)
+                    self._cleanup_tracking(symbol)
+                return
+
+            # 1b. SEVIYE GUNCELLEME (Pivot Kaymasi Kontrolu)
+            closed = await self._refresh_position_levels(symbol, pos, close_price, levels)
+            if closed:
+                return
+
+            # 1c. SCALP ZAMAN ASIMI
+            if pos.get("trade_type") == "SCALP":
+                hold_seconds = time.time() - pos.get("entry_timestamp", 0)
+                max_seconds = SCALP_MAX_HOLD_CANDLES * 300  # candle sayisi x 5dk
+                if hold_seconds > max_seconds:
+                    hours = hold_seconds / 3600.0
+                    record = await self._safe_close_position(
+                        symbol, close_price,
+                        f"Scalp Zaman Asimi ({hours:.1f} saat)")
+                    if record:
+                        await self._notify_close(record, levels=levels)
+                        self._cleanup_tracking(symbol)
+            return
+
+        # ═══════════════════════════════════════════════════════════════════
+        # BOLUM 2: YENI POZISYON GIRIS KONTROLLERI (8 SETUP)
+        # ═══════════════════════════════════════════════════════════════════
+        if len(self.paper_trader.open_positions) >= MAX_OPEN_POSITIONS:
+            return
+
+        r3, r4, r5 = cam.get("R3", 0), cam.get("R4", 0), cam.get("R5", 0)
+        s3, s4, s5 = cam.get("S3", 0), cam.get("S4", 0), cam.get("S5", 0)
+        p = cam.get("P", 0)
+
+        # ─────────────────────────────────────────────────────────────────
+        # SETUP 1: TAZE R4 BREAKOUT LONG
+        # Onceki mum R4 altinda, simdiki mum R4 ustunde kapanir
+        # Tepe AVWAP filtresini gecer → Guclu boga teyidi
+        # ─────────────────────────────────────────────────────────────────
+        if prev_close <= r4 and close_price > r4:
+            if tepe_avwap == 0 or close_price > tepe_avwap:
+                tp1 = r5 if r5 > close_price else (mvah if mvah > close_price else close_price * 1.01)
+                # nPOC veya nVAH hedefi
+                candidates = [c for c in [above_npoc, above_nvah] if c and c > tp1]
+                tp2 = min(candidates) if candidates else (mvah if mvah > tp1 else None)
+                buffer = (r4 - r3) * BUFFER_RATIO
+                soft_stop = r4 - buffer
+                hard_stop = r3
+
+                await self._handle_open(
+                    symbol=symbol, side="LONG", entry_price=close_price,
+                    reason="Taze R4 Breakout + Tepe AVWAP Ustu Onay",
+                    soft_stop=soft_stop, hard_stop=hard_stop,
+                    tp1=tp1, tp2=tp2, trade_type="BREAKOUT"
+                )
+                return
+
+        # ─────────────────────────────────────────────────────────────────
+        # SETUP 2: TAZE S4 BREAKDOWN SHORT
+        # Onceki mum S4 ustunde, simdiki mum S4 altinda kapanir
+        # Dip AVWAP filtresini gecer → Guclu ayi teyidi
+        # ─────────────────────────────────────────────────────────────────
+        if prev_close >= s4 and close_price < s4:
+            if dip_avwap == 0 or close_price < dip_avwap:
+                tp1 = s5 if s5 < close_price else (mval if (mval > 0 and mval < close_price) else close_price * 0.99)
+                candidates = [c for c in [below_npoc, below_nval] if c and c < tp1]
+                tp2 = max(candidates) if candidates else (mval if (mval > 0 and mval < tp1) else None)
+                buffer = (s3 - s4) * BUFFER_RATIO
+                soft_stop = s4 + buffer
+                hard_stop = s3
+
+                await self._handle_open(
+                    symbol=symbol, side="SHORT", entry_price=close_price,
+                    reason="Taze S4 Breakdown + Dip AVWAP Alti Onay",
+                    soft_stop=soft_stop, hard_stop=hard_stop,
+                    tp1=tp1, tp2=tp2, trade_type="BREAKOUT"
+                )
+                return
+
+        # ─────────────────────────────────────────────────────────────────
+        # SETUP 3: S3 DESTEK TEPKISI LONG (Scalp — Hedef Pivot P)
+        # Mum S3'e dokunur ama ustunde kapatir, Pivot P altinda
+        # ─────────────────────────────────────────────────────────────────
+        if current_candle['low'] <= s3 and close_price > s3 and close_price < p:
+            buffer = (s3 - s4) * BUFFER_RATIO
+            soft_stop = s3 - buffer
+            hard_stop = s4
+            await self._handle_open(
+                symbol=symbol, side="LONG", entry_price=close_price,
+                reason="S3 Destek Sekmesi (Hedef Pivot P)",
+                soft_stop=soft_stop, hard_stop=hard_stop,
+                tp1=p, trade_type="SCALP"
+            )
+            return
+
+        # ─────────────────────────────────────────────────────────────────
+        # SETUP 4: R3 DIRENC TEPKISI SHORT (Scalp — Hedef Pivot P)
+        # Mum R3'e dokunur ama altinda kapatir, Pivot P ustunde
+        # ─────────────────────────────────────────────────────────────────
+        if current_candle['high'] >= r3 and close_price < r3 and close_price > p:
+            buffer = (r4 - r3) * BUFFER_RATIO
+            soft_stop = r3 + buffer
+            hard_stop = r4
+            await self._handle_open(
+                symbol=symbol, side="SHORT", entry_price=close_price,
+                reason="R3 Direnc Tepkisi (Hedef Pivot P)",
+                soft_stop=soft_stop, hard_stop=hard_stop,
+                tp1=p, trade_type="SCALP"
+            )
+            return
+
+        # ─────────────────────────────────────────────────────────────────
+        # SETUP 5: R4-R5 DESTEK RETEST LONG (Support Flip)
+        # R4 ustunde olan fiyat R4'e geri cekilerek fitil birakir, ustunde kapanir
+        # ─────────────────────────────────────────────────────────────────
+        if prev_close > r4 and current_candle['low'] <= r4 and close_price > r4 and close_price < r5:
+            buffer = (r4 - r3) * BUFFER_RATIO
+            soft_stop = r4 - buffer
+            hard_stop = r3
+            await self._handle_open(
+                symbol=symbol, side="LONG", entry_price=close_price,
+                reason="R4 Destek Retest Sekmesi (Support Flip)",
+                soft_stop=soft_stop, hard_stop=hard_stop,
+                tp1=r5, trade_type="SCALP"
+            )
+            return
+
+        # ─────────────────────────────────────────────────────────────────
+        # SETUP 6: mVAH KIRILIMI LONG (Macro Breakout)
+        # Fiyat aylik VAH'i yukari kirar → Macro trend devami
+        # ─────────────────────────────────────────────────────────────────
+        if mvah > 0 and prev_close <= mvah and close_price > mvah:
+            candidates = [c for c in [above_npoc, above_nvah] if c and c > close_price]
+            target = min(candidates) if candidates else close_price * 1.02
+            buffer = (r4 - r3) * BUFFER_RATIO if (r4 > r3) else (close_price * 0.005)
+            soft_stop = mvah - buffer
+            hard_stop = r5 if r5 > 0 else (mvah - buffer * 2)
+            await self._handle_open(
+                symbol=symbol, side="LONG", entry_price=close_price,
+                reason="mVAH Aylik Direnc Kirilimi (Macro Breakout)",
+                soft_stop=soft_stop, hard_stop=hard_stop,
+                tp1=target, trade_type="BREAKOUT"
+            )
+            return
+
+        # ─────────────────────────────────────────────────────────────────
+        # SETUP 7: S4-S5 DIRENC RETEST SHORT (Resistance Flip) [YENİ]
+        # S4 altinda olan fiyat S4'e yukselip reddedilir, altinda kapanir
+        # ─────────────────────────────────────────────────────────────────
+        if prev_close < s4 and current_candle['high'] >= s4 and close_price < s4 and close_price > s5:
+            buffer = (s3 - s4) * BUFFER_RATIO
+            soft_stop = s4 + buffer
+            hard_stop = s3
+            await self._handle_open(
+                symbol=symbol, side="SHORT", entry_price=close_price,
+                reason="S4 Direnc Retest Sekmesi (Resistance Flip)",
+                soft_stop=soft_stop, hard_stop=hard_stop,
+                tp1=s5, trade_type="SCALP"
+            )
+            return
+
+        # ─────────────────────────────────────────────────────────────────
+        # SETUP 8: mVAL KIRILIMI SHORT (Macro Breakdown)
+        # Fiyat aylik VAL'i asagi kirar → Macro cokus baslar
+        # ─────────────────────────────────────────────────────────────────
+        if mval > 0 and prev_close >= mval and close_price < mval:
+            candidates = [c for c in [below_npoc, below_nval] if c and c < close_price]
+            target = max(candidates) if candidates else close_price * 0.98
+            buffer = (s3 - s4) * BUFFER_RATIO if (s3 > s4) else (close_price * 0.005)
+            soft_stop = mval + buffer
+            hard_stop = s5 if s5 > 0 else (mval + buffer * 2)
+            await self._handle_open(
+                symbol=symbol, side="SHORT", entry_price=close_price,
+                reason="mVAL Aylik Destek Kirilimi (Macro Breakdown)",
+                soft_stop=soft_stop, hard_stop=hard_stop,
+                tp1=target, trade_type="BREAKOUT"
+            )
+            return
+
+        # ─────────────────────────────────────────────────────────────────
+        # SETUP 9: AŞAĞI nPOC / nVAL LİKİDİTE SÜPÜRMESİ LONG (Naked Support Bounce) [YENİ]
+        # Fiyat önceki günlerin dokunulmamış POC/VAL seviyesine inip fitil bırakır ve üstünde kapatır
+        # ─────────────────────────────────────────────────────────────────
+        support_npoc = below_npoc if (below_npoc and below_npoc > 0) else below_nval
+        if support_npoc and support_npoc > 0 and current_candle['low'] <= support_npoc and close_price > support_npoc and close_price < p:
+            is_confluence = abs(s3 - support_npoc) / support_npoc <= 0.005 if s3 > 0 else False
+            reason_text = "S3 + nPOC Çift Destek Sekmesi (Hedef Pivot P)" if is_confluence else f"Aşağı nPOC (${support_npoc:.4f}) Likidite Sekmesi (Hedef Pivot P)"
+            buffer = (p - support_npoc) * BUFFER_RATIO if (p > support_npoc) else (support_npoc * 0.004)
+            soft_stop = support_npoc - buffer
+            hard_stop = s4 if (s4 > 0 and s4 < support_npoc) else (support_npoc - buffer * 2)
+            tp_target = p if p > close_price else (mpoc if (mpoc > close_price) else close_price * 1.01)
+            await self._handle_open(
+                symbol=symbol, side="LONG", entry_price=close_price,
+                reason=reason_text,
+                soft_stop=soft_stop, hard_stop=hard_stop,
+                tp1=tp_target, trade_type="SCALP"
+            )
+            return
+
+        # ─────────────────────────────────────────────────────────────────
+        # SETUP 10: YUKARI nPOC / nVAH LİKİDİTE REDDİ SHORT (Naked Resistance Rejection) [YENİ]
+        # Fiyat önceki günlerin dokunulmamış POC/VAH seviyesine iğne atıp altında kapatır
+        # ─────────────────────────────────────────────────────────────────
+        resist_npoc = above_npoc if (above_npoc and above_npoc > 0) else above_nvah
+        if resist_npoc and resist_npoc > 0 and current_candle['high'] >= resist_npoc and close_price < resist_npoc and close_price > p:
+            is_confluence = abs(r3 - resist_npoc) / resist_npoc <= 0.005 if r3 > 0 else False
+            reason_text = "R3 + nPOC Çift Direnç Reddi (Hedef Pivot P)" if is_confluence else f"Yukarı nPOC (${resist_npoc:.4f}) Direnç Reddi (Hedef Pivot P)"
+            buffer = (resist_npoc - p) * BUFFER_RATIO if (resist_npoc > p) else (resist_npoc * 0.004)
+            soft_stop = resist_npoc + buffer
+            hard_stop = r4 if (r4 > 0 and r4 > resist_npoc) else (resist_npoc + buffer * 2)
+            tp_target = p if p < close_price else (mpoc if (mpoc > 0 and mpoc < close_price) else close_price * 0.99)
+            await self._handle_open(
+                symbol=symbol, side="SHORT", entry_price=close_price,
+                reason=reason_text,
+                soft_stop=soft_stop, hard_stop=hard_stop,
+                tp1=tp_target, trade_type="SCALP"
+            )
+            return

@@ -1,0 +1,213 @@
+import asyncio
+import json
+import time
+import aiohttp
+import ccxt.async_support as ccxt
+import pandas as pd
+from config import LOOKBACK_DAYS_AVWAP
+from indicators import calculate_camarilla_pivots, calculate_anchored_vwap, calculate_volume_profile, get_tradingview_naked_lines
+
+class MarketDataManager:
+    def __init__(self, all_symbols, active_symbols=None, timeframe="5m"):
+        self.all_symbols = all_symbols
+        self.active_symbols = set(active_symbols if active_symbols is not None else all_symbols)
+        self.timeframe = timeframe
+        self.exchange = ccxt.binanceusdm({
+            'enableRateLimit': True
+        })
+        self.semaphore = asyncio.Semaphore(15)
+        self.candles_5m = {s: pd.DataFrame() for s in all_symbols}
+        self.candles_1d = {s: pd.DataFrame() for s in all_symbols}
+        self.levels = {s: {} for s in all_symbols}
+        self.current_prices = {s: 0.0 for s in all_symbols}
+        self.on_tick_callback = None
+        self.on_candle_close_callback = None
+
+    async def initialize(self):
+        print(">> Binance Vadeli (USDT-M Futures) verileri yukleniyor...")
+        print(f"   Takip Edilen Toplam Parite: {len(self.all_symbols)}")
+        tasks = [self.fetch_single_symbol(s) for s in self.all_symbols]
+        await asyncio.gather(*tasks)
+        print(f">> [TAMAMLANDI] {len(self.all_symbols)} paritenin gosterge ve pivot seviyeleri hesaplandi.")
+
+    def _clean_symbol(self, symbol: str) -> str:
+        """Binance USDT-M Futures icin sembol donusumu."""
+        clean = symbol.replace(':USDT', '')
+        multiplier_coins = {
+            'PEPE/USDT': '1000PEPE/USDT',
+            'SHIB/USDT': '1000SHIB/USDT',
+            'BONK/USDT': '1000BONK/USDT',
+            'FLOKI/USDT': '1000FLOKI/USDT',
+            'SATS/USDT': '1000SATS/USDT',
+            'RATS/USDT': '1000RATS/USDT',
+            'LUNC/USDT': '1000LUNC/USDT',
+            'XEC/USDT': '1000XEC/USDT',
+            'MOG/USDT': '1000000MOG/USDT',
+            'CHEEMS/USDT': '1000CHEEMS/USDT',
+            'WHY/USDT': '1000WHY/USDT',
+            'CAT/USDT': '1000CAT/USDT',
+            'NEIRO/USDT': '1000NEIRO/USDT'
+        }
+        return multiplier_coins.get(clean, clean)
+
+    async def fetch_single_symbol(self, symbol: str):
+        async with self.semaphore:
+            try:
+                clean_sym = self._clean_symbol(symbol)
+
+                # 1. Gunluk mum verisi (30 gun)
+                ohlcv_1d = await self.exchange.fetch_ohlcv(clean_sym, timeframe="1d", limit=30)
+                df_1d = pd.DataFrame(ohlcv_1d, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+                self.candles_1d[symbol] = df_1d
+
+                # 2. 5m mum verisi (1500 mum = ~5.2 gun)
+                ohlcv_5m = await self.exchange.fetch_ohlcv(clean_sym, timeframe=self.timeframe, limit=1500)
+                df_5m = pd.DataFrame(ohlcv_5m, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+                self.candles_5m[symbol] = df_5m
+
+                self.current_prices[symbol] = float(df_5m['close'].iloc[-1])
+                self.recalculate_levels(symbol)
+                status = "AKTIF" if symbol in self.active_symbols else "HAZIR"
+                print(f"   [{status}] {symbol} seviyeleri esitlendi. Fiyat: {self.current_prices[symbol]}")
+            except Exception as e:
+                print(f"   [HATA] {symbol} verisi alinamadi: {e}")
+
+    async def toggle_symbol(self, symbol: str, is_active: bool):
+        if is_active:
+            self.active_symbols.add(symbol)
+            if symbol not in self.levels or not self.levels[symbol]:
+                asyncio.create_task(self.fetch_single_symbol(symbol))
+            print(f">> [PARITE AKTIF EDILDI] {symbol} strateji taramasina eklendi.")
+        else:
+            self.active_symbols.discard(symbol)
+            print(f">> [PARITE PASIF EDILDI] {symbol} strateji taramasindan cikarildi.")
+
+    async def set_active_symbols(self, symbols_list: list):
+        new_active = set(s for s in symbols_list if s in self.all_symbols)
+        self.active_symbols = new_active
+        missing = [s for s in new_active if s not in self.levels or not self.levels[s]]
+        if missing:
+            asyncio.create_task(self._fetch_missing_symbols(missing))
+        print(f">> [TOPLU PARITE GUNCELLEME] Aktif Parite Sayisi: {len(self.active_symbols)}")
+
+    async def _fetch_missing_symbols(self, symbols):
+        await asyncio.gather(*(self.fetch_single_symbol(s) for s in symbols))
+
+    def recalculate_levels(self, symbol):
+        df_1d = self.candles_1d.get(symbol, pd.DataFrame())
+        df_5m = self.candles_5m.get(symbol, pd.DataFrame())
+        if df_1d.empty or df_5m.empty:
+            return
+
+        # === CAMARILLA PIVOT ===
+        prev_day = df_1d.iloc[-2] if len(df_1d) >= 2 else df_1d.iloc[-1]
+        camarilla = calculate_camarilla_pivots(prev_day['high'], prev_day['low'], prev_day['close'])
+
+        # === ANCHORED VWAP ===
+        lookback_count = min(LOOKBACK_DAYS_AVWAP, len(df_1d))
+        lookback_days = df_1d.iloc[-lookback_count:]
+        max_high_idx = lookback_days['high'].idxmax()
+        min_low_idx = lookback_days['low'].idxmin()
+
+        tepe_time = lookback_days.loc[max_high_idx, 'timestamp']
+        dip_time = lookback_days.loc[min_low_idx, 'timestamp']
+
+        earliest_5m_ts = df_5m['timestamp'].iloc[0]
+
+        if tepe_time >= earliest_5m_ts:
+            tepe_idx_5m = (df_5m['timestamp'] - tepe_time).abs().idxmin()
+            tepe_avwap = float(calculate_anchored_vwap(df_5m, tepe_idx_5m))
+        else:
+            tepe_avwap = float(calculate_anchored_vwap(df_5m, 0))
+
+        if dip_time >= earliest_5m_ts:
+            dip_idx_5m = (df_5m['timestamp'] - dip_time).abs().idxmin()
+            dip_avwap = float(calculate_anchored_vwap(df_5m, dip_idx_5m))
+        else:
+            dip_avwap = float(calculate_anchored_vwap(df_5m, 0))
+
+        # === VOLUME PROFILE ===
+        vp_result = calculate_volume_profile(df_5m, num_rows=30, value_area_pct=0.68)
+
+        # === NAKED LINES ===
+        current_p = self.current_prices.get(symbol, float(df_5m['close'].iloc[-1]))
+        naked_lines = get_tradingview_naked_lines(df_5m, current_p)
+
+        self.levels[symbol] = {
+            "camarilla": camarilla,
+            "tepe_avwap": float(tepe_avwap),
+            "dip_avwap": float(dip_avwap),
+            "mpoc": float(vp_result["POC"]),
+            "mvah": float(vp_result["VAH"]),
+            "mval": float(vp_result["VAL"]),
+            "above_npoc": float(naked_lines["above_npoc"]),
+            "below_npoc": float(naked_lines["below_npoc"]),
+            "above_nvah": float(naked_lines["above_nvah"]),
+            "below_nvah": float(naked_lines["below_nvah"]),
+            "above_nval": float(naked_lines["above_nval"]),
+            "below_nval": float(naked_lines["below_nval"])
+        }
+
+    async def start_websocket(self):
+        streams = []
+        for s in self.all_symbols:
+            clean_full = self._clean_symbol(s)
+            clean_stream = clean_full.replace('/', '').lower().replace(':usdt', '')
+            streams.append(f"{clean_stream}@bookTicker")
+            streams.append(f"{clean_stream}@kline_5m")
+
+        stream_url = f"wss://fstream.binance.com/stream?streams={'/'.join(streams)}"
+        print(f">> Canli Binance Futures WebSocket baslatiliyor ({len(self.all_symbols)} Parite Stream)...")
+
+        while True:
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.ws_connect(stream_url, heartbeat=10) as ws:
+                        print(">> [CANLI] Binance Global WebSocket AKTIF - Fiyatlar anlik akiyor.")
+                        async for msg in ws:
+                            if msg.type == aiohttp.WSMsgType.TEXT:
+                                data = json.loads(msg.data)
+                                stream_name = data.get('stream', '').lower()
+                                payload = data.get('data', {})
+
+                                if '@bookticker' in stream_name:
+                                    symbol_raw = payload.get('s', '').upper()
+                                    for s in self.all_symbols:
+                                        clean_match = self._clean_symbol(s).replace('/', '').replace(':USDT', '').upper()
+                                        if clean_match == symbol_raw or s.replace('/', '').replace(':USDT', '').upper() == symbol_raw:
+                                            bid = float(payload.get('b', 0.0))
+                                            ask = float(payload.get('a', 0.0))
+                                            price = (bid + ask) / 2.0 if (bid and ask) else (bid or ask)
+                                            if price > 0:
+                                                self.current_prices[s] = price
+                                                if self.on_tick_callback:
+                                                    await self.on_tick_callback(s, price)
+
+                                elif '@kline' in stream_name:
+                                    kline = payload.get('k', {})
+                                    if kline.get('x', False):
+                                        symbol_raw = payload.get('s', '').upper()
+                                        for s in self.all_symbols:
+                                            clean_match = self._clean_symbol(s).replace('/', '').replace(':USDT', '').upper()
+                                            if clean_match == symbol_raw or s.replace('/', '').replace(':USDT', '').upper() == symbol_raw:
+                                                new_candle = {
+                                                    'timestamp': kline.get('t'),
+                                                    'open': float(kline.get('o')),
+                                                    'high': float(kline.get('h')),
+                                                    'low': float(kline.get('l')),
+                                                    'close': float(kline.get('c')),
+                                                    'volume': float(kline.get('v'))
+                                                }
+                                                prev_candle = self.candles_5m[s].iloc[-1].to_dict() if not self.candles_5m[s].empty else new_candle
+                                                self.candles_5m[s] = pd.concat([self.candles_5m[s], pd.DataFrame([new_candle])], ignore_index=True)
+                                                self.recalculate_levels(s)
+                                                if self.on_candle_close_callback and s in self.active_symbols:
+                                                    await self.on_candle_close_callback(s, new_candle, prev_candle)
+                            elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
+                                break
+            except Exception as e:
+                print(f">> [UYARI] WebSocket baglantisi yenileniyor: {e}")
+                await asyncio.sleep(2)
+
+    async def close(self):
+        await self.exchange.close()

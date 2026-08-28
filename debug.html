@@ -1,0 +1,668 @@
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>TRADE DESK — EXECUTIVE MONITOR</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #080a0f;
+            --surface: #0f131a;
+            --card-bg: #141922;
+            --card-hover: #1a212d;
+            --border: #1f2735;
+            --border-light: #2c374a;
+            --green: #0ecb81;
+            --green-glow: rgba(14, 203, 129, 0.35);
+            --red: #f6465d;
+            --red-glow: rgba(246, 70, 93, 0.35);
+            --yellow: #f0b90b;
+            --purple: #d500f9;
+            --blue: #388bfd;
+            --cyan: #00e5ff;
+            --text-main: #f0f6fc;
+            --text-muted: #8b949e;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text-main); font-family: 'Plus Jakarta Sans', sans-serif; padding: 24px 32px; min-height: 100vh; }
+
+        .top-bar { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+        .logo-wrap { display: flex; align-items: center; gap: 14px; }
+        .logo-badge { width: 42px; height: 42px; background: linear-gradient(135deg, var(--yellow), #ff9800); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; color: #000; box-shadow: 0 4px 14px rgba(240, 185, 11, 0.35); }
+        .logo-title { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+        .logo-sub { font-size: 13px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+
+        .live-tag { display: flex; align-items: center; gap: 8px; background: rgba(14, 203, 129, 0.12); border: 1px solid var(--green); padding: 8px 18px; border-radius: 20px; font-size: 13px; font-weight: 700; color: var(--green); font-family: 'JetBrains Mono', monospace; }
+        .live-dot { width: 10px; height: 10px; background: var(--green); border-radius: 50%; box-shadow: 0 0 12px var(--green); animation: pulse 0.6s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(1.3); } }
+
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+        .section-title { font-size: 15px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+        
+        .watchlist-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 22px; margin-bottom: 36px; }
+        .coin-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 18px; padding: 24px; transition: all 0.2s ease; position: relative; }
+        .coin-card:hover { border-color: var(--border-light); background: var(--card-hover); }
+        .coin-card.active-trade { border: 2px solid var(--yellow); box-shadow: 0 0 30px rgba(240, 185, 11, 0.25); }
+
+        .card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .card-symbol { font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; display: flex; align-items: center; gap: 8px; }
+        .symbol-tag { font-size: 12px; background: rgba(56, 139, 253, 0.15); color: var(--blue); padding: 4px 10px; border-radius: 6px; font-weight: 700; border: 1px solid rgba(56, 139, 253, 0.3); }
+        
+        /* 34px DEVASA CANLI FIYAT */
+        .card-price { font-size: 34px; font-weight: 800; font-family: 'JetBrains Mono', monospace; padding: 4px 12px; border-radius: 10px; display: inline-block; transition: background 0.12s ease, color 0.12s ease; color: #fff; }
+        .tick-up { background: var(--green-glow) !important; color: var(--green) !important; text-shadow: 0 0 18px rgba(14, 203, 129, 0.9); }
+        .tick-down { background: var(--red-glow) !important; color: var(--red) !important; text-shadow: 0 0 18px rgba(246, 70, 93, 0.9); }
+
+        /* CANLI DINAMIK ANALIZ CUMLESI */
+        .analysis-box { background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; font-size: 13px; line-height: 1.5; color: #d0d7de; margin-bottom: 16px; border-left: 4px solid var(--blue); }
+        .analysis-title { font-size: 12px; font-weight: 800; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+
+        /* BOT PUSU & EYLEM PLANI */
+        .action-plan-box { background: rgba(240, 185, 11, 0.06); border: 1px solid rgba(240, 185, 11, 0.25); border-radius: 10px; padding: 12px 14px; font-size: 12px; line-height: 1.5; color: #f0f6fc; margin-bottom: 16px; }
+        .action-plan-title { font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--yellow); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+
+        .levels-table { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+        .levels-table tr:hover { background: rgba(255, 255, 255, 0.03); }
+        .levels-table td { padding: 6px 6px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
+        .lvl-lbl { color: var(--text-muted); font-weight: 600; }
+        .lvl-num { text-align: right; font-weight: 700; }
+
+        /* ALT PANEL - YARI YARIYA BOLUNMUS MODULLER */
+        .bottom-split { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 28px; }
+        .panel-box { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px; min-height: 460px; display: flex; flex-direction: column; }
+        .panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+        .panel-title { font-size: 18px; font-weight: 800; letter-spacing: 0.5px; display: flex; align-items: center; gap: 10px; }
+
+        .wallet-kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+        .w-kpi { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+        .w-lbl { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; }
+        .w-val { font-size: 26px; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+
+        /* BUYUTULMUS AKTIF POZISYON KARTI */
+        .active-pos-card { background: rgba(240, 185, 11, 0.06); border: 2px solid var(--yellow); border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .pos-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .pos-badge { padding: 6px 14px; border-radius: 8px; font-size: 14px; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+        .pos-long { background: var(--green); color: #000; }
+        .pos-short { background: var(--red); color: #fff; }
+
+        .pos-main-pnl { font-size: 22px; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+        .pos-detail-row { font-size: 14px; font-family: 'JetBrains Mono', monospace; color: var(--text-muted); margin-bottom: 8px; }
+        .pos-detail-row b { color: #fff; }
+        .pos-target-row { font-size: 13px; font-family: 'JetBrains Mono', monospace; color: var(--text-muted); }
+        .pos-setup-tag { font-size: 13px; margin-top: 10px; color: var(--yellow); font-weight: 600; }
+
+        .history-full-box { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px; }
+        .history-top-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 14px; }
+        .filter-group { display: flex; align-items: center; gap: 12px; }
+        .filter-select { background: var(--card-bg); border: 1px solid var(--border-light); color: #fff; padding: 8px 14px; border-radius: 8px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; outline: none; cursor: pointer; }
+        .filter-select:hover { border-color: var(--blue); }
+
+        .btn-export { background: linear-gradient(135deg, #238636, #2ea043); border: none; color: #fff; padding: 9px 18px; border-radius: 10px; font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(46, 160, 67, 0.3); }
+        .btn-export:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(46, 160, 67, 0.5); }
+
+        .trade-table { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+        .trade-table th { text-align: left; padding: 12px 14px; background: var(--card-bg); color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+        .trade-table td { padding: 12px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .trade-table tr:hover { background: rgba(255, 255, 255, 0.02); }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="logo-wrap">
+            <div class="logo-badge">⚡</div>
+            <div>
+                <div class="logo-title">TRADE DESK EXECUTIVE</div>
+                <div class="logo-sub">Binance Futures Canlı Motor • 5 Parite Eşzamanlı Tarama</div>
+            </div>
+        </div>
+        <div class="live-tag">
+            <div class="live-dot"></div>
+            <span id="ws-status">CANLI YAYIN AKTİF</span>
+        </div>
+    </div>
+
+    <div class="section-header">
+        <div class="section-title">📊 CANLI PUSU & SEVİYE ANALİZ HAVUZU</div>
+        <div style="font-size:13px; color:var(--green); font-weight:700; font-family:'JetBrains Mono'" id="tick-counter">● Canlı Veri Akıyor...</div>
+    </div>
+    <div class="watchlist-grid" id="watchlist-container"></div>
+
+    <div class="bottom-split">
+        <!-- SOL PANEL: AKTIF POZISYONLAR (GENISLETILMIS & BUYUK PUNTO) -->
+        <div class="panel-box">
+            <div class="panel-head">
+                <div class="panel-title">⚡ Aktif Çalışan Pozisyonlar</div>
+                <span style="font-size:14px; font-weight:800; background:var(--card-bg); border:1px solid var(--border); padding:6px 14px; border-radius:12px; font-family:'JetBrains Mono'" id="pos-count">0 / 3 AÇIK</span>
+            </div>
+            <div id="positions-container">
+                <div style="color: var(--text-muted); text-align:center; padding: 100px 20px; font-size:15px; line-height:1.6;">
+                    Şu an açık pozisyon bulunmuyor.<br><span style="color:var(--yellow)">● 5M Mum kapanışları, taze kırılımlar ve destek dönüşleri taranıyor...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SAG PANEL: FINANS & CUZDAN YONETIMI -->
+        <div class="panel-box">
+            <div class="panel-head">
+                <div class="panel-title">💰 Cüzdan & Kasa Büyüme Raporu</div>
+                <span style="font-size:14px; color:var(--green); font-weight:800; font-family:'JetBrains Mono'" id="kpi-growth">+0.0% BÜYÜME</span>
+            </div>
+
+            <div class="wallet-kpi-grid">
+                <div class="w-kpi">
+                    <div class="w-lbl">Toplam Kasa</div>
+                    <div class="w-val" id="kpi-balance">100.00 $</div>
+                </div>
+                <div class="w-kpi">
+                    <div class="w-lbl">Net Kâr / Zarar</div>
+                    <div class="w-val" id="kpi-pnl" style="color: var(--green);">+0.00 $</div>
+                </div>
+                <div class="w-kpi">
+                    <div class="w-lbl">Ödenen Komisyon</div>
+                    <div class="w-val" id="kpi-fees" style="color: var(--text-muted);">$0.0000</div>
+                </div>
+            </div>
+
+            <div style="font-size:13px; font-weight:800; color:var(--text-muted); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px;">
+                Son Kapanan İşlem Özeti
+            </div>
+            <div id="quick-history-container" style="flex:1; overflow-y:auto; max-height:220px;">
+                <div style="color: var(--text-muted); text-align:center; padding: 40px 20px; font-size:13px;">
+                    Henüz tamamlanmış işlem kaydı yok.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. TICARET DEFTERI & DETAYLI RAPOR MERKEZI -->
+    <div class="history-full-box">
+        <div class="history-top-controls">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div class="panel-title" style="margin:0;">📜 Ticaret Defteri & Geçmiş İşlem Kayıtları</div>
+                <span style="font-size:13px; background:var(--card-bg); padding:4px 10px; border-radius:8px; font-family:'JetBrains Mono'" id="history-total-count">0 İşlem</span>
+            </div>
+            
+            <div class="filter-group">
+                <select class="filter-select" id="filter-symbol" onchange="renderHistoryTable()">
+                    <option value="ALL">Tüm Pariteler</option>
+                    <option value="BTC/USDT">BTC/USDT</option>
+                    <option value="ETH/USDT">ETH/USDT</option>
+                    <option value="SOL/USDT">SOL/USDT</option>
+                    <option value="ENA/USDT">ENA/USDT</option>
+                    <option value="XRP/USDT">XRP/USDT</option>
+                </select>
+
+                <select class="filter-select" id="filter-status" onchange="renderHistoryTable()">
+                    <option value="ALL">Tüm Sonuçlar</option>
+                    <option value="WIN">🟢 Sadece Kârlı İşlemler</option>
+                    <option value="LOSS">🔴 Sadece Zararlı İşlemler</option>
+                </select>
+
+                <button class="btn-export" onclick="downloadCSVReport()">
+                    📥 Excel / CSV Raporu İndir
+                </button>
+            </div>
+        </div>
+
+        <div style="overflow-x:auto;">
+            <table class="trade-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tarih / Saat</th>
+                        <th>Parite</th>
+                        <th>Yön & Kaldıraç</th>
+                        <th>Giriş Fiyatı</th>
+                        <th>Çıkış Fiyatı</th>
+                        <th>Komisyon</th>
+                        <th>Net Kâr ($)</th>
+                        <th>ROE (%)</th>
+                        <th>Kasa ($)</th>
+                        <th>Kapanış Nedeni</th>
+                    </tr>
+                </thead>
+                <tbody id="trade-table-body">
+                    <tr>
+                        <td colspan="11" style="text-align:center; padding: 40px; color:var(--text-muted);">
+                            Kayıtlı işlem geçmişi bulunmuyor.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let appState = { balance: 100.0, symbols: {}, open_positions: {}, history: [] };
+        let livePrices = {};
+        let renderedSymbols = false;
+        let tickCounts = 0;
+
+        const rawSymbolMap = {
+            'BTCUSDT': 'BTC/USDT',
+            'ETHUSDT': 'ETH/USDT',
+            'SOLUSDT': 'SOL/USDT',
+            'ENAUSDT': 'ENA/USDT',
+            'XRPUSDT': 'XRP/USDT'
+        };
+
+        function generateDetailedIntelligence(symbol, price, cam, levels) {
+            cam = cam || {};
+            levels = levels || {};
+            const r4 = cam.R4 || 0;
+            const r3 = cam.R3 || 0;
+            const r5 = cam.R5 || 0;
+            const s3 = cam.S3 || 0;
+            const s4 = cam.S4 || 0;
+            const s5 = cam.S5 || 0;
+            const p = cam.P || 0;
+            const tepeAvwap = levels.tepe_avwap || 0;
+            const dipAvwap = levels.dip_avwap || 0;
+            const mvah = levels.mvah || 0;
+            const mval = levels.mval || 0;
+
+            let tag = '';
+            let color = '';
+            let statusText = '';
+            let actionPlan = '';
+
+            // 1. ENA gibi mVAH civarında olanlar
+            if (mvah > 0 && price >= (mvah * 0.985) && price <= (mvah * 1.015)) {
+                tag = '🎯 mVAH AYLIK TAVAN DİRENÇ TESTİ';
+                color = 'var(--cyan)';
+                statusText = `Fiyat <b>mVAH ($${mvah.toFixed(4)})</b> tavanına yapışık. Üstünde <b>Tepe AVWAP ($${tepeAvwap.toFixed(4)})</b> bulunuyor.`;
+                actionPlan = `⚡ <b>Botun Pusu Planı:</b> Fiyat 5M mumda $${mvah.toFixed(4)} üzerine kırarsa <b>Macro LONG ($${(mvah*1.03).toFixed(4)} hedefli)</b>; mVAH'tan sert red yerse <b>SHORT</b>, veya R5 ($${r5.toFixed(4)}) desteğine çekilirse <b>Retest LONG</b> açılacak.`;
+            }
+            // 2. R4 Üstünde Güçlü Boğa
+            else if (price > r4) {
+                tag = '🚀 GÜÇLÜ BOĞA TRENDİ (R4 ÜSTÜ)';
+                color = 'var(--green)';
+                statusText = `Fiyat <b>R4 ($${r4.toFixed(4)})</b> ve <b>Tepe AVWAP ($${tepeAvwap.toFixed(4)})</b> üzerinde yükseliş bölgesinde.`;
+                actionPlan = `⚡ <b>Botun Pusu Planı:</b> Fiyat R4 ($${r4.toFixed(4)}) seviyesine geri çekilip destek alarak sekerse <b>Retest LONG (Hedef R5 $${r5.toFixed(4)})</b> açılacak.`;
+            }
+            // 3. S4 Altında Çöküş
+            else if (price < s4) {
+                tag = '📉 SERT AYI ÇÖKÜŞÜ (S4 ALTI)';
+                color = 'var(--red)';
+                statusText = `Fiyat <b>S4 ($${s4.toFixed(4)})</b> ve <b>Dip AVWAP ($${dipAvwap.toFixed(4)})</b> altında düşüş bölgesinde.`;
+                actionPlan = `⚡ <b>Botun Pusu Planı:</b> S4 ($${s4.toFixed(4)}) direncine retest yapıp red yerse <b>SHORT (Hedef S5 $${s5.toFixed(4)})</b> açılacak.`;
+            }
+            // 4. R3 - R4 Sıkışma
+            else if (price > r3 && price <= r4) {
+                tag = '⚖️ R3-R4 KIRILIM KARAR BÖLGESİ';
+                color = '#ffa726';
+                statusText = `Fiyat <b>R3 ($${r3.toFixed(4)})</b> ile <b>R4 ($${r4.toFixed(4)})</b> arasında sıkışıyor.`;
+                actionPlan = `⚡ <b>Botun Pusu Planı:</b> 5M mum R4 ($${r4.toFixed(4)}) üzerinde kapanırsa <b>Taze Breakout LONG (Hedef R5 $${r5.toFixed(4)})</b> açılacak.`;
+            }
+            // 5. S3 - R3 Yatay Bant
+            else if (price >= s3 && price <= r3) {
+                tag = '🔄 S3-R3 YATAY SCALP BANDI';
+                color = '#388bfd';
+                statusText = `Fiyat <b>Pivot P ($${p.toFixed(4)})</b> dengesinde. Üstte R3 ($${r3.toFixed(4)}), altta S3 ($${s3.toFixed(4)}) desteği var.`;
+                actionPlan = `⚡ <b>Botun Pusu Planı:</b> Fiyat S3 ($${s3.toFixed(4)}) desteğine iner ve yukarı sekerse <b>Scalp LONG (Hedef Pivot $${p.toFixed(4)})</b> açılacak.`;
+            }
+            // 6. S4 - S3 Savunma
+            else {
+                tag = '⚠️ S4-S3 DESTEK SAVUNMA BÖLGESİ';
+                color = '#d500f9';
+                statusText = `Fiyat <b>S3 ($${s3.toFixed(4)})</b> altında test yapıyor. Son savunma <b>S4 ($${s4.toFixed(4)})</b>.`;
+                actionPlan = `⚡ <b>Botun Pusu Planı:</b> S4 altına kırarsa <b>Breakdown SHORT</b>; S3 üstüne geri dönerse <b>Mean Reversion LONG</b> açılacak.`;
+            }
+
+            return { tag, color, statusText, actionPlan };
+        }
+
+        function renderInitialCards() {
+            const cont = document.getElementById('watchlist-container');
+            if (!cont || !appState.symbols) return;
+            let html = '';
+            
+            for (const symbol in appState.symbols) {
+                const coin = appState.symbols[symbol] || {};
+                const price = livePrices[symbol] || coin.price || 0;
+                const levels = coin.levels || {};
+                const cam = levels.camarilla || {};
+                const intel = generateDetailedIntelligence(symbol, price, cam, levels);
+                const safeId = symbol.replace(/[^a-zA-Z0-9]/g, '_');
+
+                html += `
+                <div class="coin-card" id="card-${safeId}">
+                    <div class="card-head">
+                        <div class="card-symbol">
+                            ${symbol.replace('/USDT', '')}
+                            <span class="symbol-tag">PERP</span>
+                        </div>
+                        <div class="card-price" id="p-${safeId}">$${price}</div>
+                    </div>
+
+                    <div class="analysis-box" id="abox-${safeId}">
+                        <div class="analysis-title" id="atitle-${safeId}" style="color:${intel.color}">
+                            <span>●</span> ${intel.tag}
+                        </div>
+                        <div id="atext-${safeId}">${intel.statusText}</div>
+                    </div>
+
+                    <div class="action-plan-box" id="planbox-${safeId}">
+                        <div class="action-plan-title">🎯 BOT PUSU & EYLEM PLANI</div>
+                        <div id="plantext-${safeId}">${intel.actionPlan}</div>
+                    </div>
+
+                    <table class="levels-table">
+                        <tr><td class="lvl-lbl">R5 (Zirve Hedef)</td><td class="lvl-num" style="color:var(--yellow)">${cam.R5 ? cam.R5.toFixed(4) : '-'}</td></tr>
+                        <tr><td class="lvl-lbl">R4 (Breakout Tetik)</td><td class="lvl-num" style="color:#ffa726; font-weight:800">${cam.R4 ? cam.R4.toFixed(4) : '-'}</td></tr>
+                        <tr><td class="lvl-lbl">Tepe AVWAP (Kırmızı)</td><td class="lvl-num" style="color:var(--red); font-weight:800">${levels.tepe_avwap ? levels.tepe_avwap.toFixed(4) : '-'}</td></tr>
+                        <tr><td class="lvl-lbl">mVAH (Aylık Tavan)</td><td class="lvl-num" style="color:var(--cyan); font-weight:800">${levels.mvah ? levels.mvah.toFixed(4) : '-'}</td></tr>
+                        <tr><td class="lvl-lbl">R3 (Direnç)</td><td class="lvl-num">${cam.R3 ? cam.R3.toFixed(4) : '-'}</td></tr>
+                        <tr><td class="lvl-lbl">Pivot (P)</td><td class="lvl-num" style="color:#fff; font-weight:800">${cam.P ? cam.P.toFixed(4) : '-'}</td></tr>
+                        <tr><td class="lvl-lbl">mPOC (Aylık Hacim)</td><td class="lvl-num" style="color:var(--purple); font-weight:800">${levels.mpoc ? levels.mpoc.toFixed(4) : '-'}</td></tr>
+                        <tr><td class="lvl-lbl">S3 (Destek)</td><td class="lvl-num">${cam.S3 ? cam.S3.toFixed(4) : '-'}</td></tr>
+                        <tr><td class="lvl-lbl">Dip AVWAP (Beyaz)</td><td class="lvl-num" style="color:#fff; font-weight:800">${levels.dip_avwap ? levels.dip_avwap.toFixed(4) : '-'}</td></tr>
+                        <tr><td class="lvl-lbl">S4 (Breakdown Tetik)</td><td class="lvl-num" style="color:var(--green); font-weight:800">${cam.S4 ? cam.S4.toFixed(4) : '-'}</td></tr>
+                        <tr><td class="lvl-lbl">mVAL (Aylık Taban)</td><td class="lvl-num" style="color:var(--blue)">${levels.mval ? levels.mval.toFixed(4) : '-'}</td></tr>
+                    </table>
+                </div>
+                `;
+            }
+            cont.innerHTML = html;
+            if (Object.keys(appState.symbols || {}).length > 0) {
+                renderedSymbols = true;
+            }
+        }
+
+        function updatePriceInPlace(symbol, price) {
+            const safeId = symbol.replace(/[^a-zA-Z0-9]/g, '_');
+            const el = document.getElementById('p-' + safeId);
+            if (!el) return;
+
+            const oldPrice = livePrices[symbol] || price;
+            livePrices[symbol] = price;
+            el.innerText = '$' + price;
+
+            if (price > oldPrice) {
+                el.className = 'card-price tick-up';
+                setTimeout(() => { el.className = 'card-price'; }, 100);
+            } else if (price < oldPrice) {
+                el.className = 'card-price tick-down';
+                setTimeout(() => { el.className = 'card-price'; }, 100);
+            }
+
+            if (appState.symbols[symbol]) {
+                const coin = appState.symbols[symbol];
+                const cam = coin.levels.camarilla || {};
+                const intel = generateDetailedIntelligence(symbol, price, cam, coin.levels);
+                
+                const titleEl = document.getElementById('atitle-' + safeId);
+                const textEl = document.getElementById('atext-' + safeId);
+                const planEl = document.getElementById('plantext-' + safeId);
+                if (titleEl && textEl && planEl) {
+                    titleEl.style.color = intel.color;
+                    titleEl.innerHTML = `<span>●</span> ${intel.tag}`;
+                    textEl.innerHTML = intel.statusText;
+                    planEl.innerHTML = intel.actionPlan;
+                }
+            }
+
+            tickCounts++;
+            document.getElementById('tick-counter').innerText = `● Canlı Fiyat Akıyor (İşlenen Tick: ${tickCounts})`;
+        }
+
+        function renderPositions() {
+            const cont = document.getElementById('positions-container');
+            const posKeys = Object.keys(appState.open_positions);
+            document.getElementById('pos-count').innerText = `${posKeys.length} / 3 AÇIK`;
+
+            if (posKeys.length === 0) {
+                cont.innerHTML = `<div style="color: var(--text-muted); text-align:center; padding: 100px 20px; font-size:15px; line-height:1.6;">Şu an açık pozisyon bulunmuyor.<br><span style="color:var(--yellow)">● 5M Mum kapanışları, taze kırılımlar ve destek dönüşleri taranıyor...</span></div>`;
+                return;
+            }
+
+            let html = '';
+            posKeys.forEach(sym => {
+                const pos = appState.open_positions[sym];
+                const curP = livePrices[sym] || pos.entry_price;
+                const isLong = pos.side === 'LONG';
+                const pnlPct = isLong ? ((curP - pos.entry_price) / pos.entry_price) * 100 * pos.leverage : ((pos.entry_price - curP) / pos.entry_price) * 100 * pos.leverage;
+                const pnlUsdt = pos.position_value * (pnlPct / 100 / pos.leverage);
+
+                html += `
+                <div class="active-pos-card">
+                    <div class="pos-top">
+                        <div>
+                            <span class="pos-badge ${isLong ? 'pos-long' : 'pos-short'}">${pos.leverage}x ${pos.side}</span>
+                            <b style="margin-left:10px; font-size:18px; font-family:'JetBrains Mono'">${sym.replace('/USDT','')}</b>
+                        </div>
+                        <div class="pos-main-pnl" style="color:${pnlPct >= 0 ? 'var(--green)' : 'var(--red)'}">
+                            ${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}% (${pnlUsdt >= 0 ? '+' : ''}${pnlUsdt.toFixed(2)} $)
+                        </div>
+                    </div>
+                    <div class="pos-detail-row">
+                        Giriş: <b>$${pos.entry_price}</b> • Anlık Fiyat: <b>$${curP}</b>
+                    </div>
+                    <div class="pos-target-row">
+                        🛑 Stop Seviyesi: <code>$${pos.soft_stop.toFixed(4)}</code> • 🎯 TP1 Hedefi: <code>$${pos.tp1.toFixed(4)}</code>
+                    </div>
+                    <div class="pos-setup-tag">
+                        📌 Formasyon / Neden: ${pos.reason}
+                    </div>
+                </div>
+                `;
+            });
+            cont.innerHTML = html;
+        }
+
+        function renderHistoryTable() {
+            const tbody = document.getElementById('trade-table-body');
+            const quickCont = document.getElementById('quick-history-container');
+            const hList = appState.history || [];
+
+            document.getElementById('history-total-count').innerText = `${hList.length} İşlem`;
+
+            let totalNetPnl = 0;
+            let totalFees = 0;
+
+            hList.forEach(h => {
+                totalNetPnl += h.net_pnl;
+                totalFees += (h.fees || 0);
+            });
+
+            document.getElementById('kpi-fees').innerText = '$' + totalFees.toFixed(4);
+            const pnlEl = document.getElementById('kpi-pnl');
+            pnlEl.innerText = (totalNetPnl >= 0 ? '+' : '') + totalNetPnl.toFixed(2) + ' $';
+            pnlEl.style.color = totalNetPnl >= 0 ? 'var(--green)' : 'var(--red)';
+            
+            const growthPct = (totalNetPnl / 100.0) * 100;
+            document.getElementById('kpi-growth').innerText = (growthPct >= 0 ? '+' : '') + growthPct.toFixed(1) + '% BÜYÜME';
+            document.getElementById('kpi-growth').style.color = growthPct >= 0 ? 'var(--green)' : 'var(--red)';
+            document.getElementById('kpi-balance').innerText = appState.balance.toFixed(2) + ' $';
+
+            if (hList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 40px; color:var(--text-muted);">Kayıtlı işlem geçmişi bulunmuyor.</td></tr>`;
+                quickCont.innerHTML = `<div style="color: var(--text-muted); text-align:center; padding: 40px 20px; font-size:13px;">Henüz tamamlanmış işlem kaydı yok.</div>`;
+                return;
+            }
+
+            let quickHtml = '';
+            hList.slice().reverse().slice(0, 5).forEach(h => {
+                const isWin = h.net_pnl >= 0;
+                quickHtml += `
+                <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:8px; font-family:'JetBrains Mono'; font-size:13px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                        <span><b>${h.symbol.replace('/USDT','')}</b> (${h.side} ${h.leverage}x)</span>
+                        <span style="color:${isWin ? 'var(--green)' : 'var(--red)'}; font-weight:800;">
+                            ${isWin ? '+' : ''}${h.net_pnl.toFixed(2)}$ (${h.roe_pct >= 0 ? '+' : ''}${h.roe_pct.toFixed(1)}%)
+                        </span>
+                    </div>
+                    <div style="font-size:11px; color:var(--text-muted);">
+                        $${h.entry_price} ➔ $${h.exit_price} • Komisyon: $${h.fees.toFixed(4)}
+                    </div>
+                </div>
+                `;
+            });
+            quickCont.innerHTML = quickHtml;
+
+            const symFilter = document.getElementById('filter-symbol').value;
+            const statusFilter = document.getElementById('filter-status').value;
+
+            let filtered = hList.slice().reverse().filter(item => {
+                if (symFilter !== 'ALL' && item.symbol !== symFilter) return false;
+                if (statusFilter === 'WIN' && item.net_pnl < 0) return false;
+                if (statusFilter === 'LOSS' && item.net_pnl >= 0) return false;
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 30px; color:var(--text-muted);">Filtreye uygun işlem bulunamadı.</td></tr>`;
+                return;
+            }
+
+            let tableHtml = '';
+            filtered.forEach(h => {
+                const isWin = h.net_pnl >= 0;
+                tableHtml += `
+                <tr>
+                    <td><b style="color:var(--yellow)">${h.id}</b></td>
+                    <td style="color:var(--text-muted); font-size:12px;">${h.exit_time}</td>
+                    <td><b>${h.symbol.replace('/USDT','')}</b></td>
+                    <td><span class="pos-badge ${h.side === 'LONG' ? 'pos-long' : 'pos-short'}" style="font-size:11px; padding:2px 8px;">${h.leverage}x ${h.side}</span></td>
+                    <td>$${h.entry_price}</td>
+                    <td>$${h.exit_price}</td>
+                    <td style="color:var(--text-muted)">$${h.fees.toFixed(4)}</td>
+                    <td style="color:${isWin ? 'var(--green)' : 'var(--red)'}; font-weight:800;">
+                        ${isWin ? '+' : ''}${h.net_pnl.toFixed(4)} $
+                    </td>
+                    <td style="color:${isWin ? 'var(--green)' : 'var(--red)'}; font-weight:800;">
+                        ${isWin ? '+' : ''}${h.roe_pct.toFixed(2)}%
+                    </td>
+                    <td style="color:#fff; font-weight:800;">$${h.balance_after.toFixed(2)}</td>
+                    <td style="font-size:12px; color:var(--text-muted);">${h.close_reason}</td>
+                </tr>
+                `;
+            });
+            tbody.innerHTML = tableHtml;
+        }
+
+        function downloadCSVReport() {
+            const hList = appState.history || [];
+            if (hList.length === 0) {
+                alert("İndirilecek işlem geçmişi bulunmuyor.");
+                return;
+            }
+
+            const symFilter = document.getElementById('filter-symbol').value;
+            const statusFilter = document.getElementById('filter-status').value;
+
+            let filtered = hList.filter(item => {
+                if (symFilter !== 'ALL' && item.symbol !== symFilter) return false;
+                if (statusFilter === 'WIN' && item.net_pnl < 0) return false;
+                if (statusFilter === 'LOSS' && item.net_pnl >= 0) return false;
+                return true;
+            });
+
+            let csvContent = "﻿";
+            csvContent += "Islem ID;Tarih Giris;Tarih Cikis;Parite;Yon;Kaldirac;Marjin (USDT);Giris Fiyati;Cikis Fiyati;Brut Kar (USDT);Komisyon (USDT);Net Kar (USDT);ROE (%);Guncel Kasa (USDT);Setup Nedeni;Kapanis Nedeni
+";
+
+            filtered.forEach(h => {
+                const row = [
+                    h.id,
+                    h.entry_time,
+                    h.exit_time,
+                    h.symbol,
+                    h.side,
+                    h.leverage + "x",
+                    h.margin,
+                    h.entry_price,
+                    h.exit_price,
+                    h.gross_pnl,
+                    h.fees,
+                    h.net_pnl,
+                    h.roe_pct + "%",
+                    h.balance_after,
+                    `"${(h.reason || '').replace(/"/g, '""')}"`,
+                    `"${(h.close_reason || '').replace(/"/g, '""')}"`
+                ];
+                csvContent += row.join(";") + "
+";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            const dateStr = new Date().toISOString().slice(0,10);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Ticaret_Raporu_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // BİNANCE GLOBAL ENGELLENMEYEN WEBSOCKET
+        function startBinanceGlobalFeed() {
+            const streams = 'btcusdt@ticker/ethusdt@ticker/solusdt@ticker/enausdt@ticker/xrpusdt@ticker';
+            const wsUrl = `wss://stream.binance.com:9443/stream?streams=${streams}`;
+            const ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                document.getElementById('ws-status').innerText = 'BİNANCE CANLI YAYIN AKTİF';
+            };
+
+            ws.onmessage = (evt) => {
+                try {
+                    const msg = JSON.parse(evt.data);
+                    const data = msg.data || {};
+                    const rawSym = data.s;
+                    const price = parseFloat(data.c);
+
+                    if (rawSym && rawSymbolMap[rawSym] && price > 0) {
+                        const sym = rawSymbolMap[rawSym];
+                        updatePriceInPlace(sym, price);
+                    }
+                } catch(e) {}
+            };
+
+            ws.onclose = () => {
+                setTimeout(startBinanceGlobalFeed, 1000);
+            };
+        }
+
+        function startSSEFallback() {
+            try {
+                const eventSource = new EventSource('/api/stream');
+                eventSource.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'tick') {
+                            updatePriceInPlace(data.symbol, data.price);
+                        }
+                    } catch(e) {}
+                };
+            } catch(e) {}
+        }
+
+        async function syncBackendState() {
+            try {
+                const res = await fetch('/api/data');
+                const data = await res.json();
+                appState = data;
+                if (!renderedSymbols) {
+                    renderInitialCards();
+                }
+                renderPositions();
+                renderHistoryTable();
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        async function init() {
+            await syncBackendState();
+            startBinanceGlobalFeed();
+            startSSEFallback();
+            setInterval(syncBackendState, 2000);
+        }
+
+        init();
+    </script>
+</body>
+</html>
