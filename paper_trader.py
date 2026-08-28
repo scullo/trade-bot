@@ -46,8 +46,9 @@ class PaperTrader:
                 content_str = base64.b64decode(content_b64).decode("utf-8")
                 data = json.loads(content_str)
                 self.balance = float(data.get("balance", self.initial_balance))
-                if self.balance > 500000.0 or self.balance <= 0:
+                if self.balance > 150000.0 or self.balance <= 1000.0:
                     self.balance = float(self.initial_balance)
+                    self.history = [h for h in self.history if abs(h.get('pnl', 0)) < 50000]
                 self.open_positions = data.get("open_positions", {})
                 self.history = data.get("history", [])
                 loaded = True
@@ -61,8 +62,9 @@ class PaperTrader:
                 with open(HISTORY_FILE, "r", encoding="utf-8-sig") as f:
                     data = json.load(f)
                     self.balance = float(data.get("balance", self.initial_balance))
-                    if self.balance > 500000.0 or self.balance <= 0:
+                    if self.balance > 150000.0 or self.balance <= 1000.0:
                         self.balance = float(self.initial_balance)
+                        self.history = [h for h in self.history if abs(h.get('pnl', 0)) < 50000]
                     self.open_positions = data.get("open_positions", {})
                     self.history = data.get("history", [])
                     loaded = True
@@ -275,6 +277,8 @@ class PaperTrader:
             roe_pct = (net_pnl / margin) * 100.0
 
             self.balance += net_pnl
+            if self.balance > 150000.0 or self.balance < 1000.0:
+                self.balance = float(self.initial_balance)
             exit_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
             record = {
