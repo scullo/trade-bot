@@ -202,11 +202,50 @@ class StrategyEngine:
     # POZISYON ACMA YARDIMCISI
     # =========================================================================
     async def _handle_open(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None):
+        # ── 1. ATR / VOLATILITE HESABI ──
+        candles = self.candle_history.get(symbol, [])
+        atr_pct = 1.0
+        if len(candles) >= 14:
+            trs = []
+            for i in range(1, min(len(candles), 15)):
+                c = candles[-i]
+                prev = candles[-i-1]
+                tr = max(c['high'] - c['low'], abs(c['high'] - prev['close']), abs(c['low'] - prev['close']))
+                trs.append(tr / c['close'] * 100.0)
+            atr_pct = round(sum(trs) / len(trs), 2)
+
+        # ── 2. TREND REJIMI HESABI ──
+        snaps = snapshot_levels or {}
+        tepe_av = snaps.get('tepe_avwap', 0.0)
+        dip_av = snaps.get('dip_avwap', 0.0)
+        p_val = snaps.get('camarilla', {}).get('P', 0.0) if 'camarilla' in snaps else snaps.get('P', 0.0)
+        
+        if tepe_av > 0 and p_val > 0 and entry_price > tepe_av and entry_price > p_val:
+            trend_regime = "🟢 GÜÇLÜ BOĞA (Bullish)"
+        elif dip_av > 0 and p_val > 0 and entry_price < dip_av and entry_price < p_val:
+            trend_regime = "🔴 GÜÇLÜ AYI (Bearish)"
+        elif p_val > 0 and entry_price > p_val:
+            trend_regime = "🟡 ILIMLI BOĞA (Moderate Bull)"
+        elif p_val > 0 and entry_price < p_val:
+            trend_regime = "🟠 ILIMLI AYI (Moderate Bear)"
+        else:
+            trend_regime = "⚪ YATAY / SIKIŞMA (Ranging)"
+
+        # ── 3. SEANS HESABI ──
+        h_hour = datetime.now().hour
+        if 0 <= h_hour < 9:
+            session_str = "🌏 ASYA (Tokyo/Singapur)"
+        elif 9 <= h_hour < 16:
+            session_str = "🏛️ LONDRA (Avrupa)"
+        else:
+            session_str = "🗽 NEW YORK (ABD)"
+
         res = await self._safe_open_position(
             symbol=symbol, side=side, entry_price=entry_price,
             reason=reason, soft_stop=soft_stop, hard_stop=hard_stop,
             tp1=tp1, tp2=tp2, trade_type=trade_type,
-            snapshot_levels=snapshot_levels, setup_id=setup_id, confluence_list=confluence_list
+            snapshot_levels=snapshot_levels, setup_id=setup_id, confluence_list=confluence_list,
+            atr_pct=atr_pct, trend_regime=trend_regime, session=session_str
         )
         if isinstance(res, dict) and res.get("error") == "INSUFFICIENT_BALANCE":
             await self.notifier.notify_insufficient_balance(

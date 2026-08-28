@@ -3042,11 +3042,13 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
 
                     <div style="background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:14px; margin-bottom:18px;">
                         <div style="font-size:13px; font-weight:800; color:#38bdf8; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
-                            🎯 STRATEJİ, GİRİŞ & ÇIKIŞ GEREKÇESİ
+                            🎯 STRATEJİ, TREND REJİMİ & PİYASA KOŞULLARI
                         </div>
                         <div style="font-size:12.5px; color:#f1f5f9; line-height:1.7;">
                             <b>• Giriş Gerekçesi / Formasyon:</b> <span style="color:#ffffff;">${item.reason}</span><br>
                             <b>• Kapanış Tetikleyicisi:</b> <span style="color:#fbc531;">${item.close_reason}</span><br>
+                            <b>• Giriş Anı Trend Rejimi:</b> <span style="color:#a5f3fc; font-weight:700;">${item.trend_regime || 'Belirleniyor'}</span> | <b>Volatilite (ATR):</b> <span style="color:#fde047; font-weight:700;">%${item.atr_pct !== undefined ? item.atr_pct : '1.2'}</span><br>
+                            <b>• Piyasa Seansı:</b> <span style="color:#e2e8f0;">${item.session || 'Küresel Seans'}</span> | <b>Kademeli TP1 Durumu:</b> <span style="color:#86efac; font-weight:700;">${item.tp1_hit || (item.id.includes('TP1') ? 'EVET (%50 Kilitlendi)' : 'HAYIR')}</span><br>
                             <b>• Giriş / Çıkış Fiyatı:</b> $${item.entry_price} ➔ $${item.exit_price} | <b>Komisyon:</b> $${item.fees.toFixed(4)}<br>
                             <b>• Planlanan Hedef (TP1):</b> ${item.tp1 ? '$' + item.tp1 : 'Yok'} | <b>Planlanan Stop:</b> ${item.soft_stop ? '$' + item.soft_stop : 'Yok'}<br>
                             <b>• Çıkış Verimliliği:</b> %${eff.toFixed(1)} (Zirve kârın cebe aktarılma başarısı)
