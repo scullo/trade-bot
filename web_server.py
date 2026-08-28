@@ -2881,8 +2881,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
         for s in market_data.active_symbols:
             lev = market_data.levels.get(s, {})
             cur_p = market_data.current_prices.get(s, 0.0)
-            if (not lev or not lev.get("camarilla") or not lev.get("camarilla", {}).get("R4")) and cur_p > 0:
-                market_data._ensure_instant_levels(s, cur_p)
+            if not lev or not lev.get("camarilla"):
+                market_data.recalculate_levels(s)
                 lev = market_data.levels.get(s, {})
             symbols_data[s] = {
                 "price": cur_p,
