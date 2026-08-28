@@ -34,8 +34,8 @@ def generate_trade_chart_image(
     display_df = df_5m.iloc[-65:].copy().reset_index(drop=True)
     n_bars = len(display_df)
 
-    # 1. Dark Theme
-    fig, ax = plt.subplots(figsize=(13.5, 7.2), dpi=140)
+    # 1. Dark Professional Theme (Bloomberg / TradingView Style)
+    fig, ax = plt.subplots(figsize=(14.0, 7.5), dpi=140)
     fig.patch.set_facecolor('#080d1a')
     ax.set_facecolor('#0f172a')
 
@@ -76,8 +76,8 @@ def generate_trade_chart_image(
     chart_max = max(all_prices)
     y_span = chart_max - chart_min if chart_max > chart_min else 1.0
 
-    padded_min = chart_min - y_span * 0.10
-    padded_max = chart_max + y_span * 0.18
+    padded_min = chart_min - y_span * 0.12
+    padded_max = chart_max + y_span * 0.22
 
     # 2. AVWAP Lines
     display_timestamps = display_df['timestamp'].values
@@ -107,7 +107,7 @@ def generate_trade_chart_image(
     cam = levels.get('camarilla', {})
     raw_levels = []
 
-    def add_candidate(price, color, label, style='--'):
+    def add_candidate(price, color, label, style='--', is_trade_level=False):
         if price and not np.isnan(price) and price > 0:
             p_val = float(price)
             if p_val >= padded_min and p_val <= padded_max:
@@ -115,7 +115,8 @@ def generate_trade_chart_image(
                     'price': p_val,
                     'color': color,
                     'label': label,
-                    'style': style
+                    'style': style,
+                    'is_trade_level': is_trade_level
                 })
 
     add_candidate(cam.get('R5'), '#f59e0b', 'R5 Hedef', '--')
@@ -134,9 +135,21 @@ def generate_trade_chart_image(
     add_candidate(cam.get('S5'), '#3b82f6', 'S5 Hedef', '--')
 
     if soft_stop and soft_stop > 0:
-        add_candidate(soft_stop, '#f43f5e', 'STOP', ':')
+        add_candidate(soft_stop, '#f43f5e', 'STOP', ':', is_trade_level=True)
     if tp1 and tp1 > 0:
-        add_candidate(tp1, '#10b981', 'TP1 HEDEF', ':')
+        add_candidate(tp1, '#10b981', 'TP1 HEDEF', ':', is_trade_level=True)
+
+    # 4. Giriş ve Çıkış Seviyelerini Sağ Eksene Profesyonel Etiket Olarak Ekle
+    is_actually_closed = is_closed or (exit_price is not None and exit_price > 0)
+    if entry_price and entry_price > 0:
+        entry_side_col = '#10b981' if side == 'LONG' else '#f43f5e'
+        add_candidate(entry_price, entry_side_col, f"★ GİRİŞ ({side})", '--', is_trade_level=True)
+
+    if is_actually_closed and exit_price and exit_price > 0:
+        is_profit = (net_pnl is not None and net_pnl >= 0) or (exit_price > entry_price if side == 'LONG' else exit_price < entry_price)
+        exit_side_col = '#10b981' if is_profit else '#f43f5e'
+        exit_lbl = "★ KÂR ALINDI" if is_profit else "★ STOP KAPANIŞ"
+        add_candidate(exit_price, exit_side_col, exit_lbl, '-.', is_trade_level=True)
 
     # Merge very close levels (< 0.15% difference)
     raw_levels.sort(key=lambda x: x['price'])
@@ -148,16 +161,20 @@ def generate_trade_chart_image(
             prev = filtered_levels[-1]
             pct_diff = abs(item['price'] - prev['price']) / max(prev['price'], 1e-8)
             if pct_diff < 0.0015:
+                # Merge labels cleanly
                 prev['label'] = f"{prev['label']} / {item['label']}"
+                if item.get('is_trade_level'):
+                    prev['color'] = item['color']
+                    prev['is_trade_level'] = True
             else:
                 filtered_levels.append(item)
 
     for item in filtered_levels:
         item['adjusted_y'] = item['price']
 
-    # Relax vertical gap for text labels
+    # Relax vertical gap for right margin text labels
     min_gap = y_span * 0.075
-    for _ in range(30):
+    for _ in range(35):
         for i in range(len(filtered_levels) - 1):
             cur = filtered_levels[i]
             nxt = filtered_levels[i+1]
@@ -173,18 +190,25 @@ def generate_trade_chart_image(
         c = item['color']
         lbl = item['label']
         st = item['style']
+        is_trade = item.get('is_trade_level', False)
+
+        lw = 2.0 if is_trade else 1.1
+        alpha_val = 0.95 if is_trade else 0.65
 
         # Horizontal level line across candle area
-        ax.plot([-0.5, n_bars - 0.5], [orig_p, orig_p], color=c, linestyle=st, linewidth=1.1, alpha=0.65, zorder=4)
+        ax.plot([-0.5, n_bars - 0.5], [orig_p, orig_p], color=c, linestyle=st, linewidth=lw, alpha=alpha_val, zorder=4)
 
         # Subtle guide line connecting level to text on right margin
         ax.plot([n_bars - 0.5, n_bars + 1.5], [orig_p, adj_y], color=c, linestyle=':', linewidth=0.8, alpha=0.5, zorder=5)
 
-        # Right margin label with dark tag
-        ax.text(n_bars + 2.0, adj_y, f"{lbl} (${orig_p:.4f})", color=c, fontsize=8.2, fontweight='bold', va='center', zorder=6)
+        # Right margin label (TradingView Price Tag Style)
+        font_wt = 'heavy' if is_trade else 'bold'
+        font_sz = 8.6 if is_trade else 8.1
+        bg_box = dict(boxstyle='round,pad=0.25', facecolor='#0f172a', edgecolor=c, linewidth=1.2, alpha=0.95) if is_trade else None
+        
+        ax.text(n_bars + 2.0, adj_y, f"{lbl} (${orig_p:.4f})", color=c, fontsize=font_sz, fontweight=font_wt, va='center', bbox=bg_box, zorder=6)
 
-    # 4. Entry & Exit Representation (Clean, Uncluttered, No Overlapping Badges)
-    is_actually_closed = is_closed or (exit_price is not None and exit_price > 0)
+    # 4. Entry & Exit Representation (CLEAN PIN MARKERS ONLY — ZERO CANDLE COVERAGE!)
     entry_idx = max(0, n_bars - 14) if is_actually_closed else (n_bars - 1)
     if entry_timestamp and entry_timestamp > 0:
         entry_ts_ms = entry_timestamp * 1000 if entry_timestamp < 1e11 else entry_timestamp
@@ -195,59 +219,42 @@ def generate_trade_chart_image(
                 best_diff = diff
                 entry_idx = idx
 
-    # Entry Price Line & Crisp Marker
+    # Entry Marker: Sharp pinpoint above or below the candle without obscuring the body!
     if entry_price and entry_price > 0:
         entry_col = '#10b981' if side == 'LONG' else '#f43f5e'
-        marker = '^' if side == 'LONG' else 'v'
+        entry_candle = display_df.iloc[entry_idx]
         
-        # Horizontal entry line
-        ax.plot([-0.5, n_bars - 0.5], [entry_price, entry_price], color=entry_col, linestyle='--', linewidth=1.8, alpha=0.9, zorder=6)
+        # Place pin above candle high for SHORT, below candle low for LONG
+        pin_y = float(entry_candle['high']) + y_span * 0.03 if side == 'SHORT' else float(entry_candle['low']) - y_span * 0.03
+        marker = 'v' if side == 'SHORT' else '^'
         
-        # Sharp entry marker on candle
-        ax.scatter(entry_idx, entry_price, color=entry_col, s=180, marker=marker, edgecolors='#ffffff', linewidth=1.8, zorder=8)
+        # Draw clean crisp entry pin
+        ax.scatter(entry_idx, pin_y, color=entry_col, s=240, marker=marker, edgecolors='#ffffff', linewidth=2.0, zorder=8)
         
-        # Entry Tag cleanly positioned on the left of the entry marker
-        offset_y = -y_span * 0.05 if side == 'SHORT' else y_span * 0.05
-        ax.annotate(
-            f"GİRİŞ: ${entry_price:.4f} ({side})",
-            xy=(entry_idx, entry_price),
-            xytext=(entry_idx - 6.0, entry_price + offset_y),
-            arrowprops=dict(arrowstyle='->,head_width=0.3,head_length=0.4', color=entry_col, lw=1.2),
-            fontsize=8.5, fontweight='bold', color='#ffffff',
-            bbox=dict(boxstyle='round,pad=0.28', facecolor=entry_col, edgecolor='#ffffff', linewidth=1.1, alpha=0.95),
-            zorder=9
-        )
+        # Small vertical dotted anchor line from pin to entry price
+        ax.plot([entry_idx, entry_idx], [pin_y, entry_price], color=entry_col, linestyle=':', linewidth=1.5, alpha=0.8, zorder=6)
 
-    # Exit Price Line & Target Marker
+    # Exit Marker: Sharp 'X' above or below the exit candle
     if is_actually_closed and exit_price and exit_price > 0:
         is_profit = (net_pnl is not None and net_pnl >= 0) or (exit_price > entry_price if side == 'LONG' else exit_price < entry_price)
         exit_col = '#10b981' if is_profit else '#f43f5e'
         exit_idx = n_bars - 1
-        exit_label = f"KÂR ALINDI (${exit_price:.4f})" if is_profit else f"STOP EDİLDİ (${exit_price:.4f})"
-
-        # Horizontal exit line
-        ax.plot([-0.5, n_bars - 0.5], [exit_price, exit_price], color=exit_col, linestyle='-.', linewidth=2.0, alpha=0.9, zorder=6)
+        exit_candle = display_df.iloc[exit_idx]
         
-        # Sharp exit marker on candle
-        ax.scatter(exit_idx, exit_price, color=exit_col, s=200, marker='X', edgecolors='#ffffff', linewidth=2.0, zorder=8)
-
-        # Exit Tag cleanly positioned on the left of exit point
-        offset_exit_y = y_span * 0.06 if is_profit else -y_span * 0.06
-        ax.annotate(
-            exit_label,
-            xy=(exit_idx, exit_price),
-            xytext=(exit_idx - 6.5, exit_price + offset_exit_y),
-            arrowprops=dict(arrowstyle='->,head_width=0.3,head_length=0.4', color=exit_col, lw=1.2),
-            fontsize=8.8, fontweight='bold', color='#ffffff',
-            bbox=dict(boxstyle='round,pad=0.30', facecolor=exit_col, edgecolor='#ffffff', linewidth=1.2, alpha=0.95),
-            zorder=9
-        )
+        pin_exit_y = float(exit_candle['high']) + y_span * 0.035 if is_profit else float(exit_candle['low']) - y_span * 0.035
+        
+        ax.scatter(exit_idx, pin_exit_y, color=exit_col, s=260, marker='X', edgecolors='#ffffff', linewidth=2.2, zorder=8)
+        ax.plot([exit_idx, exit_idx], [pin_exit_y, exit_price], color=exit_col, linestyle=':', linewidth=1.5, alpha=0.8, zorder=6)
 
         # Trade Trajectory Line & Shading
         if entry_price and entry_price > 0:
             fill_x = np.array([entry_idx, exit_idx, exit_idx, entry_idx])
             fill_y = np.array([entry_price, entry_price, exit_price, exit_price])
             ax.fill(fill_x, fill_y, color=exit_col, alpha=0.08, zorder=2)
+            # Connecting trajectory line
+            ax.annotate('', xy=(exit_idx, exit_price), xytext=(entry_idx, entry_price),
+                        arrowprops=dict(arrowstyle='->,head_width=0.35,head_length=0.5', color=exit_col, linewidth=2.2, linestyle='-', alpha=0.85),
+                        zorder=5)
 
     # 5. Time and Price Axes Formatting
     time_indices = np.linspace(0, n_bars - 1, 7, dtype=int)
@@ -257,7 +264,7 @@ def generate_trade_chart_image(
     ax.tick_params(colors='#94a3b8', labelsize=9)
     for spine in ax.spines.values(): spine.set_color('#1e293b')
 
-    # 6. Executive Header & Status HUD Banner
+    # 6. Executive Header & Clean HUD Status Banner
     clean_sym = symbol.replace('/USDT', '')
     side_text = "LONG (Alış)" if side == "LONG" else "SHORT (Satış)"
 
@@ -269,7 +276,7 @@ def generate_trade_chart_image(
         is_profit = (net_pnl is not None and net_pnl >= 0)
         banner_border = '#10b981' if is_profit else '#f43f5e'
         banner_tag = '>> KÂRLI KAPANIŞ NEDENİ' if is_profit else '>> STOP NEDENİ'
-        banner_text = f"{banner_tag}: {reason}"
+        banner_text = f"{banner_tag}: {reason} | Giriş: ${entry_price:.4f} ➔ Çıkış: ${exit_price:.4f}"
         ax.text(0.02, 0.94, banner_text, transform=ax.transAxes,
                 color='#ffffff', fontsize=9.2, fontweight='bold',
                 bbox=dict(boxstyle='round,pad=0.40', facecolor='#0f172a', edgecolor=banner_border, linewidth=1.5, alpha=0.95),
@@ -279,7 +286,7 @@ def generate_trade_chart_image(
         ax.set_title(title_str, color='#ffffff', fontsize=11.0, fontweight='bold', pad=24, loc='left')
 
         if reason:
-            banner_text = f">> GİRİŞ NEDENİ: {reason}"
+            banner_text = f">> GİRİŞ NEDENİ: {reason} | Giriş Seviyesi: ${entry_price:.4f}"
             ax.text(0.02, 0.94, banner_text, transform=ax.transAxes,
                     color='#f8fafc', fontsize=9.2, fontweight='bold',
                     bbox=dict(boxstyle='round,pad=0.40', facecolor='#0f172a', edgecolor='#3b82f6', linewidth=1.5, alpha=0.95),
