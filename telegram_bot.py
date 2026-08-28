@@ -1,7 +1,7 @@
 import aiohttp
 import asyncio
 import io
-from datetime import datetime
+from datetime import datetime, timedelta
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 from chart_generator import generate_trade_chart_image
 
@@ -155,15 +155,62 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
         else:
             await self.send_message(msg)
 
+    @staticmethod
+    def _compute_period_metrics(history: list):
+        """Gecmis islemlerden Gunluk, Haftalik ve Aylik PnL ve istatistikleri hesaplar."""
+        now = datetime.now()
+        today_date = now.date()
+        week_cutoff = now - timedelta(days=7)
+        month_cutoff = now - timedelta(days=30)
+
+        today_pnl = 0.0
+        today_trades = []
+        weekly_pnl = 0.0
+        monthly_pnl = 0.0
+
+        for h in (history or []):
+            t_str = h.get('exit_time') or h.get('entry_time')
+            if not t_str:
+                continue
+            try:
+                t = datetime.strptime(t_str, "%Y-%m-%d %H:%M:%S")
+            except Exception:
+                try:
+                    t = datetime.fromisoformat(t_str.replace('Z', ''))
+                except Exception:
+                    continue
+
+            pnl = float(h.get('net_pnl', 0.0))
+            if t.date() == today_date:
+                today_pnl += pnl
+                today_trades.append(h)
+            if t >= week_cutoff:
+                weekly_pnl += pnl
+            if t >= month_cutoff:
+                monthly_pnl += pnl
+
+        return {
+            'today_pnl': today_pnl,
+            'today_trades': today_trades,
+            'weekly_pnl': weekly_pnl,
+            'monthly_pnl': monthly_pnl
+        }
+
     async def send_hourly_report(self, balance: float, initial_balance: float, open_positions: dict, history: list, mode: str = "DEMO"):
-        """Her saat basi otomatik portfoy, kasa ve acik pozisyon raporu gonderir."""
+        """Her saat basi otomatik portfoy, donemsel kazanc ve acik pozisyon raporu gonderir."""
         if not self.token or not self.chat_id:
             return
 
         total_pnl = balance - initial_balance
         growth_pct = (total_pnl / initial_balance) * 100.0 if initial_balance > 0 else 0.0
 
-        # Win Rate Hesaplama
+        # Donemsel Kazanc Metrikleri (Gunluk, Haftalik, Aylik)
+        period = self._compute_period_metrics(history)
+        today_pnl = period['today_pnl']
+        weekly_pnl = period['weekly_pnl']
+        monthly_pnl = period['monthly_pnl']
+
+        # Win Rate & Komisyon
         wins = [h for h in history if h.get('net_pnl', 0.0) >= 0]
         losses = [h for h in history if h.get('net_pnl', 0.0) < 0]
         total_trades = len(history)
@@ -186,9 +233,14 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
 
         msg = f"""📊 <b>VALKYRIE QUANT — SAATLİK KASA & PORTFÖY RAPORU</b> 🕒
 ━━━━━━━━━━━━━━━━━━━━━━━━
-💰 <b>Güncel Toplam Kasa:</b> <b>${balance:.2f} USDT</b>
+💰 <b>Güncel Toplam Kasa:</b> <b>${balance:,.2f} USDT</b>
 📈 <b>Toplam Net Kâr:</b> <b>{total_pnl:+.2f} USDT ({growth_pct:+.2f}%)</b>
 🎯 <b>Ticaret Modu:</b> {mode_badge}
+━━━━━━━━━━━━━━━━━━━━━━━━
+📅 <b>DÖNEMSEL KAZANÇ PERFORMANSI:</b>
+• 💵 <b>Günlük Kazanç (Bugün):</b> <b>{today_pnl:+.2f} USDT</b>
+• 📆 <b>Haftalık Kazanç (7 Gün):</b> <b>{weekly_pnl:+.2f} USDT</b>
+• 🗓️ <b>Aylık Kazanç (30 Gün):</b> <b>{monthly_pnl:+.2f} USDT</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━
 ⚡ <b>AÇIK POZİSYONLAR ({len(open_positions)} / 3):</b>
 {pos_str}
@@ -202,8 +254,70 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
 
         await self.send_message(msg)
 
+    async def send_midnight_summary(self, balance: float, initial_balance: float, open_positions: dict, history: list, mode: str = "DEMO"):
+        """Her gece saat 00:00'da gunluk kapanis ve genel performans ozetini gonderir."""
+        if not self.token or not self.chat_id:
+            return
+
+        total_pnl = balance - initial_balance
+        growth_pct = (total_pnl / initial_balance) * 100.0 if initial_balance > 0 else 0.0
+
+        period = self._compute_period_metrics(history)
+        today_pnl = period['today_pnl']
+        today_trades = period['today_trades']
+        weekly_pnl = period['weekly_pnl']
+        monthly_pnl = period['monthly_pnl']
+
+        today_wins = [h for h in today_trades if h.get('net_pnl', 0.0) >= 0]
+        today_losses = [h for h in today_trades if h.get('net_pnl', 0.0) < 0]
+        today_winrate = (len(today_wins) / len(today_trades) * 100.0) if today_trades else 0.0
+        today_fees = sum(h.get('fees', 0.0) for h in today_trades)
+
+        best_trade = max(today_trades, key=lambda x: x.get('net_pnl', 0.0)) if today_trades else None
+        if best_trade:
+            best_str = f"<b>#{best_trade['symbol'].replace('/USDT','')}</b> ({best_trade['net_pnl']:+.2f} USDT)"
+        else:
+            best_str = "<i>Bugün tamamlanan işlem yok</i>"
+
+        mode_badge = "🔴 <b>GERÇEK HESAP (Binance Live)</b>" if mode == "LIVE" else "🟡 <b>DEMO MODU (Paper Trading)</b>"
+
+        pos_lines = []
+        if open_positions:
+            for sym, pos in open_positions.items():
+                clean = sym.replace('/USDT', '')
+                pos_lines.append(f"• <b>#{clean}</b> ({pos['side']} {pos['leverage']}x) — Giriş: <code>${pos['entry_price']:.4f}</code>")
+            pos_str = "\n".join(pos_lines)
+        else:
+            pos_str = "• <i>Açık pozisyon devretmedi. 100 paritede gece pusu devam ediyor.</i>"
+
+        now_str = datetime.now().strftime("%Y-%m-%d 00:00:00")
+
+        msg = f"""🌕 <b>VALKYRIE QUANT — GÜNLÜK KAPANIŞ & PERFORMANS RAPORU (00:00)</b> 🌙
+━━━━━━━━━━━━━━━━━━━━━━━━
+💰 <b>Günün Kapanış Kasası:</b> <b>${balance:,.2f} USDT</b>
+🎯 <b>Ticaret Modu:</b> {mode_badge}
+━━━━━━━━━━━━━━━━━━━━━━━━
+📊 <b>GÜNÜN İŞLEM & KÂR/ZARAR ÖZETİ:</b>
+• 💵 <b>Bugünkü Net Kazanç:</b> <b>{today_pnl:+.2f} USDT</b>
+• 🎯 <b>Günlük Win Rate:</b> <b>%{today_winrate:.1f}</b> ({len(today_wins)} Kâr / {len(today_losses)} Zarar)
+• 🏆 <b>Günün En Başarılı İşlemi:</b> {best_str}
+• 🔢 <b>Bugün Kapanan İşlem:</b> <b>{len(today_trades)} Adet</b>
+• 💸 <b>Günün Ödenen Komisyonu:</b> <b>${today_fees:.4f} USDT</b>
+━━━━━━━━━━━━━━━━━━━━━━━━
+📅 <b>KÜMÜLATİF DÖNEMSEL PERFORMANS:</b>
+• 📆 <b>Haftalık Kazanç (Son 7 Gün):</b> <b>{weekly_pnl:+.2f} USDT</b>
+• 🗓️ <b>Aylık Kazanç (Son 30 Gün):</b> <b>{monthly_pnl:+.2f} USDT</b>
+• 📈 <b>Başlangıçtan Beri Toplam Kâr:</b> <b>{total_pnl:+.2f} USDT ({growth_pct:+.2f}%)</b>
+━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ <b>DEVREDEN AÇIK POZİSYONLAR ({len(open_positions)} / 3):</b>
+{pos_str}
+━━━━━━━━━━━━━━━━━━━━━━━━
+⏰ <b>Kapanış Zamanı:</b> <code>{now_str}</code>"""
+
+        await self.send_message(msg)
+
     async def start_hourly_scheduler(self, trader_manager, initial_balance=100.0):
-        """Arka planda her saat basinda (:00) rapor gonderir."""
+        """Arka planda her saat basinda (:00) saatlik rapor, her gece 00:00'da ise ozel gunluk kapanis ozeti gonderir."""
         if not self.token or not self.chat_id:
             return
 
@@ -217,13 +331,25 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
 
                 await asyncio.sleep(seconds_to_wait)
 
-                await self.send_hourly_report(
-                    balance=trader_manager.balance,
-                    initial_balance=initial_balance,
-                    open_positions=trader_manager.open_positions,
-                    history=trader_manager.history,
-                    mode=getattr(trader_manager, 'mode', 'DEMO')
-                )
+                current_hour = datetime.now().hour
+
+                # Eger saat 00:00 ise ozel Gece Kapanis Raporu gonder, aksi takdirde normal Saatlik Rapor gonder
+                if current_hour == 0:
+                    await self.send_midnight_summary(
+                        balance=trader_manager.balance,
+                        initial_balance=initial_balance,
+                        open_positions=trader_manager.open_positions,
+                        history=trader_manager.history,
+                        mode=getattr(trader_manager, 'mode', 'DEMO')
+                    )
+                else:
+                    await self.send_hourly_report(
+                        balance=trader_manager.balance,
+                        initial_balance=initial_balance,
+                        open_positions=trader_manager.open_positions,
+                        history=trader_manager.history,
+                        mode=getattr(trader_manager, 'mode', 'DEMO')
+                    )
             except Exception as e:
-                print(f"[HOURLY REPORT SCHEDULER HATA]: {e}")
+                print(f"[HOURLY/MIDNIGHT REPORT SCHEDULER HATA]: {e}")
                 await asyncio.sleep(60)
