@@ -1,10 +1,18 @@
 import json
 import os
 import time
+import base64
+import threading
 from datetime import datetime
 from config import INITIAL_BALANCE, LEVERAGE, POSITION_SIZE_USDT, COMMISSION_RATE
 
 HISTORY_FILE = "trade_history.json"
+
+# GitHub Remote Persistence Config
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+GITHUB_REPO = os.environ.get("GITHUB_REPO", "scullo/trade-bot")
+GITHUB_FILE_PATH = "trade_history.json"
+GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_FILE_PATH}"
 
 class PaperTrader:
     def __init__(self, initial_balance=INITIAL_BALANCE, leverage=LEVERAGE, margin_per_trade=POSITION_SIZE_USDT):
@@ -15,29 +23,114 @@ class PaperTrader:
         self.commission_rate = float(COMMISSION_RATE)
         self.open_positions = {}
         self.history = []
+        self._github_sha = None
         self.load_history()
 
     def load_history(self):
-        if os.path.exists(HISTORY_FILE):
+        """Önce GitHub'dan yükle, başarısız olursa lokal dosyadan yükle."""
+        loaded = False
+
+        # 1. GitHub'dan yüklemeyi dene
+        if GITHUB_TOKEN:
+            try:
+                import urllib.request
+                req = urllib.request.Request(GITHUB_API_URL, headers={
+                    "Authorization": f"token {GITHUB_TOKEN}",
+                    "Accept": "application/vnd.github.v3+json",
+                    "User-Agent": "TradeBot/1.0"
+                })
+                res = urllib.request.urlopen(req, timeout=10)
+                gh_data = json.loads(res.read().decode("utf-8"))
+                self._github_sha = gh_data.get("sha")
+                content_b64 = gh_data.get("content", "")
+                content_str = base64.b64decode(content_b64).decode("utf-8")
+                data = json.loads(content_str)
+                self.balance = float(data.get("balance", self.initial_balance))
+                self.open_positions = data.get("open_positions", {})
+                self.history = data.get("history", [])
+                loaded = True
+                print(f">> [GITHUB PERSISTENCE] trade_history.json GitHub'dan yuklendi (SHA: {self._github_sha[:8]}...)")
+            except Exception as e:
+                print(f">> [GITHUB PERSISTENCE] GitHub'dan yuklenemedi: {e}")
+
+        # 2. GitHub başarısız olursa lokal dosyadan yükle
+        if not loaded and os.path.exists(HISTORY_FILE):
             try:
                 with open(HISTORY_FILE, "r", encoding="utf-8-sig") as f:
                     data = json.load(f)
                     self.balance = float(data.get("balance", self.initial_balance))
                     self.open_positions = data.get("open_positions", {})
                     self.history = data.get("history", [])
+                    loaded = True
+                    print(f">> [LOCAL] trade_history.json lokal dosyadan yuklendi.")
             except Exception as e:
                 print(f">> Gecmis yuklenirken hata: {e}")
 
+        if not loaded:
+            print(f">> [INIT] Yeni trade_history baslatiliyor. Baslangic Kasa: {self.initial_balance}")
+
     def save_history(self):
+        """Hem lokale hem GitHub'a kaydet."""
+        state = {
+            "balance": round(self.balance, 4),
+            "open_positions": self.open_positions,
+            "history": self.history
+        }
+
+        # 1. Lokal dosyaya kaydet
         try:
             with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-                json.dump({
-                    "balance": round(self.balance, 4),
-                    "open_positions": self.open_positions,
-                    "history": self.history
-                }, f, indent=2, ensure_ascii=False)
+                json.dump(state, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            print(f">> Gecmis kaydedilirken hata: {e}")
+            print(f">> Lokal gecmis kaydedilirken hata: {e}")
+
+        # 2. GitHub'a kaydet (arka planda, ana threadi bloklamadan)
+        if GITHUB_TOKEN:
+            threading.Thread(target=self._push_to_github, args=(state,), daemon=True).start()
+
+    def _push_to_github(self, state: dict):
+        """trade_history.json dosyasini GitHub API uzerinden repo'ya kaydeder."""
+        import urllib.request
+        try:
+            content_str = json.dumps(state, indent=2, ensure_ascii=False)
+            content_b64 = base64.b64encode(content_str.encode("utf-8")).decode("utf-8")
+
+            # Güncel SHA'yı al (conflict olmaması için)
+            if not self._github_sha:
+                try:
+                    req = urllib.request.Request(GITHUB_API_URL, headers={
+                        "Authorization": f"token {GITHUB_TOKEN}",
+                        "Accept": "application/vnd.github.v3+json",
+                        "User-Agent": "TradeBot/1.0"
+                    })
+                    res = urllib.request.urlopen(req, timeout=10)
+                    gh = json.loads(res.read().decode("utf-8"))
+                    self._github_sha = gh.get("sha")
+                except Exception:
+                    pass
+
+            payload = {
+                "message": f"[BOT] Trade state auto-save ({datetime.now().strftime('%H:%M:%S')})",
+                "content": content_b64,
+                "branch": "main"
+            }
+            if self._github_sha:
+                payload["sha"] = self._github_sha
+
+            payload_bytes = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(GITHUB_API_URL, data=payload_bytes, method="PUT", headers={
+                "Authorization": f"token {GITHUB_TOKEN}",
+                "Accept": "application/vnd.github.v3+json",
+                "Content-Type": "application/json",
+                "User-Agent": "TradeBot/1.0"
+            })
+            res = urllib.request.urlopen(req, timeout=15)
+            resp_data = json.loads(res.read().decode("utf-8"))
+            new_sha = resp_data.get("content", {}).get("sha", "")
+            self._github_sha = new_sha
+            print(f">> [GITHUB SYNC] trade_history.json kaydedildi (SHA: {new_sha[:8]}...)")
+        except Exception as e:
+            print(f">> [GITHUB SYNC HATA] {e}")
 
     def get_free_balance(self):
         used_margin = sum(p.get("margin", 0.0) for p in self.open_positions.values())
