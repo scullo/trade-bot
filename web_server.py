@@ -16,28 +16,39 @@ HTML_PAGE = """
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <style>
         :root {
-            --bg: #07090e;
-            --surface: #0e121a;
-            --card-bg: #121722;
-            --card-hover: #182030;
-            --border: #1e2638;
-            --border-light: #2c3850;
-            --green: #0ecb81;
-            --green-bg: #0c2317;
-            --green-glow: rgba(14, 203, 129, 0.35);
-            --red: #ff4757;
-            --red-bg: #260f14;
-            --red-glow: rgba(255, 71, 87, 0.35);
-            --yellow: #fbc531;
-            --purple: #d500f9;
-            --blue: #388bfd;
-            --cyan: #00f2fe;
-            --text-main: #ffffff;
-            --text-secondary: #e2e8f0;
-            --text-muted: #94a3b8;
+            --bg: #080b11;
+            --surface: #0e131f;
+            --surface-glass: rgba(14, 19, 31, 0.85);
+            --card-bg: #111726;
+            --card-hover: #161f33;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-light: rgba(255, 255, 255, 0.14);
+            --border-focus: #388bfd;
+            --green: #10b981;
+            --green-bg: rgba(16, 185, 129, 0.08);
+            --green-glow: rgba(16, 185, 129, 0.25);
+            --red: #f43f5e;
+            --red-bg: rgba(244, 63, 94, 0.08);
+            --red-glow: rgba(244, 63, 94, 0.25);
+            --yellow: #f59e0b;
+            --yellow-glow: rgba(245, 158, 11, 0.25);
+            --purple: #c084fc;
+            --blue: #3b82f6;
+            --cyan: #06b6d4;
+            --text-main: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #64748b;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg); color: var(--text-main); font-family: 'Plus Jakarta Sans', sans-serif; padding: 20px 28px; min-height: 100vh; }
+        body {
+            background: radial-gradient(circle at 50% 0%, #111827 0%, #080b11 75%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 20px 32px;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
 
         /* BRANDING & TOP BAR */
         .top-bar { display: flex; justify-content: space-between; align-items: center; padding-bottom: 18px; border-bottom: 1px solid var(--border); margin-bottom: 22px; flex-wrap: wrap; gap: 14px; }
@@ -352,8 +363,23 @@ HTML_PAGE = """
         .section-title { font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #ffffff; display: flex; align-items: center; gap: 8px; }
         
         .watchlist-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin-bottom: 32px; }
-        .coin-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 18px; padding: 20px; transition: all 0.2s ease; position: relative; display: flex; flex-direction: column; }
-        .coin-card:hover { border-color: var(--border-light); background: var(--card-hover); }
+        .coin-card {
+            background: linear-gradient(180deg, rgba(18, 25, 40, 0.85) 0%, rgba(13, 18, 30, 0.95) 100%);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px 20px;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+        }
+        .coin-card:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(59, 130, 246, 0.1);
+        }
 
         /* SOLID VIVID GLOWING BORDERS FOR ACTIVE POSITIONS */
         .coin-card.has-active-pos-profit {
