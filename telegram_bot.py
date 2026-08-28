@@ -145,7 +145,10 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
                     side=record["side"],
                     entry_price=record["entry_price"],
                     exit_price=record["exit_price"],
-                    reason=record["close_reason"]
+                    reason=record["close_reason"],
+                    is_closed=True,
+                    net_pnl=net_pnl,
+                    roe_pct=roe
                 )
             except Exception as e:
                 print(f"[TELEGRAM] Kapanis grafigi olusturulamadi: {e}")
