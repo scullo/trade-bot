@@ -15,6 +15,7 @@ def generate_trade_chart_image(
     side: str = "LONG",
     entry_price: float = None,
     exit_price: float = None,
+    entry_timestamp: float = None,
     soft_stop: float = None,
     tp1: float = None,
     tp2: float = None,
