@@ -16,28 +16,39 @@ HTML_PAGE = """
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <style>
         :root {
-            --bg: #07090e;
-            --surface: #0e121a;
-            --card-bg: #121722;
-            --card-hover: #182030;
-            --border: #1e2638;
-            --border-light: #2c3850;
-            --green: #0ecb81;
-            --green-bg: #0c2317;
-            --green-glow: rgba(14, 203, 129, 0.35);
-            --red: #ff4757;
-            --red-bg: #260f14;
-            --red-glow: rgba(255, 71, 87, 0.35);
-            --yellow: #fbc531;
-            --purple: #d500f9;
-            --blue: #388bfd;
-            --cyan: #00f2fe;
-            --text-main: #ffffff;
-            --text-secondary: #e2e8f0;
-            --text-muted: #94a3b8;
+            --bg: #080b11;
+            --surface: #0e131f;
+            --surface-glass: rgba(14, 19, 31, 0.85);
+            --card-bg: #111726;
+            --card-hover: #161f33;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-light: rgba(255, 255, 255, 0.14);
+            --border-focus: #388bfd;
+            --green: #10b981;
+            --green-bg: rgba(16, 185, 129, 0.08);
+            --green-glow: rgba(16, 185, 129, 0.25);
+            --red: #f43f5e;
+            --red-bg: rgba(244, 63, 94, 0.08);
+            --red-glow: rgba(244, 63, 94, 0.25);
+            --yellow: #f59e0b;
+            --yellow-glow: rgba(245, 158, 11, 0.25);
+            --purple: #c084fc;
+            --blue: #3b82f6;
+            --cyan: #06b6d4;
+            --text-main: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #64748b;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg); color: var(--text-main); font-family: 'Plus Jakarta Sans', sans-serif; padding: 20px 28px; min-height: 100vh; }
+        body {
+            background: radial-gradient(circle at 50% 0%, #111827 0%, #080b11 75%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 20px 32px;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
 
         /* BRANDING & TOP BAR */
         .top-bar { display: flex; justify-content: space-between; align-items: center; padding-bottom: 18px; border-bottom: 1px solid var(--border); margin-bottom: 22px; flex-wrap: wrap; gap: 14px; }
@@ -352,8 +363,23 @@ HTML_PAGE = """
         .section-title { font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #ffffff; display: flex; align-items: center; gap: 8px; }
         
         .watchlist-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin-bottom: 32px; }
-        .coin-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 18px; padding: 20px; transition: all 0.2s ease; position: relative; display: flex; flex-direction: column; }
-        .coin-card:hover { border-color: var(--border-light); background: var(--card-hover); }
+        .coin-card {
+            background: linear-gradient(180deg, rgba(18, 25, 40, 0.85) 0%, rgba(13, 18, 30, 0.95) 100%);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px 20px;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+        }
+        .coin-card:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(59, 130, 246, 0.1);
+        }
 
         /* SOLID VIVID GLOWING BORDERS FOR ACTIVE POSITIONS */
         .coin-card.has-active-pos-profit {
@@ -1053,10 +1079,20 @@ HTML_PAGE = """
     </div>
 
     <div class="section-header">
-        <div class="section-title">📊 CANLI PUSU & SEVİYE ANALİZ HAVUZU</div>
-        <div style="font-size:12.5px; color:var(--green); font-weight:700; background:rgba(14,203,129,0.1); border:1px solid rgba(14,203,129,0.3); padding:5px 14px; border-radius:20px; font-family:'JetBrains Mono', monospace; display:flex; align-items:center; gap:8px;">
-            <span style="width:7px; height:7px; background:var(--green); border-radius:50%; box-shadow:0 0 8px var(--green);"></span>
-            100 PARİTE 5M MUM & LİKİDİTE TARAMASI AKTİF
+        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+            <div class="section-title">📊 CANLI PUSU & SEVİYE ANALİZ HAVUZU</div>
+            <div id="watchlist-search-count-badge" style="display:none; font-size:12px; font-weight:800; color:#58a6ff; background:rgba(56,139,253,0.15); border:1px solid rgba(56,139,253,0.3); padding:4px 12px; border-radius:12px;"></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div class="search-wrap" style="width:260px;">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="watchlist-search-input" class="coin-search-input" placeholder="Analiz kartlarında ara (örn: ENA, BTC)..." oninput="handleSearch(this.value)" autocomplete="off" />
+                <button id="watchlist-search-clear-btn" class="search-clear-btn" onclick="clearSearch()" style="display:none;" title="Aramayı Temizle">✕</button>
+            </div>
+            <div style="font-size:12px; color:var(--green); font-weight:700; background:rgba(14,203,129,0.1); border:1px solid rgba(14,203,129,0.3); padding:6px 14px; border-radius:20px; font-family:'JetBrains Mono', monospace; display:flex; align-items:center; gap:8px;">
+                <span style="width:7px; height:7px; background:var(--green); border-radius:50%; box-shadow:0 0 8px var(--green);"></span>
+                100 PARİTE 5M MUM & LİKİDİTE TARAMASI AKTİF
+            </div>
         </div>
     </div>
     <div class="watchlist-grid" id="watchlist-container"></div>
@@ -1215,18 +1251,29 @@ HTML_PAGE = """
 
         let searchQuery = '';
 
-        function handleSearch(val) {
-            searchQuery = (val || '').trim().toUpperCase();
-            const clearBtn = document.getElementById('search-clear-btn');
-            if (clearBtn) {
-                clearBtn.style.display = searchQuery ? 'block' : 'none';
-            }
+        function handleSearch(query) {
+            searchQuery = (query || '').trim().toUpperCase();
+            
+            const topInput = document.getElementById('coin-search-input');
+            const cardInput = document.getElementById('watchlist-search-input');
+            const topClear = document.getElementById('search-clear-btn');
+            const cardClear = document.getElementById('watchlist-search-clear-btn');
+
+            if (topInput && topInput.value.toUpperCase() !== searchQuery) topInput.value = query;
+            if (cardInput && cardInput.value.toUpperCase() !== searchQuery) cardInput.value = query;
+
+            if (topClear) topClear.style.display = searchQuery ? 'block' : 'none';
+            if (cardClear) cardClear.style.display = searchQuery ? 'block' : 'none';
+
             renderCoinManager();
+            renderCards();
         }
 
         function clearSearch() {
-            const input = document.getElementById('coin-search-input');
-            if (input) input.value = '';
+            const topInput = document.getElementById('coin-search-input');
+            const cardInput = document.getElementById('watchlist-search-input');
+            if (topInput) topInput.value = '';
+            if (cardInput) cardInput.value = '';
             handleSearch('');
         }
 
@@ -1504,15 +1551,43 @@ HTML_PAGE = """
                     return;
                 }
 
-                // 1. AYIRMA: Açık Pozisyonlu Coinler (HER ZAMAN EN ÜSTTE) vs Diğer Aktif Coinler
-                const posCoins = allActiveSymbols.filter(s => appState.open_positions && appState.open_positions[s]);
-                const otherCoins = allActiveSymbols.filter(s => !(appState.open_positions && appState.open_positions[s]));
+                let displaySymbols = [];
+                const searchBadge = document.getElementById('watchlist-search-count-badge');
 
-                // 2. Açık pozisyonlu coinlerin TAMAMI her zaman render edilir (limit tanımaz)
-                // 3. Diğer coinler visibleCardsCount kotası kadar render edilir (kasma/lag önlenir)
-                const remainingSlots = Math.max(0, visibleCardsCount - posCoins.length);
-                const visibleOtherCoins = otherCoins.slice(0, remainingSlots);
-                const displaySymbols = [...posCoins, ...visibleOtherCoins];
+                if (searchQuery) {
+                    const matchedSymbols = allActiveSymbols.filter(s => {
+                        const clean = s.replace('/USDT', '').toUpperCase();
+                        return clean.includes(searchQuery) || s.toUpperCase().includes(searchQuery);
+                    });
+                    displaySymbols = matchedSymbols;
+                    
+                    if (searchBadge) {
+                        searchBadge.style.display = 'inline-block';
+                        searchBadge.innerText = `🔍 "${searchQuery}" ile Eşleşen: ${matchedSymbols.length} Parite`;
+                    }
+
+                    if (displaySymbols.length === 0) {
+                        const inAllCoins = (appState.all_coins || []).find(c => c.symbol.replace('/USDT','').toUpperCase() === searchQuery || c.symbol.toUpperCase().includes(searchQuery));
+                        let activateBtn = '';
+                        if (inAllCoins) {
+                            activateBtn = `<button onclick="toggleSymbol('${inAllCoins.symbol}', true)" style="margin-top:12px; background:linear-gradient(135deg, #0ecb81, #059669); border:none; color:#07090e; font-weight:800; padding:8px 18px; border-radius:8px; cursor:pointer;">⚡ ${inAllCoins.symbol} Paritesini Aktif Et ve İzle</button><br>`;
+                        }
+                        cont.innerHTML = `
+                            <div style="grid-column: 1 / -1; color: #94a3b8; text-align:center; padding: 60px 20px; font-size:15px; line-height:1.6;">
+                                "${searchQuery}" ile eşleşen aktif analiz kartı bulunamadı.<br>
+                                ${activateBtn}
+                                <button onclick="clearSearch()" style="margin-top:10px; background:rgba(56,139,253,0.15); border:1px solid var(--blue); color:#58a6ff; font-weight:700; padding:6px 14px; border-radius:8px; cursor:pointer;">✕ Aramayı Temizle</button>
+                            </div>`;
+                        return;
+                    }
+                } else {
+                    if (searchBadge) searchBadge.style.display = 'none';
+                    const posCoins = allActiveSymbols.filter(s => appState.open_positions && appState.open_positions[s]);
+                    const otherCoins = allActiveSymbols.filter(s => !(appState.open_positions && appState.open_positions[s]));
+                    const remainingSlots = Math.max(0, visibleCardsCount - posCoins.length);
+                    const visibleOtherCoins = otherCoins.slice(0, remainingSlots);
+                    displaySymbols = [...posCoins, ...visibleOtherCoins];
+                }
 
                 let html = '';
 
@@ -1644,23 +1719,25 @@ HTML_PAGE = """
             try {
                 const safeId = symbol.replace(/[^a-zA-Z0-9]/g, '_');
                 const el = document.getElementById('p-' + safeId);
-                if (!el) return;
-
                 const oldPrice = livePrices[symbol] || price;
                 livePrices[symbol] = price;
-                el.innerText = '$' + (function(n){ if (n >= 1000) return n.toFixed(2); if (n >= 1) return n.toFixed(4); if (n >= 0.01) return n.toFixed(5); return n.toFixed(6); })(Number(price));
 
-                if (price > oldPrice) {
-                    el.className = 'card-price tick-up';
-                    setTimeout(() => { el.className = 'card-price'; }, 100);
-                } else if (price < oldPrice) {
-                    el.className = 'card-price tick-down';
-                    setTimeout(() => { el.className = 'card-price'; }, 100);
+                const fmtP = '$' + (function(n){ if (n >= 1000) return n.toFixed(2); if (n >= 1) return n.toFixed(4); if (n >= 0.01) return n.toFixed(5); return n.toFixed(6); })(Number(price));
+
+                if (el) {
+                    el.innerText = fmtP;
+                    if (price > oldPrice) {
+                        el.className = 'card-price tick-up';
+                        setTimeout(() => { if (el) el.className = 'card-price'; }, 100);
+                    } else if (price < oldPrice) {
+                        el.className = 'card-price tick-down';
+                        setTimeout(() => { if (el) el.className = 'card-price'; }, 100);
+                    }
                 }
 
                 const hasPos = appState.open_positions && appState.open_positions[symbol];
 
-                if (appState.symbols[symbol]) {
+                if (appState.symbols && appState.symbols[symbol]) {
                     const coin = appState.symbols[symbol];
                     const levels = coin.levels || {};
                     const cam = levels.camarilla || {};
@@ -1669,10 +1746,14 @@ HTML_PAGE = """
                     const titleEl = document.getElementById('atitle-' + safeId);
                     const textEl = document.getElementById('atext-' + safeId);
                     const planEl = document.getElementById('plantext-' + safeId);
-                    if (titleEl && textEl && planEl) {
+                    if (titleEl) {
                         titleEl.style.color = intel.color;
                         titleEl.innerHTML = `<span>●</span> ${intel.tag}`;
+                    }
+                    if (textEl) {
                         textEl.innerHTML = intel.statusText;
+                    }
+                    if (planEl) {
                         planEl.innerHTML = intel.actionPlan;
                     }
                 }
@@ -1718,7 +1799,8 @@ HTML_PAGE = """
                 }
 
                 tickCounts++;
-                document.getElementById('tick-counter').innerText = `● Canlı Fiyat Akıyor (İşlenen Tick: ${tickCounts})`;
+                const tickEl = document.getElementById('tick-counter');
+                if (tickEl) tickEl.innerText = `● Canlı Fiyat Akıyor (İşlenen Tick: ${tickCounts})`;
             } catch (err) {
                 console.error("updatePriceInPlace error:", err);
             }
@@ -1972,6 +2054,34 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 const levels = data.levels || {};
                 const cam = levels.camarilla || {};
 
+                // Update sidebar levels directly from candles API response
+                const sidebarTbl = document.querySelector('#tv-sidebar-content .levels-table');
+                if (sidebarTbl && cam && cam.R4) {
+                    function fmtLvl(val) {
+                        if (!val || isNaN(val) || Number(val) <= 0) return '-';
+                        const n = Number(val);
+                        if (n >= 1000) return n.toFixed(2);
+                        if (n >= 1) return n.toFixed(4);
+                        if (n >= 0.01) return n.toFixed(5);
+                        return n.toFixed(6);
+                    }
+                    sidebarTbl.innerHTML = `
+                        <tr><td class="lvl-lbl">R5 (Zirve Hedef)</td><td class="lvl-num" style="color:var(--yellow)">${fmtLvl(cam.R5)}</td></tr>
+                        <tr><td class="lvl-lbl">R4 (Breakout Tetik)</td><td class="lvl-num" style="color:#ffa726; font-weight:800">${fmtLvl(cam.R4)}</td></tr>
+                        <tr><td class="lvl-lbl">Tepe AVWAP (Kırmızı)</td><td class="lvl-num" style="color:var(--red); font-weight:800">${fmtLvl(levels.tepe_avwap)}</td></tr>
+                        <tr><td class="lvl-lbl">mVAH (Aylık Tavan)</td><td class="lvl-num" style="color:var(--cyan); font-weight:800">${fmtLvl(levels.mvah)}</td></tr>
+                        <tr><td class="lvl-lbl">Yukarı nPOC (Hedef)</td><td class="lvl-num" style="color:#f0f6fc; font-weight:700">${fmtLvl(levels.above_npoc)}</td></tr>
+                        <tr><td class="lvl-lbl">R3 (Direnç)</td><td class="lvl-num">${fmtLvl(cam.R3)}</td></tr>
+                        <tr><td class="lvl-lbl">Pivot (P)</td><td class="lvl-num" style="color:#fff; font-weight:800">${fmtLvl(cam.P)}</td></tr>
+                        <tr><td class="lvl-lbl">mPOC (Aylık Hacim)</td><td class="lvl-num" style="color:var(--purple); font-weight:800">${fmtLvl(levels.mpoc)}</td></tr>
+                        <tr><td class="lvl-lbl">S3 (Destek)</td><td class="lvl-num">${fmtLvl(cam.S3)}</td></tr>
+                        <tr><td class="lvl-lbl">Aşağı nPOC (Hedef)</td><td class="lvl-num" style="color:#f0f6fc; font-weight:700">${fmtLvl(levels.below_npoc)}</td></tr>
+                        <tr><td class="lvl-lbl">Dip AVWAP (Beyaz)</td><td class="lvl-num" style="color:#fff; font-weight:800">${fmtLvl(levels.dip_avwap)}</td></tr>
+                        <tr><td class="lvl-lbl">S4 (Breakdown Tetik)</td><td class="lvl-num" style="color:var(--green); font-weight:800">${fmtLvl(cam.S4)}</td></tr>
+                        <tr><td class="lvl-lbl">mVAL (Aylık Taban)</td><td class="lvl-num" style="color:var(--blue)">${fmtLvl(levels.mval)}</td></tr>
+                    `;
+                }
+
                 function addPriceLine(price, color, title, lineStyle) {
                     if (!price || isNaN(price) || Number(price) <= 0) return;
                     candleSeries.createPriceLine({
@@ -2002,7 +2112,15 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
 
             } catch (err) {
                 console.error("renderNativeChart error:", err);
-                if (spinner) spinner.innerHTML = `<span style="color:var(--red)">Hata: ${err.message}</span>`;
+                if (spinner) {
+                    spinner.style.display = 'flex';
+                    spinner.innerHTML = `
+                        <div style="text-align:center; padding:20px; font-family:'JetBrains Mono', monospace;">
+                            <div style="color:var(--yellow); font-size:13.5px; font-weight:700; margin-bottom:12px;">⚡ ${cleanSym} mum verisi yükleniyor...</div>
+                            <button onclick="renderNativeChart('${cleanSym}')" style="background:var(--blue); border:none; color:#fff; font-weight:800; padding:8px 18px; border-radius:8px; cursor:pointer; font-size:12px;">🔄 Grafiği Yenile</button>
+                        </div>
+                    `;
+                }
             }
         }
 
@@ -2062,8 +2180,8 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 const modal = document.getElementById('tv-modal-overlay');
                 if (!modal) return;
                 
-                const fullSym = cleanSym + '/USDT';
-                const coinData = (appState.symbols && appState.symbols[fullSym]) ? appState.symbols[fullSym] : {};
+                const fullSym = cleanSym.includes('/') ? cleanSym : cleanSym + '/USDT';
+                const coinData = (appState.symbols && (appState.symbols[fullSym] || appState.symbols[cleanSym])) ? (appState.symbols[fullSym] || appState.symbols[cleanSym]) : {};
                 const levels = coinData.levels || {};
                 const cam = levels.camarilla || {};
                 const price = Number(livePrices[fullSym] || coinData.price || 0);
@@ -2779,17 +2897,28 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
         try:
             from indicators import calculate_anchored_vwap_series
             from config import LOOKBACK_DAYS_AVWAP
+            import pandas as pd
             sym = request.query.get("symbol", "BTC/USDT")
-            clean_sym = sym.replace(':USDT', '')
+            clean_sym = sym.replace(':USDT', '').strip()
             if '/' not in clean_sym and not clean_sym.endswith('/USDT'):
                 clean_sym = clean_sym + '/USDT'
             
-            if clean_sym not in market_data.candles_5m or market_data.candles_5m[clean_sym] is None or market_data.candles_5m[clean_sym].empty:
-                await market_data.fetch_single_symbol(clean_sym)
-            
             df_5m = market_data.candles_5m.get(clean_sym)
             if df_5m is None or df_5m.empty:
-                return web.json_response({"status": "error", "message": "Mum verisi bulunamadi"}, status=404)
+                await market_data.fetch_single_symbol(clean_sym)
+                df_5m = market_data.candles_5m.get(clean_sym)
+            
+            # Direct fallback fetch if not in cache yet
+            if df_5m is None or df_5m.empty:
+                ex_sym = market_data._clean_symbol(clean_sym)
+                ohlcv = await market_data.exchange.fetch_ohlcv(ex_sym, timeframe='5m', limit=500)
+                if ohlcv and len(ohlcv) > 0:
+                    df_5m = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+                    market_data.candles_5m[clean_sym] = df_5m
+                    market_data.recalculate_levels(clean_sym)
+            
+            if df_5m is None or df_5m.empty:
+                return web.json_response({"status": "error", "message": "Mum verisi henüz hazır değil, lütfen 1 saniye sonra tekrar deneyin"}, status=503)
             
             display_df = df_5m.iloc[-500:].copy()
             candles = []
