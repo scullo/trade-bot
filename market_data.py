@@ -70,8 +70,8 @@ class MarketDataManager:
             async with aiohttp.ClientSession() as session:
                 # 1. Binance Vision (Global unblocked for Spot/Major pairs)
                 vision_urls = [
-                    (f"https://data-api.binance.vision/api/v3/klines?symbol={raw_spot}", 1.0),
-                    (f"https://data-api.binance.vision/api/v3/klines?symbol={spot_clean}", mult)
+                    (f"https://data-api.binance.vision/api/v3/klines?symbol={spot_clean}", mult),
+                    (f"https://data-api.binance.vision/api/v3/klines?symbol={raw_spot}", mult)
                 ]
                 for base_url, m_val in vision_urls:
                     try:

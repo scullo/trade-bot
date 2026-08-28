@@ -1,24 +1,5 @@
 {
-  "balance": 100000.8606,
+  "balance": 100000.0,
   "open_positions": {},
-  "history": [
-    {
-      "id": "TRD-0001",
-      "symbol": "XRP/USDT",
-      "side": "SHORT",
-      "leverage": 5,
-      "margin": 10.0,
-      "entry_price": 1.4476,
-      "exit_price": 1.42125,
-      "gross_pnl": 0.9101,
-      "fees": 0.0495,
-      "net_pnl": 0.8606,
-      "roe_pct": 8.61,
-      "balance_after": 100.86,
-      "entry_time": "2026-08-28 00:20:01",
-      "exit_time": "2026-08-28 10:27:18",
-      "reason": "R3 Direnc Tepkisi (Hedef Pivot P)",
-      "close_reason": "Manuel Müdahale (Dashboard Kapatma)"
-    }
-  ]
+  "history": []
 }
