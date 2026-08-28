@@ -365,12 +365,12 @@ HTML_PAGE = """
         .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
         .section-title { font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #ffffff; display: flex; align-items: center; gap: 8px; }
         
-        .watchlist-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin-bottom: 32px; }
+        .watchlist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; margin-bottom: 32px; width: 100%; }
         .coin-card {
             background: linear-gradient(180deg, rgba(18, 25, 40, 0.85) 0%, rgba(13, 18, 30, 0.95) 100%);
             border: 1px solid var(--border);
             border-radius: 16px;
-            padding: 18px 20px;
+            padding: 16px 18px;
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
             position: relative;
             display: flex;
@@ -378,8 +378,7 @@ HTML_PAGE = """
             justify-content: space-between;
             backdrop-filter: blur(12px);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
-            min-height: 480px;
-            contain: layout style;
+            min-height: 420px;
         }
         .coin-card:hover {
             border-color: rgba(59, 130, 246, 0.4);
@@ -579,7 +578,7 @@ HTML_PAGE = """
         }
 
         /* ALT PANEL - YARI YARIYA BOLUNMUS MODULLER */
-        .bottom-split { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 24px; margin-bottom: 32px; }
+        .bottom-split { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px; width: 100%; }
         .panel-box { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 24px; min-height: 440px; display: flex; flex-direction: column; }
         .panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
         .panel-title { font-size: 19px; font-weight: 800; letter-spacing: 0.3px; display: flex; align-items: center; gap: 10px; color: #ffffff; }
@@ -1605,7 +1604,7 @@ HTML_PAGE = """
             };
         }
 
-        let visibleCardsCount = 20;
+        let visibleCardsCount = 100;
 
         function loadMoreCards(n) {
             visibleCardsCount += n;
@@ -2880,7 +2879,7 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
         }
 
 async function init() {
-            if (localStorage.getItem('pool_collapsed') === 'true') {
+            if (false) {
                 const grid = document.getElementById('coin-chips-container');
                 const btn = document.getElementById('pool-collapse-btn');
                 if (grid) grid.style.display = 'none';
