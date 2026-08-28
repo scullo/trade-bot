@@ -1235,11 +1235,14 @@ HTML_PAGE = """
             <div class="filter-group">
                 <select class="filter-select" id="filter-symbol" onchange="renderHistoryTable()">
                     <option value="ALL">Tüm Pariteler</option>
-                    <option value="BTC/USDT">BTC/USDT</option>
-                    <option value="ETH/USDT">ETH/USDT</option>
-                    <option value="SOL/USDT">SOL/USDT</option>
-                    <option value="ENA/USDT">ENA/USDT</option>
-                    <option value="XRP/USDT">XRP/USDT</option>
+                </select>
+
+                <select class="filter-select" id="filter-setup" onchange="renderHistoryTable()">
+                    <option value="ALL">🎯 Tüm Stratejiler / Setuplar</option>
+                    <option value="nPOC">🔵 nPOC Likidite İşlemleri</option>
+                    <option value="MACRO">🟣 mVAL / mVAH Makro Kırılımlar</option>
+                    <option value="CAM_BO">⚡ S4 / R4 Breakout İşlemleri</option>
+                    <option value="CAM_BOUNCE">🛡️ S3 / R3 Destek & Direnç</option>
                 </select>
 
                 <select class="filter-select" id="filter-status" onchange="renderHistoryTable()">
@@ -1262,16 +1265,17 @@ HTML_PAGE = """
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Tarih / Saat</th>
+                        <th>Kapanış Tarihi</th>
+                        <th>Süre</th>
                         <th>Parite</th>
                         <th>Yön & Kaldıraç</th>
                         <th>Giriş Fiyatı</th>
                         <th>Çıkış Fiyatı</th>
-                        <th>Komisyon</th>
                         <th>Net Kâr ($)</th>
                         <th>ROE (%)</th>
                         <th>Kasa ($)</th>
-                        <th>Kapanış Nedeni</th>
+                        <th>🎯 Giriş Nedeni & Formasyon</th>
+                        <th>🚪 Kapanış Nedeni</th>
                     </tr>
                 </thead>
                 <tbody id="trade-table-body">
@@ -2417,33 +2421,74 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
             });
             quickCont.innerHTML = quickHtml;
 
-            const symFilter = document.getElementById('filter-symbol').value;
-            const statusFilter = document.getElementById('filter-status').value;
+            const symFilterEl = document.getElementById('filter-symbol');
+            const setupFilterEl = document.getElementById('filter-setup');
+            const statusFilterEl = document.getElementById('filter-status');
+
+            const symFilter = symFilterEl ? symFilterEl.value : 'ALL';
+            const setupFilter = setupFilterEl ? setupFilterEl.value : 'ALL';
+            const statusFilter = statusFilterEl ? statusFilterEl.value : 'ALL';
+
+            // Populate unique symbols dynamically into filter dropdown if needed
+            if (symFilterEl && symFilterEl.options.length <= 1) {
+                const uniqueSyms = [...new Set(hList.map(item => item.symbol))].sort();
+                uniqueSyms.forEach(sym => {
+                    const opt = document.createElement('option');
+                    opt.value = sym;
+                    opt.innerText = sym;
+                    symFilterEl.appendChild(opt);
+                });
+            }
 
             let filtered = hList.slice().reverse().filter(item => {
                 if (symFilter !== 'ALL' && item.symbol !== symFilter) return false;
                 if (statusFilter === 'WIN' && item.net_pnl < 0) return false;
                 if (statusFilter === 'LOSS' && item.net_pnl >= 0) return false;
+
+                const r = item.reason || '';
+                if (setupFilter === 'nPOC' && !r.includes('nPOC')) return false;
+                if (setupFilter === 'MACRO' && !r.includes('mVAL') && !r.includes('mVAH')) return false;
+                if (setupFilter === 'CAM_BO' && !r.includes('Breakout') && !r.includes('Breakdown')) return false;
+                if (setupFilter === 'CAM_BOUNCE' && !r.includes('S3') && !r.includes('R3')) return false;
+
                 return true;
             });
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 30px; color:#94a3b8;">Filtreye uygun işlem bulunamadı.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding: 40px; color:#94a3b8; font-size:14px;">Seçilen filtre kriterlerine uygun işlem kaydı bulunamadı.</td></tr>`;
                 return;
             }
 
             let tableHtml = '';
             filtered.forEach(h => {
                 const isWin = h.net_pnl >= 0;
+                const r = h.reason || 'Strateji Sinyali';
+                const cr = h.close_reason || 'Kapanış';
+
+                // Setup badge style
+                let setupBadgeClass = 'badge-other';
+                if (r.includes('nPOC')) setupBadgeClass = 'badge-npoc';
+                else if (r.includes('mVAL') || r.includes('mVAH')) setupBadgeClass = 'badge-macro';
+                else if (r.includes('Breakout') || r.includes('Breakdown')) setupBadgeClass = 'badge-breakout';
+                else if (r.includes('S3') || r.includes('R3')) setupBadgeClass = 'badge-bounce';
+
+                // Exit badge style
+                let exitBadgeClass = 'badge-time';
+                if (cr.includes('TP') || cr.includes('Kâr')) exitBadgeClass = 'badge-tp';
+                else if (cr.includes('Yumuşak') || cr.includes('Mum')) exitBadgeClass = 'badge-soft';
+                else if (cr.includes('Sert') || cr.includes('Stop')) exitBadgeClass = 'badge-hard';
+
+                const duration = h.duration || '5M Mum';
+
                 tableHtml += `
                 <tr>
                     <td><b style="color:var(--yellow)">${h.id}</b></td>
-                    <td style="color:#cbd5e1; font-size:12.5px;">${h.exit_time}</td>
-                    <td><b style="color:#ffffff;">${h.symbol.replace('/USDT','')}</b></td>
+                    <td style="color:#cbd5e1; font-size:12px; white-space:nowrap;">${h.exit_time}</td>
+                    <td style="color:#94a3b8; font-size:12px; white-space:nowrap;">⏱️ ${duration}</td>
+                    <td><b style="color:#ffffff; font-size:13.5px;">${h.symbol.replace('/USDT','')}</b></td>
                     <td><span class="pos-badge ${h.side === 'LONG' ? 'pos-long' : 'pos-short'}" style="font-size:11px; padding:2px 8px;">${h.leverage}x ${h.side}</span></td>
                     <td>$${h.entry_price}</td>
                     <td>$${h.exit_price}</td>
-                    <td style="color:#cbd5e1">$${h.fees.toFixed(4)}</td>
                     <td style="color:${isWin ? 'var(--green)' : 'var(--red)'}; font-weight:800;">
                         ${isWin ? '+' : ''}${h.net_pnl.toFixed(4)} $
                     </td>
@@ -2451,7 +2496,16 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                         ${isWin ? '+' : ''}${h.roe_pct.toFixed(2)}%
                     </td>
                     <td style="color:#ffffff; font-weight:800;">$${h.balance_after.toFixed(2)}</td>
-                    <td style="font-size:12.5px; color:#cbd5e1;">${h.close_reason}</td>
+                    <td>
+                        <span class="badge-setup ${setupBadgeClass}" title="${r}">
+                            ${r}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge-exit ${exitBadgeClass}" title="${cr}">
+                            ${cr}
+                        </span>
+                    </td>
                 </tr>
                 `;
             });

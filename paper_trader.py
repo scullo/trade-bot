@@ -238,10 +238,17 @@ class PaperTrader:
             pos["hard_stop"] = entry_p
 
             exit_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            # Duration format
+            hold_sec = time.time() - pos.get("entry_timestamp", time.time())
+            dur_mins = int(hold_sec // 60)
+            dur_hrs = dur_mins // 60
+            dur_str = f"{dur_hrs}sa {dur_mins % 60}dk" if dur_hrs > 0 else f"{dur_mins}dk"
+
             record = {
                 "id": pos["id"] + "-TP1",
                 "symbol": symbol,
                 "side": side,
+                "trade_type": pos.get("trade_type", "SCALP"),
                 "leverage": pos["leverage"],
                 "margin": round(closed_margin, 2),
                 "entry_price": round(entry_p, 8),
@@ -253,8 +260,13 @@ class PaperTrader:
                 "balance_after": round(self.balance, 2),
                 "entry_time": pos["entry_time"],
                 "exit_time": exit_time_str,
-                "reason": pos["reason"],
-                "close_reason": close_reason
+                "duration": dur_str,
+                "reason": pos.get("reason", "Strateji Sinyali"),
+                "close_reason": close_reason,
+                "tp1": pos.get("tp1", 0.0),
+                "tp2": pos.get("tp2", 0.0),
+                "soft_stop": pos.get("soft_stop", 0.0),
+                "hard_stop": pos.get("hard_stop", 0.0)
             }
             self.history.append(record)
             self.save_history()
@@ -281,10 +293,17 @@ class PaperTrader:
                 self.balance = float(self.initial_balance)
             exit_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+            # Duration format
+            hold_sec = time.time() - pos.get("entry_timestamp", time.time())
+            dur_mins = int(hold_sec // 60)
+            dur_hrs = dur_mins // 60
+            dur_str = f"{dur_hrs}sa {dur_mins % 60}dk" if dur_hrs > 0 else f"{dur_mins}dk"
+
             record = {
                 "id": pos["id"],
                 "symbol": symbol,
                 "side": side,
+                "trade_type": pos.get("trade_type", "SCALP"),
                 "leverage": pos["leverage"],
                 "margin": round(margin, 2),
                 "entry_price": round(entry_p, 8),
@@ -296,8 +315,13 @@ class PaperTrader:
                 "balance_after": round(self.balance, 2),
                 "entry_time": pos["entry_time"],
                 "exit_time": exit_time_str,
-                "reason": pos["reason"],
-                "close_reason": close_reason
+                "duration": dur_str,
+                "reason": pos.get("reason", "Strateji Sinyali"),
+                "close_reason": close_reason,
+                "tp1": pos.get("tp1", 0.0),
+                "tp2": pos.get("tp2", 0.0),
+                "soft_stop": pos.get("soft_stop", 0.0),
+                "hard_stop": pos.get("hard_stop", 0.0)
             }
             self.history.append(record)
             del self.open_positions[symbol]
