@@ -393,14 +393,96 @@ HTML_PAGE = """
             background: var(--red-bg) !important;
         }
 
-        /* CARD HEADER OPTIMIZATION (NO OVERFLOW) */
-        .card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; }
-        .card-symbol-wrap { display: flex; align-items: center; gap: 8px; min-width: 0; }
-        .card-symbol { font-size: 22px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: #ffffff; white-space: nowrap; }
-        .symbol-tag { font-size: 11px; background: rgba(56, 139, 253, 0.15); color: var(--blue); padding: 3px 8px; border-radius: 6px; font-weight: 700; border: 1px solid rgba(56, 139, 253, 0.3); }
-        .card-price { font-size: 25px; font-weight: 800; font-family: 'JetBrains Mono', monospace; padding: 2px 8px; border-radius: 8px; display: inline-block; transition: background 0.12s ease, color 0.12s ease; color: #ffffff; white-space: nowrap; text-align: right; }
-        .tick-up { background: var(--green-glow) !important; color: var(--green) !important; text-shadow: 0 0 16px rgba(14, 203, 129, 0.9); }
-        .tick-down { background: var(--red-glow) !important; color: var(--red) !important; text-shadow: 0 0 16px rgba(255, 71, 87, 0.9); }
+        /* MODERN MULTI-ROW CARD HEAD (NO OVERLAPPING ON ANY SCREEN OR LONG NAMES) */
+        .card-head {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .card-top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+        .card-symbol-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .card-symbol {
+            font-size: 18px;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            color: #ffffff;
+            letter-spacing: -0.2px;
+            white-space: nowrap;
+        }
+        .symbol-tag {
+            font-size: 10px;
+            background: rgba(56, 139, 253, 0.15);
+            color: var(--blue);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+            border: 1px solid rgba(56, 139, 253, 0.3);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .btn-open-chart {
+            background: rgba(56, 139, 253, 0.12);
+            border: 1px solid rgba(56, 139, 253, 0.3);
+            color: #58a6ff;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            white-space: nowrap;
+        }
+        .btn-open-chart:hover {
+            background: var(--blue);
+            color: #ffffff;
+            box-shadow: 0 0 10px rgba(56, 139, 253, 0.4);
+            transform: translateY(-1px);
+        }
+        .card-price-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            width: 100%;
+            margin-top: 2px;
+        }
+        .price-label-mini {
+            font-size: 10.5px;
+            color: #64748b;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .card-price {
+            font-size: 22px;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            font-variant-numeric: tabular-nums;
+            color: #f8fafc;
+            padding: 2px 6px;
+            border-radius: 6px;
+            transition: all 0.12s ease;
+            text-align: right;
+            margin-left: auto;
+        }
+        .tick-up { background: var(--green-glow) !important; color: var(--green) !important; text-shadow: 0 0 16px rgba(16, 185, 129, 0.9); }
+        .tick-down { background: var(--red-glow) !important; color: var(--red) !important; text-shadow: 0 0 16px rgba(244, 63, 94, 0.9); }
 
         /* DEDICATED CARD ACTIVE POSITION BANNER (PREVENTS CROWDING) */
         .card-pos-banner {
@@ -1641,14 +1723,19 @@ HTML_PAGE = """
                         const cleanSym = symbol.replace('/USDT', '');
                         html += `
                         <div class="coin-card ${posClass}" id="card-${safeId}">
-                            <!-- ROW 1: SYMBOL (LEFT) vs CLEAN PRICE (RIGHT) -->
+                            <!-- MULTI-ROW CARD HEAD: ZERO OVERLAP GUARANTEE -->
                             <div class="card-head" onclick="openTradingViewModal('${cleanSym}')" style="cursor:pointer;" title="${cleanSym} Canlı TradingView Grafiğini & Seviyelerini Aç">
-                                <div class="card-symbol-wrap">
-                                    <span class="card-symbol">${cleanSym}</span>
-                                    <span class="symbol-tag">PERP</span>
+                                <div class="card-top-row">
+                                    <div class="card-symbol-wrap">
+                                        <span class="card-symbol">${cleanSym}</span>
+                                        <span class="symbol-tag">PERP</span>
+                                    </div>
                                     <button class="btn-open-chart" onclick="event.stopPropagation(); openTradingViewModal('${cleanSym}')" title="${cleanSym} Canlı Grafiği Aç">📈 Grafik</button>
                                 </div>
-                                <div class="card-price" id="p-${safeId}">$${price > 0 ? formatPriceClean(price) : '---'}</div>
+                                <div class="card-price-row">
+                                    <span class="price-label-mini">CANLI FİYAT</span>
+                                    <div class="card-price" id="p-${safeId}">$${price > 0 ? formatPriceClean(price) : '---'}</div>
+                                </div>
                             </div>
 
                             <!-- ROW 2: DEDICATED ACTIVE POSITION BANNER (IF ACTIVE) -->
