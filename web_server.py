@@ -1143,7 +1143,7 @@ HTML_PAGE = """
             <!-- PARITE ARAMA KUTUSU -->
             <div class="search-wrap">
                 <span class="search-icon">🔍</span>
-                <input type="text" id="coin-search-input" class="coin-search-input" placeholder="Parite ara (örn: SOL, PEPE, DOGE)..." oninput="handleSearch(this.value)" autocomplete="off" />
+                <input type="text" id="coin-search-input" class="coin-search-input" placeholder="Parite veya kart ara (örn: SOL, ENA, PEPE)..." oninput="handleSearch(this.value)" autocomplete="off" />
                 <button id="search-clear-btn" class="search-clear-btn" onclick="clearSearch()" style="display:none;" title="Aramayı Temizle">✕</button>
             </div>
 
@@ -1166,11 +1166,6 @@ HTML_PAGE = """
             <div id="watchlist-search-count-badge" style="display:none; font-size:12px; font-weight:800; color:#58a6ff; background:rgba(56,139,253,0.15); border:1px solid rgba(56,139,253,0.3); padding:4px 12px; border-radius:12px;"></div>
         </div>
         <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-            <div class="search-wrap" style="width:260px;">
-                <span class="search-icon">🔍</span>
-                <input type="text" id="watchlist-search-input" class="coin-search-input" placeholder="Analiz kartlarında ara (örn: ENA, BTC)..." oninput="handleSearch(this.value)" autocomplete="off" />
-                <button id="watchlist-search-clear-btn" class="search-clear-btn" onclick="clearSearch()" style="display:none;" title="Aramayı Temizle">✕</button>
-            </div>
             <div style="font-size:12px; color:var(--green); font-weight:700; background:rgba(14,203,129,0.1); border:1px solid rgba(14,203,129,0.3); padding:6px 14px; border-radius:20px; font-family:'JetBrains Mono', monospace; display:flex; align-items:center; gap:8px;">
                 <span style="width:7px; height:7px; background:var(--green); border-radius:50%; box-shadow:0 0 8px var(--green);"></span>
                 100 PARİTE 5M MUM & LİKİDİTE TARAMASI AKTİF
@@ -1337,15 +1332,10 @@ HTML_PAGE = """
             searchQuery = (query || '').trim().toUpperCase();
             
             const topInput = document.getElementById('coin-search-input');
-            const cardInput = document.getElementById('watchlist-search-input');
             const topClear = document.getElementById('search-clear-btn');
-            const cardClear = document.getElementById('watchlist-search-clear-btn');
 
             if (topInput && topInput.value.toUpperCase() !== searchQuery) topInput.value = query;
-            if (cardInput && cardInput.value.toUpperCase() !== searchQuery) cardInput.value = query;
-
             if (topClear) topClear.style.display = searchQuery ? 'block' : 'none';
-            if (cardClear) cardClear.style.display = searchQuery ? 'block' : 'none';
 
             renderCoinManager();
             renderCards();
@@ -1353,9 +1343,7 @@ HTML_PAGE = """
 
         function clearSearch() {
             const topInput = document.getElementById('coin-search-input');
-            const cardInput = document.getElementById('watchlist-search-input');
             if (topInput) topInput.value = '';
-            if (cardInput) cardInput.value = '';
             handleSearch('');
         }
 
