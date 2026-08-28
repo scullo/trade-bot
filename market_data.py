@@ -54,20 +54,30 @@ class MarketDataManager:
         async with self.semaphore:
             clean_sym = self._clean_symbol(symbol)
             clean_raw = clean_sym.replace('/', '').replace(':USDT', '')
-            
-            # Direct fast Binance public futures REST API with fallback mirrors
-            endpoints = [
-                f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_raw}",
-                f"https://fapi1.binance.com/fapi/v1/klines?symbol={clean_raw}",
-                f"https://fapi2.binance.com/fapi/v1/klines?symbol={clean_raw}",
-                f"https://fapi3.binance.com/fapi/v1/klines?symbol={clean_raw}"
+            raw_spot = symbol.replace('/', '').replace(':USDT', '')
+            spot_clean = raw_spot.replace('1000000', '').replace('1000', '')
+
+            mult = 1.0
+            if '1000PEPE' in clean_raw or '1000BONK' in clean_raw or '1000SHIB' in clean_raw or '1000FLOKI' in clean_raw or '1000SATS' in clean_raw or '1000RATS' in clean_raw or '1000LUNC' in clean_raw or '1000XEC' in clean_raw or '1000CHEEMS' in clean_raw or '1000WHY' in clean_raw or '1000CAT' in clean_raw or '1000NEIRO' in clean_raw:
+                mult = 1000.0
+            elif '1000000MOG' in clean_raw:
+                mult = 1000000.0
+
+            # Multi-mirror endpoints (Binance Vision Unrestricted Global + Futures API fallback)
+            endpoint_configs = [
+                (f"https://data-api.binance.vision/api/v3/klines?symbol={raw_spot}", 1.0),
+                (f"https://data-api.binance.vision/api/v3/klines?symbol={spot_clean}", mult),
+                (f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_raw}", 1.0),
+                (f"https://fapi1.binance.com/fapi/v1/klines?symbol={clean_raw}", 1.0),
+                (f"https://fapi2.binance.com/fapi/v1/klines?symbol={clean_raw}", 1.0)
             ]
             
             df_1d = None
             df_5m = None
+            applied_mult = 1.0
             
             async with aiohttp.ClientSession() as session:
-                for base_url in endpoints:
+                for base_url, m_val in endpoint_configs:
                     try:
                         url_1d = f"{base_url}&interval=1d&limit=30"
                         url_5m = f"{base_url}&interval=5m&limit=500"
@@ -88,11 +98,16 @@ class MarketDataManager:
                                         df_5m[col] = df_5m[col].astype(float)
                         
                         if df_1d is not None and df_5m is not None and not df_1d.empty and not df_5m.empty:
+                            applied_mult = m_val
                             break
                     except Exception:
                         continue
 
             if df_1d is not None and df_5m is not None and not df_1d.empty and not df_5m.empty:
+                if applied_mult != 1.0:
+                    for col in ['open', 'high', 'low', 'close']:
+                        df_1d[col] = df_1d[col] * applied_mult
+                        df_5m[col] = df_5m[col] * applied_mult
                 self.candles_1d[symbol] = df_1d
                 self.candles_5m[symbol] = df_5m
                 self.current_prices[symbol] = float(df_5m['close'].iloc[-1])
@@ -104,10 +119,14 @@ class MarketDataManager:
                 try:
                     ohlcv_1d = await self.exchange.fetch_ohlcv(clean_sym, timeframe="1d", limit=30)
                     df_1d = pd.DataFrame(ohlcv_1d, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+                    for col in ['timestamp', 'open', 'high', 'low', 'close', 'volume']:
+                        df_1d[col] = df_1d[col].astype(float)
                     self.candles_1d[symbol] = df_1d
 
                     ohlcv_5m = await self.exchange.fetch_ohlcv(clean_sym, timeframe=self.timeframe, limit=500)
                     df_5m = pd.DataFrame(ohlcv_5m, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+                    for col in ['timestamp', 'open', 'high', 'low', 'close', 'volume']:
+                        df_5m[col] = df_5m[col].astype(float)
                     self.candles_5m[symbol] = df_5m
 
                     self.current_prices[symbol] = float(df_5m['close'].iloc[-1])
