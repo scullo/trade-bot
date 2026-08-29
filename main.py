@@ -51,7 +51,7 @@ async def main():
         print(f">> [ILK TARAMA UYARI]: {e}")
 
     # Saatlik otomatik Telegram Kasa & Portföy Raporlayıcıyı Başlat
-    asyncio.create_task(notifier.start_hourly_scheduler(trader_manager, initial_balance=INITIAL_BALANCE))
+    asyncio.create_task(notifier.start_hourly_scheduler(trader_manager, initial_balance=INITIAL_BALANCE, market_data=market_data))
 
     try:
         await market_data.start_websocket()

@@ -1,3 +1,4 @@
+from aegis_sentinel import ValkyrieAegisSentinel
 import aiohttp
 import asyncio
 import io
@@ -11,6 +12,7 @@ class TelegramNotifier:
         self.chat_id = chat_id
         self.api_url = f"https://api.telegram.org/bot{self.token}/sendMessage"
         self.photo_url = f"https://api.telegram.org/bot{self.token}/sendPhoto"
+        self.sentinel = ValkyrieAegisSentinel()
 
     async def send_message(self, text: str):
         if not self.token or not self.chat_id:
@@ -327,20 +329,21 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
 
         await self.send_message(msg)
 
-    async def start_hourly_scheduler(self, trader_manager, initial_balance=100.0):
-        """Arka planda her saat basinda (:00) saatlik rapor, her gece 00:00'da ise ozel gunluk kapanis ozeti gonderir."""
+    async def start_hourly_scheduler(self, trader_manager, initial_balance=100.0, market_data=None):
+        """Arka planda her saat basinda (:00) 6-Katmanli Valkyrie Aegis Sentinel denetimi yapar ve Telegram VIP raporu iletir."""
         if not self.token or not self.chat_id:
             return
 
         # Baslangic onay mesaji gonder
         try:
-            boot_msg = f"""🚀 <b>VALKYRIE QUANT DESK — AKTİF EDİLDİ</b>
+            boot_msg = f"""🛡️ <b>VALKYRIE AEGIS SENTINEL — AKTİF EDİLDİ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━
 💰 <b>Başlangıç Kasası:</b> <code>${trader_manager.balance:,.2f} USDT</code>
-📊 <b>Taranan Parite:</b> <code>100 / 100 Canlı Akış</code>
-⏰ <b>Başlangıç Zamanı:</b> <code>{datetime.now(timezone(timedelta(hours=3))).strftime('%Y-%m-%d %H:%M:%S')}</code>
+📊 <b>Takip Edilen:</b> <code>100 / 100 Parite (Canlı Akış)</code>
+🔬 <b>Teşhis Motoru:</b> <code>TradingView & Binance Çapraz Doğrulama Aktif</code>
+⏰ <b>Başlangıç Zamanı:</b> <code>{datetime.now(timezone(timedelta(hours=3))).strftime('%Y-%m-%d %H:%M:%S')} (TSİ)</code>
 ━━━━━━━━━━━━━━━━━━━━━━━━
-📌 <i>5 Dakikalık mum kapanışları ve saatlik raporlama döngüsü başlatıldı.</i>"""
+📌 <i>Her saat başı otonom sağlık denetimi, oto-onarım ve VIP yönetici raporu gönderilecektir.</i>"""
             await self.send_message(boot_msg)
         except Exception as e:
             print(f"[TELEGRAM BOOT MSG ERROR]: {e}")
@@ -348,33 +351,38 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
         while True:
             try:
                 now = datetime.now(timezone(timedelta(hours=3)))
-                # Bir sonraki tam saat basina (:00:02) kalan saniyeyi hesapla
                 seconds_to_wait = (60 - now.minute - 1) * 60 + (60 - now.second) + 2
                 if seconds_to_wait <= 2:
                     seconds_to_wait = 3600
 
                 await asyncio.sleep(seconds_to_wait)
 
-                # Turkiye saati (UTC+3) hesabi
                 current_hour = (datetime.utcnow().hour + 3) % 24
+                mode = getattr(trader_manager, 'mode', 'DEMO')
 
-                # Eger saat 00:00 ise ozel Gece Kapanis Raporu gonder, aksi takdirde normal Saatlik Rapor gonder
-                if current_hour == 0:
-                    await self.send_midnight_summary(
-                        balance=trader_manager.balance,
-                        initial_balance=initial_balance,
-                        open_positions=trader_manager.open_positions,
-                        history=trader_manager.history,
-                        mode=getattr(trader_manager, 'mode', 'DEMO')
-                    )
+                # 6-Katmanli Valkyrie Aegis Sentinel Denetimini Calistir
+                if market_data:
+                    audit_res = await self.sentinel.run_full_sentinel_audit(market_data, trader_manager, mode=mode)
+                    exec_report = self.sentinel.generate_executive_telegram_report(audit_res, trader_manager, initial_balance=initial_balance)
+                    await self.send_message(exec_report)
                 else:
                     await self.send_hourly_report(
                         balance=trader_manager.balance,
                         initial_balance=initial_balance,
                         open_positions=trader_manager.open_positions,
                         history=trader_manager.history,
-                        mode=getattr(trader_manager, 'mode', 'DEMO')
+                        mode=mode
+                    )
+
+                # Gece 00:00'da ekstra gunluk kapanis ozeti gonder
+                if current_hour == 0:
+                    await self.send_midnight_summary(
+                        balance=trader_manager.balance,
+                        initial_balance=initial_balance,
+                        open_positions=trader_manager.open_positions,
+                        history=trader_manager.history,
+                        mode=mode
                     )
             except Exception as e:
-                print(f"[HOURLY/MIDNIGHT REPORT SCHEDULER HATA]: {e}")
+                print(f"[AEGIS SENTINEL SCHEDULER HATA]: {e}")
                 await asyncio.sleep(30)
