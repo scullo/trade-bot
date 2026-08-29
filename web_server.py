@@ -3387,6 +3387,7 @@ async function loadAdminMetrics() {
                     btn.style.color = 'var(--text-muted)';
                     btn.style.borderColor = 'rgba(255,255,255,0.15)';
                 }
+                renderCoinManager();
             } else {
                 grid.style.display = 'none';
                 if (btn) {
@@ -3396,12 +3397,31 @@ async function loadAdminMetrics() {
                 }
             }
         }
+
         function renderCoinManager() {
             const cont = document.getElementById('coin-chips-container');
-            if (!cont || !appState.all_coins) return;
+            if (!cont) return;
+
+            let coins = appState.all_coins;
+            if (!coins || coins.length === 0) {
+                if (appState.symbols && Object.keys(appState.symbols).length > 0) {
+                    coins = Object.keys(appState.symbols).map(s => ({
+                        symbol: s,
+                        active: true,
+                        price: (appState.symbols[s] && appState.symbols[s].price) || 0
+                    }));
+                } else {
+                    coins = [];
+                }
+            }
+
+            if (coins.length === 0) {
+                cont.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; padding: 20px; color: #94a3b8; font-size:13px;">100 Parite verisi senkronize ediliyor...</div>';
+                return;
+            }
 
             // 100 Pariteyi A'dan Z'ye Kusursuz Harf Sırasına Diz
-            let sortedCoins = [...(appState.all_coins || [])].sort((a, b) => {
+            let sortedCoins = [...coins].sort((a, b) => {
                 const symA = (a.symbol || '').replace('/USDT', '').toUpperCase();
                 const symB = (b.symbol || '').replace('/USDT', '').toUpperCase();
                 return symA.localeCompare(symB);
@@ -3451,7 +3471,7 @@ async function loadAdminMetrics() {
             }
             cont.innerHTML = html;
         }
-async function toggleSymbol(symbol, active) {
+        async function toggleSymbol(symbol, active) {
             try {
                 if (appState.all_coins) {
                     const found = appState.all_coins.find(c => c.symbol === symbol);
