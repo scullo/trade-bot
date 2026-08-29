@@ -313,7 +313,7 @@ class PaperTrader:
         margin = pos["margin"]
         entry_fee = pos["entry_fee"]
 
-        if is_partial and not pos["is_half_closed"]:
+        if is_partial and not pos.get("is_half_closed", False):
             # %50 TP1 Kapatma
             closed_margin = margin * 0.5
             closed_val = pos["position_value"] * 0.5

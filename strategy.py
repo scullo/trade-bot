@@ -161,6 +161,38 @@ class StrategyEngine:
                     await self._notify_close(record, levels=levels)
                     self._cleanup_tracking(symbol)
 
+        # ── 2.5 DİNAMİK ROE VE ZAMAN BAZLI KÂR KİLİDİ (%50 KÂR AL & BREAKEVEN) ──
+        if symbol in self.paper_trader.open_positions and not self.paper_trader.open_positions[symbol].get("is_half_closed", False):
+            pos_cur = self.paper_trader.open_positions[symbol]
+            entry_p = pos_cur["entry_price"]
+            lev = pos_cur.get("leverage", 5)
+            price_pct = ((current_price - entry_p) / entry_p) if side == "LONG" else ((entry_p - current_price) / entry_p)
+            current_roe = price_pct * lev * 100.0
+
+            # Kural A: ROE >= +7.0% -> Hedef fiyata bakılmaksızın %50 kâr anında realize edilir!
+            if current_roe >= 7.0:
+                record = await self._safe_close_position(
+                    symbol, current_price,
+                    f"🎯 Dinamik ROE Kâr Kilidi (+%{current_roe:.1f} Kâr Alındı - %50 Kapatıldı)",
+                    is_partial=True
+                )
+                if record:
+                    await self._notify_close(record, levels=levels)
+                    return
+
+            # Kural B: 90 Dakika Süre Aşımı Kalkanı (Süre >= 90dk ve ROE >= +4.0%)
+            hold_sec = time.time() - pos_cur.get("entry_timestamp", time.time())
+            if hold_sec >= 5400 and current_roe >= 4.0:
+                hold_mins = int(hold_sec // 60)
+                record = await self._safe_close_position(
+                    symbol, current_price,
+                    f"⏳ Zaman Kalkanı Kâr Kilidi ({hold_mins}dk Bekleme - +%{current_roe:.1f} ROE - %50 Kapatıldı)",
+                    is_partial=True
+                )
+                if record:
+                    await self._notify_close(record, levels=levels)
+                    return
+
         # ── 3. TRAILING STOP (KAR KORUMA MEKANIZMASI) ────────────────────────
         if symbol in self.paper_trader.open_positions:
             self._apply_trailing_stop(symbol, self.paper_trader.open_positions[symbol], current_price)
@@ -518,6 +550,19 @@ class StrategyEngine:
             tp1_target = pos.get("tp1", 0.0)
             tp2_target = pos.get("tp2", 0.0)
             is_half = pos.get("is_half_closed", False)
+
+            # Dinamik ROE ve Zaman Kalkanı Kontrolü (Mum Kapanışında)
+            entry_p = pos.get("entry_price", close_price)
+            lev = pos.get("leverage", 5)
+            price_pct = ((close_price - entry_p) / entry_p) if side == "LONG" else ((entry_p - close_price) / entry_p)
+            current_roe = price_pct * lev * 100.0
+
+            if not is_half and (current_roe >= 7.0 or ((time.time() - pos.get("entry_timestamp", time.time()) >= 5400) and current_roe >= 4.0)):
+                reason_txt = f"🎯 Dinamik ROE Kâr Kilidi (+%{current_roe:.1f} Kâr Alındı - %50 Kapatıldı)" if current_roe >= 7.0 else f"⏳ Zaman Kalkanı Kâr Kilidi (+%{current_roe:.1f} ROE - %50 Kapatıldı)"
+                record = await self._safe_close_position(symbol, close_price, reason_txt, is_partial=True)
+                if record:
+                    await self._notify_close(record, levels=levels)
+                return
 
             if not is_half and tp1_target > 0:
                 if (side == "LONG" and close_price >= tp1_target) or (side == "SHORT" and close_price <= tp1_target):
