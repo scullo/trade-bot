@@ -1558,6 +1558,9 @@ HTML_PAGE = """
             </div>
         </div>
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div class="live-tag" id="user-session-pill" onclick="openAuthModal()" style="cursor:pointer; border-color:rgba(0,242,254,0.4); background:rgba(0,242,254,0.06);" title="Yatırımcı Girişi / 24h VIP Deneme Başlat">
+                👑 <b style="color:var(--cyan); margin-left:4px;">Master Admin</b>
+            </div>
             <div id="mode-badge-wrap" class="mode-badge-wrap" onclick="openLiveSettingsModal()" title="Ticaret Modu (Demo/Canlı) & Binance API Ayarlarını Aç">
                 <span id="mode-badge-dot" class="mode-dot-demo"></span>
                 <span id="mode-badge-text">🟡 DEMO MODU</span>
@@ -1587,6 +1590,9 @@ HTML_PAGE = """
         </button>
         <button class="nav-tab-btn" id="tab-btn-ledger" onclick="switchMainTab('ledger')">
             <span class="tab-icon">📜</span> 4. TİCARET DEFTERİ & EXCEL RAPORLARI
+        </button>
+        <button class="nav-tab-btn" id="tab-btn-admin" onclick="switchMainTab('admin'); loadAdminMetrics();" style="border-color:rgba(0,242,254,0.35);">
+            <span class="tab-icon">👑</span> 5. MASTER ADMİN & FON MASASI
         </button>
     </div>
 
@@ -2070,12 +2076,12 @@ HTML_PAGE = """
             currentActiveMainTab = tabName;
             
             const tabButtons = {
-                'cockpit': document.getElementById('nav-tab-cockpit') || document.getElementById('tab-btn-cockpit'),
-                'positions': document.getElementById('nav-tab-positions') || document.getElementById('tab-btn-positions'),
-                'radar': document.getElementById('nav-tab-radar') || document.getElementById('tab-btn-radar'),
-                'ledger': document.getElementById('nav-tab-history') || document.getElementById('tab-btn-ledger'),
-                'history': document.getElementById('nav-tab-history') || document.getElementById('tab-btn-ledger'),
-                'admin': document.getElementById('nav-tab-admin')
+                'cockpit': document.getElementById('tab-btn-cockpit'),
+                'positions': document.getElementById('tab-btn-positions'),
+                'radar': document.getElementById('tab-btn-radar'),
+                'ledger': document.getElementById('tab-btn-ledger'),
+                'history': document.getElementById('tab-btn-ledger'),
+                'admin': document.getElementById('tab-btn-admin')
             };
             const tabContents = {
                 'cockpit': document.getElementById('main-tab-content-cockpit'),
