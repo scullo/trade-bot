@@ -2169,6 +2169,7 @@ HTML_PAGE = """
         let currentActiveMainTab = 'cockpit';
 
         function switchMainTab(tabName) {
+            if (tabName === 'history') tabName = 'ledger';
             currentActiveMainTab = tabName;
             
             const tabButtons = {
@@ -2176,7 +2177,6 @@ HTML_PAGE = """
                 'positions': document.getElementById('tab-btn-positions'),
                 'radar': document.getElementById('tab-btn-radar'),
                 'ledger': document.getElementById('tab-btn-ledger'),
-                'history': document.getElementById('tab-btn-ledger'),
                 'admin': document.getElementById('tab-btn-admin')
             };
             const tabContents = {
@@ -2184,17 +2184,14 @@ HTML_PAGE = """
                 'positions': document.getElementById('main-tab-content-positions'),
                 'radar': document.getElementById('main-tab-content-radar'),
                 'ledger': document.getElementById('main-tab-content-ledger'),
-                'history': document.getElementById('main-tab-content-ledger'),
                 'admin': document.getElementById('main-tab-content-admin')
             };
 
             for (const key in tabButtons) {
                 if (tabButtons[key]) {
                     if (key === tabName) {
-                        tabButtons[key].classList.add('active-nav-tab');
                         tabButtons[key].classList.add('active');
                     } else {
-                        tabButtons[key].classList.remove('active-nav-tab');
                         tabButtons[key].classList.remove('active');
                     }
                 }
@@ -2202,7 +2199,7 @@ HTML_PAGE = """
 
             for (const key in tabContents) {
                 if (tabContents[key]) {
-                    if (key === tabName || (tabName === 'history' && key === 'ledger')) {
+                    if (key === tabName) {
                         tabContents[key].classList.add('active-tab');
                         tabContents[key].style.display = 'block';
                     } else {
@@ -2218,7 +2215,7 @@ HTML_PAGE = """
                 renderPositions();
             } else if (tabName === 'radar') {
                 renderCards();
-            } else if (tabName === 'ledger' || tabName === 'history') {
+            } else if (tabName === 'ledger') {
                 renderHistoryTable();
             } else if (tabName === 'admin') {
                 loadAdminMetrics();
