@@ -3,7 +3,7 @@ import os
 import time
 import base64
 import threading
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from config import INITIAL_BALANCE, LEVERAGE, POSITION_SIZE_USDT, COMMISSION_RATE
 
 HISTORY_FILE = "trade_history.json"
@@ -116,7 +116,7 @@ class PaperTrader:
                     pass
 
             payload = {
-                "message": f"[BOT] Trade state auto-save ({datetime.now().strftime('%H:%M:%S')})",
+                "message": f"[BOT] Trade state auto-save ({datetime.now(timezone(timedelta(hours=3))).strftime('%H:%M:%S')})",
                 "content": content_b64,
                 "branch": "main"
             }
@@ -239,7 +239,7 @@ class PaperTrader:
         quantity = position_value / entry_price
         entry_fee = position_value * self.commission_rate
         entry_timestamp = time.time()
-        entry_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        entry_time_str = datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S")
 
         # Risk hesabi (1R degeri)
         risk_dist = abs(entry_price - soft_stop) if soft_stop else (entry_price * 0.01)
@@ -344,7 +344,7 @@ class PaperTrader:
             pos["tp1_hit"] = True
             pos["trail_status"] = "🎯 TP1 KİLİTLENDİ (%50 Alındı - Breakeven Korumalı)"
 
-            exit_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            exit_time_str = datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S")
             # Duration format
             hold_sec = time.time() - pos.get("entry_timestamp", time.time())
             dur_mins = int(hold_sec // 60)
@@ -398,7 +398,7 @@ class PaperTrader:
             self.balance += net_pnl
             if self.balance > 150000.0 or self.balance < 1000.0:
                 self.balance = float(self.initial_balance)
-            exit_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            exit_time_str = datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S")
 
             # Duration format
             hold_sec = time.time() - pos.get("entry_timestamp", time.time())

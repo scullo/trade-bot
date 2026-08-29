@@ -1,7 +1,7 @@
 import aiohttp
 import asyncio
 import io
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 from chart_generator import generate_trade_chart_image
 
@@ -169,7 +169,7 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
     @staticmethod
     def _compute_period_metrics(history: list):
         """Gecmis islemlerden Gunluk, Haftalik ve Aylik PnL ve istatistikleri hesaplar."""
-        now = datetime.now()
+        now = datetime.now(timezone(timedelta(hours=3)))
         today_date = now.date()
         week_cutoff = now - timedelta(days=7)
         month_cutoff = now - timedelta(days=30)
@@ -240,7 +240,7 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
         else:
             pos_str = "• <i>Şu an aktif açık pozisyon bulunmuyor. (100 Parite Taranıyor)</i>"
 
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        now_str = datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S")
 
         msg = f"""📊 <b>VALKYRIE QUANT — SAATLİK KASA & PORTFÖY RAPORU</b> 🕒
 ━━━━━━━━━━━━━━━━━━━━━━━━
@@ -301,7 +301,7 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
         else:
             pos_str = "• <i>Açık pozisyon devretmedi. 100 paritede gece pusu devam ediyor.</i>"
 
-        now_str = datetime.now().strftime("%Y-%m-%d 00:00:00")
+        now_str = datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d 00:00:00")
 
         msg = f"""🌕 <b>VALKYRIE QUANT — GÜNLÜK KAPANIŞ & PERFORMANS RAPORU (00:00)</b> 🌙
 ━━━━━━━━━━━━━━━━━━━━━━━━
@@ -338,7 +338,7 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
 ━━━━━━━━━━━━━━━━━━━━━━━━
 💰 <b>Başlangıç Kasası:</b> <code>${trader_manager.balance:,.2f} USDT</code>
 📊 <b>Taranan Parite:</b> <code>100 / 100 Canlı Akış</code>
-⏰ <b>Başlangıç Zamanı:</b> <code>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</code>
+⏰ <b>Başlangıç Zamanı:</b> <code>{datetime.now(timezone(timedelta(hours=3))).strftime('%Y-%m-%d %H:%M:%S')}</code>
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📌 <i>5 Dakikalık mum kapanışları ve saatlik raporlama döngüsü başlatıldı.</i>"""
             await self.send_message(boot_msg)
@@ -347,7 +347,7 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
 
         while True:
             try:
-                now = datetime.now()
+                now = datetime.now(timezone(timedelta(hours=3)))
                 # Bir sonraki tam saat basina (:00:02) kalan saniyeyi hesapla
                 seconds_to_wait = (60 - now.minute - 1) * 60 + (60 - now.second) + 2
                 if seconds_to_wait <= 2:

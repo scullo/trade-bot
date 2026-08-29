@@ -1,5 +1,5 @@
 import io
-import datetime
+from datetime import datetime, timezone, timedelta
 import xlsxwriter
 
 def create_styled_excel_report(history_data: list, current_balance: float = 100000.0, initial_balance: float = 100000.0) -> io.BytesIO:
@@ -111,7 +111,7 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
     ws1.set_column('F:I', 20)
 
     ws1.merge_range('B2:I2', 'VALKYRIE QUANT DESK — PERFORMANS & STRATEJİ RAPORU', title_fmt)
-    ws1.merge_range('B3:I3', f"Oluşturulma Tarihi: {datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}  |  Toplam İşlem: {total_trades}  |  Kazanma Oranı: %{win_rate:.1f}", subtitle_fmt)
+    ws1.merge_range('B3:I3', f"Oluşturulma Tarihi: {datetime.now(timezone(timedelta(hours=3))).strftime('%d.%m.%Y %H:%M:%S')}  |  Toplam İşlem: {total_trades}  |  Kazanma Oranı: %{win_rate:.1f}", subtitle_fmt)
     ws1.set_row(1, 30)
     ws1.set_row(2, 18)
 

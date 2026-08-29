@@ -1,6 +1,6 @@
 import io
 import time
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -258,7 +258,7 @@ def generate_trade_chart_image(
 
     # 5. Time and Price Axes Formatting
     time_indices = np.linspace(0, n_bars - 1, 7, dtype=int)
-    time_labels = [datetime.fromtimestamp(display_df['timestamp'].iloc[idx] / 1000).strftime('%H:%M') for idx in time_indices]
+    time_labels = [datetime.fromtimestamp(display_df['timestamp'].iloc[idx] / 1000, tz=timezone(timedelta(hours=3))).strftime('%H:%M') for idx in time_indices]
     ax.set_xticks(time_indices)
     ax.set_xticklabels(time_labels, color='#94a3b8', fontsize=9, fontweight='bold')
     ax.tick_params(colors='#94a3b8', labelsize=9)

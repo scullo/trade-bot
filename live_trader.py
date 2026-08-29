@@ -2,7 +2,7 @@ import asyncio
 import json
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import ccxt.async_support as ccxt_async
 
 LIVE_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "live_config.json")
@@ -210,7 +210,7 @@ class LiveTrader:
                 "leverage": leverage,
                 "position_value": entry_price * amount,
                 "amount": amount,
-                "entry_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "entry_time": datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S"),
                 "trade_type": trade_type,
                 "reason": reason,
                 "tp1": tp1,
@@ -263,7 +263,7 @@ class LiveTrader:
                 "roe_pct": round(roe_pct, 2),
                 "reason": reason,
                 "entry_time": pos['entry_time'],
-                "exit_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "exit_time": datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S"),
                 "is_live": True
             }
 

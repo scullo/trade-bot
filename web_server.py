@@ -1,6 +1,6 @@
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from aiohttp import web
 from config import SYMBOLS
 
@@ -3378,7 +3378,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 current_balance=trader_manager.balance,
                 initial_balance=INITIAL_BALANCE
             )
-            filename = f"Valkyrie_Ticaret_Raporu_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+            filename = f"Valkyrie_Ticaret_Raporu_{datetime.now(timezone(timedelta(hours=3))).strftime('%Y%m%d_%H%M')}.xlsx"
             return web.Response(
                 body=buf.read(),
                 content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
