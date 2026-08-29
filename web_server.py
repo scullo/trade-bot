@@ -1351,14 +1351,14 @@ HTML_PAGE = """
         <div class="modal-card" style="max-width:460px; text-align:left; border:1.5px solid rgba(0,242,254,0.35); box-shadow:0 25px 60px rgba(0,0,0,0.85);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                 <div style="font-size:17px; font-weight:900; color:#fff; display:flex; align-items:center; gap:8px;">
-                    <span>🔐</span> VALKYRIE GİRİŞ & KAYIT PORTALI
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> VALKYRIE GİRİŞ & KAYIT PORTALI
                 </div>
                 <button onclick="closeAuthModal()" style="background:transparent; border:none; color:#94a3b8; font-size:20px; cursor:pointer;">✕</button>
             </div>
 
             <!-- 2 CLEAN TABS (REGISTER & LOGIN) -->
             <div style="display:flex; gap:8px; margin-bottom:16px; background:rgba(255,255,255,0.03); padding:4px; border-radius:10px;">
-                <button id="auth-tab-btn-register" onclick="switchAuthTab('register')" style="flex:1.2; padding:9px 8px; border-radius:8px; border:none; background:linear-gradient(135deg, #00f2fe, #4facfe); color:#000; font-weight:900; font-size:12.5px; cursor:pointer;">🎁 24h VIP Deneme</button>
+                <button id="auth-tab-btn-register" onclick="switchAuthTab('register')" style="flex:1.2; padding:9px 8px; border-radius:8px; border:none; background:linear-gradient(135deg, #00f2fe, #4facfe); color:#000; font-weight:900; font-size:12.5px; cursor:pointer;">24h VIP Deneme</button>
                 <button id="auth-tab-btn-login" onclick="switchAuthTab('login')" style="flex:1; padding:9px 8px; border-radius:8px; border:none; background:transparent; color:#94a3b8; font-weight:800; font-size:12.5px; cursor:pointer;">👤 Giriş Yap</button>
             </div>
 
@@ -1405,7 +1405,7 @@ HTML_PAGE = """
         <div class="modal-card" style="max-width:540px; text-align:left;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                 <div class="modal-title" style="margin:0; font-size:18px; display:flex; align-items:center; gap:8px;">
-                    <span>🛡️</span> BOT SAĞLIK & TEŞHİS RAPORU
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg> BOT SAĞLIK & TEŞHİS RAPORU
                 </div>
                 <button onclick="closeHealthDiagnosticModal()" style="background:transparent; border:none; color:#94a3b8; font-size:20px; cursor:pointer;">✕</button>
             </div>
@@ -1740,17 +1740,17 @@ HTML_PAGE = """
         </div>
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
             <button onclick="openUpgradeModal()" style="background:linear-gradient(135deg, rgba(0,242,254,0.15), rgba(79,172,254,0.25)); border:1.5px solid var(--cyan); color:#fff; font-weight:800; font-size:12px; padding:6px 12px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px;">
-                <span>💎</span> Paketi Yükselt
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="12 2 22 8.5 12 22 2 8.5 12 2"></polygon></svg> Paketi Yükselt
             </button>
             <div id="user-session-container" style="display:flex; align-items:center;">
                 <button id="user-auth-btn" class="nav-tab-btn" onclick="openAuthModal('login')" style="background:rgba(0,242,254,0.08); border:1.5px solid var(--cyan); color:#fff; font-size:12px; font-weight:800; padding:6px 14px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px;">
-                    <span>👤</span> Giriş Yap / 24h Başla
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> Giriş Yap / 24h VIP
                 </button>
             </div>
             <div id="mode-badge-wrap" class="mode-badge-wrap" onclick="openLiveSettingsModal()" title="Ticaret Modu (Demo/Canlı) & Binance API Ayarlarını Aç">
                 <span id="mode-badge-dot" class="mode-dot-demo"></span>
                 <span id="mode-badge-text">🟡 DEMO MODU</span>
-                <span style="opacity:0.6; font-size:12px; margin-left:3px;">⚙️</span>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:middle; margin-left:3px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
             </div>
             <div class="live-tag" id="system-health-pill" onclick="openHealthDiagnosticModal()" style="cursor:pointer;" title="Sistem Sağlık Raporunu & Teşhis Detaylarını Aç">
                 <div class="live-dot" id="system-health-dot"></div>
@@ -2380,7 +2380,7 @@ HTML_PAGE = """
             } else {
                 cont.innerHTML = `
                     <button class="nav-tab-btn" onclick="openAuthModal('register')" style="background:rgba(0,242,254,0.08); border:1.5px solid var(--cyan); color:#fff; font-size:12px; font-weight:800; padding:6px 14px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px;">
-                        <span>👤</span> Giriş Yap / 24h Başla
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> Giriş Yap / 24h VIP
                     </button>
                 `;
                 if (navAdminTab) navAdminTab.style.display = 'none';
