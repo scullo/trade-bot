@@ -1569,7 +1569,7 @@ HTML_PAGE = """
     <!-- =========================================================================
          VALKYRIE QUANT DESK •— ULTRA-LUXURY PUBLIC LANDING PAGE (AUTH GATEWAY)
          ========================================================================= -->
-    <div id="landing-page-view" style="display:none; min-height:100vh; background:radial-gradient(circle at 50% 15%, rgba(0,242,254,0.08), transparent 60%), #07090e; color:#fff; position:relative; overflow-x:hidden;">
+    <div id="landing-page-view" style="display:block; min-height:100vh; background:radial-gradient(circle at 50% 15%, rgba(0,242,254,0.08), transparent 60%), #07090e; color:#fff; position:relative; overflow-x:hidden;">
         
         <!-- LANDING NAVBAR -->
         <nav style="display:flex; justify-content:space-between; align-items:center; padding:18px 40px; border-bottom:1px solid rgba(255,255,255,0.06); background:rgba(7,9,14,0.75); backdrop-filter:blur(15px); position:sticky; top:0; z-index:100;">
@@ -2083,9 +2083,9 @@ HTML_PAGE = """
         <div class="manager-card">
             <div class="manager-head">
                 <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                    <div style="font-size:16px; font-weight:800; letter-spacing:0.3px; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="togglePoolCollapse()">
+                    <div style="font-size:15px; font-weight:800; letter-spacing:0.3px; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="togglePoolCollapse()" title="100 Parite Havuzunu Aç / Gizle">
                         ⚙️ PARİTE YÖNETİM HAVUZU
-                        <span id="pool-collapse-btn" style="font-size:12px; font-weight:700; color:var(--blue); background:rgba(56,139,253,0.15); border:1px solid rgba(56,139,253,0.3); padding:3px 10px; border-radius:8px; transition:all 0.15s ease;">🔼 Gizle</span>
+                        <span id="pool-collapse-btn" style="font-size:11.5px; font-weight:800; color:var(--cyan); background:rgba(0,242,254,0.08); border:1px solid rgba(0,242,254,0.3); padding:4px 12px; border-radius:8px; transition:all 0.15s ease;">⚙️ 100 Parite Havuzunu Aç ▼</span>
                     </div>
                     <span class="active-badge-pill" id="active-coin-counter">100 Aktif / 100 Parite</span>
                 </div>
@@ -2107,7 +2107,7 @@ HTML_PAGE = """
                     <button class="btn-preset btn-preset-danger" onclick="selectTopN(0)">Tümünü Kapat</button>
                 </div>
             </div>
-            <div class="coin-chips-grid" id="coin-chips-container" style="transition:all 0.3s ease;"></div>
+            <div class="coin-chips-grid" id="coin-chips-container" style="display:none; transition:all 0.3s ease;"></div>
         </div>
 
         <div class="section-header">
@@ -3379,85 +3379,48 @@ async function loadAdminMetrics() {
         function togglePoolCollapse() {
             const grid = document.getElementById('coin-chips-container');
             const btn = document.getElementById('pool-collapse-btn');
-            if (!grid || !btn) return;
-            const isHidden = grid.style.display === 'none';
-            if (isHidden) {
+            if (!grid) return;
+            if (grid.style.display === 'none' || grid.style.display === '') {
                 grid.style.display = 'grid';
-                btn.innerText = '🔼 Gizle';
-                localStorage.setItem('pool_collapsed', 'false');
+                if (btn) {
+                    btn.innerHTML = '▲ Parite Havuzunu Gizle';
+                    btn.style.color = 'var(--text-muted)';
+                    btn.style.borderColor = 'rgba(255,255,255,0.15)';
+                }
             } else {
                 grid.style.display = 'none';
-                btn.innerText = '🔽 Pariteleri Göster';
-                localStorage.setItem('pool_collapsed', 'true');
-            }
-        }
-
-        let searchQuery = '';
-
-        
-        function filterWatchlistDirect(symbol) {
-            switchMainTab('radar');
-            setTimeout(() => {
-                const input = document.getElementById('coin-search-input');
-                if (input) {
-                    input.value = symbol.replace('/USDT', '');
-                    handleSearch(input.value);
+                if (btn) {
+                    btn.innerHTML = '⚙️ 100 Parite Havuzunu Aç ▼';
+                    btn.style.color = 'var(--cyan)';
+                    btn.style.borderColor = 'rgba(0,242,254,0.3)';
                 }
-            }, 100);
-        }
-
-        function handleSearch(query) {
-            searchQuery = (query || '').trim().toUpperCase();
-            
-            const topInput = document.getElementById('coin-search-input');
-            const topClear = document.getElementById('search-clear-btn');
-
-            if (topInput && topInput.value.toUpperCase() !== searchQuery) topInput.value = query;
-            if (topClear) topClear.style.display = searchQuery ? 'block' : 'none';
-
-            renderCoinManager();
-            renderCards();
-                renderCockpitView();
-                updateSystemHealthBadge();
-        }
-
-        function clearSearch() {
-            const topInput = document.getElementById('coin-search-input');
-            if (topInput) topInput.value = '';
-            handleSearch('');
-        }
-
-        function scrollToWatchlistCard(symbol) {
-            const safeId = symbol.replace(/[^a-zA-Z0-9]/g, '_');
-            const card = document.getElementById('card-' + safeId);
-            if (card) {
-                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                card.style.transition = 'all 0.4s ease';
-                card.style.boxShadow = '0 0 35px var(--blue)';
-                card.style.borderColor = 'var(--blue)';
-                setTimeout(() => {
-                    card.style.boxShadow = '';
-                    card.style.borderColor = '';
-                }, 2500);
             }
         }
-
         function renderCoinManager() {
             const cont = document.getElementById('coin-chips-container');
             if (!cont || !appState.all_coins) return;
-            
-            const activeCount = appState.all_coins.filter(c => c.active).length;
-            const totalCount = appState.all_coins.length;
 
-            let filteredCoins = appState.all_coins;
+            // 100 Pariteyi A'dan Z'ye Kusursuz Harf Sırasına Diz
+            let sortedCoins = [...(appState.all_coins || [])].sort((a, b) => {
+                const symA = (a.symbol || '').replace('/USDT', '').toUpperCase();
+                const symB = (b.symbol || '').replace('/USDT', '').toUpperCase();
+                return symA.localeCompare(symB);
+            });
+
+            const activeCount = sortedCoins.filter(c => c.active).length;
+            const totalCount = sortedCoins.length;
+
+            let filteredCoins = sortedCoins;
             if (searchQuery) {
-                filteredCoins = appState.all_coins.filter(c => {
-                    const clean = c.symbol.replace('/USDT', '').toUpperCase();
-                    return clean.includes(searchQuery) || c.symbol.toUpperCase().includes(searchQuery);
+                filteredCoins = sortedCoins.filter(c => {
+                    const clean = (c.symbol || '').replace('/USDT', '').toUpperCase();
+                    return clean.includes(searchQuery) || (c.symbol || '').toUpperCase().includes(searchQuery);
                 });
-                document.getElementById('active-coin-counter').innerText = `${filteredCoins.length} Eşleşen / ${activeCount} Aktif`;
+                const cntEl = document.getElementById('active-coin-counter');
+                if (cntEl) cntEl.innerText = `${filteredCoins.length} Eşleşen / ${activeCount} Aktif`;
             } else {
-                document.getElementById('active-coin-counter').innerText = `${activeCount} Aktif / ${totalCount} Parite`;
+                const cntEl = document.getElementById('active-coin-counter');
+                if (cntEl) cntEl.innerText = `${activeCount} Aktif / ${totalCount} Parite (A-Z)`;
             }
 
             let html = '';
@@ -3465,7 +3428,7 @@ async function loadAdminMetrics() {
                 html = `<div style="grid-column: 1 / -1; text-align:center; padding: 24px; color: #94a3b8; font-size:14px;">"${searchQuery}" ile eşleşen parite bulunamadı.</div>`;
             } else {
                 filteredCoins.forEach(coin => {
-                    const clean = coin.symbol.replace('/USDT', '');
+                    const clean = (coin.symbol || '').replace('/USDT', '');
                     const curPrice = Number(livePrices[coin.symbol] || coin.price || 0);
                     const priceStr = curPrice > 0 ? (curPrice < 0.001 ? '$' + curPrice.toFixed(6) : (curPrice < 1 ? '$' + curPrice.toFixed(4) : '$' + curPrice.toFixed(2))) : '---';
                     const isHighlighted = searchQuery && clean.includes(searchQuery);
@@ -3477,7 +3440,7 @@ async function loadAdminMetrics() {
                                 <span class="chip-dot"></span>
                                 ${clean}
                             </div>
-                            <div style="font-size:12px; color:#cbd5e1; margin-top:2px; font-family:'JetBrains Mono'">${priceStr}</div>
+                            <div style="font-size:11.5px; color:#cbd5e1; margin-top:2px; font-family:'JetBrains Mono'">${priceStr}</div>
                         </div>
                         <button class="chip-btn ${coin.active ? 'btn-toggle-on' : 'btn-toggle-off'}">
                             ${coin.active ? 'AKTİF' : 'PASİF'}
@@ -3488,8 +3451,7 @@ async function loadAdminMetrics() {
             }
             cont.innerHTML = html;
         }
-
-        async function toggleSymbol(symbol, active) {
+async function toggleSymbol(symbol, active) {
             try {
                 if (appState.all_coins) {
                     const found = appState.all_coins.find(c => c.symbol === symbol);
@@ -5329,6 +5291,7 @@ function downloadExcelReport() {
         }
 
         async function init() {
+            updateUserSessionUI();
             if (false) {
                 const grid = document.getElementById('coin-chips-container');
                 const btn = document.getElementById('pool-collapse-btn');
