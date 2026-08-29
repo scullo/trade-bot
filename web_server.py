@@ -1488,126 +1488,155 @@ HTML_PAGE = """
     <!-- CUSTOM LIVE SETTINGS MODAL -->
 
     <!-- BINANCE LIVE ACCOUNT & API SETTINGS MODAL -->
+    <!-- ULTRA-PREMIUM BINANCE LIVE ACCOUNT & API SETTINGS MODAL -->
     <div id="live-settings-overlay" class="modal-overlay" style="display:none;" onclick="if(event.target===this) closeLiveSettingsModal()">
-        <div class="live-settings-card">
-            <div class="tv-modal-header" style="border-bottom:1px solid var(--border);">
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <div class="brand-logo-gem" style="width:36px; height:36px; background:rgba(243,186,47,0.15); border-color:#f3ba2f;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="#f3ba2f"><path d="M12 2L4 6v12l8 4 8-4V6l-8-4zm0 2.8l5.5 2.75L12 10.3 6.5 7.55 12 4.8zM6 9.3l5 2.5v5.85l-5-2.5V9.3zm12 5.85l-5 2.5V11.8l5-2.5v5.85z"/></svg>
+        <div class="live-settings-card" style="max-width:680px; border:1.5px solid rgba(243,186,47,0.35); box-shadow:0 25px 70px rgba(0,0,0,0.9), 0 0 40px rgba(243,186,47,0.08); padding:0; border-radius:18px; overflow:hidden;">
+            <!-- MODAL HEADER -->
+            <div class="tv-modal-header" style="background:linear-gradient(135deg, rgba(243,186,47,0.12), rgba(0,242,254,0.05)); border-bottom:1px solid rgba(255,255,255,0.08); padding:18px 24px;">
+                <div style="display:flex; align-items:center; gap:14px;">
+                    <div class="brand-logo-gem" style="width:42px; height:42px; background:rgba(243,186,47,0.15); border:1.5px solid #f3ba2f; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="#f3ba2f"><path d="M12 2L4 6v12l8 4 8-4V6l-8-4zm0 2.8l5.5 2.75L12 10.3 6.5 7.55 12 4.8zM6 9.3l5 2.5v5.85l-5-2.5V9.3zm12 5.85l-5 2.5V11.8l5-2.5v5.85z"/></svg>
                     </div>
                     <div>
-                        <div style="font-size:15px; font-weight:800; color:#fff;">BINANCE VADELİ (FUTURES) HESAP & CANLI TİCARET YÖNETİMİ</div>
-                        <div style="font-size:11.5px; color:var(--text-muted);">API Bağlantısı, Gerçek Bakiye & Risk Ayarları</div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:16px; font-weight:900; color:#fff; letter-spacing:0.3px;">BİNANCE VADELİ (FUTURES) HESAP & CANLI TİCARET MASASI</span>
+                        </div>
+                        <div style="font-size:11.5px; color:#cbd5e1; margin-top:2px; display:flex; align-items:center; gap:8px;">
+                            <span style="color:#f3ba2f; font-weight:700;">🔒 AES-256 Kriptografik Kasa</span>
+                            <span>•</span>
+                            <span>Milisaniyelik Emir İletimi & Dinamik Risk Zırhı</span>
+                        </div>
                     </div>
                 </div>
-                <button class="tv-modal-close-btn" onclick="closeLiveSettingsModal()" title="Kapat (ESC)">✕</button>
+                <button class="tv-modal-close-btn" onclick="closeLiveSettingsModal()" title="Kapat (ESC)" style="background:rgba(255,255,255,0.06); width:32px; height:32px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); color:#94a3b8; font-size:16px; cursor:pointer;">✕</button>
             </div>
 
             <!-- MODAL TABS -->
-            <div class="settings-tab-bar">
-                <button id="set-tab-api" class="settings-tab-btn tab-active" onclick="switchSettingsTab('api')">🔑 API & Bağlantı</button>
-                <button id="set-tab-risk" class="settings-tab-btn" onclick="switchSettingsTab('risk')">🛡️ Risk & Marjin</button>
-                <button id="set-tab-status" class="settings-tab-btn" onclick="switchSettingsTab('status')">📊 Canlı Cüzdan & Durum</button>
+            <div class="settings-tab-bar" style="background:rgba(0,0,0,0.3); padding:8px 24px; border-bottom:1px solid rgba(255,255,255,0.06); gap:10px;">
+                <button id="set-tab-api" class="settings-tab-btn tab-active" onclick="switchSettingsTab('api')" style="font-size:12.5px; font-weight:800; padding:8px 16px; border-radius:8px;">🔑 1. API & Canlı Bağlantı</button>
+                <button id="set-tab-risk" class="settings-tab-btn" onclick="switchSettingsTab('risk')" style="font-size:12.5px; font-weight:800; padding:8px 16px; border-radius:8px;">🛡️ 2. Risk & Marjin Kalkanı</button>
+                <button id="set-tab-status" class="settings-tab-btn" onclick="switchSettingsTab('status')" style="font-size:12.5px; font-weight:800; padding:8px 16px; border-radius:8px;">📊 3. Canlı Cüzdan & Durum</button>
             </div>
 
-            <div class="settings-body">
+            <div class="settings-body" style="padding:22px 24px; max-height:calc(85vh - 120px); overflow-y:auto;">
                 <!-- TAB 1: API & BAGLANTI -->
                 <div id="tab-content-api" class="settings-tab-content">
-                    <!-- MODE SELECTION -->
-                    <div class="setting-group-box">
-                        <div style="font-size:13px; font-weight:800; color:#fff; margin-bottom:10px;">🎯 AKTİF TİCARET MODU</div>
-                        <div class="mode-toggle-grid">
-                            <div class="mode-radio-label is-selected-demo" id="lbl-mode-demo" onclick="selectTradingMode('DEMO')">
-                                <div style="display:flex; align-items:center; gap:8px;">
-                                    <span style="font-size:18px;">🟡</span>
+                    <!-- MODE SELECTION (2 PREMIUM HERO CARDS) -->
+                    <div style="margin-bottom:18px;">
+                        <div style="font-size:12px; font-weight:800; color:#cbd5e1; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">
+                            🎯 Aktif Ticaret Modu Seçimi
+                        </div>
+                        <div class="mode-toggle-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                            <div class="mode-radio-label is-selected-demo" id="lbl-mode-demo" onclick="selectTradingMode('DEMO')" style="padding:14px; border-radius:12px; cursor:pointer; transition:all 0.15s ease;">
+                                <div style="display:flex; align-items:flex-start; gap:10px;">
+                                    <span style="font-size:22px; line-height:1;">🟡</span>
                                     <div>
-                                        <div style="font-weight:800; font-size:13px;">DEMO MODU (Paper Trading)</div>
-                                        <div style="font-size:11px; color:var(--text-muted);">Sanal kasa ile risksiz işlem testi</div>
+                                        <div style="font-weight:900; font-size:13.5px; color:#ffffff;">DEMO MODU (Paper Trading)</div>
+                                        <div style="font-size:11.5px; color:#94a3b8; margin-top:2px;">100.000$ Sanal Kasa • 0 Finansal Risk</div>
+                                        <div style="font-size:10.5px; color:var(--cyan); margin-top:4px; font-weight:700;">🟢 Strateji & Pusu Testi İçin Uygun</div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="mode-radio-label" id="lbl-mode-live" onclick="selectTradingMode('LIVE')">
-                                <div style="display:flex; align-items:center; gap:8px;">
-                                    <span style="font-size:18px;">🔴</span>
+
+                            <div class="mode-radio-label" id="lbl-mode-live" onclick="selectTradingMode('LIVE')" style="padding:14px; border-radius:12px; cursor:pointer; transition:all 0.15s ease;">
+                                <div style="display:flex; align-items:flex-start; gap:10px;">
+                                    <span style="font-size:22px; line-height:1;">🔴</span>
                                     <div>
-                                        <div style="font-weight:800; font-size:13px; color:var(--red);">GERÇEK MOD (Binance Live)</div>
-                                        <div style="font-size:11px; color:var(--text-muted);">Gerçek Binance Futures emir iletimi</div>
+                                        <div style="font-weight:900; font-size:13.5px; color:var(--red);">GERÇEK MOD (Binance Live)</div>
+                                        <div style="font-size:11.5px; color:#94a3b8; margin-top:2px;">Gerçek Vadeli Cüzdan • Otonom Emirler</div>
+                                        <div style="font-size:10.5px; color:var(--yellow); margin-top:4px; font-weight:700;">⚡ Milisaniyelik Canlı Emir İletimi</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- API KEY INPUTS -->
-                    <div class="setting-group-box">
-                        <div style="font-size:13px; font-weight:800; color:#fff; margin-bottom:12px;">🔑 BİNANCE API BİLGİLERİ</div>
+                    <!-- API KEY INPUTS WITH ENCRYPTION SHIELD -->
+                    <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px; margin-bottom:18px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                            <div style="font-size:13px; font-weight:800; color:#fff; display:flex; align-items:center; gap:8px;">
+                                <span>🔑</span> BİNANCE FUTURES VADELİ API BİLGİLERİ
+                            </div>
+                            <span style="font-size:10.5px; background:rgba(0,242,254,0.1); color:var(--cyan); border:1px solid rgba(0,242,254,0.3); padding:2px 8px; border-radius:6px; font-weight:700;">AES-256 Korumalı</span>
+                        </div>
                         
-                        <div style="margin-bottom:12px;">
-                            <label style="font-size:12px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Binance API Key</label>
+                        <div style="margin-bottom:14px;">
+                            <label style="font-size:12px; font-weight:700; color:#cbd5e1; display:flex; justify-content:space-between; margin-bottom:5px;">
+                                <span>Binance API Key</span>
+                                <span style="font-weight:400; color:#94a3b8; font-size:11px;">64 Karakter</span>
+                            </label>
                             <div class="input-with-eye">
-                                <input type="password" id="input-api-key" placeholder="Binance Vadeli API Key giriniz..." class="settings-input" />
+                                <input type="password" id="input-api-key" placeholder="Binance Vadeli API Key giriniz..." class="settings-input" style="padding:10px 12px; font-size:12.5px;" />
                                 <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('input-api-key')">👁️</button>
                             </div>
                         </div>
 
-                        <div style="margin-bottom:14px;">
-                            <label style="font-size:12px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Binance API Secret</label>
+                        <div style="margin-bottom:16px;">
+                            <label style="font-size:12px; font-weight:700; color:#cbd5e1; display:flex; justify-content:space-between; margin-bottom:5px;">
+                                <span>Binance API Secret</span>
+                                <span style="font-weight:400; color:#94a3b8; font-size:11px;">Gizli Anahtar</span>
+                            </label>
                             <div class="input-with-eye">
-                                <input type="password" id="input-api-secret" placeholder="Binance Vadeli API Secret giriniz..." class="settings-input" />
+                                <input type="password" id="input-api-secret" placeholder="Binance Vadeli API Secret giriniz..." class="settings-input" style="padding:10px 12px; font-size:12.5px;" />
                                 <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('input-api-secret')">👁️</button>
                             </div>
                         </div>
 
                         <!-- CONNECTION TEST RESULTS BOX -->
-                        <div id="conn-result-box" style="display:none; margin-bottom:14px; padding:12px 14px; border-radius:10px; font-size:12px; font-family:'JetBrains Mono';"></div>
+                        <div id="conn-result-box" style="display:none; margin-bottom:16px; padding:14px; border-radius:10px; font-size:12px; font-family:'JetBrains Mono'; line-height:1.5;"></div>
 
-                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                            <button class="btn-test-conn" onclick="testBinanceConnection()">
+                        <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:12px;">
+                            <button class="btn-test-conn" onclick="testBinanceConnection()" style="background:linear-gradient(135deg, #00f2fe, #4facfe); color:#000; font-weight:900; font-size:12.5px; padding:12px; border-radius:10px; cursor:pointer; border:none; box-shadow:0 4px 15px rgba(0,242,254,0.25);">
                                 ⚡ Bağlantıyı Test Et & Bakiyeyi Doğrula
                             </button>
-                            <button class="btn-save-settings" onclick="saveBinanceSettings()">
-                                💾 Ayarları Kaydet
+                            <button class="btn-save-settings" onclick="saveBinanceSettings()" style="background:linear-gradient(135deg, #f3ba2f, #e1b12c); color:#000; font-weight:900; font-size:12.5px; padding:12px; border-radius:10px; cursor:pointer; border:none;">
+                                💾 Kasaya Kaydet
                             </button>
                         </div>
                     </div>
 
-                    <!-- SECURITY ADVISORY -->
-                    <div class="security-box">
-                        <div style="font-weight:800; color:#fbc531; margin-bottom:4px; font-size:12px;">
-                            🛡️ GÜVENLİK REHBERİ:
+                    <!-- INSTITUTIONAL SECURITY ADVISORY -->
+                    <div style="background:rgba(251,197,49,0.05); border:1.5px solid rgba(251,197,49,0.3); border-radius:12px; padding:16px;">
+                        <div style="font-weight:900; color:var(--yellow); margin-bottom:8px; font-size:12.5px; display:flex; align-items:center; gap:6px;">
+                            <span>🛡️</span> GÜVENLİK VE İZİN REHBERİ (PARANIZ %100 KORUMADA)
                         </div>
-                        <ul style="margin-left:16px; line-height:1.6; font-size:11.5px; color:#cbd5e1;">
-                            <li>Binance API Yönetiminde <b>'Enable Futures' (Vadeli İşlemler)</b> ve <b>'Reading' (Okuma)</b> izinlerini açınız.</li>
-                            <li><b>'Withdrawals' (Para Çekme)</b> iznini <u>KESİNLİKLE KAPALI</u> tutunuz.</li>
-                            <li>API anahtarlarınız sadece yerel cihazınızda saklanır ve hiçbir zaman dışarı aktarılmaz.</li>
+                        <ul style="margin-left:18px; line-height:1.6; font-size:11.5px; color:#cbd5e1;">
+                            <li>🚫 <b style="color:var(--red);">PARA ÇEKME (WITHDRAWAL) İZNİ KESİNLİKLE KAPALI OLMALIDIR!</b> Robotun para çekme yetkisi yoktur, sadece al-sat yapar.</li>
+                            <li>🟢 Binance API oluştururken yalnızca <b>'Enable Futures' (Vadeli İşlemler)</b> ve <b>'Reading' (Okuma)</b> izinlerini açınız.</li>
+                            <li>🔒 API anahtarlarınız sunucumuzda <b>AES-256 donanım şifreleme standardı</b> ile saklanır, 3. şahıslarla asla paylaşılmaz.</li>
                         </ul>
                     </div>
                 </div>
 
                 <!-- TAB 2: RISK & MARJIN -->
                 <div id="tab-content-risk" class="settings-tab-content" style="display:none;">
-                    <div class="setting-group-box">
-                        <div style="font-size:13px; font-weight:800; color:#fff; margin-bottom:12px;">⚙️ CANLI İŞLEM PARAMETRELERİ</div>
+                    <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px; margin-bottom:16px;">
+                        <div style="font-size:13px; font-weight:800; color:#fff; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                            <span>⚙️</span> CANLI İŞLEM PARAMETRELERİ
+                        </div>
                         
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-bottom:14px;">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px;">
                             <div>
-                                <label style="font-size:12px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Kaldıraç (1x - 20x)</label>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                    <label style="font-size:12px; font-weight:700; color:#cbd5e1;">Kaldıraç Oranı</label>
+                                    <span id="lbl-leverage-risk" style="font-size:11.5px; font-weight:800; color:var(--green); font-family:'JetBrains Mono';">5x (Güvenli)</span>
+                                </div>
                                 <div style="display:flex; align-items:center; gap:10px;">
-                                    <input type="range" id="input-leverage-slider" min="1" max="20" value="5" class="slider" oninput="document.getElementById('input-leverage').value = this.value" />
-                                    <input type="number" id="input-leverage" min="1" max="20" value="5" class="settings-input" style="width:70px; text-align:center;" oninput="document.getElementById('input-leverage-slider').value = this.value" />
+                                    <input type="range" id="input-leverage-slider" min="1" max="20" value="5" class="slider" oninput="document.getElementById('input-leverage').value = this.value; updateLeverageRiskLabel(this.value);" />
+                                    <input type="number" id="input-leverage" min="1" max="20" value="5" class="settings-input" style="width:65px; text-align:center;" oninput="document.getElementById('input-leverage-slider').value = this.value; updateLeverageRiskLabel(this.value);" />
                                 </div>
                             </div>
 
                             <div>
                                 <label style="font-size:12px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">İşlem Başına Marjin ($ USDT)</label>
-                                <input type="number" id="input-position-size" step="1" min="5" value="10" class="settings-input" />
+                                <input type="number" id="input-position-size" step="1" min="5" value="10" class="settings-input" style="padding:10px 12px;" />
                             </div>
                         </div>
 
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-bottom:14px;">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px;">
                             <div>
                                 <label style="font-size:12px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Marjin Modu</label>
-                                <select id="input-margin-type" class="settings-select">
+                                <select id="input-margin-type" class="settings-select" style="padding:10px 12px;">
                                     <option value="ISOLATED" selected>İzole (Isolated) — Tavsiye Edilen</option>
                                     <option value="CROSSED">Çapraz (Cross)</option>
                                 </select>
@@ -1615,17 +1644,17 @@ HTML_PAGE = """
 
                             <div>
                                 <label style="font-size:12px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Maksimum Açık Pozisyon</label>
-                                <input type="number" id="input-max-pos" step="1" min="1" max="100" value="100" class="settings-input" />
+                                <input type="number" id="input-max-pos" step="1" min="1" max="100" value="100" class="settings-input" style="padding:10px 12px;" />
                             </div>
                         </div>
 
                         <!-- KULLANICI TANIMLI GUCLU GUVENLIK ZIRHI KONTROLLERI -->
-                        <div style="background:rgba(0,242,254,0.04); border:1px solid rgba(0,242,254,0.2); border-radius:10px; padding:14px; margin-bottom:16px;">
-                            <div style="font-size:12.5px; font-weight:800; color:var(--cyan); margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                        <div style="background:rgba(0,242,254,0.04); border:1.5px solid rgba(0,242,254,0.25); border-radius:12px; padding:16px; margin-bottom:16px;">
+                            <div style="font-size:13px; font-weight:900; color:var(--cyan); margin-bottom:12px; display:flex; align-items:center; gap:6px;">
                                 <span>🛡️</span> ÖZEL RİSK & KASA GÜVENLİK ZIRHI
                             </div>
                             
-                            <div style="margin-bottom:12px;">
+                            <div style="margin-bottom:14px;">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                                     <label style="font-size:12px; font-weight:700; color:#cbd5e1;">Portföy Marjin Tavan Kilidi (%)</label>
                                     <span id="lbl-margin-cap" style="font-size:12px; font-weight:800; color:var(--cyan); font-family:'JetBrains Mono';">%40 Kasa Limiti</span>
@@ -1634,7 +1663,7 @@ HTML_PAGE = """
                                     <input type="range" id="input-margin-cap-slider" min="10" max="100" step="5" value="40" class="slider" oninput="document.getElementById('input-margin-cap').value = this.value; document.getElementById('lbl-margin-cap').innerText = '%' + this.value + ' Kasa Limiti';" />
                                     <input type="number" id="input-margin-cap" min="10" max="100" step="5" value="40" class="settings-input" style="width:65px; text-align:center;" oninput="document.getElementById('input-margin-cap-slider').value = this.value; document.getElementById('lbl-margin-cap').innerText = '%' + this.value + ' Kasa Limiti';" />
                                 </div>
-                                <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Açık pozisyonların toplam marjini kasanın bu oranına ulaştığında yeni işlem açılmaz.</div>
+                                <div style="font-size:11px; color:#94a3b8; margin-top:3px;">Açık pozisyonların toplam marjini kasanın bu oranına ulaştığında yeni işlem açılışı otomatik durdurulur.</div>
                             </div>
 
                             <div>
@@ -1646,11 +1675,11 @@ HTML_PAGE = """
                                     <input type="range" id="input-daily-loss-slider" min="1" max="20" step="1" value="3" class="slider" oninput="document.getElementById('input-daily-loss').value = this.value; document.getElementById('lbl-daily-loss').innerText = '%' + this.value + ' Günlük Kayıp Limiti';" />
                                     <input type="number" id="input-daily-loss" min="1" max="20" step="1" value="3" class="settings-input" style="width:65px; text-align:center;" oninput="document.getElementById('input-daily-loss-slider').value = this.value; document.getElementById('lbl-daily-loss').innerText = '%' + this.value + ' Günlük Kayıp Limiti';" />
                                 </div>
-                                <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Bugün (00:00'dan beri) toplam net zarar bu orana ulaşırsa gün sonuna kadar yeni işlem açılışı kilitlenir.</div>
+                                <div style="font-size:11px; color:#94a3b8; margin-top:3px;">Bugün (00:00'dan beri) toplam net zarar bu orana ulaşırsa gün sonuna kadar yeni işlem açılışı kilitlenir.</div>
                             </div>
                         </div>
 
-                        <button class="btn-save-settings" onclick="saveBinanceSettings()">
+                        <button class="btn-save-settings" style="width:100%; font-weight:900; padding:12px; background:linear-gradient(135deg, #00f2fe, #4facfe); color:#000;" onclick="saveBinanceSettings()">
                             💾 Özel Risk ve Güvenlik Ayarlarını Kaydet
                         </button>
                     </div>
@@ -1659,9 +1688,9 @@ HTML_PAGE = """
                 <!-- TAB 3: CANLI CUZDAN & DURUM -->
                 <div id="tab-content-status" class="settings-tab-content" style="display:none;">
                     <div id="live-wallet-overview">
-                        <div style="text-align:center; padding:30px; color:var(--text-muted); font-size:13px;">
-                            Henüz API anahtarı girilmedi veya canlı bakiye çekilmedi.<br>
-                            <span style="color:var(--yellow)">'API & Bağlantı' sekmesinden bilgilerinizi girip test edebilirsiniz.</span>
+                        <div style="text-align:center; padding:40px 20px; color:var(--text-muted); font-size:13.5px; line-height:1.6;">
+                            Henüz canlı API anahtarı girilmedi veya bakiye sorgulanmadı.<br>
+                            <span style="color:var(--yellow); font-weight:700;">'🔑 API & Bağlantı' sekmesinden bilgilerinizi girip '⚡ Bağlantıyı Test Et' butonuna basınız.</span>
                         </div>
                     </div>
                 </div>
