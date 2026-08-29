@@ -1,3 +1,4 @@
+import time
 import sqlite3
 import os
 import hashlib
@@ -112,6 +113,22 @@ class DatabaseManager:
                 )
             """)
 
+            # 7. OTONOM CUZDAN DINLEYICI ICIN BEKLEYEN SIPARISLER (UNIQUE CENT MATCHING)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS pending_crypto_orders (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    order_code TEXT UNIQUE NOT NULL,
+                    amount_usdt REAL NOT NULL,
+                    network TEXT NOT NULL,
+                    target_wallet TEXT NOT NULL,
+                    status TEXT DEFAULT 'PENDING',
+                    tx_hash TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    expires_at DATETIME NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+            """)
             conn.commit()
 
     def check_binance_uid_trial_eligibility(self, raw_binance_uid: str) -> tuple:
@@ -384,5 +401,167 @@ class DatabaseManager:
                     VALUES (?, ?, ?)
                     ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at
                 """, (k, v, now_str))
+            conn.commit()
+            return True
+
+    def create_pending_crypto_order(self, user_id: int, network: str = "TRC20") -> dict:
+        """
+        Kullanici icin benzersiz kuruslu (Unique Cent) 20 dakikalik otonom siparis olusturur.
+        Ornek: 99.04 USDT veya 99.17 USDT.
+        """
+        import random
+        settings = self.get_payment_settings()
+        base_price = float(settings.get("price_monthly", 99.0))
+        target_wallet = settings.get("trc20_wallet") if network == "TRC20" else settings.get("bep20_wallet")
+
+        now_tsi = datetime.now(timezone(timedelta(hours=3)))
+        expires_tsi = now_tsi + timedelta(minutes=20)
+        now_str = now_tsi.strftime('%Y-%m-%d %H:%M:%S')
+        expires_str = expires_tsi.strftime('%Y-%m-%d %H:%M:%S')
+
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Son 20 dakikada aktif olan diger kuruslari bul (cakismayi onle)
+            cursor.execute("""
+                SELECT amount_usdt FROM pending_crypto_orders 
+                WHERE status = 'PENDING' AND expires_at > ?
+            """, (now_str,))
+            active_amounts = {round(row['amount_usdt'], 2) for row in cursor.fetchall()}
+
+            # 0.01 ile 0.99 arasinda bos bir kurus sec
+            cent_offset = 0.00
+            for _ in range(100):
+                cand = round(random.randint(1, 99) * 0.01, 2)
+                candidate_price = round(base_price + cand, 2)
+                if candidate_price not in active_amounts:
+                    cent_offset = cand
+                    break
+            
+            final_price = round(base_price + cent_offset, 2)
+            order_code = f"ORD-{now_tsi.strftime('%Y%m%d%H%M')}-{user_id:04d}-{random.randint(1000, 9999)}"
+
+            cursor.execute("""
+                INSERT INTO pending_crypto_orders (user_id, order_code, amount_usdt, network, target_wallet, status, expires_at)
+                VALUES (?, ?, ?, ?, ?, 'PENDING', ?)
+            """, (user_id, order_code, final_price, network, target_wallet, expires_str))
+            
+            order_id = cursor.lastrowid
+            conn.commit()
+
+            return {
+                "order_id": order_id,
+                "order_code": order_code,
+                "amount_usdt": final_price,
+                "base_price": base_price,
+                "cent_tag": cent_offset,
+                "network": network,
+                "target_wallet": target_wallet,
+                "expires_at": expires_str,
+                "expires_in_seconds": 1200
+            }
+
+    def get_pending_order_status(self, order_code: str) -> dict:
+        """Siparisin blokzincir onay durumunu sorgular."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT p.*, u.email 
+                FROM pending_crypto_orders p
+                JOIN users u ON p.user_id = u.id
+                WHERE p.order_code = ?
+            """, (order_code,))
+            row = cursor.fetchone()
+            if not row:
+                return {"found": False, "status": "NOT_FOUND"}
+
+            now_tsi = datetime.now(timezone(timedelta(hours=3))).strftime('%Y-%m-%d %H:%M:%S')
+            is_expired = (row['expires_at'] < now_tsi and row['status'] == 'PENDING')
+            status = "EXPIRED" if is_expired else row['status']
+
+            # Eger tamamlandiysa makbuz detaylarini dondur
+            receipt = None
+            if row['status'] == 'COMPLETED':
+                cursor.execute("SELECT * FROM crypto_payments WHERE tx_hash = ?", (row['tx_hash'],))
+                pmt = cursor.fetchone()
+                if pmt:
+                    receipt = {
+                        "receipt_id": pmt['receipt_id'],
+                        "tx_hash": pmt['tx_hash'],
+                        "amount_usdt": pmt['amount_usdt'],
+                        "network": pmt['network'],
+                        "verified_at": pmt['verified_at']
+                    }
+
+            return {
+                "found": True,
+                "order_id": row['id'],
+                "order_code": row['order_code'],
+                "user_id": row['user_id'],
+                "email": row['email'],
+                "amount_usdt": row['amount_usdt'],
+                "network": row['network'],
+                "target_wallet": row['target_wallet'],
+                "status": status,
+                "tx_hash": row['tx_hash'],
+                "receipt": receipt
+            }
+
+    def complete_pending_order_and_activate(self, order_id: int, tx_hash: str) -> bool:
+        """Cuzdan dinleyicisi transferi yakaladiginda siparisi onaylar ve lisansi acar."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM pending_crypto_orders WHERE id = ? AND status = 'PENDING'", (order_id,))
+            order = cursor.fetchone()
+            if not order:
+                return False
+
+            user_id = order['user_id']
+            network = order['network']
+            amount = order['amount_usdt']
+            target_wallet = order['target_wallet']
+
+            now_tsi = datetime.now(timezone(timedelta(hours=3)))
+            now_str = now_tsi.strftime('%Y-%m-%d %H:%M:%S')
+            receipt_id = f"INV-{now_tsi.strftime('%Y%m%d')}-{user_id:04d}-{int(time.time())%10000:04d}"
+
+            # 1. crypto_payments tablosuna ekle
+            cursor.execute("""
+                INSERT OR IGNORE INTO crypto_payments (user_id, plan_type, tx_hash, network, amount_usdt, recipient_wallet, receipt_id, status)
+                VALUES (?, 'ALL_ACCESS', ?, ?, ?, ?, ?, 'VERIFIED')
+            """, (user_id, tx_hash, network, amount, target_wallet, receipt_id))
+
+            # 2. subscriptions tablosunda 30 gun uzat
+            cursor.execute("""
+                SELECT expires_at FROM subscriptions 
+                WHERE user_id = ? AND status = 'ACTIVE' 
+                ORDER BY id DESC LIMIT 1
+            """, (user_id,))
+            active_sub = cursor.fetchone()
+
+            start_dt = now_tsi
+            if active_sub and active_sub['expires_at']:
+                try:
+                    cur_exp = datetime.strptime(active_sub['expires_at'], "%Y-%m-%d %H:%M:%S")
+                    if cur_exp > now_tsi:
+                        start_dt = cur_exp
+                except Exception:
+                    pass
+
+            new_expires_dt = start_dt + timedelta(days=30)
+            new_expires_str = new_expires_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+            cursor.execute("""
+                INSERT INTO subscriptions (user_id, plan_type, starts_at, expires_at, status, payment_ref)
+                VALUES (?, 'ALL_ACCESS', ?, ?, 'ACTIVE', ?)
+            """, (user_id, now_str, new_expires_str, receipt_id))
+
+            # 3. pending_crypto_orders durumunu COMPLETED yap
+            cursor.execute("""
+                UPDATE pending_crypto_orders 
+                SET status = 'COMPLETED', tx_hash = ? 
+                WHERE id = ?
+            """, (tx_hash, order_id))
+
             conn.commit()
             return True

@@ -1,3 +1,4 @@
+from wallet_listener_cron import AutonomousWalletListener
 from crypto_payment_gateway import CryptoPaymentGateway
 from db_manager import DatabaseManager
 import asyncio
@@ -1207,35 +1208,15 @@ HTML_PAGE = """
     
     
     
-        <!-- ULTRA-PREMIUM UPGRADE & CRYPTO PAYMENT MODAL -->
+        <!-- ULTRA-PREMIUM UPGRADE & CRYPTO PAYMENT MODAL (AUTONOMOUS WALLET LISTENER) -->
     <div id="upgrade-modal-overlay" class="modal-overlay" style="display:none;" onclick="if(event.target === this) closeUpgradeModal()">
         <div class="modal-card" style="max-width:680px; text-align:left; border:1px solid rgba(0,242,254,0.35); box-shadow:0 25px 60px rgba(0,0,0,0.85), 0 0 40px rgba(0,242,254,0.12); padding:26px;">
             <!-- TOP HEADER -->
             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:14px;">
                 <div>
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <div style="display:inline-flex; align-items:center;">
-                            <svg width="34" height="34" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="valk_wing_grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00f2fe" />
-      <stop offset="100%" stop-color="#4facfe" />
-    </linearGradient>
-    <linearGradient id="valk_core_grad" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#00f2fe" />
-      <stop offset="50%" stop-color="#38ef7d" />
-      <stop offset="100%" stop-color="#ffffff" />
-    </linearGradient>
-    <filter id="valk_glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="1.5" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
-    </filter>
-  </defs>
-  <path d="M6 14L18 26L24 42L20 22L10 12L6 14Z" fill="url(#valk_wing_grad)" opacity="0.85"/>
-  <path d="M42 14L30 26L24 42L28 22L38 12L42 14Z" fill="url(#valk_wing_grad)" opacity="0.85"/>
-  <path d="M24 6L32 20L24 36L16 20L24 6Z" fill="url(#valk_wing_grad)" filter="url(#valk_glow)"/>
-  <polygon points="24,14 28,21 24,28 20,21" fill="url(#valk_core_grad)"/>
-</svg>
+                        <div class="brand-logo-gem" style="width:34px; height:34px; background:rgba(0,242,254,0.1); border:1px solid var(--cyan); border-radius:8px; display:flex; align-items:center; justify-content:center;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2"><polygon points="12 2 22 8.5 12 22 2 8.5 12 2"></polygon></svg>
                         </div>
                         <div style="font-size:19px; font-weight:900; color:#fff; letter-spacing:0.5px;">
                             VALKYRIE <span style="background: linear-gradient(135deg, #00f2fe, #4facfe); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">ALL-ACCESS</span> UNLIMITED
@@ -1245,13 +1226,13 @@ HTML_PAGE = """
                         Kurumsal Düzey Kripto Algoritmik Ticaret Platformuna 30 Gün Sınırsız Erişim
                     </div>
                 </div>
-                <button onclick="closeUpgradeModal()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; width:32px; height:32px; border-radius:8px; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s ease;" onmouseover="this.style.color='#fff'; this.style.background='rgba(255,71,87,0.2)';" onmouseout="this.style.color='#94a3b8'; this.style.background='rgba(255,255,255,0.05)';">✕</button>
+                <button onclick="closeUpgradeModal()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; width:32px; height:32px; border-radius:8px; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center;" onmouseover="this.style.color='#fff';" onmouseout="this.style.color='#94a3b8';">✕</button>
             </div>
 
             <!-- HERO PRICING BANNER -->
             <div style="background:linear-gradient(135deg, rgba(0,242,254,0.1), rgba(79,172,254,0.04)); border:1.5px solid rgba(0,242,254,0.4); border-radius:14px; padding:18px 20px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                 <div>
-                    <div style="font-size:12px; font-weight:800; color:var(--cyan); text-transform:uppercase; letter-spacing:1px;">TEK FİYAT • TÜM ÖZELLİKLER DAHİL</div>
+                    <div style="font-size:11.5px; font-weight:800; color:var(--cyan); text-transform:uppercase; letter-spacing:1px;">TEK FİYAT • TÜM ÖZELLİKLER DAHİL</div>
                     <div style="font-size:28px; font-weight:900; color:#ffffff; font-family:'JetBrains Mono'; margin-top:2px;" id="modal-price-all-access">
                         $99.00 <span style="font-size:14px; font-weight:600; color:#94a3b8;">/ AY</span>
                     </div>
@@ -1261,8 +1242,11 @@ HTML_PAGE = """
                 </div>
                 <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px 14px; text-align:right;">
                     <div style="font-size:11px; color:#94a3b8;">Aktivasyon Türü:</div>
-                    <div style="font-size:13px; font-weight:800; color:var(--yellow); margin-top:2px;">⚡ Anında Otomatik Onay</div>
-                    <div style="font-size:10.5px; color:#cbd5e1;">Blokzincir TxHash Teyidiyle</div>
+                    <div style="font-size:13px; font-weight:800; color:var(--yellow); margin-top:2px; display:flex; align-items:center; justify-content:flex-end; gap:6px;">
+                        <span class="live-dot" style="background:var(--yellow); width:8px; height:8px;"></span>
+                        Tam Otomatik Dinleyici
+                    </div>
+                    <div style="font-size:10.5px; color:#cbd5e1;">Kod Girmeden Anında Açılır</div>
                 </div>
             </div>
 
@@ -1300,52 +1284,75 @@ HTML_PAGE = """
                 </div>
             </div>
 
-            <!-- PAYMENT STEP 1: NETWORK & WALLET -->
+            <!-- PAYMENT STEP 1: NETWORK SELECT -->
             <div style="margin-bottom:14px;">
                 <label style="font-size:12px; font-weight:800; color:#cbd5e1; display:flex; justify-content:space-between; margin-bottom:6px;">
                     <span>1. Ödeme Ağını (Network) Seçiniz:</span>
                     <span style="font-weight:400; color:var(--text-muted);">USDT Transferi</span>
                 </label>
-                <select id="payment-network-select" class="settings-select" onchange="updateDepositWalletDisplay()" style="padding:10px 14px; font-size:13px;">
+                <select id="payment-network-select" class="settings-select" onchange="generateFreshCryptoOrder()" style="padding:10px 14px; font-size:13px;">
                     <option value="TRC20" selected>USDT (TRC20 / Tron Ağı) — En Hızlı & Düşük Ücret (~$1-2)</option>
                     <option value="BEP20">USDT (BEP20 / Binance Smart Chain) — Hızlı & Düşük Masraf</option>
                 </select>
             </div>
 
-            <!-- PAYMENT STEP 2: COPY DEPOSIT WALLET -->
-            <div style="background:rgba(0,0,0,0.5); border:1.5px solid rgba(0,242,254,0.3); border-radius:12px; padding:14px; margin-bottom:16px;">
+            <!-- PAYMENT STEP 2: EXACT AMOUNT & WALLET BOX -->
+            <div style="background:rgba(0,0,0,0.5); border:1.5px solid rgba(0,242,254,0.3); border-radius:12px; padding:16px; margin-bottom:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:10px;">
+                    <div>
+                        <span style="font-size:11.5px; font-weight:700; color:#94a3b8;">Gönderilecek Tam Tutar:</span>
+                        <div id="exact-amount-display" style="font-size:22px; font-weight:900; color:#ffffff; font-family:'JetBrains Mono'; margin-top:2px;">
+                            $99.00 <span style="font-size:13px; color:var(--cyan); font-weight:700;">USDT</span>
+                        </div>
+                    </div>
+                    <button type="button" onclick="copyExactAmount()" style="background:rgba(0,242,254,0.12); border:1px solid var(--cyan); color:#fff; padding:8px 14px; border-radius:8px; font-size:11.5px; font-weight:800; cursor:pointer;">
+                        📋 Tutarı Kopyala
+                    </button>
+                </div>
+
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                    <span style="font-size:12px; font-weight:700; color:#94a3b8;">2. Ödeme Gönderilecek Resmi USDT Adresi:</span>
+                    <span style="font-size:11.5px; font-weight:700; color:#94a3b8;">Ödeme Gönderilecek Resmi Cüzdan Adresi:</span>
                     <span id="copy-success-badge" style="display:none; color:var(--green); font-size:11.5px; font-weight:800;">✅ Cüzdan Kopyalandı!</span>
                 </div>
                 <div style="display:flex; gap:8px; align-items:center;">
                     <input type="text" id="deposit-wallet-address" readonly class="settings-input" style="font-size:12.5px; font-weight:700; color:var(--cyan); background:rgba(0,0,0,0.6); padding:10px 12px;" value="TXvK7w7ValkyrieQuantProTRC20DepositVault99" />
-                    <button type="button" onclick="copyDepositAddress()" style="background:linear-gradient(135deg, #00f2fe, #4facfe); border:none; color:#000; padding:10px 18px; border-radius:8px; font-size:12.5px; font-weight:800; cursor:pointer; white-space:nowrap; transition:all 0.15s ease;" onmouseover="this.style.opacity='0.9';" onmouseout="this.style.opacity='1';">📋 Kopyala</button>
-                </div>
-                <div style="font-size:11.5px; color:#cbd5e1; margin-top:8px; display:flex; justify-content:space-between; align-items:center;">
-                    <span>Lütfen tam olarak <b id="lbl-exact-payment" style="color:#ffffff; font-size:13px;">99.00 USDT</b> gönderiniz.</span>
-                    <span style="color:#94a3b8; font-size:11px;">Ağ masrafını gönderici karşılar</span>
+                    <button type="button" onclick="copyDepositAddress()" style="background:linear-gradient(135deg, #00f2fe, #4facfe); border:none; color:#000; padding:10px 16px; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer; white-space:nowrap;">📋 Cüzdanı Kopyala</button>
                 </div>
             </div>
 
-            <!-- PAYMENT STEP 3: SUBMIT TXHASH -->
-            <div style="margin-bottom:16px;">
-                <label style="font-size:12px; font-weight:800; color:#cbd5e1; display:block; margin-bottom:6px;">
-                    3. Transfer İşlem Kodunuzu (TxHash / TxID) Yapıştırınız:
-                </label>
-                <input type="text" id="input-payment-txhash" placeholder="Binance / TrustWallet vb. transfer detaylarındaki 64 haneli TxHash kodunu yapıştırınız..." class="settings-input" style="padding:10px 12px; font-size:12px;" />
+            <!-- AUTONOMOUS PULSING RADAR -->
+            <div id="auto-listener-radar" style="background:rgba(0,242,254,0.05); border:1px solid rgba(0,242,254,0.25); border-radius:12px; padding:14px 16px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div class="live-dot" style="width:12px; height:12px; background:var(--cyan); box-shadow:0 0 12px var(--cyan);"></div>
+                    <div>
+                        <div style="font-size:12.5px; font-weight:800; color:#fff;">Blokzincir Ağı Otonom Taranıyor...</div>
+                        <div style="font-size:11px; color:#94a3b8;">Transferiniz cüzdana ulaştığında ekranınız otomatik yeşile dönecektir. (~30-60 sn)</div>
+                    </div>
+                </div>
+                <div id="order-countdown-clock" style="font-family:'JetBrains Mono'; font-weight:800; font-size:14px; color:var(--yellow); background:rgba(0,0,0,0.4); padding:6px 12px; border-radius:8px;">
+                    19:59
+                </div>
             </div>
 
-            <!-- ACTION BUTTON -->
-            <button class="btn-save-settings" style="width:100%; background:linear-gradient(135deg, #00f2fe, #4facfe); color:#000; font-size:14px; font-weight:900; padding:13px; border-radius:10px; cursor:pointer; letter-spacing:0.5px; box-shadow:0 6px 20px rgba(0,242,254,0.3);" onclick="submitCryptoPayment()">
-                ⚡ Ödemeyi Blokzincirde Doğrula & Lisansımı 30 Gün Başlat
-            </button>
+            <!-- OPTIONAL FALLBACK MANUAL TXHASH COLLAPSIBLE -->
+            <div style="margin-top:10px;">
+                <div onclick="toggleManualTxSection()" style="font-size:11.5px; color:#94a3b8; cursor:pointer; display:flex; align-items:center; gap:4px;">
+                    <span>▶</span> Sabırsız mısınız? <u>İşlem Kodu (TxHash) ile Anında Doğrula</u>
+                </div>
+                <div id="manual-tx-section" style="display:none; margin-top:10px;">
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="input-payment-txhash" placeholder="64 haneli TxHash kodunuzu yapıştırınız..." class="settings-input" style="padding:10px 12px; font-size:11.5px; flex:1;" />
+                        <button onclick="submitCryptoPayment()" style="background:var(--blue); color:#fff; border:none; padding:10px 16px; border-radius:8px; font-size:11.5px; font-weight:800; cursor:pointer; white-space:nowrap;">
+                            ⚡ Doğrula
+                        </button>
+                    </div>
+                </div>
+            </div>
 
-            <!-- STATUS MESSAGE BOX -->
-            <div id="payment-status-box" style="display:none; margin-top:14px; padding:14px; border-radius:10px; font-size:12.5px; font-family:'JetBrains Mono'; line-height:1.5;"></div>
+            <!-- STATUS MESSAGE / INVOICE RECEIPT BOX -->
+            <div id="payment-status-box" style="display:none; margin-top:14px; padding:16px; border-radius:12px; font-size:12.5px; font-family:'JetBrains Mono'; line-height:1.5;"></div>
         </div>
     </div>
-
 <!-- AUTHENTICATION (LOGIN / 24H TRIAL REGISTER) MODAL -->
     <div id="auth-modal-overlay" class="modal-overlay" style="display:none;" onclick="if(event.target === this) closeAuthModal()">
         <div class="modal-card" style="max-width:460px; text-align:left; border:1.5px solid rgba(0,242,254,0.35); box-shadow:0 25px 60px rgba(0,0,0,0.85);">
@@ -2143,7 +2150,120 @@ HTML_PAGE = """
             price_monthly: 99.0
         };
 
+        
+        let activePaymentOrder = null;
+        let paymentPollInterval = null;
+        let countdownTimer = null;
+        let countdownRemainingSec = 1200;
+
+        async function generateFreshCryptoOrder() {
+            const net = document.getElementById('payment-network-select').value;
+            const uid = (currentUser && currentUser.id) ? currentUser.id : 1;
+            
+            try {
+                const res = await fetch(`/api/payment/create_order?network=${net}&user_id=${uid}`);
+                const data = await res.json();
+                activePaymentOrder = data;
+
+                // Update UI elements
+                const amtDisp = document.getElementById('exact-amount-display');
+                if (amtDisp) amtDisp.innerHTML = `$${data.amount_usdt.toFixed(2)} <span style="font-size:13px; color:var(--cyan); font-weight:700;">USDT</span>`;
+                
+                const wAddr = document.getElementById('deposit-wallet-address');
+                if (wAddr) wAddr.value = data.target_wallet;
+
+                // Reset countdown
+                countdownRemainingSec = 1200;
+                startPaymentCountdown();
+
+                // Start polling
+                startOrderStatusPolling(data.order_code);
+            } catch (e) {
+                console.error("Order creation error:", e);
+            }
+        }
+
+        function startPaymentCountdown() {
+            if (countdownTimer) clearInterval(countdownTimer);
+            countdownTimer = setInterval(() => {
+                countdownRemainingSec--;
+                if (countdownRemainingSec <= 0) {
+                    clearInterval(countdownTimer);
+                    if (paymentPollInterval) clearInterval(paymentPollInterval);
+                    const clock = document.getElementById('order-countdown-clock');
+                    if (clock) clock.innerText = "SÜRE DOLDU";
+                    return;
+                }
+                const m = Math.floor(countdownRemainingSec / 60).toString().padStart(2, '0');
+                const s = (countdownRemainingSec % 60).toString().padStart(2, '0');
+                const clock = document.getElementById('order-countdown-clock');
+                if (clock) clock.innerText = `${m}:${s}`;
+            }, 1000);
+        }
+
+        function startOrderStatusPolling(orderCode) {
+            if (paymentPollInterval) clearInterval(paymentPollInterval);
+            paymentPollInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/payment/order_status?order_code=${orderCode}`);
+                    const data = await res.json();
+                    if (data && data.status === 'COMPLETED') {
+                        clearInterval(paymentPollInterval);
+                        clearInterval(countdownTimer);
+                        handleAutonomousPaymentSuccess(data);
+                    }
+                } catch (e) {
+                    console.error("Polling error:", e);
+                }
+            }, 4000);
+        }
+
+        function handleAutonomousPaymentSuccess(orderData) {
+            const radar = document.getElementById('auto-listener-radar');
+            if (radar) radar.style.display = 'none';
+
+            const box = document.getElementById('payment-status-box');
+            if (!box) return;
+
+            const rec = orderData.receipt || {};
+            box.style.display = 'block';
+            box.style.background = 'rgba(14,203,129,0.15)';
+            box.style.border = '1.5px solid var(--green)';
+            box.style.color = 'var(--green)';
+            box.innerHTML = `
+                <div style="font-size:14.5px; font-weight:900; margin-bottom:6px; display:flex; align-items:center; gap:8px;">
+                    <span>🎉</span> ÖDEMENİZ OTONOM OLARAK ONAYLANDI & LİSANS AKTİF!
+                </div>
+                <div style="font-size:12px; color:#ffffff; line-height:1.5;">
+                    Transferiniz blokzincirde yakalandı. VALKYRIE ALL-ACCESS üyeliğiniz 30 gün boyunca tüm 100 paritede sınırsız açıldı.
+                </div>
+                <div style="font-size:11.5px; color:var(--cyan); margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+                    <span>🧾 Fatura: <b>${rec.receipt_id || 'INV-20260829-001'}</b></span>
+                    <span>💸 Tutar: <b>$${orderData.amount_usdt} USDT</b></span>
+                </div>
+            `;
+
+            // Refresh user session state
+            if (currentUser) {
+                currentUser.role = 'CLIENT';
+                localStorage.setItem('valkyrie_auth_user', JSON.stringify(currentUser));
+                updateUserSessionUI();
+            }
+        }
+
+        function copyExactAmount() {
+            if (!activePaymentOrder) return;
+            navigator.clipboard.writeText(activePaymentOrder.amount_usdt.toFixed(2));
+            showToast("Tutar kopyalandı: $" + activePaymentOrder.amount_usdt.toFixed(2));
+        }
+
+        function toggleManualTxSection() {
+            const sec = document.getElementById('manual-tx-section');
+            if (sec) sec.style.display = (sec.style.display === 'none') ? 'block' : 'none';
+        }
+
         function openUpgradeModal() {
+            generateFreshCryptoOrder();
             const m = document.getElementById('upgrade-modal-overlay');
             if (m) m.style.display = 'flex';
             loadPaymentConfig();
