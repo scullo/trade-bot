@@ -3318,145 +3318,139 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
             document.getElementById('kpi-balance').innerText = totalPortfolioEquity.toFixed(2) + ' $';
         }
 
-        function renderHistoryTable() {
-            const tbody = document.getElementById('trade-table-body');
-            if (!tbody) return;
-            const hList = appState.history || [];
+                function renderHistoryTable() {
+            try {
+                const tbody = document.getElementById('trade-table-body');
+                if (!tbody) return;
+                const hList = appState.history || [];
 
-            const totalCountEl = document.getElementById('history-total-count');
-            if (totalCountEl) totalCountEl.innerText = `${hList.length} İşlem`;
-            updateFinancialSummary();
+                const totalCountEl = document.getElementById('history-total-count');
+                if (totalCountEl) totalCountEl.innerText = `${hList.length} İşlem`;
+                
+                try { updateFinancialSummary(); } catch(e) {}
 
-            if (hList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="14" style="text-align:center; padding: 40px; color:#94a3b8;">Kayıtlı işlem geçmişi bulunmuyor.</td></tr>`;
-                return;
-            }
+                if (hList.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="14" style="text-align:center; padding: 40px; color:#94a3b8;">Kayıtlı işlem geçmişi bulunmuyor.</td></tr>`;
+                    return;
+                }
 
-            const quickCont = document.getElementById('quick-history-container');
-            if (quickCont) {
-                let quickHtml = '';
-                hList.slice().reverse().slice(0, 5).forEach(h => {
-                    const isWin = h.net_pnl >= 0;
-                    quickHtml += `
-                    <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:8px; font-family:'JetBrains Mono'; font-size:13px;">
-                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                            <span style="color:#ffffff;"><b>${h.symbol.replace('/USDT','')}</b> (${h.side} ${h.leverage}x)</span>
-                            <span style="color:${isWin ? 'var(--green)' : 'var(--red)'}; font-weight:800;">
-                                ${isWin ? '+' : ''}${h.net_pnl.toFixed(2)}$ (${h.roe_pct >= 0 ? '+' : ''}${h.roe_pct.toFixed(1)}%)
+                // Populate filter dropdown
+                const symFilterEl = document.getElementById('filter-symbol');
+                const setupFilterEl = document.getElementById('filter-setup');
+                const statusFilterEl = document.getElementById('filter-status');
+
+                const symFilter = symFilterEl ? symFilterEl.value : 'ALL';
+                const setupFilter = setupFilterEl ? setupFilterEl.value : 'ALL';
+                const statusFilter = statusFilterEl ? statusFilterEl.value : 'ALL';
+
+                if (symFilterEl && symFilterEl.options.length <= 1) {
+                    const uniqueSyms = [...new Set(hList.map(item => item.symbol || ''))].filter(Boolean).sort();
+                    uniqueSyms.forEach(sym => {
+                        const opt = document.createElement('option');
+                        opt.value = sym;
+                        opt.innerText = sym;
+                        symFilterEl.appendChild(opt);
+                    });
+                }
+
+                let filtered = hList.slice().reverse().filter(item => {
+                    if (!item) return false;
+                    const itemSym = item.symbol || '';
+                    if (symFilter !== 'ALL' && itemSym !== symFilter) return false;
+                    
+                    const pnlNum = Number(item.net_pnl || 0.0);
+                    if (statusFilter === 'WIN' && pnlNum < 0) return false;
+                    if (statusFilter === 'LOSS' && pnlNum >= 0) return false;
+
+                    const r = item.reason || '';
+                    if (setupFilter === 'nPOC' && !r.includes('nPOC')) return false;
+                    if (setupFilter === 'MACRO' && !r.includes('mVAL') && !r.includes('mVAH')) return false;
+                    if (setupFilter === 'CAM_BO' && !r.includes('Breakout') && !r.includes('Breakdown')) return false;
+                    if (setupFilter === 'CAM_BOUNCE' && !r.includes('S3') && !r.includes('R3')) return false;
+
+                    return true;
+                });
+
+                if (filtered.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="14" style="text-align:center; padding: 40px; color:#94a3b8; font-size:14px;">Seçilen filtre kriterlerine uygun işlem kaydı bulunamadı.</td></tr>`;
+                    return;
+                }
+
+                let tableHtml = '';
+                filtered.forEach(h => {
+                    const netPnl = Number(h.net_pnl || 0.0);
+                    const roePct = Number(h.roe_pct || 0.0);
+                    const isWin = netPnl >= 0;
+                    const r = h.reason || 'Strateji Sinyali';
+                    const cr = h.close_reason || 'Kapanış';
+                    const symClean = (h.symbol || '').replace('/USDT', '');
+                    const duration = h.duration || '5M Mum';
+                    const exitTime = h.exit_time || '-';
+                    const side = h.side || 'LONG';
+                    const lev = h.leverage || 5;
+                    const entryP = h.entry_price !== undefined ? h.entry_price : '-';
+                    const exitP = h.exit_price !== undefined ? h.exit_price : '-';
+
+                    // Setup badge style
+                    let setupBadgeClass = 'badge-other';
+                    if (r.includes('nPOC')) setupBadgeClass = 'badge-npoc';
+                    else if (r.includes('mVAL') || r.includes('mVAH')) setupBadgeClass = 'badge-macro';
+                    else if (r.includes('Breakout') || r.includes('Breakdown')) setupBadgeClass = 'badge-breakout';
+                    else if (r.includes('S3') || r.includes('R3')) setupBadgeClass = 'badge-bounce';
+
+                    // Exit badge style
+                    let exitBadgeClass = 'badge-time';
+                    if (cr.includes('TP') || cr.includes('Kâr')) exitBadgeClass = 'badge-tp';
+                    else if (cr.includes('Yumuşak') || cr.includes('Mum')) exitBadgeClass = 'badge-soft';
+                    else if (cr.includes('Sert') || cr.includes('Stop')) exitBadgeClass = 'badge-hard';
+
+                    const rMult = h.realized_r !== undefined ? h.realized_r : (roePct >= 0 ? +(roePct / 2).toFixed(1) : -1.0);
+                    const mfe = Number(h.mfe_roe !== undefined ? h.mfe_roe : Math.max(0, roePct));
+                    const mae = Number(h.mae_roe !== undefined ? h.mae_roe : (roePct < 0 ? Math.abs(roePct) : 0.0));
+
+                    tableHtml += `
+                    <tr>
+                        <td><b style="color:var(--yellow)">${h.id || '-'}</b></td>
+                        <td style="color:#cbd5e1; font-size:12px; white-space:nowrap;">${exitTime}</td>
+                        <td style="color:#94a3b8; font-size:12px; white-space:nowrap;">⏱️ ${duration}</td>
+                        <td><b style="color:#ffffff; font-size:13.5px;">${symClean}</b></td>
+                        <td><span class="pos-badge ${side === 'LONG' ? 'pos-long' : 'pos-short'}" style="font-size:11px; padding:2px 8px;">${lev}x ${side}</span></td>
+                        <td>$${entryP}</td>
+                        <td>$${exitP}</td>
+                        <td style="color:${isWin ? 'var(--green)' : 'var(--red)'}; font-weight:800; font-family:'JetBrains Mono';">
+                            ${netPnl >= 0 ? '+' : ''}$${netPnl.toFixed(4)}
+                        </td>
+                        <td style="color:${isWin ? 'var(--green)' : 'var(--red)'}; font-weight:800; font-family:'JetBrains Mono';">
+                            ${roePct >= 0 ? '+' : ''}${roePct.toFixed(2)}%
+                        </td>
+                        <td style="color:${rMult >= 0 ? 'var(--green)' : 'var(--red)'}; font-weight:800; font-family:'JetBrains Mono'">
+                            ${rMult >= 0 ? '+' : ''}${rMult}R
+                        </td>
+                        <td style="color:#38bdf8; font-size:12px;" title="MFE: Görülen Zirve Kâr (+%${mfe.toFixed(1)}) | MAE: Maks Çekilme (-%${mae.toFixed(1)})">
+                            +${mfe.toFixed(1)}% <span style="color:#64748b; font-size:10.5px;">(-${mae.toFixed(1)}%)</span>
+                        </td>
+                        <td>
+                            <span class="badge-setup ${setupBadgeClass}" title="${r}">
+                                ${r}
                             </span>
-                        </div>
-                        <div style="font-size:12px; color:#cbd5e1;">
-                            $${h.entry_price} ➔ $${h.exit_price} • Komisyon: $${(h.fees || h.commission || 0).toFixed(4)}
-                        </div>
-                    </div>
+                        </td>
+                        <td>
+                            <span class="badge-exit ${exitBadgeClass}" title="${cr}">
+                                ${cr}
+                            </span>
+                        </td>
+                        <td>
+                            <button onclick="openTelemetryModal('${h.id}')" style="background:rgba(0,242,254,0.12); border:1px solid rgba(0,242,254,0.35); color:var(--cyan); padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.15s ease;" onmouseover="this.style.background='var(--cyan)'; this.style.color='#000';" onmouseout="this.style.background='rgba(0,242,254,0.12)'; this.style.color='var(--cyan)';">
+                                🔬 İncele
+                            </button>
+                        </td>
+                    </tr>
                     `;
                 });
-                quickCont.innerHTML = quickHtml;
+                tbody.innerHTML = tableHtml;
+            } catch (err) {
+                console.error("renderHistoryTable error:", err);
             }
-
-            const symFilterEl = document.getElementById('filter-symbol');
-            const setupFilterEl = document.getElementById('filter-setup');
-            const statusFilterEl = document.getElementById('filter-status');
-
-            const symFilter = symFilterEl ? symFilterEl.value : 'ALL';
-            const setupFilter = setupFilterEl ? setupFilterEl.value : 'ALL';
-            const statusFilter = statusFilterEl ? statusFilterEl.value : 'ALL';
-
-            // Populate unique symbols dynamically into filter dropdown if needed
-            if (symFilterEl && symFilterEl.options.length <= 1) {
-                const uniqueSyms = [...new Set(hList.map(item => item.symbol))].sort();
-                uniqueSyms.forEach(sym => {
-                    const opt = document.createElement('option');
-                    opt.value = sym;
-                    opt.innerText = sym;
-                    symFilterEl.appendChild(opt);
-                });
-            }
-
-            let filtered = hList.slice().reverse().filter(item => {
-                if (symFilter !== 'ALL' && item.symbol !== symFilter) return false;
-                if (statusFilter === 'WIN' && item.net_pnl < 0) return false;
-                if (statusFilter === 'LOSS' && item.net_pnl >= 0) return false;
-
-                const r = item.reason || '';
-                if (setupFilter === 'nPOC' && !r.includes('nPOC')) return false;
-                if (setupFilter === 'MACRO' && !r.includes('mVAL') && !r.includes('mVAH')) return false;
-                if (setupFilter === 'CAM_BO' && !r.includes('Breakout') && !r.includes('Breakdown')) return false;
-                if (setupFilter === 'CAM_BOUNCE' && !r.includes('S3') && !r.includes('R3')) return false;
-
-                return true;
-            });
-
-            if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding: 40px; color:#94a3b8; font-size:14px;">Seçilen filtre kriterlerine uygun işlem kaydı bulunamadı.</td></tr>`;
-                return;
-            }
-
-            let tableHtml = '';
-            filtered.forEach(h => {
-                const isWin = h.net_pnl >= 0;
-                const r = h.reason || 'Strateji Sinyali';
-                const cr = h.close_reason || 'Kapanış';
-
-                // Setup badge style
-                let setupBadgeClass = 'badge-other';
-                if (r.includes('nPOC')) setupBadgeClass = 'badge-npoc';
-                else if (r.includes('mVAL') || r.includes('mVAH')) setupBadgeClass = 'badge-macro';
-                else if (r.includes('Breakout') || r.includes('Breakdown')) setupBadgeClass = 'badge-breakout';
-                else if (r.includes('S3') || r.includes('R3')) setupBadgeClass = 'badge-bounce';
-
-                // Exit badge style
-                let exitBadgeClass = 'badge-time';
-                if (cr.includes('TP') || cr.includes('Kâr')) exitBadgeClass = 'badge-tp';
-                else if (cr.includes('Yumuşak') || cr.includes('Mum')) exitBadgeClass = 'badge-soft';
-                else if (cr.includes('Sert') || cr.includes('Stop')) exitBadgeClass = 'badge-hard';
-
-                const duration = h.duration || '5M Mum';
-
-                const rMult = h.realized_r !== undefined ? h.realized_r : (h.roe_pct >= 0 ? +(h.roe_pct / 2).toFixed(1) : -1.0);
-                const mfe = h.mfe_roe !== undefined ? h.mfe_roe : Math.max(0, h.roe_pct);
-                const mae = h.mae_roe !== undefined ? h.mae_roe : (h.roe_pct < 0 ? Math.abs(h.roe_pct) : 0.0);
-
-                tableHtml += `
-                <tr>
-                    <td><b style="color:var(--yellow)">${h.id}</b></td>
-                    <td style="color:#cbd5e1; font-size:12px; white-space:nowrap;">${h.exit_time}</td>
-                    <td style="color:#94a3b8; font-size:12px; white-space:nowrap;">⏱️ ${duration}</td>
-                    <td><b style="color:#ffffff; font-size:13.5px;">${h.symbol.replace('/USDT','')}</b></td>
-                    <td><span class="pos-badge ${h.side === 'LONG' ? 'pos-long' : 'pos-short'}" style="font-size:11px; padding:2px 8px;">${h.leverage}x ${h.side}</span></td>
-                    <td>$${h.entry_price}</td>
-                    <td>$${h.exit_price}</td>
-                    <td style="color:${isWin ? 'var(--green)' : 'var(--red)'}; font-weight:800;">
-                        ${isWin ? '+' : ''}${h.net_pnl.toFixed(4)} $
-                    </td>
-                    <td style="color:${isWin ? 'var(--green)' : 'var(--red)'}; font-weight:800;">
-                        ${isWin ? '+' : ''}${h.roe_pct.toFixed(2)}%
-                    </td>
-                    <td style="color:${rMult >= 0 ? 'var(--green)' : 'var(--red)'}; font-weight:800; font-family:'JetBrains Mono'">
-                        ${rMult >= 0 ? '+' : ''}${rMult}R
-                    </td>
-                    <td style="color:#38bdf8; font-size:12px;" title="MFE: Görülen Zirve Kâr (+%${mfe.toFixed(1)}) | MAE: Maks Çekilme (-%${mae.toFixed(1)})">
-                        +${mfe.toFixed(1)}% <span style="color:#64748b; font-size:10.5px;">(-${mae.toFixed(1)}%)</span>
-                    </td>
-                    <td>
-                        <span class="badge-setup ${setupBadgeClass}" title="${r}">
-                            ${r}
-                        </span>
-                    </td>
-                    <td>
-                        <span class="badge-exit ${exitBadgeClass}" title="${cr}">
-                            ${cr}
-                        </span>
-                    </td>
-                    <td>
-                        <button onclick="openTelemetryModal('${h.id}')" style="background:rgba(0,242,254,0.12); border:1px solid rgba(0,242,254,0.35); color:var(--cyan); padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.15s ease;" onmouseover="this.style.background='var(--cyan)'; this.style.color='#000';" onmouseout="this.style.background='rgba(0,242,254,0.12)'; this.style.color='var(--cyan)';">
-                            🔬 İncele
-                        </button>
-                    </td>
-                </tr>
-                `;
-            });
-            tbody.innerHTML = tableHtml;
         }
 
         function downloadExcelReport() {
