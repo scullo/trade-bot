@@ -968,6 +968,213 @@ HTML_PAGE = """
             gap: 6px;
         }
 
+    
+        /* =========================================================================
+           VALKYRIE QUANT COCKPIT 3.0 - TAB NAVIGATION & AI QUANT DESK STYLES
+           ========================================================================= */
+        .nav-tab-strip {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(13, 18, 30, 0.95);
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            overflow-x: auto;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+        }
+        .nav-tab-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: #94a3b8;
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-size: 13.5px;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .nav-tab-btn:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+        .nav-tab-btn.active {
+            background: linear-gradient(135deg, rgba(0, 242, 254, 0.15), rgba(79, 172, 254, 0.25));
+            border-color: #00f2fe;
+            color: #ffffff;
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.25);
+        }
+        .tab-badge {
+            background: var(--red);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 900;
+            padding: 2px 7px;
+            border-radius: 10px;
+            margin-left: 4px;
+            box-shadow: 0 0 10px rgba(255, 71, 87, 0.5);
+            animation: pulse 1s infinite;
+        }
+        .tab-badge-sub {
+            background: rgba(14, 203, 129, 0.15);
+            color: var(--green);
+            border: 1px solid var(--green);
+            font-size: 11px;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 10px;
+            margin-left: 4px;
+        }
+
+        /* 1. COCKPIT HERO FINANSAL KPI GRID */
+        .cockpit-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .cockpit-kpi-card {
+            background: linear-gradient(180deg, rgba(18, 25, 40, 0.9) 0%, rgba(13, 18, 30, 0.95) 100%);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+        }
+        .cockpit-kpi-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #00f2fe, #4facfe);
+        }
+        .kpi-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .kpi-card-title { font-size: 12px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+        .kpi-card-icon { font-size: 18px; }
+        .kpi-card-val { font-size: 24px; font-weight: 900; font-family: 'JetBrains Mono', monospace; color: #ffffff; margin-bottom: 4px; }
+        .kpi-card-sub { font-size: 11.5px; color: #64748b; font-family: 'JetBrains Mono', monospace; }
+
+        /* 🧠 VALKYRIE AI CANLI AKIL & YORUM ODASI */
+        .ai-quant-room {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 29, 0.98) 100%);
+            border: 1px solid rgba(0, 242, 254, 0.35);
+            border-radius: 20px;
+            padding: 22px 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(0, 242, 254, 0.15);
+            position: relative;
+        }
+        .ai-room-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 14px;
+        }
+        .ai-room-title {
+            font-size: 16px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .ai-pulse-dot {
+            width: 9px;
+            height: 9px;
+            background: #00f2fe;
+            border-radius: 50%;
+            box-shadow: 0 0 12px #00f2fe;
+            animation: pulse 0.8s infinite alternate;
+        }
+        .regime-progress-wrap {
+            display: flex;
+            height: 8px;
+            border-radius: 6px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.06);
+            margin: 12px 0 16px 0;
+            width: 100%;
+        }
+        .regime-bar-bull { background: var(--green); transition: width 0.3s ease; }
+        .regime-bar-bear { background: var(--red); transition: width 0.3s ease; }
+        .regime-bar-range { background: var(--yellow); transition: width 0.3s ease; }
+
+        .ai-thought-feed {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .ai-thought-item {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 13px;
+            line-height: 1.55;
+            color: #f1f5f9;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            border-left: 4px solid var(--blue);
+        }
+
+        /* 🎯 TETIKLENMEYE EN YAKIN TOP 5 COIN PUSU GRID */
+        .near-trigger-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+        .near-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .near-card:hover {
+            border-color: rgba(0, 242, 254, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+        .near-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .near-sym { font-weight: 800; font-size: 15px; font-family: 'JetBrains Mono', monospace; color: #ffffff; }
+        .near-dist-badge { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; }
+        .dist-super-close { background: rgba(14, 203, 129, 0.2); color: var(--green); border: 1px solid var(--green); }
+        .dist-close { background: rgba(240, 185, 11, 0.2); color: var(--yellow); border: 1px solid var(--yellow); }
+
+        /* TAB CONTAINER DISPLAY TOGGLING */
+        .main-tab-content {
+            display: none;
+            animation: fadeIn 0.25s ease;
+        }
+        .main-tab-content.active-tab {
+            display: block;
+        }
+
     </style>
 </head>
 <body>
@@ -1454,6 +1661,18 @@ HTML_PAGE = """
 
         let searchQuery = '';
 
+        
+        function filterWatchlistDirect(symbol) {
+            switchMainTab('radar');
+            setTimeout(() => {
+                const input = document.getElementById('coin-search-input');
+                if (input) {
+                    input.value = symbol.replace('/USDT', '');
+                    handleSearch(input.value);
+                }
+            }, 100);
+        }
+
         function handleSearch(query) {
             searchQuery = (query || '').trim().toUpperCase();
             
@@ -1465,6 +1684,7 @@ HTML_PAGE = """
 
             renderCoinManager();
             renderCards();
+                renderCockpitView();
                 updateSystemHealthBadge();
         }
 
@@ -1787,12 +2007,14 @@ HTML_PAGE = """
         function loadMoreCards(n) {
             visibleCardsCount += n;
             renderCards();
+                renderCockpitView();
                 updateSystemHealthBadge();
         }
 
         function loadAllCards() {
             visibleCardsCount = 999;
             renderCards();
+                renderCockpitView();
                 updateSystemHealthBadge();
         }
 
@@ -2010,6 +2232,7 @@ HTML_PAGE = """
                     <div class="load-more-bar">
                         <span style="font-size:13.5px; color:var(--green); font-weight:700; font-family:'JetBrains Mono'">✓ Tüm ${totalActive} Parite Canlı Listeleniyor</span>
                         <button class="btn-load-all" onclick="visibleCardsCount = 20; renderCards();
+                renderCockpitView();
                 updateSystemHealthBadge();" style="padding:8px 16px; font-size:12px;">🔼 İlk 20'ye Daralt</button>
                     </div>
                     `;
@@ -2097,9 +2320,13 @@ HTML_PAGE = """
 
         function renderPositions() {
             const cont = document.getElementById('positions-container');
+            if (!cont) return;
             const posKeys = Object.keys(appState.open_positions || {});
             const activeCount = Object.keys(appState.symbols || {}).length;
-            document.getElementById('pos-count').innerText = `${posKeys.length} / ${activeCount} AÇIK`;
+            const badge = document.getElementById('positions-active-count-badge');
+            if (badge) badge.innerText = `${posKeys.length} Açık Pozisyon (${activeCount} Parite Takipte)`;
+            const pCount = document.getElementById('pos-count');
+            if (pCount) pCount.innerText = `${posKeys.length} / ${activeCount} AÇIK`;
 
             if (posKeys.length === 0) {
                 cont.innerHTML = `<div style="color: #94a3b8; text-align:center; padding: 100px 20px; font-size:15px; line-height:1.6;">Şu an açık pozisyon bulunmuyor.<br><span style="color:var(--yellow)">● 5M Mum kapanışları, taze kırılımlar ve destek dönüşleri taranıyor...</span></div>`;
@@ -2922,6 +3149,7 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 if (currentSymbolsCount !== lastRenderedSymbolsCount || (watchlistCont && watchlistCont.children.length === 0)) {
                     lastRenderedSymbolsCount = currentSymbolsCount;
                     renderCards();
+                renderCockpitView();
                 updateSystemHealthBadge();
                 }
 
