@@ -1227,7 +1227,53 @@ HTML_PAGE = """
     
     
     
-        <!-- ULTRA-PREMIUM UPGRADE & CRYPTO PAYMENT MODAL (AUTONOMOUS WALLET LISTENER) -->
+            <!-- =========================================================================
+         48-HOUR DEMO TRIAL EXPIRED GRACEFUL NOTIFICATION MODAL
+         ========================================================================= -->
+    <div id="trial-expired-modal-overlay" class="modal-overlay" style="display:none;" onclick="if(event.target === this) closeTrialExpiredModal()">
+        <div class="modal-card" style="max-width:560px; text-align:left; border:1px solid rgba(255,71,87,0.4); box-shadow:0 25px 60px rgba(0,0,0,0.9), 0 0 40px rgba(255,71,87,0.15); padding:28px;">
+            <!-- HEADER -->
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:14px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:38px; height:38px; background:rgba(255,71,87,0.12); border:1.5px solid var(--red); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </div>
+                    <div>
+                        <div style="font-size:18px; font-weight:900; color:#fff;">48 Saatlik Demo Süreniz Tamamlandı</div>
+                        <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Valkyrie Quant Algoritmik Demo Lisans Raporu</div>
+                    </div>
+                </div>
+                <button onclick="closeTrialExpiredModal()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; width:32px; height:32px; border-radius:8px; font-size:16px; cursor:pointer;" onmouseover="this.style.color='#fff';" onmouseout="this.style.color='#94a3b8';">✕</button>
+            </div>
+
+            <!-- GRACEFUL SAFETY PROTOCOL NOTICE -->
+            <div style="background:rgba(0,242,254,0.05); border:1.5px solid rgba(0,242,254,0.3); border-radius:12px; padding:16px; margin-bottom:18px;">
+                <div style="font-size:12.5px; font-weight:800; color:var(--cyan); margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                    <span>🛡️</span> GÜVENLİ POZİSYON PROTOKOLÜ DEVREDE
+                </div>
+                <div style="font-size:12px; color:#cbd5e1; line-height:1.55;">
+                    Mevcut açık pozisyonlarınız <b>kesinlikle panikle veya piyasadan kapatılmaz</b>. Önceden belirlenen Take Profit (TP) ve Stop Loss (SL) hedeflerine ulaşana kadar güvenle yönetilir. Yalnızca <b>yeni pozisyon alımları kısıtlanmıştır</b>.
+                </div>
+            </div>
+
+            <!-- VALUE SUMMARY -->
+            <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:14px 16px; margin-bottom:20px; font-size:12.5px; color:#94a3b8; line-height:1.6;">
+                48 saat boyunca 100 paritede kurumsal nPOC, AVWAP ve Camarilla seviye pusu algoritmalarını test ettiniz. Kesintisiz canlı veya demo işlem yapmaya devam etmek için üyeliğinizi yükseltebilirsiniz.
+            </div>
+
+            <!-- ACTIONS -->
+            <div style="display:flex; gap:10px;">
+                <button onclick="closeTrialExpiredModal(); openUpgradeModal();" style="flex:1; background:linear-gradient(135deg, #00f2fe, #4facfe); border:none; color:#000; font-weight:900; font-size:13.5px; padding:13px 20px; border-radius:10px; cursor:pointer; box-shadow:0 6px 20px rgba(0,242,254,0.35);">
+                    💎 ALL-ACCESS ($99 / Ay) Paketine Yükselt
+                </button>
+                <button onclick="closeTrialExpiredModal(); switchMainTab('ledger');" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:#fff; font-weight:700; font-size:12.5px; padding:13px 18px; border-radius:10px; cursor:pointer;">
+                    📜 Raporları İncele
+                </button>
+            </div>
+        </div>
+    </div>
+
+<!-- ULTRA-PREMIUM UPGRADE & CRYPTO PAYMENT MODAL (AUTONOMOUS WALLET LISTENER) -->
     <div id="upgrade-modal-overlay" class="modal-overlay" style="display:none;" onclick="if(event.target === this) closeUpgradeModal()">
         <div class="modal-card" style="max-width:680px; text-align:left; border:1px solid rgba(0,242,254,0.35); box-shadow:0 25px 60px rgba(0,0,0,0.85), 0 0 40px rgba(0,242,254,0.12); padding:26px;">
             <!-- TOP HEADER -->
@@ -2598,6 +2644,70 @@ HTML_PAGE = """
             }
         }
 
+        let trialCountdownInterval = null;
+
+        function closeTrialExpiredModal() {
+            const el = document.getElementById('trial-expired-modal-overlay');
+            if (el) el.style.display = 'none';
+        }
+
+        function openTrialExpiredModal() {
+            const el = document.getElementById('trial-expired-modal-overlay');
+            if (el) el.style.display = 'flex';
+        }
+
+        function startTrialLiveCountdown(expiresAtStr) {
+            if (trialCountdownInterval) clearInterval(trialCountdownInterval);
+
+            function tick() {
+                const badge = document.getElementById('trial-countdown-badge');
+                if (!badge) return;
+
+                if (!expiresAtStr) {
+                    badge.innerHTML = `⏳ <span style="color:var(--yellow);">48h Demo</span>`;
+                    return;
+                }
+
+                const expireTime = new Date(expiresAtStr.replace(' ', 'T') + '+03:00').getTime();
+                const now = new Date().getTime();
+                const diffMs = expireTime - now;
+
+                if (diffMs <= 0) {
+                    badge.style.background = 'rgba(255,71,87,0.15)';
+                    badge.style.borderColor = 'var(--red)';
+                    badge.innerHTML = `<span class="live-dot" style="background:var(--red); width:8px; height:8px;"></span> <b style="color:var(--red);">Süre Doldu</b>`;
+                    if (currentUser && currentUser.plan === '48H_DEMO_TRIAL') {
+                        // Notify expired once per session if not already closed
+                        if (!sessionStorage.getItem('valkyrie_trial_expired_notified')) {
+                            sessionStorage.setItem('valkyrie_trial_expired_notified', 'true');
+                            openTrialExpiredModal();
+                        }
+                    }
+                    return;
+                }
+
+                const totalSec = Math.floor(diffMs / 1000);
+                const hrs = Math.floor(totalSec / 3600);
+                const mins = Math.floor((totalSec % 3600) / 60);
+                const secs = totalSec % 60;
+
+                const timeStr = `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                
+                if (hrs < 4) {
+                    badge.style.background = 'rgba(251,197,49,0.15)';
+                    badge.style.borderColor = 'var(--yellow)';
+                    badge.innerHTML = `<span class="live-dot" style="background:var(--yellow); width:8px; height:8px;"></span> <b style="color:var(--yellow);">48h Demo: ${timeStr}</b>`;
+                } else {
+                    badge.style.background = 'rgba(0,242,254,0.08)';
+                    badge.style.borderColor = 'rgba(0,242,254,0.3)';
+                    badge.innerHTML = `<span class="live-dot" style="background:var(--cyan); width:8px; height:8px;"></span> <b style="color:var(--cyan);">48h Demo: ${timeStr}</b>`;
+                }
+            }
+
+            tick();
+            trialCountdownInterval = setInterval(tick, 1000);
+        }
+
         function updateUserSessionUI() {
             const landingView = document.getElementById('landing-page-view');
             const appView = document.getElementById('dashboard-app-view');
@@ -2605,19 +2715,19 @@ HTML_PAGE = """
             const navAdminTab = document.getElementById('tab-btn-admin');
 
             if (!currentUser) {
-                // KULLANICI GIRIS YAPMAMIS -> LANDING PAGE GOSTER
+                if (trialCountdownInterval) clearInterval(trialCountdownInterval);
                 if (landingView) landingView.style.display = 'block';
                 if (appView) appView.style.display = 'none';
                 return;
             }
 
-            // KULLANICI GIRIS YAPMIS -> DASHBOARD GOSTER
             if (landingView) landingView.style.display = 'none';
             if (appView) appView.style.display = 'block';
 
             if (!cont) return;
 
             if (currentUser.role === 'ADMIN') {
+                if (trialCountdownInterval) clearInterval(trialCountdownInterval);
                 cont.innerHTML = `
                     <div class="live-tag" style="border-color:rgba(0,242,254,0.4); background:rgba(0,242,254,0.08);" title="Master Admin Masası">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" style="margin-right:4px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
@@ -2630,26 +2740,41 @@ HTML_PAGE = """
                 if (navAdminTab) navAdminTab.style.display = 'inline-flex';
             } else if (currentUser.email) {
                 const cleanName = currentUser.email.split('@')[0];
+                const isAllAccess = (currentUser.plan === 'ALL_ACCESS' || currentUser.role === 'CLIENT');
+                
+                let badgeMarkup = '';
+                if (isAllAccess) {
+                    badgeMarkup = `<span class="live-tag" style="background:rgba(56,239,125,0.12); border:1px solid var(--green); color:var(--green); font-size:11px; font-weight:800;">💎 All-Access VIP</span>`;
+                } else {
+                    badgeMarkup = `<div id="trial-countdown-badge" class="live-tag" onclick="openUpgradeModal()" style="cursor:pointer; font-family:'JetBrains Mono'; font-size:11.5px; transition:all 0.15s ease;">⏳ 48h Demo Yükleniyor...</div>`;
+                }
+
                 cont.innerHTML = `
                     <div class="live-tag" title="Hesap Bilgilerim">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                         <b style="color:#cbd5e1;">${cleanName}</b>
-                        <span style="background:rgba(251,197,49,0.2); color:var(--yellow); padding:2px 6px; border-radius:4px; font-size:10px; margin-left:6px;">48h Demo</span>
                     </div>
+                    ${badgeMarkup}
                     <button onclick="handleLogout()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#94a3b8; font-weight:800; font-size:11.5px; padding:6px 12px; border-radius:8px; cursor:pointer;" title="Oturumu Kapat">
                         Çıkış Yap
                     </button>
                 `;
                 if (navAdminTab) navAdminTab.style.display = 'none';
+
+                if (!isAllAccess) {
+                    startTrialLiveCountdown(currentUser.expires_at);
+                }
             }
         }
 
         function handleLogout() {
+            if (trialCountdownInterval) clearInterval(trialCountdownInterval);
             localStorage.removeItem('valkyrie_auth_user');
             currentUser = null;
             updateUserSessionUI();
         }
-async function submitLogin() {
+
+        async function submitLogin() {
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             const box = document.getElementById('auth-msg-box');
@@ -2713,14 +2838,15 @@ async function submitLogin() {
 
                 if (data.success) {
                     currentUser = data.user;
+                    try { localStorage.setItem('valkyrie_auth_user', JSON.stringify(currentUser)); } catch(e) {}
                     box.style.display = 'block';
                     box.style.background = 'rgba(14,203,129,0.1)';
                     box.style.color = 'var(--green)';
-                    box.innerText = `🎉 24 Saatlik Denemeniz Başlatıldı!`;
+                    box.innerText = `🎉 48 Saatlik Risksiz Demo Denemeniz Başlatıldı!`;
                     setTimeout(() => {
                         closeAuthModal();
                         updateUserSessionUI();
-                    }, 1200);
+                    }, 1000);
                 } else {
                     box.style.display = 'block';
                     box.style.background = 'rgba(255,71,87,0.1)';
@@ -2734,22 +2860,7 @@ async function submitLogin() {
                 box.innerText = 'Bağlantı Hatası: Lütfen sayfayı yenileyip tekrar deneyin.';
             }
         }
-
-        function updateUserSessionUI() {
-            const pill = document.getElementById('user-session-pill');
-            const navAdminTab = document.getElementById('nav-tab-admin');
-            if (!pill) return;
-
-            if (currentUser && currentUser.role === 'ADMIN') {
-                pill.innerHTML = `👑 <b style="color:var(--cyan); margin-left:4px;">Master Admin</b>`;
-                if (navAdminTab) navAdminTab.style.display = 'inline-flex';
-            } else if (currentUser) {
-                pill.innerHTML = `👤 <span style="color:#cbd5e1; margin-left:4px;">${currentUser.email.split('@')[0]}</span> <span style="background:rgba(251,197,49,0.2); color:var(--yellow); padding:2px 6px; border-radius:4px; font-size:10px; margin-left:4px;">48h Demo</span>`;
-                if (navAdminTab) navAdminTab.style.display = 'none';
-            }
-        }
-
-        async function loadAdminMetrics() {
+async function loadAdminMetrics() {
             try {
                 const res = await fetch('/api/admin/overview');
                 const data = await res.json();
