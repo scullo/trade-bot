@@ -362,7 +362,14 @@ HTML_PAGE = """
         .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
         .section-title { font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #ffffff; display: flex; align-items: center; gap: 8px; }
         
-        .watchlist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; margin-bottom: 32px; width: 100%; }
+        .watchlist-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
+            gap: 18px; 
+            margin-bottom: 32px; 
+            width: 100%; 
+            align-items: start; 
+        }
         .coin-card {
             background: linear-gradient(180deg, rgba(18, 25, 40, 0.85) 0%, rgba(13, 18, 30, 0.95) 100%);
             border: 1px solid var(--border);
@@ -372,10 +379,11 @@ HTML_PAGE = """
             position: relative;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            justify-content: flex-start;
+            gap: 10px;
             backdrop-filter: blur(12px);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
-            min-height: 420px;
+            height: fit-content;
         }
         .coin-card:hover {
             border-color: rgba(59, 130, 246, 0.4);
@@ -517,11 +525,11 @@ HTML_PAGE = """
         }
 
         /* CANLI DINAMIK ANALIZ CUMLESI */
-        .analysis-box { background: rgba(0, 0, 0, 0.6); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 12.5px; line-height: 1.45; color: #f1f5f9; margin-bottom: 10px; border-left: 4px solid var(--blue); min-height: 60px; display: flex; flex-direction: column; justify-content: flex-start; }
+        .analysis-box { background: rgba(0, 0, 0, 0.6); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 12.5px; line-height: 1.45; color: #f1f5f9; margin-bottom: 0; border-left: 4px solid var(--blue); display: flex; flex-direction: column; justify-content: flex-start; }
         .analysis-title { font-size: 12px; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
 
         /* BOT PUSU & EYLEM PLANI */
-        .action-plan-box { background: rgba(240, 185, 11, 0.08); border: 1px solid rgba(240, 185, 11, 0.35); border-radius: 10px; padding: 10px 14px; font-size: 12.5px; line-height: 1.45; color: #ffffff; margin-bottom: 12px; min-height: 60px; display: flex; flex-direction: column; justify-content: flex-start; }
+        .action-plan-box { background: rgba(240, 185, 11, 0.08); border: 1px solid rgba(240, 185, 11, 0.35); border-radius: 10px; padding: 10px 14px; font-size: 12.5px; line-height: 1.45; color: #ffffff; margin-bottom: 0; display: flex; flex-direction: column; justify-content: flex-start; }
         .action-plan-title { font-size: 11.5px; font-weight: 800; text-transform: uppercase; color: var(--yellow); margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
 
         .levels-table { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
