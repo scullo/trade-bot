@@ -17,6 +17,25 @@ class StrategyEngine:
         self.notifier = notifier
         self.vault = SecurityVault()
         self.peak_prices = {}  # symbol -> trailing icin en iyi fiyat
+        self.last_trade_times = {}  # (symbol, side) -> timestamp (30dk Cooldown)
+
+    def get_symbol_atr_pct(self, symbol: str) -> float:
+        """Paritenin son 14 mumluk ATR yuzdesini hesaplayarak coine ozel dinamik esik uretir."""
+        if self.market_data and symbol in self.market_data.candles_5m:
+            df = self.market_data.candles_5m[symbol]
+            if df is not None and len(df) >= 14:
+                try:
+                    tr1 = df['high'] - df['low']
+                    tr2 = (df['high'] - df['close'].shift(1)).abs()
+                    tr3 = (df['low'] - df['close'].shift(1)).abs()
+                    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+                    atr_val = tr.rolling(14).mean().iloc[-1]
+                    cur_p = df['close'].iloc[-1]
+                    if cur_p > 0 and not np.isnan(atr_val):
+                        return float(atr_val / cur_p)
+                except Exception:
+                    pass
+        return 0.012  # Varsayilan %1.2
 
     async def _notify_open(self, pos: dict, levels: dict = None):
         if not self.notifier:

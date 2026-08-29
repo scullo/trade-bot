@@ -133,7 +133,7 @@ BUFFER_RATIO = 0.25           # %25 akilli stop tampon payi
 BREAKOUT_HOLD_SECONDS = 60    # Kirilim tutunma teyit suresi (60 saniye)
 
 # 4. Trailing Stop / Kar Koruma Esikleri
-TRAILING_BREAKEVEN_ROE = 6.0    # %6 ROE'de soft stop -> breakeven (giris fiyatina) tasir
+TRAILING_BREAKEVEN_ROE = 3.5    # %6 ROE'de soft stop -> breakeven (giris fiyatina) tasir
 TRAILING_LOCK_30_ROE = 12.0     # %12 ROE'de karin %30'unu kilitleyen seviyeye tasir
 TRAILING_LOCK_50_ROE = 20.0     # %20 ROE'de hard stop ile karin %50'sini kilitle
 
