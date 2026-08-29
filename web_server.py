@@ -5547,7 +5547,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             sym = payload.get("symbol")
             if sym in trader_manager.open_positions:
                 cur_price = market_data.current_prices.get(sym, trader_manager.open_positions[sym]["entry_price"])
-                record = trader_manager.close_position(sym, cur_price, "Manuel Müdahale (Dashboard Kapatma)")
+                record = await trader_manager.close_position(sym, cur_price, "Manuel Müdahale (Dashboard Kapatma)")
                 if record:
                     if notifier:
                         await notifier.notify_position_closed(record, is_manual=True)
