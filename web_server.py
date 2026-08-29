@@ -1461,157 +1461,255 @@ HTML_PAGE = """
         </div>
     </div>
 
-    <!-- 1. PARITE YONETIM MERKEZI (TOP 100 COIN & HIZLI AYAR BUTONLARI & ACILIR-KAPANIR PANEL) -->
-    <!-- 1. PARITE YONETIM MERKEZI (TOP 100 COIN & ARAMA & HIZLI AYAR BUTONLARI & ACILIR-KAPANIR PANEL) -->
-    <div class="manager-card">
-        <div class="manager-head">
-            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                <div style="font-size:16px; font-weight:800; letter-spacing:0.3px; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="togglePoolCollapse()">
-                    ⚙️ PARİTE YÖNETİM HAVUZU
-                    <span id="pool-collapse-btn" style="font-size:12px; font-weight:700; color:var(--blue); background:rgba(56,139,253,0.15); border:1px solid rgba(56,139,253,0.3); padding:3px 10px; border-radius:8px; transition:all 0.15s ease;">🔼 Gizle</span>
+    <!-- =========================================================================
+         VALKYRIE QUANT COCKPIT 3.0 - MODULER SEKME SERIDI (NAVIGATION BAR)
+         ========================================================================= -->
+    <div class="nav-tab-strip">
+        <button class="nav-tab-btn active" id="tab-btn-cockpit" onclick="switchMainTab('cockpit')">
+            <span class="tab-icon">🏠</span> 1. KOKPİT & AI QUANT MERKEZİ
+        </button>
+        <button class="nav-tab-btn" id="tab-btn-positions" onclick="switchMainTab('positions')">
+            <span class="tab-icon">⚡</span> 2. AÇIK POZİSYONLAR & RİSK MASASI
+            <span class="tab-badge" id="nav-pos-count-badge" style="display:none;">0</span>
+        </button>
+        <button class="nav-tab-btn" id="tab-btn-radar" onclick="switchMainTab('radar')">
+            <span class="tab-icon">📊</span> 3. 100 PARİTE PUSU & SEVİYE RADARI
+            <span class="tab-badge-sub" id="nav-active-coins-badge">100/100</span>
+        </button>
+        <button class="nav-tab-btn" id="tab-btn-ledger" onclick="switchMainTab('ledger')">
+            <span class="tab-icon">📜</span> 4. TİCARET DEFTERİ & EXCEL RAPORLARI
+        </button>
+    </div>
+
+    <!-- =========================================================================
+         1. SEKME: KOKPİT & AI QUANT MERKEZİ (ANA SAYFA)
+         ========================================================================= -->
+    <div id="main-tab-content-cockpit" class="main-tab-content active-tab">
+        <!-- 4 HERO FINANSAL KPI KARTI -->
+        <div class="cockpit-kpi-grid">
+            <div class="cockpit-kpi-card">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">Toplam Kasa Bakiyesi</span>
+                    <span class="kpi-card-icon">💼</span>
                 </div>
-                <span class="active-badge-pill" id="active-coin-counter">5 Aktif / 100 Parite</span>
+                <div class="kpi-card-val" id="cockpit-balance">100,000.00 $</div>
+                <div class="kpi-card-sub" id="cockpit-free-bal">Serbest: 100,000.00 USDT (5x)</div>
             </div>
 
-            <!-- PARITE ARAMA KUTUSU -->
-            <div class="search-wrap">
-                <span class="search-icon">🔍</span>
-                <input type="text" id="coin-search-input" class="coin-search-input" placeholder="Parite veya kart ara (örn: SOL, ENA, PEPE)..." oninput="handleSearch(this.value)" autocomplete="off" />
-                <button id="search-clear-btn" class="search-clear-btn" onclick="clearSearch()" style="display:none;" title="Aramayı Temizle">✕</button>
+            <div class="cockpit-kpi-card">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">Net Kâr / Zarar & Büyüme</span>
+                    <span class="kpi-card-icon">📈</span>
+                </div>
+                <div class="kpi-card-val" id="cockpit-pnl" style="color:var(--green);">+0.00 $</div>
+                <div class="kpi-card-sub" id="cockpit-growth">+0.00% Kasa Büyümesi</div>
             </div>
 
-            <div class="quick-preset-bar">
-                <span style="font-size:12.5px; font-weight:700; color:#cbd5e1;">⚡ HIZLI SEÇİM:</span>
-                <button class="btn-preset" onclick="selectTopN(5)">Top 5</button>
-                <button class="btn-preset" onclick="selectTopN(10)">Top 10</button>
-                <button class="btn-preset" onclick="selectTopN(20)">Top 20</button>
-                <button class="btn-preset" onclick="selectTopN(50)">Top 50</button>
-                <button class="btn-preset" onclick="selectTopN(100)">Top 100 (Tümü)</button>
-                <button class="btn-preset btn-preset-danger" onclick="selectTopN(0)">Tümünü Kapat</button>
+            <div class="cockpit-kpi-card">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">Kazanma Oranı (Win Rate)</span>
+                    <span class="kpi-card-icon">🎯</span>
+                </div>
+                <div class="kpi-card-val" id="cockpit-winrate">%0.0</div>
+                <div class="kpi-card-sub" id="cockpit-win-loss-count">0 Kazanç / 0 Kayıp</div>
+            </div>
+
+            <div class="cockpit-kpi-card">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">Kâr Faktörü (PF) & Ücret</span>
+                    <span class="kpi-card-icon">⚖️</span>
+                </div>
+                <div class="kpi-card-val" id="cockpit-pf">0.00 PF</div>
+                <div class="kpi-card-sub" id="cockpit-fees">Komisyon: $0.0000</div>
             </div>
         </div>
-        <div class="coin-chips-grid" id="coin-chips-container" style="transition:all 0.3s ease;"></div>
-    </div>
 
-    <div class="section-header">
-        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
-            <div class="section-title">📊 CANLI PUSU & SEVİYE ANALİZ HAVUZU</div>
-            <div id="watchlist-search-count-badge" style="display:none; font-size:12px; font-weight:800; color:#58a6ff; background:rgba(56,139,253,0.15); border:1px solid rgba(56,139,253,0.3); padding:4px 12px; border-radius:12px;"></div>
+        <!-- 🧠 VALKYRIE AI CANLI QUANT DÜŞÜNCE & YORUM ODASI -->
+        <div class="ai-quant-room">
+            <div class="ai-room-head">
+                <div class="ai-room-title">
+                    <div class="ai-pulse-dot"></div>
+                    <span>🧠 VALKYRIE AI QUANT ZEKASI • CANLI PİYASA & PUSU DÜŞÜNCE AKIŞI</span>
+                </div>
+                <div style="font-size:12px; color:#cbd5e1; font-family:'JetBrains Mono', monospace;" id="ai-market-time-badge">
+                    ⚡ Canlı 5M Mum Senkronizasyonu
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:12.5px; font-weight:800; font-family:'JetBrains Mono', monospace; color:#cbd5e1; margin-bottom:4px;">
+                <span>📊 100 PARİTE 1H MAKRO TREND DAĞILIMI:</span>
+                <span id="ai-regime-counts">🟢 0 Boğa | 🔴 0 Ayı | ⚪ 0 Yatay</span>
+            </div>
+            <div class="regime-progress-wrap">
+                <div class="regime-bar-bull" id="regime-bar-bull" style="width: 20%;"></div>
+                <div class="regime-bar-bear" id="regime-bar-bear" style="width: 60%;"></div>
+                <div class="regime-bar-range" id="regime-bar-range" style="width: 20%;"></div>
+            </div>
+
+            <div class="ai-thought-feed" id="ai-thought-feed">
+                <div class="ai-thought-item">
+                    <span style="font-size:18px;">💡</span>
+                    <div>
+                        <b>VALKYRIE QUANT DESK BAŞLATILDI:</b> 100 paritede Camarilla Pivotları, Tepe/Dip AVWAP seviyeleri ve Kurumsal nPOC likidite hatları aktif taranıyor.
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
-    <div class="watchlist-grid" id="watchlist-container"></div>
 
-    <div class="bottom-split">
-        <!-- SOL PANEL: AKTIF POZISYONLAR (GENISLETILMIS & BUYUK PUNTO) -->
-        <div class="panel-box">
+        <!-- 🎯 TETİKLENMEYE EN YAKIN TOP 5 COİN PUSU RADARI -->
+        <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div class="section-title">🎯 TETİKLENMEYE EN YAKIN PUSU LİSTESİ (TOP 5 RADAR)</div>
+            <div style="font-size:12px; color:var(--text-muted); font-family:'JetBrains Mono';">Kilit kırılım/destek seviyesine mesafeye göre sıralıdır</div>
+        </div>
+        <div class="near-trigger-grid" id="near-trigger-container">
+            <div style="grid-column:1/-1; text-align:center; padding:30px; color:#64748b; font-size:13px;">
+                ⚡ 100 parite taranıyor, en yakın fırsatlar listeleniyor...
+            </div>
+        </div>
+
+        <!-- ⚡ AÇIK POZİSYONLAR HIZLI KOKPİT ÖZETİ -->
+        <div class="panel-box" style="margin-bottom:24px;">
             <div class="panel-head">
-                <div class="panel-title">⚡ Aktif Çalışan Pozisyonlar</div>
-                <span style="font-size:13.5px; font-weight:800; background:var(--card-bg); border:1px solid var(--border); padding:5px 12px; border-radius:12px; font-family:'JetBrains Mono'" id="pos-count">0 / 3 AÇIK</span>
+                <div class="panel-title">⚡ Aktif Çalışan Pozisyonlar Özeti</div>
+                <button class="btn-preset" onclick="switchMainTab('positions')" style="font-size:12px; padding:4px 10px;">Tam Risk Masasına Git ➔</button>
             </div>
-            <div id="positions-container" style="max-height:680px; overflow-y:auto; padding-right:6px;">
-                <div style="color: #94a3b8; text-align:center; padding: 100px 20px; font-size:15px; line-height:1.6;">
-                    Şu an açık pozisyon bulunmuyor.<br><span style="color:var(--yellow)">● 5M Mum kapanışları, taze kırılımlar ve destek dönüşleri taranıyor...</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- SAG PANEL: FINANS & CUZDAN YONETIMI -->
-        <div class="panel-box">
-            <div class="panel-head">
-                <div class="panel-title">💰 Cüzdan & Kasa Büyüme Raporu</div>
-                <span style="font-size:13.5px; color:var(--green); font-weight:800; font-family:'JetBrains Mono'" id="kpi-growth">+0.0% BÜYÜME</span>
-            </div>
-
-            <div class="wallet-kpi-grid">
-                <div class="w-kpi">
-                    <div class="w-lbl">Toplam Kasa</div>
-                    <div class="w-val" id="kpi-balance">100.00 $</div>
-                </div>
-                <div class="w-kpi">
-                    <div class="w-lbl">Net Kâr / Zarar</div>
-                    <div class="w-val" id="kpi-pnl" style="color: var(--green);">+0.00 $</div>
-                </div>
-                <div class="w-kpi">
-                    <div class="w-lbl">Ödenen Komisyon</div>
-                    <div class="w-val" id="kpi-fees" style="color: #cbd5e1;">$0.0000</div>
-                </div>
-            </div>
-
-            <div style="font-size:12.5px; font-weight:800; color:#cbd5e1; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px;">
-                Son Kapanan İşlem Özeti
-            </div>
-            <div id="quick-history-container" style="flex:1; overflow-y:auto; max-height:220px;">
-                <div style="color: #94a3b8; text-align:center; padding: 40px 20px; font-size:13px;">
-                    Henüz tamamlanmış işlem kaydı yok.
+            <div id="cockpit-mini-positions" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:12px;">
+                <div style="color:#94a3b8; text-align:center; padding:24px 20px; font-size:13.5px;">
+                    Şu an açık pozisyon bulunmuyor. Robot 5M mum kapanışlarını pusuya yatarak takip ediyor.
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 3. TICARET DEFTERI & DETAYLI RAPOR MERKEZI -->
-    <div class="history-full-box">
-        <div class="history-top-controls">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <div class="panel-title" style="margin:0;">📜 Ticaret Defteri & Geçmiş İşlem Kayıtları</div>
-                <span style="font-size:13px; background:var(--card-bg); padding:4px 10px; border-radius:8px; font-family:'JetBrains Mono'" id="history-total-count">0 İşlem</span>
-            </div>
-            
-            <div class="filter-group">
-                <select class="filter-select" id="filter-symbol" onchange="renderHistoryTable()">
-                    <option value="ALL">Tüm Pariteler</option>
-                </select>
-
-                <select class="filter-select" id="filter-setup" onchange="renderHistoryTable()">
-                    <option value="ALL">🎯 Tüm Stratejiler / Setuplar</option>
-                    <option value="nPOC">🔵 nPOC Likidite İşlemleri</option>
-                    <option value="MACRO">🟣 mVAL / mVAH Makro Kırılımlar</option>
-                    <option value="CAM_BO">⚡ S4 / R4 Breakout İşlemleri</option>
-                    <option value="CAM_BOUNCE">🛡️ S3 / R3 Destek & Direnç</option>
-                </select>
-
-                <select class="filter-select" id="filter-status" onchange="renderHistoryTable()">
-                    <option value="ALL">Tüm Sonuçlar</option>
-                    <option value="WIN">🟢 Sadece Kârlı İşlemler</option>
-                    <option value="LOSS">🔴 Sadece Zararlı İşlemler</option>
-                </select>
-
-                <button class="btn-export" onclick="downloadExcelReport()" title="Pasta grafikleri, KPI kartları ve renklendirilmiş sekmeleriyle profesyonel Excel raporu indir">
-                    📊 Profesyonel Excel İndir (.xlsx)
-                </button>
-                <button class="btn-export" onclick="downloadCSVReport()" style="background:rgba(255,255,255,0.08); border:1px solid var(--border-light); box-shadow:none;" title="Düz metin CSV tablosu indir">
-                    📄 CSV İndir
-                </button>
+    <!-- =========================================================================
+         2. SEKME: AÇIK POZİSYONLAR & RİSK MASASI
+         ========================================================================= -->
+    <div id="main-tab-content-positions" class="main-tab-content">
+        <div class="section-header">
+            <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                <div class="section-title">⚡ CANLI AÇIK POZİSYONLAR & RİSK KORUMA MASASI</div>
+                <span class="active-badge-pill" id="positions-active-count-badge">0 Açık Pozisyon</span>
             </div>
         </div>
+        <div id="positions-container" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(360px, 1fr)); gap:18px; margin-bottom:30px;">
+            <div style="grid-column:1/-1; color: #94a3b8; text-align:center; padding: 100px 20px; font-size:15px; line-height:1.6;">
+                Şu an açık pozisyon bulunmuyor.<br><span style="color:var(--yellow)">● 5M Mum kapanışları, taze kırılımlar ve destek dönüşleri taranıyor...</span>
+            </div>
+        </div>
+    </div>
 
-        <div style="overflow-x:auto;">
-            <table class="trade-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Kapanış Tarihi</th>
-                        <th>Süre</th>
-                        <th>Parite</th>
-                        <th>Yön & Kaldıraç</th>
-                        <th>Giriş Fiyatı</th>
-                        <th>Çıkış Fiyatı</th>
-                        <th>Net Kâr ($)</th>
-                        <th>ROE (%)</th>
-                        <th>R-Katı (1R)</th>
-                        <th>Zirve Kâr (MFE)</th>
-                        <th>🎯 Giriş Stratejisi</th>
-                        <th>🚪 Kapanış Nedeni</th>
-                        <th>🔬 Adli İnceleme</th>
-                    </tr>
-                </thead>
-                <tbody id="trade-table-body">
-                    <tr>
-                        <td colspan="11" style="text-align:center; padding: 40px; color:#94a3b8;">
-                            Kayıtlı işlem geçmişi bulunmuyor.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+    <!-- =========================================================================
+         3. SEKME: 100 PARİTE PUSU & SEVİYE RADARI
+         ========================================================================= -->
+    <div id="main-tab-content-radar" class="main-tab-content">
+        <!-- PARITE YONETIM HAVUZU (TOP 100 COIN & ARAMA & HIZLI AYAR BUTONLARI) -->
+        <div class="manager-card">
+            <div class="manager-head">
+                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                    <div style="font-size:16px; font-weight:800; letter-spacing:0.3px; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="togglePoolCollapse()">
+                        ⚙️ PARİTE YÖNETİM HAVUZU
+                        <span id="pool-collapse-btn" style="font-size:12px; font-weight:700; color:var(--blue); background:rgba(56,139,253,0.15); border:1px solid rgba(56,139,253,0.3); padding:3px 10px; border-radius:8px; transition:all 0.15s ease;">🔼 Gizle</span>
+                    </div>
+                    <span class="active-badge-pill" id="active-coin-counter">100 Aktif / 100 Parite</span>
+                </div>
+
+                <!-- PARITE ARAMA KUTUSU -->
+                <div class="search-wrap">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="coin-search-input" class="coin-search-input" placeholder="Parite veya kart ara (örn: SOL, ENA, PEPE)..." oninput="handleSearch(this.value)" autocomplete="off" />
+                    <button id="search-clear-btn" class="search-clear-btn" onclick="clearSearch()" style="display:none;" title="Aramayı Temizle">✕</button>
+                </div>
+
+                <div class="quick-preset-bar">
+                    <span style="font-size:12.5px; font-weight:700; color:#cbd5e1;">⚡ HIZLI SEÇİM:</span>
+                    <button class="btn-preset" onclick="selectTopN(5)">Top 5</button>
+                    <button class="btn-preset" onclick="selectTopN(10)">Top 10</button>
+                    <button class="btn-preset" onclick="selectTopN(20)">Top 20</button>
+                    <button class="btn-preset" onclick="selectTopN(50)">Top 50</button>
+                    <button class="btn-preset" onclick="selectTopN(100)">Top 100 (Tümü)</button>
+                    <button class="btn-preset btn-preset-danger" onclick="selectTopN(0)">Tümünü Kapat</button>
+                </div>
+            </div>
+            <div class="coin-chips-grid" id="coin-chips-container" style="transition:all 0.3s ease;"></div>
+        </div>
+
+        <div class="section-header">
+            <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                <div class="section-title">📊 100 PARİTE PUSU & SEVİYE ANALİZ HAVUZU</div>
+                <div id="watchlist-search-count-badge" style="display:none; font-size:12px; font-weight:800; color:#58a6ff; background:rgba(56,139,253,0.15); border:1px solid rgba(56,139,253,0.3); padding:4px 12px; border-radius:12px;"></div>
+            </div>
+        </div>
+        <div class="watchlist-grid" id="watchlist-container"></div>
+    </div>
+
+    <!-- =========================================================================
+         4. SEKME: TİCARET DEFTERİ & EXCEL RAPORLARI
+         ========================================================================= -->
+    <div id="main-tab-content-ledger" class="main-tab-content">
+        <div class="history-full-box">
+            <div class="history-top-controls">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div class="panel-title" style="margin:0;">📜 Ticaret Defteri & Geçmiş İşlem Kayıtları</div>
+                    <span style="font-size:13px; background:var(--card-bg); padding:4px 10px; border-radius:8px; font-family:'JetBrains Mono'" id="history-total-count">0 İşlem</span>
+                </div>
+                
+                <div class="filter-group">
+                    <select class="filter-select" id="filter-symbol" onchange="renderHistoryTable()">
+                        <option value="ALL">Tüm Pariteler</option>
+                    </select>
+
+                    <select class="filter-select" id="filter-setup" onchange="renderHistoryTable()">
+                        <option value="ALL">🎯 Tüm Stratejiler / Setuplar</option>
+                        <option value="nPOC">🔵 nPOC Likidite İşlemleri</option>
+                        <option value="MACRO">🟣 mVAL / mVAH Makro Kırılımlar</option>
+                        <option value="CAM_BO">⚡ S4 / R4 Breakout İşlemleri</option>
+                        <option value="CAM_BOUNCE">🛡️ S3 / R3 Destek & Direnç</option>
+                    </select>
+
+                    <select class="filter-select" id="filter-status" onchange="renderHistoryTable()">
+                        <option value="ALL">Tüm Sonuçlar</option>
+                        <option value="WIN">🟢 Sadece Kârlı İşlemler</option>
+                        <option value="LOSS">🔴 Sadece Zararlı İşlemler</option>
+                    </select>
+
+                    <button class="btn-export" onclick="downloadExcelReport()" title="Pasta grafikleri, KPI kartları ve renklendirilmiş sekmeleriyle profesyonel Excel raporu indir">
+                        📊 Profesyonel Excel İndir (.xlsx)
+                    </button>
+                    <button class="btn-export" onclick="downloadCSVReport()" style="background:rgba(255,255,255,0.08); border:1px solid var(--border-light); box-shadow:none;" title="Düz metin CSV tablosu indir">
+                        📄 CSV İndir
+                    </button>
+                </div>
+            </div>
+
+            <div style="overflow-x:auto;">
+                <table class="trade-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Kapanış Tarihi (TSİ)</th>
+                            <th>Süre</th>
+                            <th>Parite</th>
+                            <th>Yön & Kaldıraç</th>
+                            <th>Giriş Fiyatı</th>
+                            <th>Çıkış Fiyatı</th>
+                            <th>Net Kâr ($)</th>
+                            <th>ROE (%)</th>
+                            <th>R-Katı (1R)</th>
+                            <th>Zirve Kâr (MFE)</th>
+                            <th>🎯 Giriş Stratejisi</th>
+                            <th>🚪 Kapanış Nedeni</th>
+                            <th>🔬 Adli İnceleme</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trade-table-body">
+                        <tr>
+                            <td colspan="14" style="text-align:center; padding: 40px; color:#94a3b8;">
+                                Kayıtlı işlem geçmişi bulunmuyor.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
