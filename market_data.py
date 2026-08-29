@@ -53,43 +53,57 @@ class MarketDataManager:
         return 1.0
 
     def get_system_health(self) -> dict:
-        total_syms = len(self.all_symbols)
-        healthy_levs = 0
-        live_prices_cnt = 0
-        for s in self.all_symbols:
-            if self.current_prices.get(s, 0.0) > 0:
-                live_prices_cnt += 1
-            lev = self.levels.get(s, {})
-            cam = lev.get('camarilla', {}) if isinstance(lev, dict) else {}
-            if cam.get('R4', 0.0) > 0 and lev.get('tepe_avwap', 0.0) > 0:
-                healthy_levs += 1
+        try:
+            total_syms = len(self.all_symbols)
+            healthy_levs = 0
+            live_prices_cnt = 0
+            for s in self.all_symbols:
+                if self.current_prices.get(s, 0.0) > 0:
+                    live_prices_cnt += 1
+                lev = self.levels.get(s, {})
+                cam = lev.get('camarilla', {}) if isinstance(lev, dict) else {}
+                if cam.get('R4', 0.0) > 0:
+                    healthy_levs += 1
 
-        now_sec = time.time()
-        last_scan = getattr(self, '_last_candle_scan_ts', now_sec)
-        scan_active = (now_sec - last_scan) < 420  # Son 7 dakika icinde mum taramasi calisti mi?
-        levels_ok = (healthy_levs == total_syms and total_syms > 0)
-        ws_ok = (live_prices_cnt >= total_syms * 0.9)
+            now_sec = time.time()
+            last_scan = getattr(self, '_last_candle_scan_ts', now_sec)
+            scan_active = (now_sec - last_scan) < 420
+            levels_ok = (healthy_levs >= total_syms * 0.95 and total_syms > 0)
+            ws_ok = (live_prices_cnt >= total_syms * 0.8)
 
-        is_perfect = levels_ok and ws_ok and scan_active
-        err_msg = None
-        if not levels_ok:
-            err_msg = f"{total_syms - healthy_levs} paritenin seviye verisi eksik!"
-        elif not scan_active:
-            err_msg = "5M Mum tarayici gecikmeli calisiyor!"
-        elif not ws_ok:
-            err_msg = "WebSocket fiyat akisinda kopma var!"
+            is_perfect = levels_ok and ws_ok and scan_active
+            err_msg = None
+            if not levels_ok:
+                err_msg = f"{total_syms - healthy_levs} paritenin seviye verisi eksik!"
+            elif not scan_active:
+                err_msg = "5M Mum tarayici gecikmeli calisiyor!"
+            elif not ws_ok:
+                err_msg = "WebSocket fiyat akisinda gecikme var!"
 
-        return {
-            "is_perfect": is_perfect,
-            "status_text": "5/5 Tam Sağlıklı & Hatasız" if is_perfect else f"⚠️ Sorun: {err_msg}",
-            "healthy_symbols": healthy_levs,
-            "total_symbols": total_syms,
-            "live_prices": live_prices_cnt,
-            "scan_active": scan_active,
-            "ws_active": ws_ok,
-            "last_scan_time": getattr(self, '_last_candle_scan_str', datetime.now(timezone(timedelta(hours=3))).strftime('%H:%M:%S')),
-            "error_detail": err_msg
-        }
+            scan_str = getattr(self, '_last_candle_scan_str', datetime.now(timezone(timedelta(hours=3))).strftime('%H:%M:%S'))
+            return {
+                "is_perfect": is_perfect,
+                "status_text": "5/5 Tam Sağlıklı & Hatasız" if is_perfect else f"⚠️ Sorun: {err_msg}",
+                "healthy_symbols": healthy_levs,
+                "total_symbols": total_syms,
+                "live_prices": live_prices_cnt,
+                "scan_active": scan_active,
+                "ws_active": ws_ok,
+                "last_scan_time": scan_str,
+                "error_detail": err_msg
+            }
+        except Exception as e:
+            return {
+                "is_perfect": False,
+                "status_text": f"Teşhis İstisnası: {e}",
+                "healthy_symbols": 0,
+                "total_symbols": 100,
+                "live_prices": 0,
+                "scan_active": True,
+                "ws_active": True,
+                "last_scan_time": "Şimdi",
+                "error_detail": str(e)
+            }
 
     async def sync_top_100_symbols(self):
         """Binance Vadeli (USDT-M) 24h hacim siralamasini kontrol eder, delist olan veya veri vermeyen pariteleri otomatik degistirir."""

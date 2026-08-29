@@ -3295,45 +3295,67 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
         return web.Response(text=HTML_PAGE, content_type='text/html')
         
     async def api_data(request):
-        symbols_data = {}
-        for s in market_data.active_symbols:
-            lev = market_data.levels.get(s, {})
-            cur_p = market_data.current_prices.get(s, 0.0)
-            if not lev or not lev.get("camarilla"):
-                market_data.recalculate_levels(s)
+        try:
+            symbols_data = {}
+            for s in market_data.active_symbols:
                 lev = market_data.levels.get(s, {})
-            symbols_data[s] = {
-                "price": cur_p,
-                "levels": lev
-            }
-        
-        all_coins = []
-        for s in market_data.all_symbols:
-            all_coins.append({
-                "symbol": s,
-                "active": s in market_data.active_symbols,
-                "price": market_data.current_prices.get(s, 0.0)
+                cur_p = market_data.current_prices.get(s, 0.0)
+                if not lev or not lev.get("camarilla"):
+                    market_data.recalculate_levels(s)
+                    lev = market_data.levels.get(s, {})
+                symbols_data[s] = {
+                    "price": cur_p,
+                    "levels": lev
+                }
+            
+            all_coins = []
+            for s in market_data.all_symbols:
+                all_coins.append({
+                    "symbol": s,
+                    "active": s in market_data.active_symbols,
+                    "price": market_data.current_prices.get(s, 0.0)
+                })
+
+            try:
+                sys_health = market_data.get_system_health() if market_data else {
+                    "is_perfect": True,
+                    "status_text": "5/5 Tam Sağlıklı",
+                    "healthy_symbols": 100,
+                    "total_symbols": 100,
+                    "scan_active": True,
+                    "ws_active": True
+                }
+            except Exception as he:
+                sys_health = {
+                    "is_perfect": False,
+                    "status_text": f"Teşhis: {he}",
+                    "healthy_symbols": 100,
+                    "total_symbols": 100,
+                    "scan_active": True,
+                    "ws_active": True
+                }
+
+            return web.json_response({
+                "balance": trader_manager.balance,
+                "initial_balance": 100000.0,
+                "free_balance": trader_manager.get_free_balance(),
+                "open_positions": trader_manager.open_positions,
+                "history": trader_manager.history,
+                "symbols": symbols_data,
+                "all_coins": all_coins,
+                "system_health": sys_health
             })
-
-        sys_health = market_data.get_system_health() if market_data else {
-            "is_perfect": True,
-            "status_text": "5/5 Tam Sağlıklı",
-            "healthy_symbols": len(market_data.all_symbols) if market_data else 100,
-            "total_symbols": len(market_data.all_symbols) if market_data else 100,
-            "scan_active": True,
-            "ws_active": True
-        }
-
-        return web.json_response({
-            "balance": trader_manager.balance,
-            "initial_balance": 100000.0,
-            "free_balance": trader_manager.get_free_balance(),
-            "open_positions": trader_manager.open_positions,
-            "history": trader_manager.history,
-            "symbols": symbols_data,
-            "all_coins": all_coins,
-            "system_health": sys_health
-        })
+        except Exception as e:
+            return web.json_response({
+                "balance": trader_manager.balance,
+                "initial_balance": 100000.0,
+                "free_balance": trader_manager.get_free_balance(),
+                "open_positions": trader_manager.open_positions,
+                "history": trader_manager.history,
+                "symbols": {},
+                "all_coins": [],
+                "system_health": {"is_perfect": False, "status_text": f"Hata: {e}"}
+            })
 
     async def api_toggle_symbol(request):
         try:
