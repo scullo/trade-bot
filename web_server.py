@@ -3302,36 +3302,39 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
 
         function renderHistoryTable() {
             const tbody = document.getElementById('trade-table-body');
-            const quickCont = document.getElementById('quick-history-container');
+            if (!tbody) return;
             const hList = appState.history || [];
 
-            document.getElementById('history-total-count').innerText = `${hList.length} İşlem`;
+            const totalCountEl = document.getElementById('history-total-count');
+            if (totalCountEl) totalCountEl.innerText = `${hList.length} İşlem`;
             updateFinancialSummary();
 
             if (hList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 40px; color:#94a3b8;">Kayıtlı işlem geçmişi bulunmuyor.</td></tr>`;
-                quickCont.innerHTML = `<div style="color: #94a3b8; text-align:center; padding: 40px 20px; font-size:13px;">Henüz tamamlanmış işlem kaydı yok.</div>`;
+                tbody.innerHTML = `<tr><td colspan="14" style="text-align:center; padding: 40px; color:#94a3b8;">Kayıtlı işlem geçmişi bulunmuyor.</td></tr>`;
                 return;
             }
 
-            let quickHtml = '';
-            hList.slice().reverse().slice(0, 5).forEach(h => {
-                const isWin = h.net_pnl >= 0;
-                quickHtml += `
-                <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:8px; font-family:'JetBrains Mono'; font-size:13px;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                        <span style="color:#ffffff;"><b>${h.symbol.replace('/USDT','')}</b> (${h.side} ${h.leverage}x)</span>
-                        <span style="color:${isWin ? 'var(--green)' : 'var(--red)'}; font-weight:800;">
-                            ${isWin ? '+' : ''}${h.net_pnl.toFixed(2)}$ (${h.roe_pct >= 0 ? '+' : ''}${h.roe_pct.toFixed(1)}%)
-                        </span>
+            const quickCont = document.getElementById('quick-history-container');
+            if (quickCont) {
+                let quickHtml = '';
+                hList.slice().reverse().slice(0, 5).forEach(h => {
+                    const isWin = h.net_pnl >= 0;
+                    quickHtml += `
+                    <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:8px; font-family:'JetBrains Mono'; font-size:13px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                            <span style="color:#ffffff;"><b>${h.symbol.replace('/USDT','')}</b> (${h.side} ${h.leverage}x)</span>
+                            <span style="color:${isWin ? 'var(--green)' : 'var(--red)'}; font-weight:800;">
+                                ${isWin ? '+' : ''}${h.net_pnl.toFixed(2)}$ (${h.roe_pct >= 0 ? '+' : ''}${h.roe_pct.toFixed(1)}%)
+                            </span>
+                        </div>
+                        <div style="font-size:12px; color:#cbd5e1;">
+                            $${h.entry_price} ➔ $${h.exit_price} • Komisyon: $${(h.fees || h.commission || 0).toFixed(4)}
+                        </div>
                     </div>
-                    <div style="font-size:12px; color:#cbd5e1;">
-                        $${h.entry_price} ➔ $${h.exit_price} • Komisyon: $${h.fees.toFixed(4)}
-                    </div>
-                </div>
-                `;
-            });
-            quickCont.innerHTML = quickHtml;
+                    `;
+                });
+                quickCont.innerHTML = quickHtml;
+            }
 
             const symFilterEl = document.getElementById('filter-symbol');
             const setupFilterEl = document.getElementById('filter-setup');
