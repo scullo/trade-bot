@@ -2099,11 +2099,11 @@ HTML_PAGE = """
                 </div>
                 
                 <div class="filter-group">
-                    <select class="filter-select" id="filter-symbol" onchange="renderHistoryTable()">
+                    <select class="filter-select" id="filter-symbol" onchange="onLedgerFilterChange()">
                         <option value="ALL">Tüm Pariteler</option>
                     </select>
 
-                    <select class="filter-select" id="filter-setup" onchange="renderHistoryTable()">
+                    <select class="filter-select" id="filter-setup" onchange="onLedgerFilterChange()">
                         <option value="ALL">🎯 Tüm Stratejiler / Setuplar</option>
                         <option value="nPOC">🔵 nPOC Likidite İşlemleri</option>
                         <option value="MACRO">🟣 mVAL / mVAH Makro Kırılımlar</option>
@@ -2111,7 +2111,7 @@ HTML_PAGE = """
                         <option value="CAM_BOUNCE">🛡️ S3 / R3 Destek & Direnç</option>
                     </select>
 
-                    <select class="filter-select" id="filter-status" onchange="renderHistoryTable()">
+                    <select class="filter-select" id="filter-status" onchange="onLedgerFilterChange()">
                         <option value="ALL">Tüm Sonuçlar</option>
                         <option value="WIN">🟢 Sadece Kârlı İşlemler</option>
                         <option value="LOSS">🔴 Sadece Zararlı İşlemler</option>
@@ -2155,6 +2155,9 @@ HTML_PAGE = """
                     </tbody>
                 </table>
             </div>
+
+            <!-- LEDGER 20-ITEM PAGINATION STRIP -->
+            <div id="ledger-pagination-container" style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding:12px 18px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; flex-wrap:wrap; gap:12px;"></div>
         </div>
     </div>
 
@@ -4509,19 +4512,34 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
             if (balEl) balEl.innerText = '$' + totalPortfolioEquity.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
         }
 
-                function renderHistoryTable() {
+                let ledgerCurrentPage = 1;
+        const LEDGER_PAGE_SIZE = 20;
+
+        function setLedgerPage(p) {
+            ledgerCurrentPage = p;
+            renderHistoryTable();
+        }
+
+        function onLedgerFilterChange() {
+            ledgerCurrentPage = 1;
+            renderHistoryTable();
+        }
+
+        function renderHistoryTable() {
             try {
                 const tbody = document.getElementById('trade-table-body');
                 if (!tbody) return;
                 const hList = appState.history || [];
 
                 const totalCountEl = document.getElementById('history-total-count');
-                if (totalCountEl) totalCountEl.innerText = `${hList.length} İşlem`;
+                if (totalCountEl) totalCountEl.innerText = `${hList.length} Toplam İşlem`;
                 
                 try { updateFinancialSummary(); } catch(e) {}
 
                 if (hList.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="14" style="text-align:center; padding: 40px; color:#94a3b8;">Kayıtlı işlem geçmişi bulunmuyor.</td></tr>`;
+                    const pagCont = document.getElementById('ledger-pagination-container');
+                    if (pagCont) pagCont.innerHTML = '';
                     return;
                 }
 
@@ -4562,13 +4580,23 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                     return true;
                 });
 
-                if (filtered.length === 0) {
+                const totalFilteredCount = filtered.length;
+                const totalPages = Math.ceil(totalFilteredCount / LEDGER_PAGE_SIZE) || 1;
+                if (ledgerCurrentPage > totalPages) ledgerCurrentPage = totalPages;
+                if (ledgerCurrentPage < 1) ledgerCurrentPage = 1;
+
+                if (totalFilteredCount === 0) {
                     tbody.innerHTML = `<tr><td colspan="14" style="text-align:center; padding: 40px; color:#94a3b8; font-size:14px;">Seçilen filtre kriterlerine uygun işlem kaydı bulunamadı.</td></tr>`;
+                    const pagCont = document.getElementById('ledger-pagination-container');
+                    if (pagCont) pagCont.innerHTML = '';
                     return;
                 }
 
+                const startIndex = (ledgerCurrentPage - 1) * LEDGER_PAGE_SIZE;
+                const pageItems = filtered.slice(startIndex, startIndex + LEDGER_PAGE_SIZE);
+
                 let tableHtml = '';
-                filtered.forEach(h => {
+                pageItems.forEach(h => {
                     const netPnl = Number(h.net_pnl || 0.0);
                     const roePct = Number(h.roe_pct || 0.0);
                     const isWin = netPnl >= 0;
@@ -4639,12 +4667,41 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                     `;
                 });
                 tbody.innerHTML = tableHtml;
+
+                // Render Pagination Controls
+                const pagCont = document.getElementById('ledger-pagination-container');
+                if (pagCont) {
+                    let pagesHtml = '';
+                    
+                    const prevDisabled = (ledgerCurrentPage === 1);
+                    pagesHtml += `<button onclick="setLedgerPage(${ledgerCurrentPage - 1})" ${prevDisabled ? 'disabled' : ''} style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:${prevDisabled ? '#64748b' : '#fff'}; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:800; cursor:${prevDisabled ? 'not-allowed' : 'pointer'}; transition:all 0.15s ease;">« Önceki</button>`;
+
+                    for (let p = 1; p <= totalPages; p++) {
+                        if (p === 1 || p === totalPages || (p >= ledgerCurrentPage - 2 && p <= ledgerCurrentPage + 2)) {
+                            const isAct = (p === ledgerCurrentPage);
+                            pagesHtml += `<button onclick="setLedgerPage(${p})" style="background:${isAct ? 'linear-gradient(135deg, #00f2fe, #4facfe)' : 'rgba(255,255,255,0.04)'}; border:${isAct ? 'none' : '1px solid rgba(255,255,255,0.08)'}; color:${isAct ? '#000' : '#cbd5e1'}; font-weight:900; font-size:12px; min-width:34px; height:32px; border-radius:8px; cursor:pointer; transition:all 0.15s ease;">${p}</button>`;
+                        } else if (p === ledgerCurrentPage - 3 || p === ledgerCurrentPage + 3) {
+                            pagesHtml += `<span style="color:#64748b; padding:0 4px;">...</span>`;
+                        }
+                    }
+
+                    const nextDisabled = (ledgerCurrentPage === totalPages);
+                    pagesHtml += `<button onclick="setLedgerPage(${ledgerCurrentPage + 1})" ${nextDisabled ? 'disabled' : ''} style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:${nextDisabled ? '#64748b' : '#fff'}; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:800; cursor:${nextDisabled ? 'not-allowed' : 'pointer'}; transition:all 0.15s ease;">Sonraki »</button>`;
+
+                    pagCont.innerHTML = `
+                        <div style="font-size:12.5px; color:#94a3b8; font-family:'JetBrains Mono';">
+                            Toplam <b style="color:#ffffff;">${totalFilteredCount}</b> işlemden <b style="color:var(--cyan);">${startIndex + 1} - ${Math.min(startIndex + LEDGER_PAGE_SIZE, totalFilteredCount)}</b> arası gösteriliyor (Sayfa ${ledgerCurrentPage} / ${totalPages})
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            ${pagesHtml}
+                        </div>
+                    `;
+                }
             } catch (err) {
                 console.error("renderHistoryTable error:", err);
             }
         }
-
-        function downloadExcelReport() {
+function downloadExcelReport() {
             window.location.href = '/api/export_excel';
         }
 
