@@ -270,13 +270,29 @@ class StrategyEngine:
             else:
                 htf_str = "⚪ NÖTR MAKRO"
 
+        # ── 7. MAKRO TREND KALKANI (COUNTER-TREND SHIELD) ──
+        # Güçlü Boğa Trendinde zayıf SHORT'ları ve Güçlü Ayı Trendinde zayıf LONG'ları engelle
+        if trend_regime == "🟢 GÜÇLÜ BOĞA (Bullish)" and side == "SHORT" and c_count < 3 and vol_surge < 2.0:
+            print(f">> [MAKRO TREND KALKANI] {symbol} Güçlü Boğa Trendinde Karşı SHORT Reddedildi (Confluence: {c_count}/4, Surge: {vol_surge}x)")
+            return
+        if trend_regime == "🔴 GÜÇLÜ AYI (Bearish)" and side == "LONG" and c_count < 3 and vol_surge < 2.0:
+            print(f">> [MAKRO TREND KALKANI] {symbol} Güçlü Ayı Trendinde Karşı LONG Reddedildi (Confluence: {c_count}/4, Surge: {vol_surge}x)")
+            return
+
+        # ── 8. DİNAMİK MARJİN & RİSK BOYUTLANDIRMA (RISK PARITY) ──
+        # Aşırı volatil coinlerde (AMP, BICO) marjini küçültüp riski maks 3.5$ ile sınırla
+        safe_atr = max(0.5, atr_pct)
+        dyn_margin = min(100.0, max(20.0, round(3.5 / (safe_atr * 0.02 * 5.0) * 100.0 / 3.5, 2)))
+        dyn_margin = min(100.0, max(25.0, round(100.0 / (safe_atr / 1.0), 2)))
+
         res = await self._safe_open_position(
             symbol=symbol, side=side, entry_price=entry_price,
             reason=reason, soft_stop=soft_stop, hard_stop=hard_stop,
             tp1=tp1, tp2=tp2, trade_type=trade_type,
             snapshot_levels=snapshot_levels, setup_id=setup_id, confluence_list=confluence_list,
             atr_pct=atr_pct, trend_regime=trend_regime, session=session_str,
-            volume_surge=vol_surge, confluence_score=conf_score_str, htf_alignment=htf_str
+            volume_surge=vol_surge, confluence_score=conf_score_str, htf_alignment=htf_str,
+            custom_margin=dyn_margin
         )
         if isinstance(res, dict) and res.get("error") == "INSUFFICIENT_BALANCE":
             await self.notifier.notify_insufficient_balance(
@@ -435,15 +451,46 @@ class StrategyEngine:
             soft_stop = pos.get("soft_stop", 0.0)
             side = pos["side"]
 
-            # 1a. YUMUSAK STOP KONTROL
+            # 1a. KADEMELİ KÂR ALMA (TP1 - %50 Kapatma & Breakeven Koruması)
+            tp1_target = pos.get("tp1", 0.0)
+            tp2_target = pos.get("tp2", 0.0)
+            is_half = pos.get("is_half_closed", False)
+
+            if not is_half and tp1_target > 0:
+                if (side == "LONG" and close_price >= tp1_target) or (side == "SHORT" and close_price <= tp1_target):
+                    record = await self._safe_close_position(
+                        symbol, tp1_target,
+                        f"🎯 TP1 Hedefine Ulaşıldı (%50 Kâr Alındı - Stop Breakeven'e Çekildi)",
+                        is_partial=True
+                    )
+                    if record:
+                        await self._notify_close(record, levels=levels)
+                    return
+
+            # 1b. NİHAİ KÂR ALMA (TP2 - Kalan %50 Kapatma)
+            if is_half and tp2_target > 0:
+                if (side == "LONG" and close_price >= tp2_target) or (side == "SHORT" and close_price <= tp2_target):
+                    record = await self._safe_close_position(
+                        symbol, tp2_target,
+                        f"🚀 TP2 Nihai Hedefe Ulaşıldı (Kalan %50 Kapatıldı)",
+                        is_partial=False
+                    )
+                    if record:
+                        await self._notify_close(record, levels=levels)
+                        self._cleanup_tracking(symbol)
+                    return
+
+            # 1c. YUMUSAK STOP KONTROL (Breakeven veya Koruma Stopu)
             if side == "LONG" and close_price < soft_stop:
-                record = await self._safe_close_position(symbol, close_price, f"Yumusak Stop (Mum Seviye Altinda Kapandi)")
+                reason_stop = "🛡️ Breakeven Koruması Tetiklendi" if is_half else "Yumusak Stop (Mum Seviye Altinda Kapandi)"
+                record = await self._safe_close_position(symbol, close_price, reason_stop)
                 if record:
                     await self._notify_close(record, levels=levels)
                     self._cleanup_tracking(symbol)
                 return
             elif side == "SHORT" and close_price > soft_stop:
-                record = await self._safe_close_position(symbol, close_price, f"Yumusak Stop (Mum Seviye Ustunde Kapandi)")
+                reason_stop = "🛡️ Breakeven Koruması Tetiklendi" if is_half else "Yumusak Stop (Mum Seviye Ustunde Kapandi)"
+                record = await self._safe_close_position(symbol, close_price, reason_stop)
                 if record:
                     await self._notify_close(record, levels=levels)
                     self._cleanup_tracking(symbol)

@@ -52,6 +52,53 @@ class MarketDataManager:
             return 1000000.0
         return 1.0
 
+    async def sync_top_100_symbols(self):
+        """Binance Vadeli (USDT-M) 24h hacim siralamasini kontrol eder, delist olan veya veri vermeyen pariteleri otomatik degistirir."""
+        try:
+            url = "https://fapi.binance.com/fapi/v1/ticker/24hr"
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=8)) as resp:
+                    if resp.status == 200:
+                        tickers = await resp.json()
+                        if isinstance(tickers, list):
+                            # Sadece USDT ile biten ve hacmi olan pariteleri al
+                            valid_tickers = [
+                                t for t in tickers 
+                                if t.get('symbol', '').endswith('USDT') and float(t.get('quoteVolume', 0)) > 500000.0
+                            ]
+                            valid_tickers.sort(key=lambda x: float(x.get('quoteVolume', 0)), reverse=True)
+                            top_symbols = []
+                            for t in valid_tickers:
+                                raw_s = t['symbol']
+                                if raw_s.endswith('USDT'):
+                                    base = raw_s[:-4]
+                                    if base.startswith('1000000'): base = base[7:]
+                                    elif base.startswith('1000'): base = base[4:]
+                                    top_symbols.append(base + '/USDT')
+
+                            # Simdiki sembolleri tara, verisi olmayanlari siradaki en iyi hacimli ile degistir
+                            for s in list(self.all_symbols):
+                                lev = self.levels.get(s, {})
+                                cam = lev.get('camarilla', {}) if isinstance(lev, dict) else {}
+                                if not cam or not cam.get('R4') or cam.get('R4') <= 0:
+                                    # Bu sembol veri vermiyor / delist olmus olabilir
+                                    for replacement in top_symbols:
+                                        if replacement not in self.all_symbols:
+                                            print(f">> [OTOMATİK DELİST YÖNETİCİSİ] {s} veri vermiyor -> Yerine Top Hacimli {replacement} alınıyor!")
+                                            self.all_symbols.remove(s)
+                                            self.all_symbols.append(replacement)
+                                            if s in self.active_symbols:
+                                                self.active_symbols.remove(s)
+                                                self.active_symbols.add(replacement)
+                                            self.levels[replacement] = {}
+                                            self.current_prices[replacement] = 0.0
+                                            self.candles_5m[replacement] = pd.DataFrame()
+                                            self.candles_1d[replacement] = pd.DataFrame()
+                                            await self.fetch_single_symbol(replacement)
+                                            break
+        except Exception as e:
+            print(f">> [SYNC TOP 100 UYARI] {e}")
+
     async def initialize(self):
         print(">> Binance Vadeli (USDT-M Futures) verileri yukleniyor...")
         print(f"   Takip Edilen Toplam Parite: {len(self.all_symbols)}")

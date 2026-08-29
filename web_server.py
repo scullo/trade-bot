@@ -884,7 +884,83 @@ HTML_PAGE = """
             border-radius: 10px;
             padding: 12px 16px;
         }
-</style>
+
+        .accordion-btn {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            color: #94a3b8;
+            font-size: 11.5px;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 7px 10px;
+            margin-top: 10px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+        .accordion-btn:hover {
+            background: rgba(56, 189, 248, 0.1);
+            border-color: #38bdf8;
+            color: #ffffff;
+        }
+        .accordion-content {
+            display: none;
+            margin-top: 8px;
+            animation: fadeIn 0.2s ease;
+        }
+        .quant-intel-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-top: 8px;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .quant-intel-item {
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 6px;
+            padding: 5px 8px;
+        }
+        .quant-intel-lbl {
+            color: #64748b;
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+        .quant-intel-val {
+            color: #f1f5f9;
+            font-weight: 700;
+            margin-top: 1px;
+        }
+        .badge-tp1-hit {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.4));
+            border: 1px solid #10b981;
+            color: #a7f3d0;
+            font-size: 11.5px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .badge-trailing-lock {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.4));
+            border: 1px solid #f59e0b;
+            color: #fde68a;
+            font-size: 11.5px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+    </style>
 </head>
 <body>
 
@@ -1642,6 +1718,21 @@ HTML_PAGE = """
             renderCards();
         }
 
+        
+        function toggleLevelsAccordion(safeId) {
+            const el = document.getElementById('acc-' + safeId);
+            const btn = document.getElementById('acc-btn-' + safeId);
+            if (el) {
+                if (el.style.display === 'none' || el.style.display === '') {
+                    el.style.display = 'block';
+                    if (btn) btn.innerHTML = '<span>📊 15 Kilit Seviyeyi Gizle</span> <span>▲</span>';
+                } else {
+                    el.style.display = 'none';
+                    if (btn) btn.innerHTML = '<span>📊 15 Kilit Seviyeyi Aç</span> <span>▼</span>';
+                }
+            }
+        }
+
         function renderCards() {
             try {
                 const cont = document.getElementById('watchlist-container');
@@ -1787,7 +1878,19 @@ HTML_PAGE = """
                             <!-- ROW 2: DEDICATED ACTIVE POSITION BANNER (IF ACTIVE) -->
                             ${posBannerHtml}
 
-                            <div class="analysis-box" id="abox-${safeId}">
+                            <!-- QUANT ANALİZ & MAKRO DURUM KUTUSU -->
+                            <div class="quant-intel-grid">
+                                <div class="quant-intel-item">
+                                    <div class="quant-intel-lbl">1H Makro Trend</div>
+                                    <div class="quant-intel-val" style="color:${intel.macroColor}">${intel.macroTrend}</div>
+                                </div>
+                                <div class="quant-intel-item">
+                                    <div class="quant-intel-lbl">En Yakın Direnç</div>
+                                    <div class="quant-intel-val" style="color:#fde047">${intel.nearestUp ? '$' + formatPriceClean(intel.nearestUp) + ' (+' + intel.upDistPct + '%)' : 'Açık Alan'}</div>
+                                </div>
+                            </div>
+
+                            <div class="analysis-box" id="abox-${safeId}" style="margin-top:8px;">
                                 <div class="analysis-title" id="atitle-${safeId}" style="color:${intel.color}">
                                     <span>●</span> ${intel.tag}
                                 </div>
@@ -1795,11 +1898,18 @@ HTML_PAGE = """
                             </div>
 
                             <div class="action-plan-box" id="planbox-${safeId}">
-                                <div class="action-plan-title">🎯 BOT PUSU & EYLEM PLANI</div>
-                                <div id="plantext-${safeId}">${intel.actionPlan}</div>
+                                <div class="action-plan-title">🎯 BOT PUSU & CANLI EYLEM PLANI</div>
+                                <div id="plantext-${safeId}">${intel.posCommentary ? '<b style="color:#86efac;">' + intel.posCommentary + '</b>' : intel.actionPlan}</div>
                             </div>
 
-                            ${tableHtml}
+                            <!-- AKORDİYON SEVİYE LİSTESİ (İSTENDİĞİNDE AÇILIR) -->
+                            <button class="accordion-btn" id="acc-btn-${safeId}" onclick="toggleLevelsAccordion('${safeId}')">
+                                <span>📊 15 Kilit Seviyeyi Aç</span>
+                                <span>▼</span>
+                            </button>
+                            <div class="accordion-content" id="acc-${safeId}">
+                                ${tableHtml}
+                            </div>
                         </div>
                         `;
                     } catch (e) {
@@ -1942,8 +2052,11 @@ HTML_PAGE = """
                     <div class="pos-detail-row">
                         Giriş: <b>$${pos.entry_price}</b> • Anlık: <b id="pos-cur-price-${safeId}">$${metrics.curP}</b> • Pozisyon Hacmi (${pos.leverage}x): <b>$${pos.position_value.toFixed(2)}</b> (Marjin: <b>$${pos.margin.toFixed(2)}</b>)
                     </div>
-                    <div class="pos-target-row">
-                        🛑 Stop Seviyesi: <code style="color:#ffffff;">$${pos.soft_stop.toFixed(4)}</code> • 🎯 TP1 Hedefi: <code style="color:#ffffff;">$${pos.tp1.toFixed(4)}</code>
+                    <div class="pos-target-row" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:8px;">
+                        ${pos.is_half_closed || pos.tp1_hit ? '<span class="badge-tp1-hit">🎯 TP1 ALINDI (%50 Kâr Kasada) • Breakeven Korumalı</span>' : '<span style="color:#94a3b8; font-size:12px;">🎯 İlk Hedef (TP1): <code style="color:#fff;">$' + (pos.tp1 ? pos.tp1.toFixed(4) : '-') + '</code></span>'}
+                        ${pos.trail_status ? '<span class="badge-trailing-lock">' + pos.trail_status + '</span>' : ''}
+                        <span style="color:#94a3b8; font-size:12px;">🛑 Aktif Stop: <code style="color:${pos.is_half_closed ? 'var(--green)' : '#f87171'}; font-weight:800;">$' + (pos.soft_stop ? pos.soft_stop.toFixed(4) : '-') + '</code></span>
+                        ${pos.tp2 ? '<span style="color:#94a3b8; font-size:12px;">🚀 Nihai Hedef (TP2): <code style="color:#38bdf8; font-weight:800;">$' + pos.tp2.toFixed(4) + '</code></span>' : ''}
                     </div>
                     <div class="pos-setup-tag">
                         📌 Formasyon / Neden: ${pos.reason}

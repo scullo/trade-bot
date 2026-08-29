@@ -153,13 +153,13 @@ class PaperTrader:
         return True
 
     def update_tick_telemetry(self, symbol: str, current_price: float):
-        # Her fiyat hareketinde MFE (Max Kar) ve MAE (Max Zarar) derinligini anlik kaydeder
+        # Her fiyat hareketinde MFE (Max Kar) ve MAE (Max Zarar) derinligini anlik kaydeder ve Kademeli Izsuren Stopu yonetir
         if symbol not in self.open_positions:
             return
         pos = self.open_positions[symbol]
         side = pos["side"]
         entry = pos["entry_price"]
-        lev = pos["leverage"]
+        lev = pos.get("leverage", 5)
 
         if current_price > pos.get("peak_price", entry):
             pos["peak_price"] = current_price
@@ -167,21 +167,65 @@ class PaperTrader:
             pos["trough_price"] = current_price
 
         if side == "LONG":
+            current_roe = ((current_price - entry) / entry) * lev * 100.0
             mfe_roe = ((pos["peak_price"] - entry) / entry) * lev * 100.0
             mae_roe = ((entry - pos["trough_price"]) / entry) * lev * 100.0
         else:
+            current_roe = ((entry - current_price) / entry) * lev * 100.0
             mfe_roe = ((entry - pos["trough_price"]) / entry) * lev * 100.0
             mae_roe = ((pos["peak_price"] - entry) / entry) * lev * 100.0
 
         pos["max_mfe_roe"] = round(max(pos.get("max_mfe_roe", 0.0), mfe_roe), 2)
         pos["max_mae_roe"] = round(max(pos.get("max_mae_roe", 0.0), mae_roe), 2)
 
-    def open_position(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None, atr_pct: float = 1.0, trend_regime: str = "YATAY", session: str = "LONDRA", volume_surge: float = 1.0, confluence_score: str = "2/4", htf_alignment: str = "TREND YÖNÜNDE"):
+        # ── KADEMELİ İZSÜREN KÂR KİLİDİ (TIERED TRAILING PROFIT LOCK) ──
+        updated_stop = False
+        # Tier 3: ROE >= +15.0% -> En az +9.0% ROE kilit
+        if current_roe >= 15.0 and not pos.get("_trail_15"):
+            pos["_trail_15"] = True
+            pos["_trail_8"] = True
+            pos["trail_status"] = "🛡️ Tier 3 (%9.0 Kâr Korumalı)"
+            if side == "LONG":
+                lock_p = entry * (1.0 + (0.09 / lev))
+                if lock_p > pos.get("soft_stop", 0):
+                    pos["soft_stop"] = lock_p
+                    pos["hard_stop"] = lock_p
+                    updated_stop = True
+            else:
+                lock_p = entry * (1.0 - (0.09 / lev))
+                if lock_p < pos.get("soft_stop", 999999):
+                    pos["soft_stop"] = lock_p
+                    pos["hard_stop"] = lock_p
+                    updated_stop = True
+            print(f">> [TRAILING TIER 3] {symbol} +%15 ROE Goruldu -> Stop +%9.0 Kâra Kilitlendi!")
+
+        # Tier 2: ROE >= +8.0% -> En az +3.5% ROE kilit
+        elif current_roe >= 8.0 and not pos.get("_trail_8"):
+            pos["_trail_8"] = True
+            pos["trail_status"] = "🛡️ Tier 2 (%3.5 Kâr Korumalı)"
+            if side == "LONG":
+                lock_p = entry * (1.0 + (0.035 / lev))
+                if lock_p > pos.get("soft_stop", 0):
+                    pos["soft_stop"] = lock_p
+                    pos["hard_stop"] = lock_p
+                    updated_stop = True
+            else:
+                lock_p = entry * (1.0 - (0.035 / lev))
+                if lock_p < pos.get("soft_stop", 999999):
+                    pos["soft_stop"] = lock_p
+                    pos["hard_stop"] = lock_p
+                    updated_stop = True
+            print(f">> [TRAILING TIER 2] {symbol} +%8 ROE Goruldu -> Stop +%3.5 Kâra Kilitlendi!")
+
+        if updated_stop:
+            self.save_history()
+
+    def open_position(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None, atr_pct: float = 1.0, trend_regime: str = "YATAY", session: str = "LONDRA", volume_surge: float = 1.0, confluence_score: str = "2/4", htf_alignment: str = "TREND YÖNÜNDE", custom_margin: float = None):
         if symbol in self.open_positions:
             return None
 
-        # Marjin ve Serbest Kasa Kontrolu
-        margin = self.margin_per_trade
+        # Marjin ve Serbest Kasa Kontrolu (Dinamik ATR Boyutlandirma Destegi)
+        margin = float(custom_margin) if custom_margin is not None else float(self.margin_per_trade)
         free_bal = self.get_free_balance()
         if free_bal < margin:
             print(f">> [YETERSIZ BAKIYE] Kasa: {self.balance:.2f} USDT, Serbest Kasa: {free_bal:.2f} USDT, Gereken Marjin: {margin} USDT")
@@ -294,8 +338,11 @@ class PaperTrader:
             pos["position_value"] = closed_val
             pos["quantity"] = closed_qty
             pos["entry_fee"] = entry_fee - portion_entry_fee
-            pos["soft_stop"] = entry_p # Breakeven
-            pos["hard_stop"] = entry_p
+            be_price = entry_p * 1.002 if side == "LONG" else entry_p * 0.998
+            pos["soft_stop"] = be_price
+            pos["hard_stop"] = be_price
+            pos["tp1_hit"] = True
+            pos["trail_status"] = "🎯 TP1 KİLİTLENDİ (%50 Alındı - Breakeven Korumalı)"
 
             exit_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             # Duration format
