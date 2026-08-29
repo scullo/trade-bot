@@ -1223,14 +1223,11 @@ HTML_PAGE = """
             </div>
         </div>
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <div id="mode-badge-wrap" class="mode-badge-wrap" onclick="openLiveSettingsModal()" title="Ticaret Modunu & Binance API Ayarlarını Aç">
+            <div id="mode-badge-wrap" class="mode-badge-wrap" onclick="openLiveSettingsModal()" title="Ticaret Modu (Demo/Canlı) & Binance API Ayarlarını Aç">
                 <span id="mode-badge-dot" class="mode-dot-demo"></span>
                 <span id="mode-badge-text">🟡 DEMO MODU</span>
+                <span style="opacity:0.6; font-size:12px; margin-left:3px;">⚙️</span>
             </div>
-            <button class="btn-binance-settings" onclick="openLiveSettingsModal()" title="Binance API Anahtarları ve Canlı Hesap Ayarlarını Aç">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="#f3ba2f"><path d="M12 2L4 6v12l8 4 8-4V6l-8-4zm0 2.8l5.5 2.75L12 10.3 6.5 7.55 12 4.8zM6 9.3l5 2.5v5.85l-5-2.5V9.3zm12 5.85l-5 2.5V11.8l5-2.5v5.85z"/></svg>
-                ⚙️ Binance Canlı Hesap
-            </button>
             <div class="live-tag">
                 <div class="live-dot"></div>
                 <span id="ws-status">BİNANCE CANLI YAYIN</span>
