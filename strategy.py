@@ -1,4 +1,8 @@
 import time
+import datetime
+from datetime import datetime
+import pandas as pd
+import numpy as np
 from config import (
     BUFFER_RATIO, MAX_OPEN_POSITIONS,
     TRAILING_BREAKEVEN_ROE, TRAILING_LOCK_30_ROE, TRAILING_LOCK_50_ROE,
@@ -203,16 +207,31 @@ class StrategyEngine:
     # =========================================================================
     async def _handle_open(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None):
         # ── 1. ATR / VOLATILITE HESABI ──
-        candles = self.candle_history.get(symbol, [])
-        atr_pct = 1.0
-        if len(candles) >= 14:
-            trs = []
-            for i in range(1, min(len(candles), 15)):
-                c = candles[-i]
-                prev = candles[-i-1]
-                tr = max(c['high'] - c['low'], abs(c['high'] - prev['close']), abs(c['low'] - prev['close']))
-                trs.append(tr / c['close'] * 100.0)
-            atr_pct = round(sum(trs) / len(trs), 2)
+        atr_pct = 1.2
+        vol_surge = 1.0
+        if self.market_data and symbol in self.market_data.candles_5m:
+            df = self.market_data.candles_5m[symbol]
+            if isinstance(df, pd.DataFrame) and not df.empty and len(df) >= 14:
+                try:
+                    high = df['high']
+                    low = df['low']
+                    close = df['close']
+                    tr1 = high - low
+                    tr2 = (high - close.shift()).abs()
+                    tr3 = (low - close.shift()).abs()
+                    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+                    atr = tr.rolling(14).mean().iloc[-1]
+                    atr_pct = round((atr / close.iloc[-1]) * 100.0, 2)
+                except Exception:
+                    atr_pct = 1.2
+
+                try:
+                    if len(df) >= 20:
+                        avg_vol = df['volume'].iloc[-21:-1].mean()
+                        cur_vol = df['volume'].iloc[-1]
+                        vol_surge = round(float(cur_vol / avg_vol), 2) if avg_vol > 0 else 1.0
+                except Exception:
+                    vol_surge = 1.0
 
         # ── 2. TREND REJIMI HESABI ──
         snaps = snapshot_levels or {}
@@ -241,12 +260,7 @@ class StrategyEngine:
             session_str = "🗽 NEW YORK (ABD)"
 
         # ── 4. HACIM PATLAMA KATSAYISI (Volume Surge Ratio) ──
-        vol_surge = 1.0
-        if len(candles) >= 20:
-            vols = [c.get('volume', 0.0) for c in candles[-21:-1]]
-            avg_vol = sum(vols) / len(vols) if vols else 1.0
-            cur_vol = candles[-1].get('volume', 0.0) if candles else 1.0
-            vol_surge = round(cur_vol / avg_vol, 2) if avg_vol > 0 else 1.0
+        # Zaten yukarida df_5m'den guvenle hesaplandi (varsayilan 1.0x)
 
         # ── 5. CONFLUENCE (ÇAKIŞMA) SKORU ──
         c_count = min(4, max(1, len(confluence_list or [1])))
@@ -434,14 +448,22 @@ class StrategyEngine:
         prev_close = prev_candle['close'] if prev_candle else close_price
 
         cam = levels.get("camarilla", {})
+        p = cam.get("P", 0.0)
+        r3 = cam.get("R3", 0.0)
+        r4 = cam.get("R4", 0.0)
+        r5 = cam.get("R5", 0.0)
+        s3 = cam.get("S3", 0.0)
+        s4 = cam.get("S4", 0.0)
+        s5 = cam.get("S5", 0.0)
         tepe_avwap = levels.get("tepe_avwap") or 0.0
         dip_avwap = levels.get("dip_avwap") or 0.0
         mvah = levels.get("mvah") or 0.0
         mval = levels.get("mval") or 0.0
-        above_npoc = levels.get("above_npoc")
-        below_npoc = levels.get("below_npoc")
-        above_nvah = levels.get("above_nvah")
-        below_nval = levels.get("below_nval")
+        mpoc = levels.get("mpoc") or 0.0
+        above_npoc = levels.get("above_npoc") or 0.0
+        below_npoc = levels.get("below_npoc") or 0.0
+        above_nvah = levels.get("above_nvah") or 0.0
+        below_nval = levels.get("below_nval") or 0.0
 
         # ═══════════════════════════════════════════════════════════════════
         # BOLUM 1: ACIK POZISYON YONETIMI
