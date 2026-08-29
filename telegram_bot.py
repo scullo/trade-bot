@@ -14,12 +14,13 @@ class TelegramNotifier:
         self.photo_url = f"https://api.telegram.org/bot{self.token}/sendPhoto"
         self.sentinel = ValkyrieAegisSentinel()
 
-    async def send_message(self, text: str):
-        if not self.token or not self.chat_id:
+    async def send_message(self, text: str, chat_id: str = None):
+        target_chat = chat_id or self.chat_id
+        if not self.token or not target_chat:
             return
         try:
             payload = {
-                "chat_id": self.chat_id,
+                "chat_id": str(target_chat),
                 "text": text,
                 "parse_mode": "HTML"
             }
@@ -463,20 +464,27 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
 
         while True:
             try:
-                params = {"offset": offset, "timeout": 15}
+                params = {"offset": offset, "timeout": 10, "allowed_updates": ["message", "channel_post"]}
                 async with aiohttp.ClientSession() as session:
-                    async with session.get(poll_url, params=params, timeout=20) as resp:
+                    async with session.get(poll_url, params=params, timeout=15) as resp:
                         if resp.status == 200:
                             data = await resp.json()
                             updates = data.get("result", [])
                             for u in updates:
                                 offset = u["update_id"] + 1
-                                msg_obj = u.get("message", {})
-                                text = msg_obj.get("text", "").strip().lower()
+                                msg_obj = u.get("message") or u.get("channel_post") or u.get("edited_message") or {}
+                                raw_text = str(msg_obj.get("text", "")).strip()
+                                text = raw_text.lower()
                                 chat = msg_obj.get("chat", {})
-                                sender_chat_id = str(chat.get("id", ""))
+                                sender_chat_id = str(chat.get("id", "")) or str(self.chat_id)
 
-                                if text in ["/kasa", "kasa", "/durum", "durum", "/bakiye", "bakiye", "/start"]:
+                                if not text:
+                                    continue
+
+                                print(f">> [TELEGRAM ASİSTAN MESAJ ALINDI]: '{raw_text}' (Chat ID: {sender_chat_id})")
+
+                                is_kasa_cmd = any(w in text for w in ["kasa", "durum", "bakiye", "start", "help", "rapor", "pnl", "portfoy"])
+                                if is_kasa_cmd:
                                     bal = trader_manager.balance
                                     open_p = trader_manager.open_positions
                                     hist = trader_manager.history
@@ -498,7 +506,7 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
 
                                     top_movers.sort(key=lambda x: x[2], reverse=True)
                                     top_str_list = []
-                                    for sym, side, roe, pnl in top_movers[:4]:
+                                    for sym, side, roe, pnl in top_movers[:5]:
                                         clean_s = sym.replace('/USDT', '')
                                         s_emoji = "🟢" if roe >= 0 else "🔴"
                                         top_str_list.append(f"• {s_emoji} <b>#{clean_s}</b> ({side}): <code>%{roe:+5.2f} ROE (${pnl:+5.2f})</code>")
@@ -512,7 +520,7 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
                                     reply = f"""💎 ━━━━━━━━━━━━━━━━━━━━━━━━━ 💎
 💼 <b>VALKYRIE QUANT — ANLIK KASA RAPORU ({now_str})</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-💰 <b>Toplam Kasa:</b> <b>${bal:,.2f} USDT</b>
+💰 <b>Toplam Kasa Bakiyesi:</b> <b>${bal:,.2f} USDT</b>
 📊 <b>Açık Pozisyon Sayısı:</b> <b>{len(open_p)} Adet</b>
 ⚡ <b>Anlık Canlı Kâr (Unrealized):</b> <b>{total_unrealized:+.2f} USDT</b>
 💵 <b>Bugün Gerçekleşen Kâr:</b> <b>{today_pnl:+.2f} USDT</b>
@@ -521,7 +529,9 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
 {top_str}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 💎 ━━━━━━━━━━━━━━━━━━━━━━━━━ 💎"""
-                                    await self.send_message(reply)
+                                    await self.send_message(reply, chat_id=sender_chat_id)
+                                    print(f">> [TELEGRAM ASİSTAN YANIT GÖNDERİLDİ] -> {sender_chat_id}")
             except Exception as e:
-                await asyncio.sleep(5)
-            await asyncio.sleep(1)
+                print(f"[TELEGRAM LISTENER ERROR]: {e}")
+                await asyncio.sleep(4)
+            await asyncio.sleep(0.5)
