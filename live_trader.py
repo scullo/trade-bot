@@ -98,7 +98,7 @@ class LiveTrader:
 
             return {
                 "status": "ok",
-                "message": "Binance Futures API Baglantisi Basarili!",
+                "message": "Binance Futures API Bağlantısı Başarılı!",
                 "total_balance": round(total_usdt, 2),
                 "free_balance": round(free_usdt, 2),
                 "ping_ms": ping_ms
@@ -106,7 +106,7 @@ class LiveTrader:
         except Exception as e:
             return {
                 "status": "error",
-                "message": f"Baglanti Hatasi: {str(e)}"
+                "message": f"Bağlantı Hatası: {str(e)}"
             }
         finally:
             if test_ex:

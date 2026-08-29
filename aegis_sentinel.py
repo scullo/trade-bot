@@ -311,7 +311,7 @@ class ValkyrieAegisSentinel:
         if healing:
             healing_text = "\n".join([f" • {act}" for act in healing[:3]])
         else:
-            healing_text = " • <i>0 Kritik Hata / Tüm alt sistemler sorunsuz.</i>"
+            healing_text = " • <i>0 Kritik Hata / Tüm alt sistemler tam sağlıklı.</i>"
 
         # En Yakin Hedefler
         near_lines = []
@@ -321,7 +321,7 @@ class ValkyrieAegisSentinel:
                 near_lines.append(f" {len(near_lines)+1}. <b>#{clean}</b> ➔ {n['target']} (%{n['dist']:.2f} kaldı - {n['side']})")
             near_text = "\n".join(near_lines)
         else:
-            near_text = " • <i>100 paritede pusu devam ediyor, seviyeler taranıyor.</i>"
+            near_text = " • <i>100 paritede pusu devam ediyor, kurumsal seviyeler taranıyor.</i>"
 
         # Acik Pozisyonlar
         pos_lines = []

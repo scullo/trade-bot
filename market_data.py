@@ -76,9 +76,9 @@ class MarketDataManager:
             if not levels_ok:
                 err_msg = f"{total_syms - healthy_levs} paritenin seviye verisi eksik!"
             elif not scan_active:
-                err_msg = "5M Mum tarayici gecikmeli calisiyor!"
+                err_msg = "5M Mum tarayıcısı gecikmeli çalışıyor!"
             elif not ws_ok:
-                err_msg = "WebSocket fiyat akisinda gecikme var!"
+                err_msg = "WebSocket canlı fiyat akışında gecikme var!"
 
             scan_str = getattr(self, '_last_candle_scan_str', datetime.now(timezone(timedelta(hours=3))).strftime('%H:%M:%S'))
             return {

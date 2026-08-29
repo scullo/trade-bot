@@ -14,7 +14,7 @@ HTML_PAGE = """
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>VALKYRIE QUANT DESK — Binance Futures Terminal</title>    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>VALKYRIE QUANT DESK •— Binance Futures Terminal</title>    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script type="text/javascript" src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <style>
@@ -1567,7 +1567,7 @@ HTML_PAGE = """
     </div>
 
     <!-- =========================================================================
-         VALKYRIE QUANT DESK — ULTRA-LUXURY PUBLIC LANDING PAGE (AUTH GATEWAY)
+         VALKYRIE QUANT DESK •— ULTRA-LUXURY PUBLIC LANDING PAGE (AUTH GATEWAY)
          ========================================================================= -->
     <div id="landing-page-view" style="display:none; min-height:100vh; background:radial-gradient(circle at 50% 15%, rgba(0,242,254,0.08), transparent 60%), #07090e; color:#fff; position:relative; overflow-x:hidden;">
         
@@ -1676,7 +1676,7 @@ HTML_PAGE = """
 
         <!-- FOOTER -->
         <footer style="border-top:1px solid rgba(255,255,255,0.06); padding:24px; text-align:center; font-size:11.5px; color:#64748b;">
-            <div style="margin-bottom:6px;">VALKYRIE QUANT DESK © 2026 • Kurumsal Algoritmik Ticaret Sistemleri</div>
+            <div style="margin-bottom:6px;">VALKYRIE QUANT DESK •© 2026 • Kurumsal Algoritmik Ticaret Sistemleri</div>
             <div>Risk Bildirimi: Kripto vadeli işlemler yüksek volatilite ve risk içerir. Geçmiş performans gelecekteki getirilerin garantisi değildir.</div>
         </footer>
     </div>
@@ -2027,7 +2027,7 @@ HTML_PAGE = """
                 <div class="ai-thought-item">
                     <span style="font-size:18px;">💡</span>
                     <div>
-                        <b>VALKYRIE QUANT DESK BAŞLATILDI:</b> 100 paritede Camarilla Pivotları, Tepe/Dip AVWAP seviyeleri ve Kurumsal nPOC likidite hatları aktif taranıyor.
+                        <b>VALKYRIE QUANT DESK •BAŞLATILDI:</b> 100 paritede Camarilla Pivotları, Tepe/Dip AVWAP seviyeleri ve Kurumsal nPOC likidite hatları aktif taranıyor.
                     </div>
                 </div>
             </div>
@@ -5773,7 +5773,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
     await runner.setup()
     site = web.TCPSite(runner, host, port)
     await site.start()
-    print(f">> [VALKYRIE QUANT DESK READY]: http://{host}:{port}")
+    print(f">> [VALKYRIE QUANT DESK •READY]: http://{host}:{port}")
 
 async def broadcast_tick(symbol, price):
     if not sse_clients:
