@@ -1,3 +1,4 @@
+from db_manager import DatabaseManager
 import asyncio
 import json
 from datetime import datetime, timezone, timedelta
@@ -1203,6 +1204,60 @@ HTML_PAGE = """
 <body>
 
     
+    
+    <!-- AUTHENTICATION (LOGIN / 24H TRIAL REGISTER) MODAL -->
+    <div id="auth-modal-overlay" class="modal-overlay" style="display:none;" onclick="if(event.target === this) closeAuthModal()">
+        <div class="modal-card" style="max-width:440px; text-align:left;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                <div style="font-size:17px; font-weight:900; color:#fff; display:flex; align-items:center; gap:8px;">
+                    <span>🔐</span> VALKYRIE QUANT GİRİŞ & ÜYELİK
+                </div>
+                <button onclick="closeAuthModal()" style="background:transparent; border:none; color:#94a3b8; font-size:20px; cursor:pointer;">✕</button>
+            </div>
+
+            <!-- TAB SWITCHER -->
+            <div style="display:flex; gap:8px; margin-bottom:16px; background:rgba(255,255,255,0.03); padding:4px; border-radius:10px;">
+                <button id="auth-tab-btn-login" onclick="switchAuthTab('login')" style="flex:1; padding:8px; border-radius:8px; border:none; background:var(--blue); color:#fff; font-weight:800; font-size:12px; cursor:pointer;">Giriş Yap</button>
+                <button id="auth-tab-btn-register" onclick="switchAuthTab('register')" style="flex:1; padding:8px; border-radius:8px; border:none; background:transparent; color:#94a3b8; font-weight:800; font-size:12px; cursor:pointer;">🎁 24h Ücretsiz Deneme</button>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <div id="auth-form-login">
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">E-Posta Adresi</label>
+                    <input type="email" id="login-email" placeholder="ornek@domain.com" class="settings-input" value="admin@valkyriequant.com" />
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Şifre</label>
+                    <input type="password" id="login-password" placeholder="Şifrenizi giriniz..." class="settings-input" value="AdminValkyrie2026!" />
+                </div>
+                <button class="btn-save-settings" style="width:100%; margin-top:6px;" onclick="submitLogin()">⚡ Giriş Yap</button>
+            </div>
+
+            <!-- REGISTER FORM (WITH 24H TRIAL & ANTI-ABUSE) -->
+            <div id="auth-form-register" style="display:none;">
+                <div style="background:rgba(0,242,254,0.06); border:1px solid rgba(0,242,254,0.2); border-radius:8px; padding:10px; margin-bottom:12px; font-size:11px; color:#cbd5e1;">
+                    🎁 <b>24 Saatlik VIP Deneme:</b> Kayıt olduğunuz an 24 saat boyunca tüm algoritmik sinyaller hesabınızda otomatik aktif edilir.
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">E-Posta</label>
+                    <input type="email" id="reg-email" placeholder="E-posta adresiniz..." class="settings-input" />
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Şifre</label>
+                    <input type="password" id="reg-password" placeholder="Şifre belirleyiniz..." class="settings-input" />
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Binance Hesap UID (Opsiyonel / Doğrulama)</label>
+                    <input type="text" id="reg-binance-uid" placeholder="Binance UID (Örn: 12345678)" class="settings-input" />
+                </div>
+                <button class="btn-save-settings" style="width:100%; margin-top:6px; background:linear-gradient(135deg, #00f2fe, #4facfe);" onclick="submitRegister()">🚀 24 Saatlik Denemeyi Başlat</button>
+            </div>
+
+            <div id="auth-msg-box" style="display:none; margin-top:12px; padding:10px; border-radius:8px; font-size:12px; font-family:'JetBrains Mono';"></div>
+        </div>
+    </div>
+
     <!-- SYSTEM HEALTH DIAGNOSTIC MODAL -->
     <div id="health-modal-overlay" class="modal-overlay" style="display:none;" onclick="if(event.target === this) closeHealthDiagnosticModal()">
         <div class="modal-card" style="max-width:540px; text-align:left;">
@@ -1770,6 +1825,162 @@ HTML_PAGE = """
     <script>
 
         // =========================================================================
+        // MULTI-TENANT AUTHENTICATION & MASTER ADMIN JS ENGINE
+        // =========================================================================
+        let currentUser = {
+            role: 'ADMIN',
+            email: 'admin@valkyriequant.com',
+            plan_type: 'VIP'
+        };
+
+        function openAuthModal() {
+            const m = document.getElementById('auth-modal-overlay');
+            if (m) m.style.display = 'flex';
+        }
+
+        function closeAuthModal() {
+            const m = document.getElementById('auth-modal-overlay');
+            if (m) m.style.display = 'none';
+        }
+
+        function switchAuthTab(tab) {
+            const btnL = document.getElementById('auth-tab-btn-login');
+            const btnR = document.getElementById('auth-tab-btn-register');
+            const fL = document.getElementById('auth-form-login');
+            const fR = document.getElementById('auth-form-register');
+
+            if (tab === 'login') {
+                btnL.style.background = 'var(--blue)'; btnL.style.color = '#fff';
+                btnR.style.background = 'transparent'; btnR.style.color = '#94a3b8';
+                fL.style.display = 'block'; fR.style.display = 'none';
+            } else {
+                btnR.style.background = 'var(--blue)'; btnR.style.color = '#fff';
+                btnL.style.background = 'transparent'; btnL.style.color = '#94a3b8';
+                fR.style.display = 'block'; fL.style.display = 'none';
+            }
+        }
+
+        async function submitLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const box = document.getElementById('auth-msg-box');
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    currentUser = data.user;
+                    box.style.display = 'block';
+                    box.style.background = 'rgba(14,203,129,0.1)';
+                    box.style.color = 'var(--green)';
+                    box.innerText = `✅ Hoş geldiniz, ${currentUser.email}!`;
+                    setTimeout(() => {
+                        closeAuthModal();
+                        updateUserSessionUI();
+                    }, 1000);
+                } else {
+                    box.style.display = 'block';
+                    box.style.background = 'rgba(255,71,87,0.1)';
+                    box.style.color = 'var(--red)';
+                    box.innerText = `❌ ${data.message}`;
+                }
+            } catch (e) {
+                alert('Giriş Hatası: ' + e);
+            }
+        }
+
+        async function submitRegister() {
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const binance_uid = document.getElementById('reg-binance-uid').value;
+            const box = document.getElementById('auth-msg-box');
+
+            try {
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email, password, binance_uid })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    currentUser = data.user;
+                    box.style.display = 'block';
+                    box.style.background = 'rgba(14,203,129,0.1)';
+                    box.style.color = 'var(--green)';
+                    box.innerText = `🎉 24 Saatlik Denemeniz Başlatıldı!`;
+                    setTimeout(() => {
+                        closeAuthModal();
+                        updateUserSessionUI();
+                    }, 1200);
+                } else {
+                    box.style.display = 'block';
+                    box.style.background = 'rgba(255,71,87,0.1)';
+                    box.style.color = 'var(--red)';
+                    box.innerText = `❌ ${data.message}`;
+                }
+            } catch (e) {
+                alert('Kayıt Hatası: ' + e);
+            }
+        }
+
+        function updateUserSessionUI() {
+            const pill = document.getElementById('user-session-pill');
+            const navAdminTab = document.getElementById('nav-tab-admin');
+            if (!pill) return;
+
+            if (currentUser && currentUser.role === 'ADMIN') {
+                pill.innerHTML = `👑 <b style="color:var(--cyan); margin-left:4px;">Master Admin</b>`;
+                if (navAdminTab) navAdminTab.style.display = 'inline-flex';
+            } else if (currentUser) {
+                pill.innerHTML = `👤 <span style="color:#cbd5e1; margin-left:4px;">${currentUser.email.split('@')[0]}</span> <span style="background:rgba(251,197,49,0.2); color:var(--yellow); padding:2px 6px; border-radius:4px; font-size:10px; margin-left:4px;">24h Deneme</span>`;
+                if (navAdminTab) navAdminTab.style.display = 'none';
+            }
+        }
+
+        async function loadAdminMetrics() {
+            try {
+                const res = await fetch('/api/admin/overview');
+                const data = await res.json();
+                
+                const aumEl = document.getElementById('admin-total-aum');
+                const usrEl = document.getElementById('admin-total-users');
+                const trlEl = document.getElementById('admin-trial-count');
+                const vipEl = document.getElementById('admin-vip-count');
+                const tbody = document.getElementById('admin-users-table-body');
+
+                if (aumEl) aumEl.innerText = `$${(data.total_aum || 100000).toLocaleString('en-US', {minimumFractionDigits:2})}`;
+                if (usrEl) usrEl.innerText = `${data.total_users || 1} Yatırımcı`;
+                if (trlEl) trlEl.innerText = `${data.trial_count || 0} Aktif`;
+                if (vipEl) vipEl.innerText = `${(data.vip_count || 1) + (data.pro_count || 0)} Abone`;
+
+                if (tbody && data.users_list) {
+                    let html = '';
+                    data.users_list.forEach(u => {
+                        html += `
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                                <td style="padding:10px; color:#94a3b8;">#${u.id}</td>
+                                <td style="padding:10px; font-weight:700; color:#fff;">${u.email}</td>
+                                <td style="padding:10px;"><span style="background:${u.role === 'ADMIN' ? 'rgba(0,242,254,0.15)' : 'rgba(255,255,255,0.06)'}; color:${u.role === 'ADMIN' ? 'var(--cyan)' : '#94a3b8'}; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:800;">${u.role}</span></td>
+                                <td style="padding:10px;"><span style="color:var(--yellow); font-weight:700;">${u.plan}</span></td>
+                                <td style="padding:10px; font-family:'JetBrains Mono'; font-weight:800; color:var(--green);">$${u.balance.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+                                <td style="padding:10px;">${u.api_valid ? '🟢 Bağlı' : '⚪ Bekliyor'}</td>
+                                <td style="padding:10px; font-size:11px; color:#94a3b8;">${u.expires_at || 'Süresiz'}</td>
+                            </tr>
+                        `;
+                    });
+                    tbody.innerHTML = html;
+                }
+            } catch (e) {
+                console.error('Admin metrics error:', e);
+            }
+        }
+
+
+        // =========================================================================
         // VALKYRIE AEGIS SENTINEL & HEALTH DIAGNOSTIC MODAL
         // =========================================================================
         function updateSystemHealthBadge() {
@@ -1859,31 +2070,42 @@ HTML_PAGE = """
             currentActiveMainTab = tabName;
             
             const tabButtons = {
-                'cockpit': document.getElementById('tab-btn-cockpit'),
-                'positions': document.getElementById('tab-btn-positions'),
-                'radar': document.getElementById('tab-btn-radar'),
-                'ledger': document.getElementById('tab-btn-ledger')
+                'cockpit': document.getElementById('nav-tab-cockpit') || document.getElementById('tab-btn-cockpit'),
+                'positions': document.getElementById('nav-tab-positions') || document.getElementById('tab-btn-positions'),
+                'radar': document.getElementById('nav-tab-radar') || document.getElementById('tab-btn-radar'),
+                'ledger': document.getElementById('nav-tab-history') || document.getElementById('tab-btn-ledger'),
+                'history': document.getElementById('nav-tab-history') || document.getElementById('tab-btn-ledger'),
+                'admin': document.getElementById('nav-tab-admin')
             };
             const tabContents = {
                 'cockpit': document.getElementById('main-tab-content-cockpit'),
                 'positions': document.getElementById('main-tab-content-positions'),
                 'radar': document.getElementById('main-tab-content-radar'),
-                'ledger': document.getElementById('main-tab-content-ledger')
+                'ledger': document.getElementById('main-tab-content-ledger'),
+                'history': document.getElementById('main-tab-content-ledger'),
+                'admin': document.getElementById('main-tab-content-admin')
             };
 
             for (const key in tabButtons) {
                 if (tabButtons[key]) {
                     if (key === tabName) {
+                        tabButtons[key].classList.add('active-nav-tab');
                         tabButtons[key].classList.add('active');
                     } else {
+                        tabButtons[key].classList.remove('active-nav-tab');
                         tabButtons[key].classList.remove('active');
                     }
                 }
+            }
+
+            for (const key in tabContents) {
                 if (tabContents[key]) {
-                    if (key === tabName) {
+                    if (key === tabName || (tabName === 'history' && key === 'ledger')) {
                         tabContents[key].classList.add('active-tab');
+                        tabContents[key].style.display = 'block';
                     } else {
                         tabContents[key].classList.remove('active-tab');
+                        tabContents[key].style.display = 'none';
                     }
                 }
             }
@@ -1894,8 +2116,10 @@ HTML_PAGE = """
                 renderPositions();
             } else if (tabName === 'radar') {
                 renderCards();
-            } else if (tabName === 'ledger') {
+            } else if (tabName === 'ledger' || tabName === 'history') {
                 renderHistoryTable();
+            } else if (tabName === 'admin') {
+                loadAdminMetrics();
             }
         }
 
@@ -4128,6 +4352,52 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
     async def index(request):
         return web.Response(text=HTML_PAGE, content_type='text/html')
         
+    
+    # =========================================================================
+    # VALKYRIE MULTI-TENANT & AUTH API ENDPOINTS
+    # =========================================================================
+    db_inst = DatabaseManager()
+    db_inst.seed_admin_account()
+
+    async def api_auth_register(request):
+        try:
+            body = await request.json()
+            email = body.get('email', '')
+            password = body.get('password', '')
+            telegram_id = body.get('telegram_id', '')
+            binance_uid = body.get('binance_uid', '')
+
+            if not email or not password:
+                return web.json_response({"success": False, "message": "E-posta ve şifre zorunludur!"}, status=400)
+
+            ok, msg, user_id = db_inst.register_user(email, password, telegram_id, binance_uid)
+            if not ok:
+                return web.json_response({"success": False, "message": msg}, status=400)
+
+            auth_ok, auth_msg, user_data = db_inst.authenticate_user(email, password)
+            return web.json_response({"success": True, "message": msg, "user": user_data})
+        except Exception as e:
+            return web.json_response({"success": False, "message": f"Kayıt Hatası: {e}"}, status=500)
+
+    async def api_auth_login(request):
+        try:
+            body = await request.json()
+            email = body.get('email', '')
+            password = body.get('password', '')
+            ok, msg, user_data = db_inst.authenticate_user(email, password)
+            if not ok:
+                return web.json_response({"success": False, "message": msg}, status=401)
+            return web.json_response({"success": True, "message": msg, "user": user_data})
+        except Exception as e:
+            return web.json_response({"success": False, "message": f"Giriş Hatası: {e}"}, status=500)
+
+    async def api_admin_overview(request):
+        try:
+            data = db_inst.get_admin_dashboard_metrics()
+            return web.json_response(data)
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=500)
+
     async def api_data(request):
         try:
             symbols_data = {}
@@ -4446,6 +4716,9 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
     app.router.add_post('/api/live/test_connection', api_live_test_connection)
     app.router.add_post('/api/live/save_config', api_live_save_config)
     app.router.add_get('/', index)
+    app.router.add_post('/api/auth/register', api_auth_register)
+    app.router.add_post('/api/auth/login', api_auth_login)
+    app.router.add_get('/api/admin/overview', api_admin_overview)
     app.router.add_get('/api/data', api_data)
     app.router.add_get('/api/candles', api_candles)
     app.router.add_get('/api/export_excel', api_export_excel)

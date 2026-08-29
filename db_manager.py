@@ -199,3 +199,124 @@ class DatabaseManager:
                     "futures_balance": r['futures_balance']
                 })
             return subscribers
+
+
+    def seed_admin_account(self, email: str = "admin@valkyriequant.com", password_raw: str = "AdminValkyrie2026!"):
+        """Sistem ilk baslatildiginda Master Admin hesabini otomatik olusturur."""
+        clean_email = email.strip().lower()
+        pwd_hash = hashlib.sha256(password_raw.encode('utf-8')).hexdigest()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM users WHERE email = ?", (clean_email,))
+            row = cursor.fetchone()
+            if not row:
+                cursor.execute("""
+                    INSERT INTO users (email, password_hash, role, telegram_chat_id)
+                    VALUES (?, ?, 'ADMIN', '829687700')
+                """, (clean_email, pwd_hash))
+                user_id = cursor.lastrowid
+                now_tsi = datetime.now(timezone(timedelta(hours=3)))
+                expires_tsi = now_tsi + timedelta(days=3650)
+                cursor.execute("""
+                    INSERT INTO subscriptions (user_id, plan_type, starts_at, expires_at, status)
+                    VALUES (?, 'VIP', ?, ?, 'ACTIVE')
+                """, (user_id, now_tsi.strftime('%Y-%m-%d %H:%M:%S'), expires_tsi.strftime('%Y-%m-%d %H:%M:%S')))
+                conn.commit()
+                print(">> [MASTER ADMIN] admin@valkyriequant.com hesabi basariyla olusturuldu!")
+
+    def authenticate_user(self, email: str, password_raw: str) -> tuple:
+        """Kullanici girisini dogrular ve oturum bilgilerini dondurur."""
+        clean_email = email.strip().lower()
+        pwd_hash = hashlib.sha256(password_raw.encode('utf-8')).hexdigest()
+        now_str = datetime.now(timezone(timedelta(hours=3))).strftime('%Y-%m-%d %H:%M:%S')
+
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT u.id, u.email, u.role, u.telegram_chat_id, u.created_at,
+                       s.plan_type, s.expires_at, s.status as sub_status
+                FROM users u
+                LEFT JOIN subscriptions s ON u.id = s.user_id
+                WHERE u.email = ? AND u.password_hash = ?
+                ORDER BY s.id DESC LIMIT 1
+            """, (clean_email, pwd_hash))
+            row = cursor.fetchone()
+            if not row:
+                return False, "E-posta veya şifre hatalı!", None
+
+            # 24 Saatlik deneme kalan suresi
+            expires_at_str = row['expires_at']
+            is_active = False
+            remaining_seconds = 0
+            if expires_at_str:
+                try:
+                    exp_dt = datetime.strptime(expires_at_str, '%Y-%m-%d %H:%M:%S')
+                    now_dt = datetime.strptime(now_str, '%Y-%m-%d %H:%M:%S')
+                    remaining_seconds = max(0, int((exp_dt - now_dt).total_seconds()))
+                    is_active = (remaining_seconds > 0) and (row['sub_status'] == 'ACTIVE')
+                except Exception:
+                    pass
+
+            user_data = {
+                "id": row['id'],
+                "email": row['email'],
+                "role": row['role'],
+                "telegram_chat_id": row['telegram_chat_id'],
+                "plan_type": row['plan_type'] or '24H_TRIAL',
+                "is_subscription_active": is_active,
+                "remaining_seconds": remaining_seconds,
+                "expires_at": expires_at_str
+            }
+            return True, "Giriş başarılı!", user_data
+
+    def get_admin_dashboard_metrics(self) -> dict:
+        """Master Admin icin toplam AUM, abone sayilari ve kullanici tablosunu derler."""
+        now_str = datetime.now(timezone(timedelta(hours=3))).strftime('%Y-%m-%d %H:%M:%S')
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # 1. Kullanici ve abonelik listesi
+            cursor.execute("""
+                SELECT u.id, u.email, u.role, u.telegram_chat_id, u.created_at,
+                       s.plan_type, s.expires_at, s.status as sub_status,
+                       c.futures_balance, c.is_valid as api_valid
+                FROM users u
+                LEFT JOIN subscriptions s ON u.id = s.user_id
+                LEFT JOIN api_credentials c ON u.id = c.user_id
+                GROUP BY u.id
+                ORDER BY u.id DESC
+            """)
+            users = []
+            total_aum = 0.0
+            trial_count = 0
+            pro_count = 0
+            vip_count = 0
+
+            for r in cursor.fetchall():
+                bal = float(r['futures_balance'] or 0.0)
+                total_aum += bal
+                plan = r['plan_type'] or '24H_TRIAL'
+                if plan == '24H_TRIAL': trial_count += 1
+                elif plan == 'PRO': pro_count += 1
+                elif plan == 'VIP': vip_count += 1
+
+                users.append({
+                    "id": r['id'],
+                    "email": r['email'],
+                    "role": r['role'],
+                    "plan": plan,
+                    "expires_at": r['expires_at'],
+                    "sub_status": r['sub_status'],
+                    "balance": bal,
+                    "api_valid": bool(r['api_valid']),
+                    "created_at": r['created_at']
+                })
+
+            return {
+                "total_users": len(users),
+                "total_aum": total_aum,
+                "trial_count": trial_count,
+                "pro_count": pro_count,
+                "vip_count": vip_count,
+                "users_list": users
+            }
