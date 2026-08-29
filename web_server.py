@@ -17,7 +17,29 @@ HTML_PAGE = """
     <title>VALKYRIE QUANT DESK •— Binance Futures Terminal</title>    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script type="text/javascript" src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <script>
+        (function() {
+            try {
+                var user = localStorage.getItem('valkyrie_auth_user');
+                if (user && JSON.parse(user)) {
+                    document.documentElement.className = 'is-authenticated';
+                } else {
+                    document.documentElement.className = 'is-guest';
+                }
+            } catch(e) {
+                document.documentElement.className = 'is-guest';
+            }
+        })();
+    </script>
+
     <style>
+        /* 0ms INSTANT ZERO-FLASH AUTH LAYOUT CONTROLLER */
+        html.is-authenticated #landing-page-view { display: none !important; }
+        html.is-authenticated #dashboard-app-view { display: block !important; }
+
+        html.is-guest #landing-page-view { display: block !important; }
+        html.is-guest #dashboard-app-view { display: none !important; }
+
         :root {
             --bg: #080b11;
             --surface: #0e131f;
@@ -2701,11 +2723,13 @@ HTML_PAGE = """
             const navAdminTab = document.getElementById('tab-btn-admin');
 
             if (!currentUser) {
+                document.documentElement.className = 'is-guest';
                 if (trialCountdownInterval) clearInterval(trialCountdownInterval);
                 if (landingView) landingView.style.display = 'block';
                 if (appView) appView.style.display = 'none';
                 return;
             }
+            document.documentElement.className = 'is-authenticated';
 
             if (landingView) landingView.style.display = 'none';
             if (appView) appView.style.display = 'block';
@@ -2757,6 +2781,7 @@ HTML_PAGE = """
             if (trialCountdownInterval) clearInterval(trialCountdownInterval);
             localStorage.removeItem('valkyrie_auth_user');
             currentUser = null;
+            document.documentElement.className = 'is-guest';
             updateUserSessionUI();
         }
 
