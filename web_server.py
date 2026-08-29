@@ -1228,9 +1228,9 @@ HTML_PAGE = """
                 <span id="mode-badge-text">🟡 DEMO MODU</span>
                 <span style="opacity:0.6; font-size:12px; margin-left:3px;">⚙️</span>
             </div>
-            <div class="live-tag">
-                <div class="live-dot"></div>
-                <span id="ws-status">BİNANCE CANLI YAYIN</span>
+            <div class="live-tag" id="system-health-pill" title="100 Paritenin Canlı Fiyat & 5M Mum Akış Durumu">
+                <div class="live-dot" id="system-health-dot"></div>
+                <span id="system-health-text">100/100 Parite Canlı Akıyor</span>
             </div>
         </div>
     </div>
@@ -1271,12 +1271,6 @@ HTML_PAGE = """
         <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
             <div class="section-title">📊 CANLI PUSU & SEVİYE ANALİZ HAVUZU</div>
             <div id="watchlist-search-count-badge" style="display:none; font-size:12px; font-weight:800; color:#58a6ff; background:rgba(56,139,253,0.15); border:1px solid rgba(56,139,253,0.3); padding:4px 12px; border-radius:12px;"></div>
-        </div>
-        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-            <div style="font-size:12px; color:var(--green); font-weight:700; background:rgba(14,203,129,0.1); border:1px solid rgba(14,203,129,0.3); padding:6px 14px; border-radius:20px; font-family:'JetBrains Mono', monospace; display:flex; align-items:center; gap:8px;">
-                <span style="width:7px; height:7px; background:var(--green); border-radius:50%; box-shadow:0 0 8px var(--green);"></span>
-                100 PARİTE 5M MUM & LİKİDİTE TARAMASI AKTİF
-            </div>
         </div>
     </div>
     <div class="watchlist-grid" id="watchlist-container"></div>
@@ -1452,6 +1446,7 @@ HTML_PAGE = """
 
             renderCoinManager();
             renderCards();
+                updateSystemHealthBadge();
         }
 
         function clearSearch() {
@@ -1773,11 +1768,13 @@ HTML_PAGE = """
         function loadMoreCards(n) {
             visibleCardsCount += n;
             renderCards();
+                updateSystemHealthBadge();
         }
 
         function loadAllCards() {
             visibleCardsCount = 999;
             renderCards();
+                updateSystemHealthBadge();
         }
 
         
@@ -1993,7 +1990,8 @@ HTML_PAGE = """
                     html += `
                     <div class="load-more-bar">
                         <span style="font-size:13.5px; color:var(--green); font-weight:700; font-family:'JetBrains Mono'">✓ Tüm ${totalActive} Parite Canlı Listeleniyor</span>
-                        <button class="btn-load-all" onclick="visibleCardsCount = 20; renderCards();" style="padding:8px 16px; font-size:12px;">🔼 İlk 20'ye Daralt</button>
+                        <button class="btn-load-all" onclick="visibleCardsCount = 20; renderCards();
+                updateSystemHealthBadge();" style="padding:8px 16px; font-size:12px;">🔼 İlk 20'ye Daralt</button>
                     </div>
                     `;
                 }
@@ -2905,6 +2903,7 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 if (currentSymbolsCount !== lastRenderedSymbolsCount || (watchlistCont && watchlistCont.children.length === 0)) {
                     lastRenderedSymbolsCount = currentSymbolsCount;
                     renderCards();
+                updateSystemHealthBadge();
                 }
 
                 // 4. Only re-render Open Positions if position IDs or count changed
