@@ -1566,6 +1566,7 @@ HTML_PAGE = """
         function generateDetailedIntelligence(symbol, price, cam, levels, openPos) {
             cam = cam || {};
             levels = levels || {};
+            price = Number(price) || 0;
             
             const r4 = Number(cam.R4) || 0;
             const r3 = Number(cam.R3) || 0;
@@ -1586,6 +1587,62 @@ HTML_PAGE = """
 
             const formatVal = (v) => (v && !isNaN(v) && Number(v) > 0) ? (Number(v) < 0.001 ? Number(v).toFixed(6) : (Number(v) < 1 ? Number(v).toFixed(4) : Number(v).toFixed(4))) : '-';
 
+            // 1. 1H MAKRO TREND HESABI
+            let macroTrend = "⚪ YATAY / SIKIŞMA";
+            let macroColor = "#94a3b8";
+            if (tepeAvwap > 0 && p > 0 && price > tepeAvwap && price > p) {
+                macroTrend = "🟢 GÜÇLÜ BOĞA";
+                macroColor = "var(--green)";
+            } else if (dipAvwap > 0 && p > 0 && price < dipAvwap && price < p) {
+                macroTrend = "🔴 GÜÇLÜ AYI";
+                macroColor = "var(--red)";
+            } else if (p > 0 && price > p) {
+                macroTrend = "🟡 ILIMLI BOĞA";
+                macroColor = "var(--yellow)";
+            } else if (p > 0 && price < p) {
+                macroTrend = "🟠 ILIMLI AYI";
+                macroColor = "#fb923c";
+            }
+
+            // 2. EN YAKIN DİRENÇ VE DESTEK
+            const allUp = [r3, r4, r5, tepeAvwap, mvah, aboveNpoc, aboveNvah, mpoc, p].filter(x => x && x > price * 1.0005);
+            allUp.sort((a, b) => a - b);
+            const nearestUp = allUp.length > 0 ? allUp[0] : null;
+            const upDistPct = nearestUp ? (((nearestUp - price) / price) * 100).toFixed(2) : null;
+
+            const allDown = [s3, s4, s5, dipAvwap, mval, belowNpoc, belowNval, mpoc, p].filter(x => x && x < price * 0.9995);
+            allDown.sort((a, b) => b - a);
+            const nearestDown = allDown.length > 0 ? allDown[0] : null;
+            const downDistPct = nearestDown ? (((price - nearestDown) / price) * 100).toFixed(2) : null;
+
+            // 3. CANLI POZİSYON DURUM YORUMU
+            let posCommentary = "";
+            if (openPos) {
+                if (openPos.is_half_closed || openPos.tp1_hit) {
+                    posCommentary = "🎯 TP1 ALINDI (%50 Kâr Kasada) • Stop Breakeven Korumalı • TP2 Hedefine Koşuyor";
+                } else if (openPos.trail_status) {
+                    posCommentary = openPos.trail_status;
+                } else {
+                    posCommentary = `⚡ ${openPos.side} Aktif • TP1: $${openPos.tp1 ? formatVal(openPos.tp1) : '-'} • Stop: $${openPos.soft_stop ? formatVal(openPos.soft_stop) : '-'}`;
+                }
+            }
+
+            function packResult(tag, color, statusText, actionPlan) {
+                return {
+                    tag: tag,
+                    color: color,
+                    statusText: statusText,
+                    actionPlan: actionPlan,
+                    macroTrend: macroTrend,
+                    macroColor: macroColor,
+                    nearestUp: nearestUp,
+                    nearestDown: nearestDown,
+                    upDistPct: upDistPct,
+                    downDistPct: downDistPct,
+                    posCommentary: posCommentary
+                };
+            }
+
             // DURUM 0: ACIK POZISYON VARSA CANLI POZISYON YONETIMI
             if (openPos) {
                 const metrics = computePositionPnL(openPos, price);
@@ -1593,117 +1650,117 @@ HTML_PAGE = """
                 const isLoss = metrics.isLoss;
                 const statusColor = isLoss ? 'var(--red)' : (isWin ? 'var(--green)' : '#ffffff');
 
-                return {
-                    tag: `🛡️ ${openPos.leverage}x ${openPos.side} POZİSYONU CANLI YÖNETİLİYOR`,
-                    color: statusColor,
-                    statusText: `Bot şu anda <b>${openPos.side}</b> pozisyonunu aktif koruyor. Giriş: <b>$${openPos.entry_price}</b> | Anlık: <b>$${metrics.curP}</b> | Durum: <b style="color:${statusColor}">${metrics.roePct >= 0 ? '+' : ''}${metrics.roePct.toFixed(2)}% ROE (${metrics.pnlUsdt >= 0 ? '+' : ''}${metrics.pnlUsdt.toFixed(2)} $)</b>`,
-                    actionPlan: `🎯 <b>Botun Canlı Takip Planı:</b> 5M mum kapanışı Stop Seviyesi ($${formatVal(openPos.soft_stop)}) ${openPos.side === 'LONG' ? 'altına inerse' : 'üstüne çıkarsa'} işlem kapatılacak. Fiyat TP1 Hedefine ($${formatVal(openPos.tp1)}) ulaştığı anda <b>%50 kâr realize edilip</b> stop risksiz giriş noktasına (Breakeven) taşınacak.`
-                };
+                return packResult(
+                    `🛡️ ${openPos.leverage}x ${openPos.side} POZİSYONU CANLI YÖNETİLİYOR`,
+                    statusColor,
+                    `Bot şu anda <b>${openPos.side}</b> pozisyonunu aktif koruyor. Giriş: <b>$${openPos.entry_price}</b> | Anlık: <b>$${metrics.curP}</b> | Durum: <b style="color:${statusColor}">${metrics.roePct >= 0 ? '+' : ''}${metrics.roePct.toFixed(2)}% ROE (${metrics.pnlUsdt >= 0 ? '+' : ''}${metrics.pnlUsdt.toFixed(2)} $)</b>`,
+                    `🎯 <b>Botun Canlı Takip Planı:</b> 5M mum kapanışı Stop Seviyesi ($${formatVal(openPos.soft_stop)}) ${openPos.side === 'LONG' ? 'altına inerse' : 'üstüne çıkarsa'} işlem kapatılacak. Fiyat TP1 Hedefine ($${formatVal(openPos.tp1)}) ulaştığı anda <b>%50 kâr realize edilip</b> stop risksiz giriş noktasına (Breakeven) taşınacak.`
+                );
             }
 
             // DURUM 1: AŞAĞI nPOC / LİKİDİTE DESTEK TESTİ (YENİ SETUP 9)
             if (belowNpoc > 0 && Math.abs(price - belowNpoc) / belowNpoc <= 0.006) {
                 const isConf = (s3 > 0 && Math.abs(s3 - belowNpoc) / belowNpoc <= 0.005);
                 const confTag = isConf ? ' ★ S3 + nPOC ÇİFT DESTEK' : '';
-                return {
-                    tag: `🎯 AŞAĞI nPOC LİKİDİTE TESTİ${confTag}`,
-                    color: 'var(--cyan)',
-                    statusText: `Fiyat dokunulmamış kurumsal hacim bloğu olan <b>Aşağı nPOC ($${formatVal(belowNpoc)})</b> desteğini test ediyor.`,
-                    actionPlan: `⚡ <b>Botun Pusu Planı:</b> 5M mum bu seviyeye fitil bırakıp <b>nPOC ($${formatVal(belowNpoc)})</b> üzerinde kapatırsa <b>Likidite Sekmesi LONG (Hedef Pivot P: $${formatVal(p)})</b> açılacak.`
-                };
+                return packResult(
+                    `🎯 AŞAĞI nPOC LİKİDİTE TESTİ${confTag}`,
+                    'var(--cyan)',
+                    `Fiyat dokunulmamış kurumsal hacim bloğu olan <b>Aşağı nPOC ($${formatVal(belowNpoc)})</b> desteğini test ediyor.`,
+                    `⚡ <b>Botun Pusu Planı:</b> 5M mum bu seviyeye fitil bırakıp <b>nPOC ($${formatVal(belowNpoc)})</b> üzerinde kapatırsa <b>Likidite Sekmesi LONG (Hedef Pivot P: $${formatVal(p)})</b> açılacak.`
+                );
             }
 
             // DURUM 2: YUKARI nPOC / LİKİDİTE DİRENÇ TESTİ (YENİ SETUP 10)
             if (aboveNpoc > 0 && Math.abs(price - aboveNpoc) / aboveNpoc <= 0.006) {
                 const isConf = (r3 > 0 && Math.abs(r3 - aboveNpoc) / aboveNpoc <= 0.005);
                 const confTag = isConf ? ' ★ R3 + nPOC ÇİFT DİRENÇ' : '';
-                return {
-                    tag: `🎯 YUKARI nPOC DİRENÇ TESTİ${confTag}`,
-                    color: 'var(--yellow)',
-                    statusText: `Fiyat dokunulmamış kurumsal tepe bloğu olan <b>Yukarı nPOC ($${formatVal(aboveNpoc)})</b> direncini test ediyor.`,
-                    actionPlan: `⚡ <b>Botun Pusu Planı:</b> 5M mum bu seviyeye iğne atıp <b>nPOC ($${formatVal(aboveNpoc)})</b> altında kapatırsa <b>Direnç Reddi SHORT (Hedef Pivot P: $${formatVal(p)})</b> açılacak.`
-                };
+                return packResult(
+                    `🎯 YUKARI nPOC DİRENÇ TESTİ${confTag}`,
+                    'var(--yellow)',
+                    `Fiyat dokunulmamış kurumsal tepe bloğu olan <b>Yukarı nPOC ($${formatVal(aboveNpoc)})</b> direncini test ediyor.`,
+                    `⚡ <b>Botun Pusu Planı:</b> 5M mum bu seviyeye iğne atıp <b>nPOC ($${formatVal(aboveNpoc)})</b> altında kapatırsa <b>Direnç Reddi SHORT (Hedef Pivot P: $${formatVal(p)})</b> açılacak.`
+                );
             }
 
             // DURUM 3: R5 ZIRVESI / ASIRI ALIM
             if (r5 > 0 && price >= r5) {
-                return {
-                    tag: '🔥 R5 AŞIRI ALIM (TREND ZİRVESİ GENİŞLEMESİ)',
-                    color: 'var(--yellow)',
-                    statusText: `Fiyat <b>R5 ($${formatVal(r5)})</b> zirve seviyesinin üzerine çıktı, aşırı alım bölgesinde seyrediyor.`,
-                    actionPlan: `⚡ <b>Botun Pusu Planı:</b> R5 üzerinde kovalama alımı yapılmaz. Fiyat mVAH/nPOC hedeflerine yürürse <b>Trend Breakout</b> takip edilir; R5 altına sarkıp ayı mumu bırakırsa <b>Direnç Reddi SHORT</b> pususu kurulur.`
-                };
+                return packResult(
+                    '🔥 R5 AŞIRI ALIM (TREND ZİRVESİ GENİŞLEMESİ)',
+                    'var(--yellow)',
+                    `Fiyat <b>R5 ($${formatVal(r5)})</b> zirve seviyesinin üzerine çıktı, aşırı alım bölgesinde seyrediyor.`,
+                    `⚡ <b>Botun Pusu Planı:</b> R5 üzerinde kovalama alımı yapılmaz. Fiyat mVAH/nPOC hedeflerine yürürse <b>Trend Breakout</b> takip edilir; R5 altına sarkıp ayı mumu bırakırsa <b>Direnç Reddi SHORT</b> pususu kurulur.`
+                );
             }
 
             // DURUM 4: R4 - R5 BOGA KANALI (BREAKOUT & RETEST)
             if (r4 > 0 && price > r4) {
                 const npocText = aboveNpoc > 0 ? ` (Üst nPOC: $${formatVal(aboveNpoc)})` : (aboveNvah > 0 ? ` (Üst nVAH: $${formatVal(aboveNvah)})` : '');
-                return {
-                    tag: '🚀 R4 BOĞA KANALI (BREAKOUT & RETEST PUSUSU)',
-                    color: 'var(--green)',
-                    statusText: `Fiyat <b>R4 ($${formatVal(r4)})</b> üzerinde boğa bölgesinde. Üst hedef: <b>R5 ($${formatVal(r5)})</b>${npocText}.`,
-                    actionPlan: `⚡ <b>Botun Pusu Planı:</b> 5M mum R4 üzerinde yeni kapandıysa <b>Taze Breakout LONG</b> açılacak. Fiyat R4 desteğine geri çekilip (Retest) fitil bırakırsa <b>Retest LONG (Hedef R5: $${formatVal(r5)})</b> açılacak.`
-                };
+                return packResult(
+                    '🚀 R4 BOĞA KANALI (BREAKOUT & RETEST PUSUSU)',
+                    'var(--green)',
+                    `Fiyat <b>R4 ($${formatVal(r4)})</b> üzerinde boğa bölgesinde. Üst hedef: <b>R5 ($${formatVal(r5)})</b>${npocText}.`,
+                    `⚡ <b>Botun Pusu Planı:</b> 5M mum R4 üzerinde yeni kapandıysa <b>Taze Breakout LONG</b> açılacak. Fiyat R4 desteğine geri çekilip (Retest) fitil bırakırsa <b>Retest LONG (Hedef R5: $${formatVal(r5)})</b> açılacak.`
+                );
             }
 
             // DURUM 5: R3 - R4 SIKISMA & KARAR BOLGESI
             if (r3 > 0 && price > r3 && price <= r4) {
-                return {
-                    tag: '⚖️ R3-R4 SIKIŞMA & KIRILIM PUSUSU',
-                    color: '#ffa726',
-                    statusText: `Fiyat <b>R3 ($${formatVal(r3)})</b> desteği ile <b>R4 ($${formatVal(r4)})</b> direnci arasında sıkışıyor.`,
-                    actionPlan: `⚡ <b>Botun Pusu Planı:</b> 5M mum kapanışında <b>R4 ($${formatVal(r4)})</b> yukarı kırılırsa <b>Breakout LONG (Hedef R5)</b> açılacak; fiyat R3'ten red yiyip aşağı dönerse <b>Scalp SHORT (Hedef Pivot P: $${formatVal(p)})</b> açılacak.`
-                };
+                return packResult(
+                    '⚖️ R3-R4 SIKIŞMA & KIRILIM PUSUSU',
+                    '#ffa726',
+                    `Fiyat <b>R3 ($${formatVal(r3)})</b> desteği ile <b>R4 ($${formatVal(r4)})</b> direnci arasında sıkışıyor.`,
+                    `⚡ <b>Botun Pusu Planı:</b> 5M mum kapanışında <b>R4 ($${formatVal(r4)})</b> yukarı kırılırsa <b>Breakout LONG (Hedef R5)</b> açılacak; fiyat R3'ten red yiyip aşağı dönerse <b>Scalp SHORT (Hedef Pivot P: $${formatVal(p)})</b> açılacak.`
+                );
             }
 
             // DURUM 6: S3 - R3 PIVOT YATAY KANAL (SCALP KANALI)
             if (s3 > 0 && r3 > 0 && price >= s3 && price <= r3) {
-                return {
-                    tag: '🔄 PİVOT YATAY KANAL (DESTEK / DİRENÇ TEPKİSİ)',
-                    color: '#388bfd',
-                    statusText: `Fiyat <b>Pivot P ($${formatVal(p)})</b> ekseninde dengeli seyrediyor. (Alt: S3 $${formatVal(s3)} • Üst: R3 $${formatVal(r3)})`,
-                    actionPlan: `⚡ <b>Botun Pusu Planı:</b> Fiyat <b>S3 ($${formatVal(s3)})</b> desteğine inip fitille sekerse <b>Scalp LONG (Hedef: Pivot P)</b>; <b>R3 ($${formatVal(r3)})</b> direncine çıkıp red yerse <b>Scalp SHORT (Hedef: Pivot P)</b> açılacak.`
-                };
+                return packResult(
+                    '🔄 PİVOT YATAY KANAL (DESTEK / DİRENÇ TEPKİSİ)',
+                    '#388bfd',
+                    `Fiyat <b>Pivot P ($${formatVal(p)})</b> ekseninde dengeli seyrediyor. (Alt: S3 $${formatVal(s3)} • Üst: R3 $${formatVal(r3)})`,
+                    `⚡ <b>Botun Pusu Planı:</b> Fiyat <b>S3 ($${formatVal(s3)})</b> desteğine inip fitille sekerse <b>Scalp LONG (Hedef: Pivot P)</b>; <b>R3 ($${formatVal(r3)})</b> direncine çıkıp red yerse <b>Scalp SHORT (Hedef: Pivot P)</b> açılacak.`
+                );
             }
 
             // DURUM 7: S4 - S3 COKUS UYARI BOLGESI
             if (s4 > 0 && price > s4 && price < s3) {
-                return {
-                    tag: '⚠️ S4-S3 ÇÖKÜŞ UYARI BÖLGESİ',
-                    color: '#d500f9',
-                    statusText: `Fiyat <b>S3 ($${formatVal(s3)})</b> altına indi, son savunma hattı olan <b>S4 ($${formatVal(s4)})</b> test ediliyor.`,
-                    actionPlan: `⚡ <b>Botun Pusu Planı:</b> 5M mum <b>S4 ($${formatVal(s4)})</b> altına inerse <b>Breakdown SHORT (Hedef S5: $${formatVal(s5)})</b> açılacak; fiyat S3 üstüne toparlarsa <b>Mean Reversion LONG (Hedef Pivot P)</b> açılacak.`
-                };
+                return packResult(
+                    '⚠️ S4-S3 ÇÖKÜŞ UYARI BÖLGESİ',
+                    '#d500f9',
+                    `Fiyat <b>S3 ($${formatVal(s3)})</b> altına indi, son savunma hattı olan <b>S4 ($${formatVal(s4)})</b> test ediliyor.`,
+                    `⚡ <b>Botun Pusu Planı:</b> 5M mum <b>S4 ($${formatVal(s4)})</b> altına inerse <b>Breakdown SHORT (Hedef S5: $${formatVal(s5)})</b> açılacak; fiyat S3 üstüne toparlarsa <b>Mean Reversion LONG (Hedef Pivot P)</b> açılacak.`
+                );
             }
 
             // DURUM 8: S4 ALTI AYI BOLGESI (BREAKDOWN)
             if (s4 > 0 && price <= s4) {
                 const npocText = belowNpoc > 0 ? ` (Alt nPOC: $${formatVal(belowNpoc)})` : (belowNval > 0 ? ` (Alt nVAL: $${formatVal(belowNval)})` : '');
-                return {
-                    tag: '📉 S4 AYI BÖLGESİ (PANİK & BREAKDOWN PUSUSU)',
-                    color: 'var(--red)',
-                    statusText: `Fiyat <b>S4 ($${formatVal(s4)})</b> altında ayı hakimiyetinde. Alt hedef: <b>S5 ($${formatVal(s5)})</b> / <b>mVAL ($${formatVal(mval)})</b>${npocText}.`,
-                    actionPlan: `⚡ <b>Botun Pusu Planı:</b> 5M mum S4 altında yeni kapandıysa <b>Taze Breakdown SHORT</b> açılacak. Fiyat S4 direncine yükselip red mumu bırakırsa <b>Retest SHORT (Hedef S5: $${formatVal(s5)})</b> açılacak.`
-                };
+                return packResult(
+                    '📉 S4 AYI BÖLGESİ (PANİK & BREAKDOWN PUSUSU)',
+                    'var(--red)',
+                    `Fiyat <b>S4 ($${formatVal(s4)})</b> altında ayı hakimiyetinde. Alt hedef: <b>S5 ($${formatVal(s5)})</b> / <b>mVAL ($${formatVal(mval)})</b>${npocText}.`,
+                    `⚡ <b>Botun Pusu Planı:</b> 5M mum S4 altında yeni kapandıysa <b>Taze Breakdown SHORT</b> açılacak. Fiyat S4 direncine yükselip red mumu bırakırsa <b>Retest SHORT (Hedef S5: $${formatVal(s5)})</b> açılacak.`
+                );
             }
 
             // DURUM 9: mVAH GERÇEK YAKINLIK TESTİ (Macro Breakout)
             if (mvah > 0 && Math.abs(price - mvah) / mvah <= 0.015) {
                 const npocText = aboveNpoc > 0 ? ` Hedef Üst nPOC: $${formatVal(aboveNpoc)}.` : '';
-                return {
-                    tag: '🎯 mVAH AYLIK TAVAN BÖLGESİ (MACRO TEST)',
-                    color: 'var(--cyan)',
-                    statusText: `Fiyat <b>mVAH ($${formatVal(mvah)})</b> aylık tepe hacim duvarını test ediyor.${npocText}`,
-                    actionPlan: `⚡ <b>Botun Pusu Planı:</b> 5M mum kapanışı <b>mVAH ($${formatVal(mvah)})</b> üzerinde güçlü teyit verirse <b>Macro Breakout LONG</b> açılacak. Red yerse <b>Macro SHORT</b> pususu devreye girecek.`
-                };
+                return packResult(
+                    '🎯 mVAH AYLIK TAVAN BÖLGESİ (MACRO TEST)',
+                    'var(--cyan)',
+                    `Fiyat <b>mVAH ($${formatVal(mvah)})</b> aylık tepe hacim duvarını test ediyor.${npocText}`,
+                    `⚡ <b>Botun Pusu Planı:</b> 5M mum kapanışı <b>mVAH ($${formatVal(mvah)})</b> üzerinde güçlü teyit verirse <b>Macro Breakout LONG</b> açılacak. Red yerse <b>Macro SHORT</b> pususu devreye girecek.`
+                );
             }
 
-            return {
-                tag: '🔍 PİYASA İZLENİYOR',
-                color: 'var(--text-muted)',
-                statusText: `Fiyat $${formatVal(price)} seviyesinde stabil.`,
-                actionPlan: `⚡ <b>Botun Pusu Planı:</b> 5 dakikalık mum kapanışlarında strateji kurallarının oluşması (Breakout, Retest, nPOC veya Destek/Direnç dönüşü) bekleniyor.`
-            };
+            return packResult(
+                '🔍 PİYASA İZLENİYOR',
+                'var(--text-muted)',
+                `Fiyat $${formatVal(price)} seviyesinde stabil.`,
+                `⚡ <b>Botun Pusu Planı:</b> 5 dakikalık mum kapanışlarında strateji kurallarının oluşması (Breakout, Retest, nPOC veya Destek/Direnç dönüşü) bekleniyor.`
+            );
         }
 
         let visibleCardsCount = 100;
