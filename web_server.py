@@ -2378,13 +2378,22 @@ HTML_PAGE = """
                         </div>
                     `;
                 } else {
-                    miniPosContainer.innerHTML = openKeys.map(sym => {
+                    const sortedMini = openKeys.map(sym => {
                         const p = appState.open_positions[sym];
                         const curPrice = Number((livePrices && livePrices[sym]) || (appState.symbols && appState.symbols[sym] ? appState.symbols[sym].price : 0) || p.entry_price);
                         const isLong = p.side === 'LONG';
                         const priceDiff = isLong ? ((curPrice - p.entry_price) / p.entry_price) : ((p.entry_price - curPrice) / p.entry_price);
                         const roePct = priceDiff * p.leverage * 100;
                         const pnlVal = p.position_value * priceDiff;
+                        return { sym, p, curPrice, isLong, roePct, pnlVal };
+                    }).sort((a, b) => b.roePct - a.roePct);
+
+                    miniPosContainer.innerHTML = sortedMini.map(item => {
+                        const sym = item.sym;
+                        const p = item.p;
+                        const roePct = item.roePct;
+                        const pnlVal = item.pnlVal;
+                        const isLong = item.isLong;
                         const isWin = roePct >= 0;
                         const cleanSym = sym.replace('/USDT','');
 
@@ -3147,12 +3156,20 @@ HTML_PAGE = """
                 return;
             }
 
-            let html = '';
-            posKeys.forEach(sym => {
+            // Pozisyonları Kâr Yüzdesine (ROE %) Göre En Yüksekten En Düşüğe Sırala
+            const sortedPosList = posKeys.map(sym => {
                 const pos = appState.open_positions[sym];
-                const safeId = sym.replace(/[^a-zA-Z0-9]/g, '_');
                 const curP = Number((livePrices && livePrices[sym]) || (appState.symbols && appState.symbols[sym] ? appState.symbols[sym].price : 0) || pos.entry_price);
                 const metrics = computePositionPnL(pos, curP);
+                return { sym, pos, metrics, curP };
+            }).sort((a, b) => b.metrics.roePct - a.metrics.roePct);
+
+            let html = '';
+            sortedPosList.forEach(item => {
+                const sym = item.sym;
+                const pos = item.pos;
+                const metrics = item.metrics;
+                const safeId = sym.replace(/[^a-zA-Z0-9]/g, '_');
                 const isWin = metrics.isWin;
                 const isLoss = metrics.isLoss;
                 const pnlClass = isLoss ? 'pos-card-loss' : (isWin ? 'pos-card-profit' : '');
