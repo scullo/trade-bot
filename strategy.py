@@ -706,9 +706,9 @@ class StrategyEngine:
             if vol_surge < 1.25:
                 return
             if tepe_avwap == 0 or close_price > tepe_avwap:
-                tp1 = r5 if (r5 > close_price * 1.008) else (mvah if (mvah > close_price * 1.008) else close_price * 1.012)
-                candidates = [c for c in [above_npoc, above_nvah] if c and c > tp1 * 1.005]
-                tp2 = min(candidates) if candidates else (mvah if (mvah > tp1 * 1.005) else None)
+                tp1 = r5 if (r5 >= close_price * 1.008) else (mvah if (mvah >= close_price * 1.008) else close_price * 1.015)
+                candidates = [c for c in [above_npoc, above_nvah, tepe_avwap] if c and c >= tp1 * 1.008]
+                tp2 = min(candidates) if candidates else (mvah if (mvah >= tp1 * 1.008) else None)
                 coin_atr = self.get_symbol_atr_pct(symbol)
                 dyn_stop_pct = max(0.008, min(0.025, coin_atr * 1.0))
                 buffer = r4 * dyn_stop_pct
@@ -734,9 +734,9 @@ class StrategyEngine:
             if vol_surge < 1.25:
                 return
             if dip_avwap == 0 or close_price < dip_avwap:
-                tp1 = s5 if (s5 > 0 and s5 < close_price * 0.992) else (mval if (mval > 0 and mval < close_price * 0.992) else close_price * 0.988)
-                candidates = [c for c in [below_npoc, below_nval] if c and c < tp1 * 0.995]
-                tp2 = max(candidates) if candidates else (mval if (mval > 0 and mval < tp1 * 0.995) else None)
+                tp1 = s5 if (s5 > 0 and s5 <= close_price * 0.992) else (mval if (mval > 0 and mval <= close_price * 0.992) else close_price * 0.985)
+                candidates = [c for c in [below_npoc, below_nval, dip_avwap] if c and c <= tp1 * 0.992]
+                tp2 = max(candidates) if candidates else (mval if (mval > 0 and mval <= tp1 * 0.992) else None)
                 coin_atr = self.get_symbol_atr_pct(symbol)
                 dyn_stop_pct = max(0.008, min(0.025, coin_atr * 1.0))
                 buffer = s4 * dyn_stop_pct
@@ -807,11 +807,12 @@ class StrategyEngine:
             buffer = (r4 - r3) * BUFFER_RATIO
             soft_stop = r4 - buffer
             hard_stop = r3
+            target_r5 = r5 if (r5 >= close_price * 1.008) else (mvah if (mvah >= close_price * 1.008) else close_price * 1.015)
             await self._handle_open(
                 symbol=symbol, side="LONG", entry_price=close_price,
                 reason="R4 Destek Retest Sekmesi (Support Flip)",
                 soft_stop=soft_stop, hard_stop=hard_stop,
-                tp1=r5, trade_type="SCALP",
+                tp1=target_r5, trade_type="SCALP",
                 snapshot_levels=levels, setup_id="SETUP_5_R4_SUPPORT_FLIP",
                 confluence_list=["R4_Retest", "Support_Flip"]
             )
@@ -822,8 +823,9 @@ class StrategyEngine:
         # Fiyat aylik VAH'i yukari kirar → Macro trend devami
         # ─────────────────────────────────────────────────────────────────
         if mvah > 0 and prev_close <= mvah and close_price > mvah:
-            candidates = [c for c in [above_npoc, above_nvah] if c and c > close_price]
-            target = min(candidates) if candidates else close_price * 1.02
+            # 🛡️ ZIRH 3: Minimum %0.80 Hedef Barajı (Mikro hedefleri atla, kurumsal istasyona bağlan)
+            candidates = [c for c in [above_npoc, above_nvah, r5, tepe_avwap] if c and c >= close_price * 1.008]
+            target = min(candidates) if candidates else close_price * 1.018
             coin_atr = self.get_symbol_atr_pct(symbol)
             dyn_stop_pct = max(0.008, min(0.025, coin_atr * 1.0))
             buffer = mvah * dyn_stop_pct
@@ -847,11 +849,12 @@ class StrategyEngine:
             buffer = (s3 - s4) * BUFFER_RATIO
             soft_stop = s4 + buffer
             hard_stop = s3
+            target_s5 = s5 if (s5 > 0 and s5 <= close_price * 0.992) else (mval if (mval > 0 and mval <= close_price * 0.992) else close_price * 0.985)
             await self._handle_open(
                 symbol=symbol, side="SHORT", entry_price=close_price,
                 reason="S4 Direnc Retest Sekmesi (Resistance Flip)",
                 soft_stop=soft_stop, hard_stop=hard_stop,
-                tp1=s5, trade_type="SCALP",
+                tp1=target_s5, trade_type="SCALP",
                 snapshot_levels=levels, setup_id="SETUP_7_S4_RESISTANCE_FLIP",
                 confluence_list=["S4_Retest", "Resistance_Flip"]
             )
@@ -862,8 +865,9 @@ class StrategyEngine:
         # Fiyat aylik VAL'i asagi kirar → Macro cokus baslar
         # ─────────────────────────────────────────────────────────────────
         if mval > 0 and prev_close >= mval and close_price < mval:
-            candidates = [c for c in [below_npoc, below_nval] if c and c < close_price]
-            target = max(candidates) if candidates else close_price * 0.98
+            # 🛡️ ZIRH 3: Minimum %0.80 Hedef Barajı (Mikro hedefleri atla, kurumsal istasyona bağlan)
+            candidates = [c for c in [below_npoc, below_nval, s5, dip_avwap] if c and c <= close_price * 0.992]
+            target = max(candidates) if candidates else close_price * 0.982
             coin_atr = self.get_symbol_atr_pct(symbol)
             dyn_stop_pct = max(0.008, min(0.025, coin_atr * 1.0))
             buffer = mval * dyn_stop_pct
@@ -924,10 +928,10 @@ class StrategyEngine:
             # Smart Multi-Target: En yakin ilk destegi TP1, nihai hedefi TP2 yap
             down_targets = [
                 lvl for lvl in [mvah, r4, tepe_avwap, dip_avwap, mpoc, r3, p, below_npoc, s3, s4, s5]
-                if lvl and lvl < close_price * 0.992
+                if lvl and lvl <= close_price * 0.992
             ]
             down_targets.sort(reverse=True)
-            tp1_target = down_targets[0] if down_targets else (p if p < close_price else close_price * 0.99)
+            tp1_target = down_targets[0] if down_targets else (p if (p > 0 and p <= close_price * 0.992) else close_price * 0.985)
             tp2_target = down_targets[-1] if len(down_targets) > 1 else (p if p < tp1_target else None)
 
             target_name = "mVAH" if tp1_target == mvah else ("R4" if tp1_target == r4 else ("AVWAP" if (tp1_target in [tepe_avwap, dip_avwap]) else ("mPOC" if tp1_target == mpoc else ("R3" if tp1_target == r3 else "Pivot P"))))
