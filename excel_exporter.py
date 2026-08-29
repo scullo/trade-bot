@@ -176,9 +176,16 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         pair_stats[sym]['trades'] += 1
         pair_stats[sym]['net_pnl'] += pnl
         pair_stats[sym]['fees'] += h.get('fees', 0.0)
-        pair_stats[sym]['mfe_sum'] += h.get('mfe_roe', max(0, h.get('roe_pct', 0)))
-        pair_stats[sym]['mae_sum'] += h.get('mae_roe', abs(min(0, h.get('roe_pct', 0))))
-        pair_stats[sym]['atr_sum'] += h.get('atr_pct', 1.2)
+        def _safe_float(v, default=0.0):
+            if isinstance(v, (int, float)): return float(v)
+            if isinstance(v, str):
+                try: return float(v.replace('%', '').replace('+', '').replace('-', '').replace('$', '').strip())
+                except: return default
+            return default
+
+        pair_stats[sym]['mfe_sum'] += _safe_float(h.get('mfe_roe', max(0, h.get('roe_pct', 0))))
+        pair_stats[sym]['mae_sum'] += _safe_float(h.get('mae_roe', abs(min(0, h.get('roe_pct', 0)))))
+        pair_stats[sym]['atr_sum'] += _safe_float(h.get('atr_pct', 1.2), default=1.2)
 
         if h.get('id', '').endswith('-TP1') or 'TP1' in str(h.get('close_reason', '')):
             pair_stats[sym]['tp1_hits'] += 1
@@ -276,53 +283,57 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
 
     def write_trade_row(ws, r_idx, h):
         ws.set_row(r_idx, 20)
-        is_win = h.get('net_pnl', 0) >= 0
+        pnl = _safe_float(h.get('net_pnl', 0.0))
+        is_win = pnl >= 0
         pnl_fmt = cell_green if is_win else cell_red
         roe_fmt = cell_roe_green if is_win else cell_roe_red
-        r_mult = h.get('realized_r', round(h.get('roe_pct', 0) / 2, 1) if is_win else -1.0)
-        mfe = h.get('mfe_roe', max(0, h.get('roe_pct', 0)))
-        mae = h.get('mae_roe', abs(min(0, h.get('roe_pct', 0))))
-        eff = h.get('exit_efficiency_pct', round((h.get('roe_pct', 0) / mfe) * 100, 1) if (mfe > 0 and is_win) else (0.0 if not is_win else 100.0))
+        r_mult = _safe_float(h.get('r_multiple', 1.0))
+        mfe = _safe_float(h.get('mfe_roe', max(0, _safe_float(h.get('roe_pct', 0)))))
+        mae = _safe_float(h.get('mae_roe', abs(min(0, _safe_float(h.get('roe_pct', 0))))))
+        eff = _safe_float(h.get('exit_efficiency_pct', round((_safe_float(h.get('roe_pct', 0)) / mfe) * 100, 1) if (mfe > 0 and is_win) else (0.0 if not is_win else 100.0)))
         snaps = h.get('snapshot_levels', {})
 
         trade_type_label = "TP1 %50 KISMİ KÂR" if h.get('id', '').endswith('-TP1') else ("TP2 NİHAİ KAPANIŞ" if "TP2" in str(h.get('close_reason', '')) else "TAM POZİSYON")
         tp1_status = "EVET (%50 Kilitlendi)" if (h.get('id', '').endswith('-TP1') or h.get('tp1_hit')) else "HAYIR"
         trailing_status = h.get('trail_status') or ("Breakeven" if "Breakeven" in str(h.get('close_reason', '')) else "-")
 
+        atr_val = _safe_float(h.get('atr_pct', 1.2), 1.2)
+        vol_val = _safe_float(h.get('volume_surge', 1.0), 1.0)
+
         ws.write(r_idx, 0, h.get('id', ''), cell_center)
         ws.write(r_idx, 1, h.get('symbol', ''), cell_center)
         ws.write(r_idx, 2, h.get('side', ''), cell_center)
         ws.write(r_idx, 3, f"{h.get('leverage', 5)}x", cell_center)
         ws.write(r_idx, 4, trade_type_label, cell_center)
-        ws.write(r_idx, 5, h.get('entry_time', ''), cell_center)
-        ws.write(r_idx, 6, h.get('exit_time', ''), cell_center)
-        ws.write(r_idx, 7, h.get('duration', '5M Mum'), cell_center)
+        ws.write(r_idx, 5, str(h.get('entry_time', '')), cell_center)
+        ws.write(r_idx, 6, str(h.get('exit_time', '')), cell_center)
+        ws.write(r_idx, 7, str(h.get('duration', '5M Mum')), cell_center)
         ws.write(r_idx, 8, h.get('candles_held', 1), cell_center)
         ws.write(r_idx, 9, h.get('session', 'LONDRA'), cell_center)
         ws.write(r_idx, 10, h.get('trend_regime', 'YATAY'), cell_center)
-        ws.write(r_idx, 11, f"%{h.get('atr_pct', 1.2):.2f}", cell_center)
-        ws.write(r_idx, 12, f"{h.get('volume_surge', 1.0):.1f}x", cell_center)
-        ws.write(r_idx, 13, h.get('confluence_score', '2/4'), cell_center)
-        ws.write(r_idx, 14, h.get('htf_alignment', 'NÖTR'), cell_center)
+        ws.write(r_idx, 11, f"%{atr_val:.2f}", cell_center)
+        ws.write(r_idx, 12, f"{vol_val:.1f}x", cell_center)
+        ws.write(r_idx, 13, str(h.get('confluence_score', '2/4')), cell_center)
+        ws.write(r_idx, 14, str(h.get('htf_alignment', 'NÖTR')), cell_center)
         ws.write(r_idx, 15, tp1_status, cell_center)
         ws.write(r_idx, 16, trailing_status, cell_center)
-        ws.write(r_idx, 17, h.get('margin', 0.0), cell_currency_2d)
-        ws.write(r_idx, 18, h.get('entry_price', 0.0), cell_currency)
-        ws.write(r_idx, 19, h.get('peak_price', h.get('entry_price', 0.0)), cell_currency)
-        ws.write(r_idx, 20, h.get('trough_price', h.get('entry_price', 0.0)), cell_currency)
-        ws.write(r_idx, 21, h.get('exit_price', 0.0), cell_currency)
+        ws.write(r_idx, 17, _safe_float(h.get('margin', 0.0)), cell_currency_2d)
+        ws.write(r_idx, 18, _safe_float(h.get('entry_price', 0.0)), cell_currency)
+        ws.write(r_idx, 19, _safe_float(h.get('peak_price', h.get('entry_price', 0.0))), cell_currency)
+        ws.write(r_idx, 20, _safe_float(h.get('trough_price', h.get('entry_price', 0.0))), cell_currency)
+        ws.write(r_idx, 21, _safe_float(h.get('exit_price', 0.0)), cell_currency)
         ws.write(r_idx, 22, h.get('tp1', 0.0) or "-", cell_currency if h.get('tp1') else cell_center)
         ws.write(r_idx, 23, h.get('tp2', 0.0) or "-", cell_currency if h.get('tp2') else cell_center)
         ws.write(r_idx, 24, h.get('soft_stop', 0.0) or "-", cell_currency if h.get('soft_stop') else cell_center)
-        ws.write(r_idx, 25, h.get('gross_pnl', h.get('net_pnl', 0.0) + h.get('fees', 0.0)), cell_currency)
-        ws.write(r_idx, 26, h.get('fees', 0.0), cell_currency)
-        ws.write(r_idx, 27, h.get('net_pnl', 0.0), pnl_fmt)
-        ws.write(r_idx, 28, (h.get('roe_pct', 0.0) / 100.0), roe_fmt)
+        ws.write(r_idx, 25, _safe_float(h.get('gross_pnl', _safe_float(h.get('net_pnl', 0.0)) + _safe_float(h.get('fees', 0.0)))), cell_currency)
+        ws.write(r_idx, 26, _safe_float(h.get('fees', 0.0)), cell_currency)
+        ws.write(r_idx, 27, pnl, pnl_fmt)
+        ws.write(r_idx, 28, (_safe_float(h.get('roe_pct', 0.0)) / 100.0), roe_fmt)
         ws.write(r_idx, 29, f"{r_mult:+.1f}R", cell_center)
         ws.write(r_idx, 30, f"+%{mfe:.1f}", cell_center)
         ws.write(r_idx, 31, f"-%{mae:.1f}", cell_center)
         ws.write(r_idx, 32, f"%{eff:.1f}", cell_center)
-        ws.write(r_idx, 33, h.get('balance_after', current_balance), cell_currency_2d)
+        ws.write(r_idx, 33, _safe_float(h.get('balance_after', current_balance)), cell_currency_2d)
         ws.write(r_idx, 34, h.get('reason', 'Strateji Sinyali'), cell_left)
         ws.write(r_idx, 35, h.get('close_reason', 'Kapanış'), cell_left)
         ws.write(r_idx, 36, snaps.get('P', 0.0) or "-", cell_currency if snaps.get('P') else cell_center)
