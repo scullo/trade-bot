@@ -3398,16 +3398,27 @@ async function loadAdminMetrics() {
             'TIAUSDT': 'TIA/USDT', 'INJUSDT': 'INJ/USDT', 'FETUSDT': 'FET/USDT', 'DOTUSDT': 'DOT/USDT',
             '1000SHIBUSDT': 'SHIB/USDT', 'TONUSDT': 'TON/USDT', 'WIFUSDT': 'WIF/USDT', 'GALAUSDT': 'GALA/USDT',
             'SEIUSDT': 'SEI/USDT', 'RENDERUSDT': 'RENDER/USDT', 'FTMUSDT': 'FTM/USDT', 'ATOMUSDT': 'ATOM/USDT',
-            'LTCUSDT': 'LTC/USDT', 'POLUSDT': 'POL/USDT'
+            'LTCUSDT': 'LTC/USDT', 'POLUSDT': 'POL/USDT', '1000NEIROUSDT': 'NEIRO/USDT', '1000BONKUSDT': 'BONK/USDT',
+            '1000FLOKIUSDT': 'FLOKI/USDT', '1000LUNCUSDT': 'LUNC/USDT', '1000XECUSDT': 'XEC/USDT',
+            '1000CHEEMSUSDT': 'CHEEMS/USDT', '1000WHYUSDT': 'WHY/USDT', '1000CATUSDT': 'CAT/USDT'
         };
 
-        // UNIFIED PNL COMPUTATION ENGINE
+        // UNIFIED PNL COMPUTATION ENGINE (WITH MULTIPLIER SANITY GUARD)
         function computePositionPnL(pos, livePrice) {
-            const curP = Number(livePrice || pos.entry_price);
+            let curP = Number(livePrice || pos.entry_price);
+            if (!curP || isNaN(curP) || curP <= 0) curP = Number(pos.entry_price);
+
             const isLong = pos.side === 'LONG';
-            const priceDiffPct = isLong ? ((curP - pos.entry_price) / pos.entry_price) * 100 : ((pos.entry_price - curP) / pos.entry_price) * 100;
+            let priceDiffPct = isLong ? ((curP - pos.entry_price) / pos.entry_price) * 100 : ((pos.entry_price - curP) / pos.entry_price) * 100;
+
+            // Multiplier & Outlier Glitch Shield (Örn: 1000x meme coin sapmasını koru)
+            if (priceDiffPct < -75.0 || priceDiffPct > 500.0) {
+                curP = Number(pos.entry_price);
+                priceDiffPct = 0.0;
+            }
+
             const roePct = priceDiffPct * pos.leverage;
-            const pnlUsdt = pos.position_value * (priceDiffPct / 100);
+            const pnlUsdt = (pos.position_value || (pos.margin * pos.leverage) || 500) * (priceDiffPct / 100);
             const isWin = pnlUsdt > 0.0001;
             const isLoss = pnlUsdt < -0.0001;
             return { curP, isLong, priceDiffPct, roePct, pnlUsdt, isWin, isLoss };
@@ -4889,7 +4900,8 @@ function downloadExcelReport() {
             const multiplierMap = {
                 'pepe': '1000pepe', 'shib': '1000shib', 'bonk': '1000bonk',
                 'floki': '1000floki', 'sats': '1000sats', 'rats': '1000rats',
-                'lunc': '1000lunc', 'xec': '1000xec', 'mog': '1000000mog', 'cheems': '1000cheems'
+                'lunc': '1000lunc', 'xec': '1000xec', 'mog': '1000000mog', 'cheems': '1000cheems',
+                'why': '1000why', 'cat': '1000cat', 'neiro': '1000neiro'
             };
             let base = multiplierMap[s] || s;
             return base + 'usdt';
