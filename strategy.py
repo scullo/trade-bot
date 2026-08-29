@@ -1,3 +1,4 @@
+from security_vault import SecurityVault
 import time
 import datetime
 from datetime import datetime
@@ -14,6 +15,7 @@ class StrategyEngine:
         self.market_data = market_data
         self.paper_trader = paper_trader
         self.notifier = notifier
+        self.vault = SecurityVault()
         self.peak_prices = {}  # symbol -> trailing icin en iyi fiyat
 
     async def _notify_open(self, pos: dict, levels: dict = None):
@@ -561,6 +563,27 @@ class StrategyEngine:
         # BOLUM 2: YENI POZISYON GIRIS KONTROLLERI (8 SETUP)
         # ═══════════════════════════════════════════════════════════════════
         if len(self.paper_trader.open_positions) >= MAX_OPEN_POSITIONS:
+            return
+
+        # 🛡️ GÜVENLİK ZIRHI 1: GÜNLÜK DEVRE KESİCİ (CIRCUIT BREAKER - Max %3 Günlük Kayıp)
+        cb_ok, cb_msg = self.vault.check_daily_circuit_breaker(
+            getattr(self.paper_trader, 'history', []),
+            getattr(self.paper_trader, 'balance', 100000.0),
+            max_loss_pct=0.03
+        )
+        if not cb_ok:
+            print(f">> [GÜVENLİK ZIRHI] {cb_msg}")
+            return
+
+        # 🛡️ GÜVENLİK ZIRHI 2: PORTFÖY MARJİN TAVAN KİLİDİ (Max %40 Kasa Kullanımı)
+        mc_ok, mc_msg = self.vault.check_margin_cap(
+            getattr(self.paper_trader, 'open_positions', {}),
+            new_trade_margin=100.0,
+            balance=getattr(self.paper_trader, 'balance', 100000.0),
+            max_cap_pct=0.40
+        )
+        if not mc_ok:
+            # Sadece kritik durumlarda logla
             return
 
         r3, r4, r5 = cam.get("R3", 0), cam.get("R4", 0), cam.get("R5", 0)
