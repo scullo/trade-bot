@@ -1319,19 +1319,18 @@ HTML_PAGE = """
 
 <!-- AUTHENTICATION (LOGIN / 24H TRIAL REGISTER) MODAL -->
     <div id="auth-modal-overlay" class="modal-overlay" style="display:none;" onclick="if(event.target === this) closeAuthModal()">
-        <div class="modal-card" style="max-width:480px; text-align:left; border:1px solid rgba(0,242,254,0.35); box-shadow:0 25px 60px rgba(0,0,0,0.85);">
+        <div class="modal-card" style="max-width:460px; text-align:left; border:1.5px solid rgba(0,242,254,0.35); box-shadow:0 25px 60px rgba(0,0,0,0.85);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                <div style="font-size:18px; font-weight:900; color:#fff; display:flex; align-items:center; gap:8px;">
+                <div style="font-size:17px; font-weight:900; color:#fff; display:flex; align-items:center; gap:8px;">
                     <span>🔐</span> VALKYRIE GİRİŞ & KAYIT PORTALI
                 </div>
                 <button onclick="closeAuthModal()" style="background:transparent; border:none; color:#94a3b8; font-size:20px; cursor:pointer;">✕</button>
             </div>
 
-            <!-- 3 AUTH TABS -->
-            <div style="display:flex; gap:6px; margin-bottom:16px; background:rgba(255,255,255,0.03); padding:4px; border-radius:10px;">
-                <button id="auth-tab-btn-register" onclick="switchAuthTab('register')" style="flex:1.2; padding:9px 6px; border-radius:8px; border:none; background:linear-gradient(135deg, #00f2fe, #4facfe); color:#000; font-weight:900; font-size:12px; cursor:pointer;">🎁 24h VIP Deneme</button>
-                <button id="auth-tab-btn-login" onclick="switchAuthTab('login')" style="flex:1; padding:9px 6px; border-radius:8px; border:none; background:transparent; color:#94a3b8; font-weight:800; font-size:12px; cursor:pointer;">👤 Giriş Yap</button>
-                <button id="auth-tab-btn-admin" onclick="switchAuthTab('admin')" style="flex:1; padding:9px 6px; border-radius:8px; border:none; background:transparent; color:var(--cyan); font-weight:800; font-size:11px; cursor:pointer;">👑 Master Admin</button>
+            <!-- 2 CLEAN TABS (REGISTER & LOGIN) -->
+            <div style="display:flex; gap:8px; margin-bottom:16px; background:rgba(255,255,255,0.03); padding:4px; border-radius:10px;">
+                <button id="auth-tab-btn-register" onclick="switchAuthTab('register')" style="flex:1.2; padding:9px 8px; border-radius:8px; border:none; background:linear-gradient(135deg, #00f2fe, #4facfe); color:#000; font-weight:900; font-size:12.5px; cursor:pointer;">🎁 24h VIP Deneme</button>
+                <button id="auth-tab-btn-login" onclick="switchAuthTab('login')" style="flex:1; padding:9px 8px; border-radius:8px; border:none; background:transparent; color:#94a3b8; font-weight:800; font-size:12.5px; cursor:pointer;">👤 Giriş Yap</button>
             </div>
 
             <!-- 1. TAB: 24H TRIAL REGISTER FORM -->
@@ -1356,35 +1355,17 @@ HTML_PAGE = """
                 </button>
             </div>
 
-            <!-- 2. TAB: CLIENT LOGIN FORM -->
+            <!-- 2. TAB: UNIFIED LOGIN FORM (BOTH FOR USERS AND ADMIN) -->
             <div id="auth-form-login" style="display:none;">
                 <div style="margin-bottom:12px;">
-                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">E-Posta Adresi</label>
+                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">E-Posta Adresiniz</label>
                     <input type="email" id="login-email" placeholder="ornek@domain.com" class="settings-input" />
                 </div>
                 <div style="margin-bottom:16px;">
-                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Şifre</label>
+                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Şifreniz</label>
                     <input type="password" id="login-password" placeholder="Şifrenizi giriniz..." class="settings-input" />
                 </div>
                 <button class="btn-save-settings" style="width:100%; font-weight:900; padding:12px;" onclick="submitLogin()">🔐 Güvenli Giriş Yap</button>
-            </div>
-
-            <!-- 3. TAB: MASTER ADMIN QUICK ACCESS -->
-            <div id="auth-form-admin" style="display:none;">
-                <div style="background:rgba(251,197,49,0.06); border:1px solid rgba(251,197,49,0.3); border-radius:10px; padding:12px; margin-bottom:14px; font-size:12px; color:#cbd5e1; line-height:1.5;">
-                    👑 <b>Master Admin Yetkili Masası:</b> Sistemin sahibi olarak tüm müşteri cüzdan bakiyelerini, toplam fonu (AUM) ve abonelikleri buradan yönetebilirsiniz.
-                </div>
-                <div style="margin-bottom:10px;">
-                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Master Admin E-Posta</label>
-                    <input type="email" id="admin-email-input" class="settings-input" value="admin@valkyriequant.com" />
-                </div>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Master Admin Şifre</label>
-                    <input type="password" id="admin-password-input" class="settings-input" value="AdminValkyrie2026!" />
-                </div>
-                <button class="btn-save-settings" style="width:100%; background:linear-gradient(135deg, #fbc531, #e1b12c); color:#000; font-weight:900; padding:12px;" onclick="submitAdminQuickLogin()">
-                    ⚡ Master Admin Olarak Giriş Yap & Masayı Aç
-                </button>
             </div>
 
             <div id="auth-msg-box" style="display:none; margin-top:14px; padding:12px; border-radius:8px; font-size:12.5px; font-family:'JetBrains Mono'; line-height:1.5;"></div>
@@ -2272,11 +2253,7 @@ HTML_PAGE = """
         };
 
         
-        function fillMasterAdminCreds() {
-            document.getElementById('login-email').value = 'admin@valkyriequant.com';
-            document.getElementById('login-password').value = 'AdminValkyrie2026!';
-            submitLogin();
-        }
+
 
         function restorePersistedSession() {
             try {
@@ -2318,14 +2295,11 @@ HTML_PAGE = """
         function switchAuthTab(tab) {
             const btnReg = document.getElementById('auth-tab-btn-register');
             const btnLog = document.getElementById('auth-tab-btn-login');
-            const btnAdm = document.getElementById('auth-tab-btn-admin');
             const fReg = document.getElementById('auth-form-register');
             const fLog = document.getElementById('auth-form-login');
-            const fAdm = document.getElementById('auth-form-admin');
 
             if (fReg) fReg.style.display = (tab === 'register') ? 'block' : 'none';
             if (fLog) fLog.style.display = (tab === 'login') ? 'block' : 'none';
-            if (fAdm) fAdm.style.display = (tab === 'admin') ? 'block' : 'none';
 
             if (btnReg) {
                 btnReg.style.background = (tab === 'register') ? 'linear-gradient(135deg, #00f2fe, #4facfe)' : 'transparent';
@@ -2335,18 +2309,6 @@ HTML_PAGE = """
                 btnLog.style.background = (tab === 'login') ? 'var(--blue)' : 'transparent';
                 btnLog.style.color = (tab === 'login') ? '#fff' : '#94a3b8';
             }
-            if (btnAdm) {
-                btnAdm.style.background = (tab === 'admin') ? 'rgba(251,197,49,0.2)' : 'transparent';
-                btnAdm.style.color = (tab === 'admin') ? 'var(--yellow)' : 'var(--cyan)';
-            }
-        }
-
-        function submitAdminQuickLogin() {
-            const email = document.getElementById('admin-email-input').value;
-            const password = document.getElementById('admin-password-input').value;
-            document.getElementById('login-email').value = email;
-            document.getElementById('login-password').value = password;
-            submitLogin();
         }
 
         function updateUserSessionUI() {
