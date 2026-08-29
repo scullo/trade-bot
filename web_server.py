@@ -1319,58 +1319,78 @@ HTML_PAGE = """
 
 <!-- AUTHENTICATION (LOGIN / 24H TRIAL REGISTER) MODAL -->
     <div id="auth-modal-overlay" class="modal-overlay" style="display:none;" onclick="if(event.target === this) closeAuthModal()">
-        <div class="modal-card" style="max-width:440px; text-align:left;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                <div style="font-size:17px; font-weight:900; color:#fff; display:flex; align-items:center; gap:8px;">
-                    <span>🔐</span> VALKYRIE QUANT GİRİŞ & ÜYELİK
+        <div class="modal-card" style="max-width:480px; text-align:left; border:1px solid rgba(0,242,254,0.35); box-shadow:0 25px 60px rgba(0,0,0,0.85);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <div style="font-size:18px; font-weight:900; color:#fff; display:flex; align-items:center; gap:8px;">
+                    <span>🔐</span> VALKYRIE GİRİŞ & KAYIT PORTALI
                 </div>
                 <button onclick="closeAuthModal()" style="background:transparent; border:none; color:#94a3b8; font-size:20px; cursor:pointer;">✕</button>
             </div>
 
-            <!-- TAB SWITCHER -->
-            <div style="display:flex; gap:8px; margin-bottom:16px; background:rgba(255,255,255,0.03); padding:4px; border-radius:10px;">
-                <button id="auth-tab-btn-login" onclick="switchAuthTab('login')" style="flex:1; padding:8px; border-radius:8px; border:none; background:var(--blue); color:#fff; font-weight:800; font-size:12px; cursor:pointer;">Giriş Yap</button>
-                <button id="auth-tab-btn-register" onclick="switchAuthTab('register')" style="flex:1; padding:8px; border-radius:8px; border:none; background:transparent; color:#94a3b8; font-weight:800; font-size:12px; cursor:pointer;">🎁 24h Ücretsiz Deneme</button>
+            <!-- 3 AUTH TABS -->
+            <div style="display:flex; gap:6px; margin-bottom:16px; background:rgba(255,255,255,0.03); padding:4px; border-radius:10px;">
+                <button id="auth-tab-btn-register" onclick="switchAuthTab('register')" style="flex:1.2; padding:9px 6px; border-radius:8px; border:none; background:linear-gradient(135deg, #00f2fe, #4facfe); color:#000; font-weight:900; font-size:12px; cursor:pointer;">🎁 24h VIP Deneme</button>
+                <button id="auth-tab-btn-login" onclick="switchAuthTab('login')" style="flex:1; padding:9px 6px; border-radius:8px; border:none; background:transparent; color:#94a3b8; font-weight:800; font-size:12px; cursor:pointer;">👤 Giriş Yap</button>
+                <button id="auth-tab-btn-admin" onclick="switchAuthTab('admin')" style="flex:1; padding:9px 6px; border-radius:8px; border:none; background:transparent; color:var(--cyan); font-weight:800; font-size:11px; cursor:pointer;">👑 Master Admin</button>
             </div>
 
-            <!-- LOGIN FORM -->
-            <div id="auth-form-login">
+            <!-- 1. TAB: 24H TRIAL REGISTER FORM -->
+            <div id="auth-form-register">
+                <div style="background:rgba(0,242,254,0.06); border:1px solid rgba(0,242,254,0.25); border-radius:10px; padding:12px; margin-bottom:14px; font-size:12px; color:#cbd5e1; line-height:1.5;">
+                    🎉 <b>24 Saatlik Ücretsiz VIP Deneme:</b> Kredi kartı gerekmez. Kayıt olduğunuz anda 100 kripto paritede tüm algoritmalar 24 saat boyunca hesabınızda sınırsız açılır!
+                </div>
                 <div style="margin-bottom:12px;">
-                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">E-Posta Adresi</label>
-                    <input type="email" id="login-email" placeholder="ornek@domain.com" class="settings-input" value="admin@valkyriequant.com" />
+                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">E-Posta Adresiniz</label>
+                    <input type="email" id="reg-email" placeholder="ornek@domain.com" class="settings-input" />
                 </div>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Şifre</label>
-                    <input type="password" id="login-password" placeholder="Şifrenizi giriniz..." class="settings-input" value="AdminValkyrie2026!" />
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Şifreniz</label>
+                    <input type="password" id="reg-password" placeholder="Güçlü bir şifre belirleyiniz..." class="settings-input" />
                 </div>
-                <button class="btn-save-settings" style="width:100%; margin-top:6px;" onclick="submitLogin()">⚡ Giriş Yap</button>
-            </div>
-
-            <!-- REGISTER FORM (WITH 24H TRIAL & ANTI-ABUSE) -->
-            <div id="auth-form-register" style="display:none;">
-                <div style="background:rgba(0,242,254,0.06); border:1px solid rgba(0,242,254,0.2); border-radius:8px; padding:10px; margin-bottom:12px; font-size:11px; color:#cbd5e1;">
-                    🎁 <b>24 Saatlik VIP Deneme:</b> Kayıt olduğunuz an 24 saat boyunca tüm algoritmik sinyaller hesabınızda otomatik aktif edilir.
-                </div>
-                <div style="margin-bottom:10px;">
-                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">E-Posta</label>
-                    <input type="email" id="reg-email" placeholder="E-posta adresiniz..." class="settings-input" />
-                </div>
-                <div style="margin-bottom:10px;">
-                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Şifre</label>
-                    <input type="password" id="reg-password" placeholder="Şifre belirleyiniz..." class="settings-input" />
-                </div>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Binance Hesap UID (Opsiyonel / Doğrulama)</label>
+                <div style="margin-bottom:16px;">
+                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Binance Hesap UID (Opsiyonel / Suistimal Koruması)</label>
                     <input type="text" id="reg-binance-uid" placeholder="Binance UID (Örn: 12345678)" class="settings-input" />
                 </div>
-                <button class="btn-save-settings" style="width:100%; margin-top:6px; background:linear-gradient(135deg, #00f2fe, #4facfe);" onclick="submitRegister()">🚀 24 Saatlik Denemeyi Başlat</button>
+                <button class="btn-save-settings" style="width:100%; background:linear-gradient(135deg, #00f2fe, #4facfe); color:#000; font-weight:900; font-size:13.5px; padding:12px;" onclick="submitRegister()">
+                    🚀 24 Saatlik VIP Denememi Anında Başlat
+                </button>
             </div>
 
-            <div id="auth-msg-box" style="display:none; margin-top:12px; padding:10px; border-radius:8px; font-size:12px; font-family:'JetBrains Mono';"></div>
+            <!-- 2. TAB: CLIENT LOGIN FORM -->
+            <div id="auth-form-login" style="display:none;">
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">E-Posta Adresi</label>
+                    <input type="email" id="login-email" placeholder="ornek@domain.com" class="settings-input" />
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Şifre</label>
+                    <input type="password" id="login-password" placeholder="Şifrenizi giriniz..." class="settings-input" />
+                </div>
+                <button class="btn-save-settings" style="width:100%; font-weight:900; padding:12px;" onclick="submitLogin()">🔐 Güvenli Giriş Yap</button>
+            </div>
+
+            <!-- 3. TAB: MASTER ADMIN QUICK ACCESS -->
+            <div id="auth-form-admin" style="display:none;">
+                <div style="background:rgba(251,197,49,0.06); border:1px solid rgba(251,197,49,0.3); border-radius:10px; padding:12px; margin-bottom:14px; font-size:12px; color:#cbd5e1; line-height:1.5;">
+                    👑 <b>Master Admin Yetkili Masası:</b> Sistemin sahibi olarak tüm müşteri cüzdan bakiyelerini, toplam fonu (AUM) ve abonelikleri buradan yönetebilirsiniz.
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Master Admin E-Posta</label>
+                    <input type="email" id="admin-email-input" class="settings-input" value="admin@valkyriequant.com" />
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Master Admin Şifre</label>
+                    <input type="password" id="admin-password-input" class="settings-input" value="AdminValkyrie2026!" />
+                </div>
+                <button class="btn-save-settings" style="width:100%; background:linear-gradient(135deg, #fbc531, #e1b12c); color:#000; font-weight:900; padding:12px;" onclick="submitAdminQuickLogin()">
+                    ⚡ Master Admin Olarak Giriş Yap & Masayı Aç
+                </button>
+            </div>
+
+            <div id="auth-msg-box" style="display:none; margin-top:14px; padding:12px; border-radius:8px; font-size:12.5px; font-family:'JetBrains Mono'; line-height:1.5;"></div>
         </div>
     </div>
-
-    <!-- SYSTEM HEALTH DIAGNOSTIC MODAL -->
+<!-- SYSTEM HEALTH DIAGNOSTIC MODAL -->
     <div id="health-modal-overlay" class="modal-overlay" style="display:none;" onclick="if(event.target === this) closeHealthDiagnosticModal()">
         <div class="modal-card" style="max-width:540px; text-align:left;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
@@ -1670,8 +1690,13 @@ HTML_PAGE = """
             </div>
         </div>
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <div class="live-tag" id="user-session-pill" onclick="openAuthModal()" style="cursor:pointer; border-color:rgba(0,242,254,0.4); background:rgba(0,242,254,0.06);" title="Yatırımcı Girişi / 24h VIP Deneme Başlat">
-                👑 <b style="color:var(--cyan); margin-left:4px;">Master Admin</b>
+            <button onclick="openUpgradeModal()" style="background:linear-gradient(135deg, rgba(0,242,254,0.15), rgba(79,172,254,0.25)); border:1.5px solid var(--cyan); color:#fff; font-weight:800; font-size:12px; padding:6px 12px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                <span>💎</span> Paketi Yükselt
+            </button>
+            <div id="user-session-container" style="display:flex; align-items:center;">
+                <button id="user-auth-btn" class="nav-tab-btn" onclick="openAuthModal('login')" style="background:rgba(0,242,254,0.08); border:1.5px solid var(--cyan); color:#fff; font-size:12px; font-weight:800; padding:6px 14px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                    <span>👤</span> Giriş Yap / 24h Başla
+                </button>
             </div>
             <div id="mode-badge-wrap" class="mode-badge-wrap" onclick="openLiveSettingsModal()" title="Ticaret Modu (Demo/Canlı) & Binance API Ayarlarını Aç">
                 <span id="mode-badge-dot" class="mode-dot-demo"></span>
@@ -1703,7 +1728,7 @@ HTML_PAGE = """
         <button class="nav-tab-btn" id="tab-btn-ledger" onclick="switchMainTab('ledger')">
             <span class="tab-icon">📜</span> 4. TİCARET DEFTERİ & EXCEL RAPORLARI
         </button>
-        <button class="nav-tab-btn" id="tab-btn-admin" onclick="switchMainTab('admin'); loadAdminMetrics();" style="border-color:rgba(0,242,254,0.35);">
+        <button class="nav-tab-btn" id="tab-btn-admin" onclick="switchMainTab('admin'); loadAdminMetrics();" style="border-color:rgba(0,242,254,0.35); display:none;">
             <span class="tab-icon">👑</span> 5. MASTER ADMİN & FON MASASI
         </button>
     </div>
@@ -2255,20 +2280,75 @@ HTML_PAGE = """
             if (m) m.style.display = 'none';
         }
 
-        function switchAuthTab(tab) {
-            const btnL = document.getElementById('auth-tab-btn-login');
-            const btnR = document.getElementById('auth-tab-btn-register');
-            const fL = document.getElementById('auth-form-login');
-            const fR = document.getElementById('auth-form-register');
+        function openAuthModal(defaultTab = 'register') {
+            const m = document.getElementById('auth-modal-overlay');
+            if (m) m.style.display = 'flex';
+            switchAuthTab(defaultTab);
+        }
 
-            if (tab === 'login') {
-                btnL.style.background = 'var(--blue)'; btnL.style.color = '#fff';
-                btnR.style.background = 'transparent'; btnR.style.color = '#94a3b8';
-                fL.style.display = 'block'; fR.style.display = 'none';
+        function switchAuthTab(tab) {
+            const btnReg = document.getElementById('auth-tab-btn-register');
+            const btnLog = document.getElementById('auth-tab-btn-login');
+            const btnAdm = document.getElementById('auth-tab-btn-admin');
+            const fReg = document.getElementById('auth-form-register');
+            const fLog = document.getElementById('auth-form-login');
+            const fAdm = document.getElementById('auth-form-admin');
+
+            if (fReg) fReg.style.display = (tab === 'register') ? 'block' : 'none';
+            if (fLog) fLog.style.display = (tab === 'login') ? 'block' : 'none';
+            if (fAdm) fAdm.style.display = (tab === 'admin') ? 'block' : 'none';
+
+            if (btnReg) {
+                btnReg.style.background = (tab === 'register') ? 'linear-gradient(135deg, #00f2fe, #4facfe)' : 'transparent';
+                btnReg.style.color = (tab === 'register') ? '#000' : '#94a3b8';
+            }
+            if (btnLog) {
+                btnLog.style.background = (tab === 'login') ? 'var(--blue)' : 'transparent';
+                btnLog.style.color = (tab === 'login') ? '#fff' : '#94a3b8';
+            }
+            if (btnAdm) {
+                btnAdm.style.background = (tab === 'admin') ? 'rgba(251,197,49,0.2)' : 'transparent';
+                btnAdm.style.color = (tab === 'admin') ? 'var(--yellow)' : 'var(--cyan)';
+            }
+        }
+
+        function submitAdminQuickLogin() {
+            const email = document.getElementById('admin-email-input').value;
+            const password = document.getElementById('admin-password-input').value;
+            document.getElementById('login-email').value = email;
+            document.getElementById('login-password').value = password;
+            submitLogin();
+        }
+
+        function updateUserSessionUI() {
+            const cont = document.getElementById('user-session-container');
+            const navAdminTab = document.getElementById('tab-btn-admin');
+
+            if (!cont) return;
+
+            if (currentUser && currentUser.role === 'ADMIN') {
+                cont.innerHTML = `
+                    <div class="live-tag" onclick="openAuthModal('admin')" style="cursor:pointer; border-color:rgba(0,242,254,0.4); background:rgba(0,242,254,0.08);" title="Master Admin Masasını Yönet">
+                        👑 <b style="color:var(--cyan); margin-left:4px;">Master Admin</b>
+                    </div>
+                `;
+                if (navAdminTab) navAdminTab.style.display = 'inline-flex';
+            } else if (currentUser && currentUser.email) {
+                const cleanName = currentUser.email.split('@')[0];
+                cont.innerHTML = `
+                    <div class="live-tag" onclick="openAuthModal('login')" style="cursor:pointer;" title="Hesabım">
+                        👤 <b style="color:#cbd5e1; margin-left:4px;">${cleanName}</b>
+                        <span style="background:rgba(251,197,49,0.2); color:var(--yellow); padding:2px 6px; border-radius:4px; font-size:10px; margin-left:6px;">24h Deneme</span>
+                    </div>
+                `;
+                if (navAdminTab) navAdminTab.style.display = 'none';
             } else {
-                btnR.style.background = 'var(--blue)'; btnR.style.color = '#fff';
-                btnL.style.background = 'transparent'; btnL.style.color = '#94a3b8';
-                fR.style.display = 'block'; fL.style.display = 'none';
+                cont.innerHTML = `
+                    <button class="nav-tab-btn" onclick="openAuthModal('register')" style="background:rgba(0,242,254,0.08); border:1.5px solid var(--cyan); color:#fff; font-size:12px; font-weight:800; padding:6px 14px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                        <span>👤</span> Giriş Yap / 24h Başla
+                    </button>
+                `;
+                if (navAdminTab) navAdminTab.style.display = 'none';
             }
         }
 
