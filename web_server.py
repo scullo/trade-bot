@@ -1213,13 +1213,35 @@ HTML_PAGE = """
             <!-- TOP HEADER -->
             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:14px;">
                 <div>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:22px;">👑</span>
-                        <div style="font-size:20px; font-weight:900; color:#fff; letter-spacing:0.5px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="display:inline-flex; align-items:center;">
+                            <svg width="34" height="34" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="valk_wing_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f2fe" />
+      <stop offset="100%" stop-color="#4facfe" />
+    </linearGradient>
+    <linearGradient id="valk_core_grad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00f2fe" />
+      <stop offset="50%" stop-color="#38ef7d" />
+      <stop offset="100%" stop-color="#ffffff" />
+    </linearGradient>
+    <filter id="valk_glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <path d="M6 14L18 26L24 42L20 22L10 12L6 14Z" fill="url(#valk_wing_grad)" opacity="0.85"/>
+  <path d="M42 14L30 26L24 42L28 22L38 12L42 14Z" fill="url(#valk_wing_grad)" opacity="0.85"/>
+  <path d="M24 6L32 20L24 36L16 20L24 6Z" fill="url(#valk_wing_grad)" filter="url(#valk_glow)"/>
+  <polygon points="24,14 28,21 24,28 20,21" fill="url(#valk_core_grad)"/>
+</svg>
+                        </div>
+                        <div style="font-size:19px; font-weight:900; color:#fff; letter-spacing:0.5px;">
                             VALKYRIE <span style="background: linear-gradient(135deg, #00f2fe, #4facfe); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">ALL-ACCESS</span> UNLIMITED
                         </div>
                     </div>
-                    <div style="font-size:12px; color:var(--text-muted); margin-top:3px;">
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
                         Kurumsal Düzey Kripto Algoritmik Ticaret Platformuna 30 Gün Sınırsız Erişim
                     </div>
                 </div>
@@ -1244,29 +1266,36 @@ HTML_PAGE = """
                 </div>
             </div>
 
-            <!-- VALUE PROPOSITION GRID (WHAT YOU GET) -->
-            <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:14px 16px; margin-bottom:18px;">
-                <div style="font-size:12px; font-weight:800; color:#cbd5e1; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.5px;">
-                    💎 Bu Pakete Neler Dahil? (Sınırsız Özellikler)
+            <!-- VALUE PROPOSITION GRID (VALKYRIE PROPRIETARY SETUPS) -->
+            <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:16px 18px; margin-bottom:18px;">
+                <div style="font-size:12px; font-weight:800; color:#cbd5e1; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:8px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                    <span>VALKYRIE ÖZEL ALGORİTMİK SİSTEM ÖZELLİKLERİ</span>
                 </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px 16px; font-size:12px; color:#e2e8f0;">
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <span style="color:var(--cyan);">✓</span> <b>100 Kripto Paritede</b> Canlı Tarama & İşlem
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px 18px; font-size:12px; color:#e2e8f0;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00f2fe" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <span><b>100 Kripto Paritede</b> 5M Canlı Otonom İşlem</span>
                     </div>
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <span style="color:var(--cyan);">✓</span> <b>Camarilla R4/S4, nPOC & Macro</b> Setupları
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00f2fe" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <span><b>Valkyrie Özel Kurumsal Likidite</b> Setupları</span>
                     </div>
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <span style="color:var(--cyan);">✓</span> <b>Kişiye Özel Risk & Marjin</b> Tavan Kilidi
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00f2fe" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <span><b>Yüksek Olasılıklı Dönüş & Kırılım</b> Algoritmaları</span>
                     </div>
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <span style="color:var(--cyan);">✓</span> <b>7/24 VIP Telegram</b> Canlı Sinyal Botu
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00f2fe" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <span><b>Kişiselleştirilebilir Risk & Kasa</b> Güvenlik Kilidi</span>
                     </div>
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <span style="color:var(--cyan);">✓</span> <b>48 Sütunlu Adli Defter</b> & Excel İndirme
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00f2fe" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <span><b>7/24 Kesintisiz VIP Telegram</b> Anlık Bildirim Kanalı</span>
                     </div>
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <span style="color:var(--cyan);">✓</span> <b>Valkyrie Aegis Sentinel</b> Otomatik Koruma
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00f2fe" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <span><b>48 Sütunlu Adli Defter</b> & Profesyonel Excel İndirme</span>
                     </div>
                 </div>
             </div>
@@ -1682,18 +1711,28 @@ HTML_PAGE = """
     <!-- TOP BAR BRANDING -->
     <div class="top-bar">
         <div class="logo-wrap">
-            <div class="brand-logo-gem">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="url(#gem_grad1)" stroke="#00f2fe" stroke-width="1.5" stroke-linejoin="round"/>
-                    <path d="M2 17L12 22L22 17" stroke="#4facfe" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M2 12L12 17L22 12" stroke="#00f2fe" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <defs>
-                        <linearGradient id="gem_grad1" x1="2" y1="2" x2="22" y2="12" gradientUnits="userSpaceOnUse">
-                            <stop stop-color="#00f2fe"/>
-                            <stop offset="1" stop-color="#4facfe"/>
-                        </linearGradient>
-                    </defs>
-                </svg>
+            <div class="brand-logo-gem" style="width:40px; height:40px; background:rgba(0,242,254,0.08); border:1.5px solid var(--cyan); border-radius:12px; display:flex; align-items:center; justify-content:center; box-shadow:0 0 20px rgba(0,242,254,0.2);">
+                <svg width="34" height="34" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="valk_wing_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f2fe" />
+      <stop offset="100%" stop-color="#4facfe" />
+    </linearGradient>
+    <linearGradient id="valk_core_grad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00f2fe" />
+      <stop offset="50%" stop-color="#38ef7d" />
+      <stop offset="100%" stop-color="#ffffff" />
+    </linearGradient>
+    <filter id="valk_glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <path d="M6 14L18 26L24 42L20 22L10 12L6 14Z" fill="url(#valk_wing_grad)" opacity="0.85"/>
+  <path d="M42 14L30 26L24 42L28 22L38 12L42 14Z" fill="url(#valk_wing_grad)" opacity="0.85"/>
+  <path d="M24 6L32 20L24 36L16 20L24 6Z" fill="url(#valk_wing_grad)" filter="url(#valk_glow)"/>
+  <polygon points="24,14 28,21 24,28 20,21" fill="url(#valk_core_grad)"/>
+</svg>
             </div>
             <div>
                 <div class="logo-title">VALKYRIE <span style="background: linear-gradient(135deg, #00f2fe, #4facfe); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">QUANT DESK</span></div>
@@ -1725,21 +1764,26 @@ HTML_PAGE = """
          ========================================================================= -->
     <div class="nav-tab-strip">
         <button class="nav-tab-btn active" id="tab-btn-cockpit" onclick="switchMainTab('cockpit')">
-            <span class="tab-icon">🏠</span> 1. KOKPİT & AI QUANT MERKEZİ
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            1. KOKPİT & AI QUANT MERKEZİ
         </button>
         <button class="nav-tab-btn" id="tab-btn-positions" onclick="switchMainTab('positions')">
-            <span class="tab-icon">⚡</span> 2. AÇIK POZİSYONLAR & RİSK MASASI
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            2. AÇIK POZİSYONLAR & RİSK MASASI
             <span class="tab-badge" id="nav-pos-count-badge" style="display:none;">0</span>
         </button>
         <button class="nav-tab-btn" id="tab-btn-radar" onclick="switchMainTab('radar')">
-            <span class="tab-icon">📊</span> 3. 100 PARİTE PUSU & SEVİYE RADARI
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
+            3. 100 PARİTE PUSU & SEVİYE RADARI
             <span class="tab-badge-sub" id="nav-active-coins-badge">100/100</span>
         </button>
         <button class="nav-tab-btn" id="tab-btn-ledger" onclick="switchMainTab('ledger')">
-            <span class="tab-icon">📜</span> 4. TİCARET DEFTERİ & EXCEL RAPORLARI
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+            4. TİCARET DEFTERİ & EXCEL RAPORLARI
         </button>
         <button class="nav-tab-btn" id="tab-btn-admin" onclick="switchMainTab('admin'); loadAdminMetrics();" style="border-color:rgba(0,242,254,0.35); display:none;">
-            <span class="tab-icon">👑</span> 5. MASTER ADMİN & FON MASASI
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" style="margin-right:6px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            5. MASTER ADMİN & FON MASASI
         </button>
     </div>
 
