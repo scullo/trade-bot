@@ -3365,6 +3365,28 @@ async function loadAdminMetrics() {
         }
 
         let appState = { symbols: {}, balance: 100.0, open_positions: {}, history: [], all_coins: [] };
+        let searchQuery = '';
+
+        function handleSearch(val) {
+            searchQuery = (val || '').trim().toUpperCase();
+            const clearBtn = document.getElementById('search-clear-btn');
+            if (clearBtn) {
+                clearBtn.style.display = searchQuery ? 'block' : 'none';
+            }
+            renderCoinManager();
+            renderCards();
+        }
+
+        function clearSearch() {
+            searchQuery = '';
+            const input = document.getElementById('coin-search-input');
+            if (input) input.value = '';
+            const clearBtn = document.getElementById('search-clear-btn');
+            if (clearBtn) clearBtn.style.display = 'none';
+            renderCoinManager();
+            renderCards();
+        }
+
         let livePrices = {};
         let tickCounts = 0;
 
