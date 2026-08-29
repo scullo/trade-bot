@@ -1703,7 +1703,7 @@ HTML_PAGE = """
         </footer>
     </div>
 
-    <div id="dashboard-app-view" style="display:none;">
+    <div id="dashboard-app-view" style="display:none; width:100%;">
     <!-- TOP BAR BRANDING -->
     <!-- CUSTOM LIVE SETTINGS MODAL -->
 
@@ -2602,6 +2602,10 @@ HTML_PAGE = """
         // MULTI-TENANT AUTHENTICATION & MASTER ADMIN JS ENGINE
         // =========================================================================
         let currentUser = null;
+        try {
+            const saved = localStorage.getItem('valkyrie_auth_user');
+            if (saved) currentUser = JSON.parse(saved);
+        } catch(e) {}
 
         function restorePersistedSession() {
             try {
@@ -3504,9 +3508,12 @@ async function loadAdminMetrics() {
 
         async function selectTopN(n) {
             try {
-                const all = (appState.all_coins && appState.all_coins.length > 0)
-                    ? appState.all_coins.map(c => c.symbol)
-                    : [];
+                let all = [];
+                if (appState.all_coins && appState.all_coins.length > 0) {
+                    all = appState.all_coins.map(c => c.symbol);
+                } else if (appState.symbols && Object.keys(appState.symbols).length > 0) {
+                    all = Object.keys(appState.symbols);
+                }
                 let selected = [];
                 if (n > 0) {
                     selected = all.slice(0, n);
@@ -3740,8 +3747,8 @@ async function loadAdminMetrics() {
         function loadAllCards() {
             visibleCardsCount = 999;
             renderCards();
-                renderCockpitView();
-                updateSystemHealthBadge();
+            renderCockpitView();
+            updateSystemHealthBadge();
         }
 
         
@@ -5322,7 +5329,7 @@ function downloadExcelReport() {
         }
 
         async function init() {
-            updateUserSessionUI();
+            restorePersistedSession();
             if (false) {
                 const grid = document.getElementById('coin-chips-container');
                 const btn = document.getElementById('pool-collapse-btn');
@@ -5518,7 +5525,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             sym = payload.get("symbol")
             if sym in trader_manager.open_positions:
                 cur_price = market_data.current_prices.get(sym, trader_manager.open_positions[sym]["entry_price"])
-                record = paper_trader.close_position(sym, cur_price, "Manuel Müdahale (Dashboard Kapatma)")
+                record = trader_manager.close_position(sym, cur_price, "Manuel Müdahale (Dashboard Kapatma)")
                 if record:
                     if notifier:
                         await notifier.notify_position_closed(record, is_manual=True)
