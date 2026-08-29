@@ -128,6 +128,8 @@ Giriş: <code>${pos['entry_price']:.6f}</code> | Marjin: <b>${pos.get('margin_us
         bal_after = record.get('balance_after', '')
         bal_str = f"💼 <b>Güncel Toplam Kasa:</b> <b>{bal_after:.2f} USDT</b>\n" if bal_after != '' else ""
 
+        open_reason = record.get("reason", "Strateji Sinyali")
+        close_reason = record.get("close_reason", "Hedef/Stop Kapanışı")
         partial_note = "\n🛡️ <b>Kalan %50:</b> <i>Breakeven ile 0 riskle koşuyor!</i>\n" if is_partial_tp1 else ""
         msg = f"""💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎
 {pnl_emoji}
@@ -138,8 +140,9 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
 💰 <b>Net Kâr / Zarar:</b> <b>{net_pnl:+.4f} USDT ({roe:+.2f}%)</b>
 💵 <b>Brüt:</b> {record.get('gross_pnl', net_pnl):+.4f} $ | 💸 <b>Komisyon:</b> {record['fees']:.4f} $
 {bal_str}━━━━━━━━━━━━━━━━━━━━━━━━
-📌 <b>Neden:</b> <i>{record['close_reason']}</i>{manual_tag}{partial_note}
-⏰ <b>Zaman:</b> <code>{record['exit_time']}</code>
+📥 <b>Açılış Nedeni:</b> <i>{open_reason}</i>
+📤 <b>Kapanış Nedeni:</b> <i>{close_reason}</i>{manual_tag}{partial_note}
+⏰ <b>Çıkış Zamanı:</b> <code>{record['exit_time']}</code>
 💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎"""
 
         chart_buf = None
