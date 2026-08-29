@@ -180,7 +180,7 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
     @staticmethod
     def _compute_period_metrics(history: list):
         """Gecmis islemlerden Gunluk, Haftalik ve Aylik PnL ve istatistikleri hesaplar."""
-        now = datetime.now(timezone(timedelta(hours=3)))
+        now = datetime.now()
         today_date = now.date()
         week_cutoff = now - timedelta(days=7)
         month_cutoff = now - timedelta(days=30)
@@ -195,12 +195,15 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
             if not t_str:
                 continue
             try:
-                t = datetime.strptime(t_str, "%Y-%m-%d %H:%M:%S")
+                t = datetime.strptime(str(t_str).split('.')[0], "%Y-%m-%d %H:%M:%S")
             except Exception:
                 try:
-                    t = datetime.fromisoformat(t_str.replace('Z', ''))
+                    t = datetime.fromisoformat(str(t_str).replace('Z', '').split('+')[0])
                 except Exception:
                     continue
+
+            if t.tzinfo is not None:
+                t = t.replace(tzinfo=None)
 
             pnl = float(h.get('net_pnl', 0.0))
             if t.date() == today_date:
