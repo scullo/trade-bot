@@ -1365,14 +1365,14 @@ HTML_PAGE = """
 
             <!-- 2 CLEAN TABS (REGISTER & LOGIN) -->
             <div style="display:flex; gap:8px; margin-bottom:16px; background:rgba(255,255,255,0.03); padding:4px; border-radius:10px;">
-                <button id="auth-tab-btn-register" onclick="switchAuthTab('register')" style="flex:1.2; padding:9px 8px; border-radius:8px; border:none; background:linear-gradient(135deg, #00f2fe, #4facfe); color:#000; font-weight:900; font-size:12.5px; cursor:pointer;">24h VIP Deneme</button>
+                <button id="auth-tab-btn-register" onclick="switchAuthTab('register')" style="flex:1.2; padding:9px 8px; border-radius:8px; border:none; background:linear-gradient(135deg, #00f2fe, #4facfe); color:#000; font-weight:900; font-size:12.5px; cursor:pointer;">48h Ücretsiz Demo</button>
                 <button id="auth-tab-btn-login" onclick="switchAuthTab('login')" style="flex:1; padding:9px 8px; border-radius:8px; border:none; background:transparent; color:#94a3b8; font-weight:800; font-size:12.5px; cursor:pointer;">👤 Giriş Yap</button>
             </div>
 
             <!-- 1. TAB: 24H TRIAL REGISTER FORM -->
             <div id="auth-form-register">
                 <div style="background:rgba(0,242,254,0.06); border:1px solid rgba(0,242,254,0.25); border-radius:10px; padding:12px; margin-bottom:14px; font-size:12px; color:#cbd5e1; line-height:1.5;">
-                    🎉 <b>24 Saatlik Ücretsiz VIP Deneme:</b> Kredi kartı gerekmez. Kayıt olduğunuz anda 100 kripto paritede tüm algoritmalar 24 saat boyunca hesabınızda sınırsız açılır!
+                    🎉 <b>24 Saatlik Ücretsiz VIP Deneme:</b> Kredi kartı gerekmez. Kayıt olduğunuz anda 100 kripto paritede tüm algoritmalar 48 saat boyunca hesabınızda sınırsız açılır!
                 </div>
                 <div style="margin-bottom:12px;">
                     <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">E-Posta Adresiniz</label>
@@ -1387,7 +1387,7 @@ HTML_PAGE = """
                     <input type="text" id="reg-binance-uid" placeholder="Binance UID (Örn: 12345678)" class="settings-input" />
                 </div>
                 <button class="btn-save-settings" style="width:100%; background:linear-gradient(135deg, #00f2fe, #4facfe); color:#000; font-weight:900; font-size:13.5px; padding:12px;" onclick="submitRegister()">
-                    🚀 24 Saatlik VIP Denememi Anında Başlat
+                    🚀 48 Saatlik Ücretsiz Demo (Paper Trading)mi Anında Başlat
                 </button>
             </div>
 
@@ -1751,7 +1751,7 @@ HTML_PAGE = """
             </button>
             <div id="user-session-container" style="display:flex; align-items:center;">
                 <button id="user-auth-btn" class="nav-tab-btn" onclick="openAuthModal('login')" style="background:rgba(0,242,254,0.08); border:1.5px solid var(--cyan); color:#fff; font-size:12px; font-weight:800; padding:6px 14px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> Giriş Yap / 24h VIP
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> Giriş Yap / 48h Demo
                 </button>
             </div>
             <div id="mode-badge-wrap" class="mode-badge-wrap" onclick="openLiveSettingsModal()" title="Ticaret Modu (Demo/Canlı) & Binance API Ayarlarını Aç">
@@ -2493,14 +2493,14 @@ HTML_PAGE = """
                 cont.innerHTML = `
                     <div class="live-tag" onclick="openAuthModal('login')" style="cursor:pointer;" title="Hesabım">
                         👤 <b style="color:#cbd5e1; margin-left:4px;">${cleanName}</b>
-                        <span style="background:rgba(251,197,49,0.2); color:var(--yellow); padding:2px 6px; border-radius:4px; font-size:10px; margin-left:6px;">24h Deneme</span>
+                        <span style="background:rgba(251,197,49,0.2); color:var(--yellow); padding:2px 6px; border-radius:4px; font-size:10px; margin-left:6px;">48h Demo</span>
                     </div>
                 `;
                 if (navAdminTab) navAdminTab.style.display = 'none';
             } else {
                 cont.innerHTML = `
                     <button class="nav-tab-btn" onclick="openAuthModal('register')" style="background:rgba(0,242,254,0.08); border:1.5px solid var(--cyan); color:#fff; font-size:12px; font-weight:800; padding:6px 14px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> Giriş Yap / 24h VIP
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> Giriş Yap / 48h Demo
                     </button>
                 `;
                 if (navAdminTab) navAdminTab.style.display = 'none';
@@ -2602,7 +2602,7 @@ HTML_PAGE = """
                 pill.innerHTML = `👑 <b style="color:var(--cyan); margin-left:4px;">Master Admin</b>`;
                 if (navAdminTab) navAdminTab.style.display = 'inline-flex';
             } else if (currentUser) {
-                pill.innerHTML = `👤 <span style="color:#cbd5e1; margin-left:4px;">${currentUser.email.split('@')[0]}</span> <span style="background:rgba(251,197,49,0.2); color:var(--yellow); padding:2px 6px; border-radius:4px; font-size:10px; margin-left:4px;">24h Deneme</span>`;
+                pill.innerHTML = `👤 <span style="color:#cbd5e1; margin-left:4px;">${currentUser.email.split('@')[0]}</span> <span style="background:rgba(251,197,49,0.2); color:var(--yellow); padding:2px 6px; border-radius:4px; font-size:10px; margin-left:4px;">48h Demo</span>`;
                 if (navAdminTab) navAdminTab.style.display = 'none';
             }
         }

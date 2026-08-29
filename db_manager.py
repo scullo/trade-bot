@@ -11,7 +11,7 @@ class DatabaseManager:
     """
     VALKYRIE MULTI-TENANT DATABASE MANAGER
     Cok kullanicili uye yonetimi, AES-256 Binance API kasasi,
-    24 Saatlik VIP Deneme (1-Day Trial) ve Binance UID Suistimal Engelleme Motoru.
+    48 Saatlik Ücretsiz Demo (Paper Trading) (1-Day Trial) ve Binance UID Suistimal Engelleme Motoru.
     """
     def __init__(self, db_path: str = DB_PATH):
         self.db_path = db_path
@@ -134,7 +134,7 @@ class DatabaseManager:
     def check_binance_uid_trial_eligibility(self, raw_binance_uid: str) -> tuple:
         """
         ANTI-ABUSE KONTROLU (1. Kalkan):
-        Bu Binance Hesap UID'si daha once 24 saatlik denemeyi kullandi mi?
+        Bu Binance Hesap UID'si daha once 48 saatlik demo denemesini kullandi mi?
         """
         if not raw_binance_uid:
             return True, "UID belirtilmedi"
@@ -144,11 +144,11 @@ class DatabaseManager:
             cursor.execute("SELECT id, email FROM users WHERE binance_uid_hash = ?", (uid_hash,))
             row = cursor.fetchone()
             if row:
-                return False, f"Bu Binance hesabı daha önce ({row['email']}) ile 24 saatlik ücretsiz denemeyi kullandı. Lütfen ücretli bir paket seçiniz."
+                return False, f"Bu Binance hesabı daha önce ({row['email']}) ile 48 saatlik ücretsiz demo denemesini kullandı. Lütfen ücretli bir paket seçiniz."
             return True, "Binance hesabı deneme için uygun"
 
     def register_user(self, email: str, password_raw: str, telegram_chat_id: str = None, raw_binance_uid: str = None) -> tuple:
-        """Yeni kullanici kaydeder ve 24 Saatlik VIP Denemeyi baslatir."""
+        """Yeni kullanici kaydeder ve 48 Saatlik Ücretsiz Demo (Paper Trading)yi baslatir."""
         clean_email = email.strip().lower()
         pwd_hash = hashlib.sha256(password_raw.encode('utf-8')).hexdigest()
         uid_hash = self.vault.hash_binance_uid(raw_binance_uid) if raw_binance_uid else None
@@ -167,16 +167,16 @@ class DatabaseManager:
                 """, (clean_email, pwd_hash, telegram_chat_id, uid_hash))
                 user_id = cursor.lastrowid
 
-                # Otomatik 24 Saatlik VIP Deneme Baslat
+                # Otomatik 48 Saatlik Ücretsiz Demo (Paper Trading) Baslat
                 now_tsi = datetime.now(timezone(timedelta(hours=3)))
-                expires_tsi = now_tsi + timedelta(hours=24)
+                expires_tsi = now_tsi + timedelta(hours=48)
                 cursor.execute("""
                     INSERT INTO subscriptions (user_id, plan_type, starts_at, expires_at, status)
-                    VALUES (?, '24H_TRIAL', ?, ?, 'ACTIVE')
+                    VALUES (?, '48H_DEMO_TRIAL', ?, ?, 'ACTIVE')
                 """, (user_id, now_tsi.strftime('%Y-%m-%d %H:%M:%S'), expires_tsi.strftime('%Y-%m-%d %H:%M:%S')))
 
                 conn.commit()
-                return True, "Kullanıcı başarıyla kaydedildi ve 24 Saatlik VIP Deneme tanımlandı!", user_id
+                return True, "Kullanıcı başarıyla kaydedildi ve 48 Saatlik Ücretsiz Demo (Paper Trading) tanımlandı!", user_id
         except sqlite3.IntegrityError:
             return False, "Bu e-posta adresi veya Binance hesabı sistemde zaten kayıtlı!", None
         except Exception as e:
@@ -306,7 +306,7 @@ class DatabaseManager:
                 "email": row['email'],
                 "role": row['role'],
                 "telegram_chat_id": row['telegram_chat_id'],
-                "plan_type": row['plan_type'] or '24H_TRIAL',
+                "plan_type": row['plan_type'] or '48H_DEMO_TRIAL',
                 "is_subscription_active": is_active,
                 "remaining_seconds": remaining_seconds,
                 "expires_at": expires_at_str
@@ -339,8 +339,8 @@ class DatabaseManager:
             for r in cursor.fetchall():
                 bal = float(r['futures_balance'] or 0.0)
                 total_aum += bal
-                plan = r['plan_type'] or '24H_TRIAL'
-                if plan == '24H_TRIAL': trial_count += 1
+                plan = r['plan_type'] or '48H_DEMO_TRIAL'
+                if plan == '48H_DEMO_TRIAL': trial_count += 1
                 elif plan == 'PRO': pro_count += 1
                 elif plan == 'VIP': vip_count += 1
 
