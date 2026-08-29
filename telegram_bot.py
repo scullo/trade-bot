@@ -382,15 +382,146 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
                         mode=mode
                     )
 
-                # Gece 00:00'da ekstra gunluk kapanis ozeti gonder
-                if current_hour == 0:
-                    await self.send_midnight_summary(
+                # Sabah 08:00 ve Gece 00:00'da Günlük Yönetici Brifingi Gönder
+                if current_hour in [0, 8]:
+                    await self.send_daily_executive_briefing(
                         balance=trader_manager.balance,
                         initial_balance=initial_balance,
                         open_positions=trader_manager.open_positions,
                         history=trader_manager.history,
-                        mode=mode
+                        market_data=market_data
                     )
             except Exception as e:
                 print(f"[AEGIS SENTINEL SCHEDULER HATA]: {e}")
                 await asyncio.sleep(30)
+
+    async def send_daily_executive_briefing(self, balance: float, initial_balance: float, open_positions: dict, history: list, market_data=None):
+        """08:00 ve 00:00 saatlerinde Günlük Valkyrie Quant Yönetici Brifingi gönderir."""
+        if not self.token or not self.chat_id:
+            return
+        try:
+            now = datetime.now(timezone(timedelta(hours=3)))
+            date_str = now.strftime("%d.%m.%Y")
+            period = self._compute_period_metrics(history)
+            today_pnl = period['today_pnl']
+            today_trades = period['today_trades']
+            growth_pct = (today_pnl / initial_balance * 100.0) if initial_balance > 0 else 0.0
+
+            today_wins = [h for h in today_trades if float(h.get('net_pnl', 0)) >= 0]
+            today_losses = [h for h in today_trades if float(h.get('net_pnl', 0)) < 0]
+            today_winrate = (len(today_wins) / len(today_trades) * 100.0) if today_trades else 0.0
+
+            best_trade = max(today_trades, key=lambda x: float(x.get('net_pnl', 0))) if today_trades else None
+            if best_trade and float(best_trade.get('net_pnl', 0)) > 0:
+                best_str = f"<b>#{best_trade['symbol'].replace('/USDT','')}</b> (<code>+{float(best_trade['net_pnl']):.2f} USDT</code>)"
+            else:
+                best_str = "<i>Henüz kârlı kapanış yok</i>"
+
+            # En iyi setup bul
+            setup_pnl = {}
+            for t in today_trades:
+                st = str(t.get('reason', 'Genel')).split('(')[0].strip()
+                pnl = float(t.get('net_pnl', 0))
+                if st not in setup_pnl:
+                    setup_pnl[st] = {'pnl': 0.0, 'wins': 0, 'total': 0}
+                setup_pnl[st]['pnl'] += pnl
+                setup_pnl[st]['total'] += 1
+                if pnl >= 0:
+                    setup_pnl[st]['wins'] += 1
+
+            if setup_pnl:
+                best_st_name = max(setup_pnl.items(), key=lambda x: x[1]['pnl'])[0]
+                st_data = setup_pnl[best_st_name]
+                st_wr = (st_data['wins'] / st_data['total'] * 100) if st_data['total'] > 0 else 0
+                best_setup_str = f"<b>{best_st_name[:24]}</b> (%{st_wr:.0f} Win)"
+            else:
+                best_setup_str = "<b>Camarilla & nPOC</b> (%100 Pusu)"
+
+            msg = f"""💎 ━━━━━━━━━━━━━━━━━━━━━━━━━ 💎
+🌅 <b>GÜNLÜK VALKYRIE QUANT BRİFİNGİ ({date_str})</b> 🌅
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 <b>Günlük Net Kâr:</b> <b>{today_pnl:+.2f} USDT ({growth_pct:+.2f}%)</b>
+🎯 <b>Kazanma Oranı:</b> <b>%{today_winrate:.1f}</b> ({len(today_wins)} Win / {len(today_losses)} Loss)
+👑 <b>Günün Yıldızı:</b> {best_str}
+🚀 <b>En İyi Setup:</b> {best_setup_str}
+💼 <b>Toplam Kasa:</b> <b>${balance:,.2f} USDT</b> ({len(open_positions)} Açık Pozisyon)
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+💎 ━━━━━━━━━━━━━━━━━━━━━━━━━ 💎"""
+
+            await self.send_message(msg)
+        except Exception as e:
+            print(f"[DAILY BRIEFING ERROR]: {e}")
+
+    async def start_command_listener(self, trader_manager, market_data=None):
+        """Telegram üzerinden gelen /kasa veya kasa mesajlarını dinler ve anında detaylı portföy yanıtı döner."""
+        if not self.token:
+            return
+        
+        offset = 0
+        poll_url = f"https://api.telegram.org/bot{self.token}/getUpdates"
+        print(">> [TELEGRAM ASİSTAN] /kasa komut dinleyicisi arka planda başlatıldı.")
+
+        while True:
+            try:
+                params = {"offset": offset, "timeout": 15}
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(poll_url, params=params, timeout=20) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            updates = data.get("result", [])
+                            for u in updates:
+                                offset = u["update_id"] + 1
+                                msg_obj = u.get("message", {})
+                                text = msg_obj.get("text", "").strip().lower()
+                                chat = msg_obj.get("chat", {})
+                                sender_chat_id = str(chat.get("id", ""))
+
+                                if text in ["/kasa", "kasa", "/durum", "durum", "/bakiye", "bakiye", "/start"]:
+                                    bal = trader_manager.balance
+                                    open_p = trader_manager.open_positions
+                                    hist = trader_manager.history
+                                    
+                                    total_unrealized = 0.0
+                                    top_movers = []
+                                    for sym, pos in open_p.items():
+                                        cur_p = market_data.current_prices.get(sym, pos['entry_price']) if market_data else pos['entry_price']
+                                        entry_p = pos['entry_price']
+                                        side = pos['side']
+                                        lev = pos.get('leverage', 5)
+                                        margin = pos.get('margin_usdt', pos.get('margin', 100.0))
+                                        
+                                        diff = (cur_p - entry_p)/entry_p if side == 'LONG' else (entry_p - cur_p)/entry_p
+                                        roe = diff * lev * 100.0
+                                        pnl = margin * (roe / 100.0)
+                                        total_unrealized += pnl
+                                        top_movers.append((sym, side, roe, pnl))
+
+                                    top_movers.sort(key=lambda x: x[2], reverse=True)
+                                    top_str_list = []
+                                    for sym, side, roe, pnl in top_movers[:4]:
+                                        clean_s = sym.replace('/USDT', '')
+                                        s_emoji = "🟢" if roe >= 0 else "🔴"
+                                        top_str_list.append(f"• {s_emoji} <b>#{clean_s}</b> ({side}): <code>%{roe:+5.2f} ROE (${pnl:+5.2f})</code>")
+                                    
+                                    top_str = "\n".join(top_str_list) if top_str_list else "• <i>Açık pozisyon yok</i>"
+                                    
+                                    period = self._compute_period_metrics(hist)
+                                    today_pnl = period['today_pnl']
+                                    now_str = datetime.now(timezone(timedelta(hours=3))).strftime("%H:%M:%S")
+
+                                    reply = f"""💎 ━━━━━━━━━━━━━━━━━━━━━━━━━ 💎
+💼 <b>VALKYRIE QUANT — ANLIK KASA RAPORU ({now_str})</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 <b>Toplam Kasa:</b> <b>${bal:,.2f} USDT</b>
+📊 <b>Açık Pozisyon Sayısı:</b> <b>{len(open_p)} Adet</b>
+⚡ <b>Anlık Canlı Kâr (Unrealized):</b> <b>{total_unrealized:+.2f} USDT</b>
+💵 <b>Bugün Gerçekleşen Kâr:</b> <b>{today_pnl:+.2f} USDT</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 <b>ÖNE ÇIKAN AÇIK POZİSYONLAR:</b>
+{top_str}
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+💎 ━━━━━━━━━━━━━━━━━━━━━━━━━ 💎"""
+                                    await self.send_message(reply)
+            except Exception as e:
+                await asyncio.sleep(5)
+            await asyncio.sleep(1)

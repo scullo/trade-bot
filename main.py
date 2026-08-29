@@ -52,6 +52,8 @@ async def main():
 
     # Saatlik otomatik Telegram Kasa & Portföy Raporlayıcıyı Başlat
     asyncio.create_task(notifier.start_hourly_scheduler(trader_manager, initial_balance=INITIAL_BALANCE, market_data=market_data))
+    # Telegram /kasa ve kasa İnteraktif Komut Dinleyicisini Başlat
+    asyncio.create_task(notifier.start_command_listener(trader_manager, market_data=market_data))
 
     try:
         await market_data.start_websocket()
