@@ -1204,6 +1204,25 @@ HTML_PAGE = """
     </style>
 </head>
 <body>
+    <!-- GLOBAL VALKYRIE BRAND VECTOR ASSETS & GRADIENTS -->
+    <svg style="position:absolute; width:0; height:0; overflow:hidden;" aria-hidden="true">
+        <defs>
+            <linearGradient id="valk_global_wing" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#00f2fe" />
+                <stop offset="100%" stop-color="#4facfe" />
+            </linearGradient>
+            <linearGradient id="valk_global_core" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#00f2fe" />
+                <stop offset="50%" stop-color="#38ef7d" />
+                <stop offset="100%" stop-color="#00f2fe" />
+            </linearGradient>
+            <linearGradient id="valk_global_gold" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#fbc531" />
+                <stop offset="100%" stop-color="#f39c12" />
+            </linearGradient>
+        </defs>
+    </svg>
+
 
     
     
@@ -1509,27 +1528,11 @@ HTML_PAGE = """
         <!-- LANDING NAVBAR -->
         <nav style="display:flex; justify-content:space-between; align-items:center; padding:18px 40px; border-bottom:1px solid rgba(255,255,255,0.06); background:rgba(7,9,14,0.75); backdrop-filter:blur(15px); position:sticky; top:0; z-index:100;">
             <div style="display:flex; align-items:center; gap:12px;">
-                <div style="width:40px; height:40px; background:rgba(0,242,254,0.08); border:1.5px solid var(--cyan); border-radius:12px; display:flex; align-items:center; justify-content:center; box-shadow:0 0 25px rgba(0,242,254,0.25);">
-                    <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="landing_valk_wing" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00f2fe" />
-      <stop offset="100%" stop-color="#4facfe" />
-    </linearGradient>
-    <linearGradient id="landing_valk_core" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#00f2fe" />
-      <stop offset="50%" stop-color="#38ef7d" />
-      <stop offset="100%" stop-color="#ffffff" />
-    </linearGradient>
-    <filter id="landing_valk_glow" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="2.5" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
-    </filter>
-  </defs>
-  <path d="M6 14L18 26L24 42L20 22L10 12L6 14Z" fill="url(#landing_valk_wing)" opacity="0.85"/>
-  <path d="M42 14L30 26L24 42L28 22L38 12L42 14Z" fill="url(#landing_valk_wing)" opacity="0.85"/>
-  <path d="M24 6L32 20L24 36L16 20L24 6Z" fill="url(#landing_valk_wing)" filter="url(#landing_valk_glow)"/>
-  <polygon points="24,14 28,21 24,28 20,21" fill="url(#landing_valk_core)"/>
+                <div style="width:38px; height:38px; background:rgba(0,242,254,0.12); border:1.5px solid var(--cyan); border-radius:10px; display:flex; align-items:center; justify-content:center; box-shadow:0 0 20px rgba(0,242,254,0.3); flex-shrink:0;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+  <path d="M12 2L3 8.5L6 21L12 17L18 21L21 8.5L12 2Z" fill="rgba(0,242,254,0.18)" stroke="#00f2fe" stroke-width="1.6" stroke-linejoin="round"/>
+  <polygon points="12,6 16.5,11.5 12,17 7.5,11.5" fill="rgba(56,239,125,0.25)" stroke="#38ef7d" stroke-width="1.4" stroke-linejoin="round"/>
+  <circle cx="12" cy="11.5" r="1.8" fill="#ffffff" stroke="#00f2fe" stroke-width="0.8"/>
 </svg>
                 </div>
                 <div style="font-size:18px; font-weight:900; letter-spacing:0.5px;">
@@ -1850,31 +1853,14 @@ HTML_PAGE = """
     <!-- TOP BAR BRANDING -->
     <div class="top-bar">
         <div class="logo-wrap">
-            <div class="brand-logo-gem" style="width:40px; height:40px; background:rgba(0,242,254,0.08); border:1.5px solid var(--cyan); border-radius:12px; display:flex; align-items:center; justify-content:center; box-shadow:0 0 20px rgba(0,242,254,0.2);">
-                <svg width="34" height="34" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="valk_wing_grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00f2fe" />
-      <stop offset="100%" stop-color="#4facfe" />
-    </linearGradient>
-    <linearGradient id="valk_core_grad" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#00f2fe" />
-      <stop offset="50%" stop-color="#38ef7d" />
-      <stop offset="100%" stop-color="#ffffff" />
-    </linearGradient>
-    <filter id="valk_glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="1.5" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
-    </filter>
-  </defs>
-  <path d="M6 14L18 26L24 42L20 22L10 12L6 14Z" fill="url(#valk_wing_grad)" opacity="0.85"/>
-  <path d="M42 14L30 26L24 42L28 22L38 12L42 14Z" fill="url(#valk_wing_grad)" opacity="0.85"/>
-  <path d="M24 6L32 20L24 36L16 20L24 6Z" fill="url(#valk_wing_grad)" filter="url(#valk_glow)"/>
-  <polygon points="24,14 28,21 24,28 20,21" fill="url(#valk_core_grad)"/>
+            <div class="brand-logo-gem" style="width:38px; height:38px; background:rgba(0,242,254,0.12); border:1.5px solid var(--cyan); border-radius:10px; display:flex; align-items:center; justify-content:center; box-shadow:0 0 16px rgba(0,242,254,0.3); flex-shrink:0;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+  <path d="M12 2L3 8.5L6 21L12 17L18 21L21 8.5L12 2Z" fill="rgba(0,242,254,0.18)" stroke="#00f2fe" stroke-width="1.6" stroke-linejoin="round"/>
+  <polygon points="12,6 16.5,11.5 12,17 7.5,11.5" fill="rgba(56,239,125,0.25)" stroke="#38ef7d" stroke-width="1.4" stroke-linejoin="round"/>
+  <circle cx="12" cy="11.5" r="1.8" fill="#ffffff" stroke="#00f2fe" stroke-width="0.8"/>
 </svg>
             </div>
-            <div>
-                <div class="logo-title">VALKYRIE <span style="background: linear-gradient(135deg, #00f2fe, #4facfe); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">QUANT DESK</span></div>
+            <div class="logo-title">VALKYRIE <span style="background: linear-gradient(135deg, #00f2fe, #4facfe); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">QUANT DESK</span></div>
             </div>
         </div>
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
