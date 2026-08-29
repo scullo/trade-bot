@@ -1570,11 +1570,11 @@ HTML_PAGE = """
 
             <div class="cockpit-kpi-card">
                 <div class="kpi-card-head">
-                    <span class="kpi-card-title">Kâr Faktörü (PF) & Ücret</span>
-                    <span class="kpi-card-icon">⚖️</span>
+                    <span class="kpi-card-title">Kâr / Kayıp Verimlilik Gücü</span>
+                    <span class="kpi-card-icon">💎</span>
                 </div>
-                <div class="kpi-card-val" id="cockpit-pf">0.00 PF</div>
-                <div class="kpi-card-sub" id="cockpit-fees">Komisyon: $0.0000</div>
+                <div class="kpi-card-val" id="cockpit-pf" style="color:var(--cyan);">0.00x</div>
+                <div class="kpi-card-sub" id="cockpit-fees">Brüt Kâr: +$0.00 | Kayıp: -$0.00</div>
             </div>
         </div>
 
@@ -1962,8 +1962,19 @@ HTML_PAGE = """
             if (cGrowth) cGrowth.innerText = `${growthPct >= 0 ? '+' : ''}${growthPct.toFixed(2)}% Büyüme`;
             if (cWinrate) cWinrate.innerText = `%${winRate}`;
             if (cWinLoss) cWinLoss.innerText = `${wins} Kazanç / ${losses} Kayıp (${totalTrades} İşlem)`;
-            if (cPf) cPf.innerText = `${pf} PF`;
-            if (cFees) cFees.innerText = `Ödenen Komisyon: $${totalFees.toFixed(4)}`;
+            if (cPf) {
+                const pfNum = parseFloat(pf);
+                let qualityText = 'Dengeleniyor';
+                if (pfNum >= 2.0) qualityText = 'Mükemmel';
+                else if (pfNum >= 1.2) qualityText = 'Yüksek';
+                else if (pfNum > 0.0) qualityText = 'Pozitif';
+
+                cPf.innerText = `${pf}x (${qualityText})`;
+                cPf.style.color = pfNum >= 1.0 ? 'var(--cyan)' : 'var(--yellow)';
+            }
+            if (cFees) {
+                cFees.innerText = `Brüt Kâr: +$${winPnlSum.toFixed(2)} | Kayıp: -$${lossPnlSum.toFixed(2)}`;
+            }
 
             // 2. AI Quant Intelligence Stream & 1H Macro Trend Breakdown
             let bullCount = 0, bearCount = 0, rangeCount = 0;
