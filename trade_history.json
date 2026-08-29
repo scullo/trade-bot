@@ -1,5 +1,5 @@
 {
-  "balance": 99760.74850887834,
+  "balance": 99761.1438773213,
   "open_positions": {
     "RENDER/USDT": {
       "id": "TRD-0006",
@@ -9720,6 +9720,54 @@
       "tp2": 0.004065715839564922,
       "soft_stop": 0.004999268749999999,
       "hard_stop": 0.005066322499999999
+    },
+    {
+      "id": "TRD-0315",
+      "symbol": "MORPHO/USDT",
+      "side": "SHORT",
+      "trade_type": "BREAKOUT",
+      "leverage": 5,
+      "margin": 100.0,
+      "entry_price": 2.402,
+      "exit_price": 2.39865,
+      "gross_pnl": 0.6973,
+      "fees": 0.4997,
+      "net_pnl": 0.1977,
+      "roe_pct": 0.2,
+      "balance_after": 99760.95,
+      "entry_time": "2026-08-30 00:53:51",
+      "exit_time": "2026-08-30 00:53:56",
+      "duration": "0dk",
+      "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
+      "close_reason": "TP Hedefine Ulasildi ($2.4015)",
+      "tp1": 2.40155,
+      "tp2": 0.0,
+      "soft_stop": 2.4227279999999998,
+      "hard_stop": 2.441956
+    },
+    {
+      "id": "TRD-0316",
+      "symbol": "MORPHO/USDT",
+      "side": "SHORT",
+      "trade_type": "BREAKOUT",
+      "leverage": 5,
+      "margin": 100.0,
+      "entry_price": 2.402,
+      "exit_price": 2.39865,
+      "gross_pnl": 0.6973,
+      "fees": 0.4997,
+      "net_pnl": 0.1977,
+      "roe_pct": 0.2,
+      "balance_after": 99761.14,
+      "entry_time": "2026-08-30 00:54:01",
+      "exit_time": "2026-08-30 00:54:04",
+      "duration": "0dk",
+      "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
+      "close_reason": "TP Hedefine Ulasildi ($2.4015)",
+      "tp1": 2.40155,
+      "tp2": 0.0,
+      "soft_stop": 2.4227279999999998,
+      "hard_stop": 2.441956
     }
   ]
 }
