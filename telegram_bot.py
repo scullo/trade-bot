@@ -83,7 +83,11 @@ Marjin: <b>{pos.get('margin_usdt', pos.get('margin', 10.0)):.2f} USDT</b> (Hacim
         if free_balance is not None:
             msg += f"💼 <b>Kalan Serbest Kasa:</b> <b>{free_balance:.2f} USDT</b>\n"
 
-        msg += f"""━━━━━━━━━━━━━━━━━━━━━━━━
+        atr_val = pos.get('atr_pct', 1.2)
+        vol_val = pos.get('volume_surge', 1.0)
+        msg += f"""🛡️ <b>Kâr Zırhı:</b> <code>+%7.0 ROE veya 90dk'da %50 Kilit & 0 Risk</code>
+📊 <b>Volatilite / Hacim:</b> <code>%{atr_val:.2f} ATR | {vol_val:.2f}x Hacim</code>
+━━━━━━━━━━━━━━━━━━━━━━━━
 📌 <b>Setup Nedeni:</b> <i>{pos['reason']}</i>
 ⏰ <b>Zaman:</b> <code>{pos['entry_time']}</code>"""
 
@@ -115,16 +119,20 @@ Marjin: <b>{pos.get('margin_usdt', pos.get('margin', 10.0)):.2f} USDT</b> (Hacim
         net_pnl = record["net_pnl"]
         roe = record["roe_pct"]
         is_win = net_pnl >= 0
+        is_partial_tp1 = record.get("id", "").endswith("-TP1") or "Dinamik" in str(record.get("close_reason", "")) or "Zaman Kalkanı" in str(record.get("close_reason", ""))
         if is_manual:
             pnl_emoji = "🚨 <b>MANUEL MÜDAHALE — POZİSYON KAPATILDI</b> 🚨"
+        elif is_partial_tp1:
+            pnl_emoji = "🎯 <b>DİNAMİK KÂR KİLİTLENDİ (%50 NAKİT ALINDI)</b> 💎"
         else:
-            pnl_emoji = "🎉 <b>KÂRLI KAPANIŞ</b> 🟢" if is_win else "🛑 <b>ZARAR KES (STOP)</b> 🔴"
+            pnl_emoji = "🎉 <b>KÂRLI KAPANIŞ (TAM HEDEF)</b> 🟢" if is_win else "🛑 <b>ZARAR KES (STOP)</b> 🔴"
         clean_sym = record["symbol"].replace("/USDT", "")
 
         manual_tag = "\n⚠️ <i>Kullanıcı Dashboard üzerinden acil müdahale ile pozisyonu kapattı.</i>\n" if is_manual else ""
         bal_after = record.get('balance_after', '')
         bal_str = f"💼 <b>Güncel Toplam Kasa:</b> <b>{bal_after:.2f} USDT</b>\n" if bal_after != '' else ""
 
+        partial_note = "\n🛡️ <i>Kalan %50 marjin stopu risksiz Breakeven seviyesine çekildi ve ana hedefe koşuyor.</i>\n" if is_partial_tp1 else ""
         msg = f"""{pnl_emoji}
 ━━━━━━━━━━━━━━━━━━━━━━━━
 Parite: <b>#{clean_sym}/USDT</b> ({record['side']} {record['leverage']}x)
@@ -134,7 +142,7 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
 💵 <b>Brüt Kâr:</b> {record.get('gross_pnl', net_pnl):+.4f} USDT
 💸 <b>Borsa Komisyonu:</b> {record['fees']:.4f} USDT
 ━━━━━━━━━━━━━━━━━━━━━━━━
-{bal_str}📌 <b>Kapanış Nedeni:</b> <i>{record['close_reason']}</i>{manual_tag}
+{bal_str}📌 <b>Kapanış Nedeni:</b> <i>{record['close_reason']}</i>{manual_tag}{partial_note}
 ⏰ <b>Çıkış Zamanı:</b> <code>{record['exit_time']}</code>"""
 
         chart_buf = None

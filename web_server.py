@@ -3659,7 +3659,7 @@ async function loadAdminMetrics() {
                     `🛡️ ${openPos.leverage}x ${openPos.side} POZİSYONU CANLI YÖNETİLİYOR`,
                     statusColor,
                     `Bot şu anda <b>${openPos.side}</b> pozisyonunu aktif koruyor. Giriş: <b>$${openPos.entry_price}</b> | Anlık: <b>$${metrics.curP}</b> | Durum: <b style="color:${statusColor}">${metrics.roePct >= 0 ? '+' : ''}${metrics.roePct.toFixed(2)}% ROE (${metrics.pnlUsdt >= 0 ? '+' : ''}${metrics.pnlUsdt.toFixed(2)} $)</b>`,
-                    `🎯 <b>Botun Canlı Takip Planı:</b> 5M mum kapanışı Stop Seviyesi ($${formatVal(openPos.soft_stop)}) ${openPos.side === 'LONG' ? 'altına inerse' : 'üstüne çıkarsa'} işlem kapatılacak. Fiyat TP1 Hedefine ($${formatVal(openPos.tp1)}) ulaştığı anda <b>%50 kâr realize edilip</b> stop risksiz giriş noktasına (Breakeven) taşınacak.`
+                    `🎯 <b>Botun Canlı Takip Planı:</b> 5M mum kapanışı Stop Seviyesi ($${formatVal(openPos.soft_stop)}) ${openPos.side === 'LONG' ? 'altına inerse' : 'üstüne çıkarsa'} işlem kapatılacak. Pozisyon <b>+%7.0 ROE kâra ulaştığında</b> veya <b>90dk kârda beklediğinde</b> (ya da TP1 $${formatVal(openPos.tp1)} hedefine geldiğinde) <b>%50 kâr anında nakite kilitlenecek</b>, kalan %50 pozisyon stopu risksiz Breakeven seviyesine çekilerek zirveye kadar koşturulacak.`
                 );
             }
 
