@@ -1714,6 +1714,341 @@ HTML_PAGE = """
     </div>
 
     <script>
+
+        // =========================================================================
+        // VALKYRIE QUANT COCKPIT 3.0 - MAIN TAB SWITCHING & AI ENGINE
+        // =========================================================================
+        let currentActiveMainTab = 'cockpit';
+
+        function switchMainTab(tabName) {
+            currentActiveMainTab = tabName;
+            
+            const tabButtons = {
+                'cockpit': document.getElementById('tab-btn-cockpit'),
+                'positions': document.getElementById('tab-btn-positions'),
+                'radar': document.getElementById('tab-btn-radar'),
+                'ledger': document.getElementById('tab-btn-ledger')
+            };
+            const tabContents = {
+                'cockpit': document.getElementById('main-tab-content-cockpit'),
+                'positions': document.getElementById('main-tab-content-positions'),
+                'radar': document.getElementById('main-tab-content-radar'),
+                'ledger': document.getElementById('main-tab-content-ledger')
+            };
+
+            for (const key in tabButtons) {
+                if (tabButtons[key]) {
+                    if (key === tabName) {
+                        tabButtons[key].classList.add('active');
+                    } else {
+                        tabButtons[key].classList.remove('active');
+                    }
+                }
+                if (tabContents[key]) {
+                    if (key === tabName) {
+                        tabContents[key].classList.add('active-tab');
+                    } else {
+                        tabContents[key].classList.remove('active-tab');
+                    }
+                }
+            }
+
+            if (tabName === 'cockpit') {
+                renderCockpitView();
+            } else if (tabName === 'positions') {
+                renderPositions();
+            } else if (tabName === 'radar') {
+                renderCards();
+            } else if (tabName === 'ledger') {
+                renderHistoryTable();
+            }
+        }
+
+        function filterWatchlistDirect(symbol) {
+            switchMainTab('radar');
+            setTimeout(() => {
+                const input = document.getElementById('coin-search-input');
+                if (input) {
+                    input.value = symbol.replace('/USDT', '');
+                    handleSearch(input.value);
+                }
+            }, 100);
+        }
+
+        function renderCockpitView() {
+            if (!appState) return;
+
+            // 1. Cockpit Financial KPIs
+            const bal = Number(appState.balance || 100000.0);
+            const initBal = Number(appState.initial_balance || 100000.0);
+            const hist = appState.history || [];
+            
+            let totalNetPnl = 0.0;
+            let totalFees = 0.0;
+            let wins = 0;
+            let losses = 0;
+            let winPnlSum = 0.0;
+            let lossPnlSum = 0.0;
+
+            hist.forEach(t => {
+                const pnl = parseFloat(t.net_pnl || 0.0);
+                const fee = parseFloat(t.commission || 0.0);
+                totalNetPnl += pnl;
+                totalFees += fee;
+                if (pnl >= 0) {
+                    wins++;
+                    winPnlSum += pnl;
+                } else {
+                    losses++;
+                    lossPnlSum += Math.abs(pnl);
+                }
+            });
+
+            const growthPct = ((bal - initBal) / initBal) * 100.0;
+            const totalTrades = wins + losses;
+            const winRate = totalTrades > 0 ? ((wins / totalTrades) * 100.0).toFixed(1) : '0.0';
+            const pf = lossPnlSum > 0 ? (winPnlSum / lossPnlSum).toFixed(2) : (winPnlSum > 0 ? '99.0' : '0.00');
+
+            const cBal = document.getElementById('cockpit-balance');
+            const cFree = document.getElementById('cockpit-free-bal');
+            const cPnl = document.getElementById('cockpit-pnl');
+            const cGrowth = document.getElementById('cockpit-growth');
+            const cWinrate = document.getElementById('cockpit-winrate');
+            const cWinLoss = document.getElementById('cockpit-win-loss-count');
+            const cPf = document.getElementById('cockpit-pf');
+            const cFees = document.getElementById('cockpit-fees');
+
+            if (cBal) cBal.innerText = `$${bal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+            if (cFree) cFree.innerText = `Kullanılabilir Kasa: $${bal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})} USDT (5x)`;
+            if (cPnl) {
+                cPnl.innerText = `${totalNetPnl >= 0 ? '+' : ''}$${totalNetPnl.toFixed(2)}`;
+                cPnl.style.color = totalNetPnl >= 0 ? 'var(--green)' : 'var(--red)';
+            }
+            if (cGrowth) cGrowth.innerText = `${growthPct >= 0 ? '+' : ''}${growthPct.toFixed(2)}% Büyüme`;
+            if (cWinrate) cWinrate.innerText = `%${winRate}`;
+            if (cWinLoss) cWinLoss.innerText = `${wins} Kazanç / ${losses} Kayıp (${totalTrades} İşlem)`;
+            if (cPf) cPf.innerText = `${pf} PF`;
+            if (cFees) cFees.innerText = `Ödenen Komisyon: $${totalFees.toFixed(4)}`;
+
+            // 2. AI Quant Intelligence Stream & 1H Macro Trend Breakdown
+            let bullCount = 0, bearCount = 0, rangeCount = 0;
+            const nearCandidates = [];
+
+            if (appState.symbols) {
+                for (const sym in appState.symbols) {
+                    const c = appState.symbols[sym];
+                    const price = c.price || 0.0;
+                    const levels = c.levels || {};
+                    const cam = levels.camarilla || {};
+                    const p = cam.P || 0.0;
+                    const r4 = cam.R4 || 0.0;
+                    const s4 = cam.S4 || 0.0;
+                    const r3 = cam.R3 || 0.0;
+                    const s3 = cam.S3 || 0.0;
+                    const tepe = levels.tepe_avwap || 0.0;
+                    const dip = levels.dip_avwap || 0.0;
+
+                    if (price > 0 && p > 0) {
+                        if (tepe > 0 && price > tepe && price > p) bullCount++;
+                        else if (dip > 0 && price < dip && price < p) bearCount++;
+                        else rangeCount++;
+
+                        // Check distances for near-trigger radar
+                        if (r4 > 0 && price < r4) {
+                            const distR4 = ((r4 - price) / price) * 100.0;
+                            if (distR4 > 0 && distR4 <= 2.0) {
+                                nearCandidates.push({
+                                    symbol: sym,
+                                    price: price,
+                                    targetName: 'R4 Breakout',
+                                    targetPrice: r4,
+                                    distPct: distR4,
+                                    action: '🚀 R4 Breakout LONG Pususu',
+                                    bias: '🟢 Boğa Eğilimi'
+                                });
+                            }
+                        }
+                        if (s4 > 0 && price > s4) {
+                            const distS4 = ((price - s4) / price) * 100.0;
+                            if (distS4 > 0 && distS4 <= 2.0) {
+                                nearCandidates.push({
+                                    symbol: sym,
+                                    price: price,
+                                    targetName: 'S4 Breakdown',
+                                    targetPrice: s4,
+                                    distPct: distS4,
+                                    action: '🔻 S4 Breakdown SHORT Pususu',
+                                    bias: '🔴 Ayı Eğilimi'
+                                });
+                            }
+                        }
+                        if (s3 > 0 && price >= s3 && price <= s3 * 1.015) {
+                            const distS3 = ((price - s3) / price) * 100.0;
+                            nearCandidates.push({
+                                symbol: sym,
+                                price: price,
+                                targetName: 'S3 Destek',
+                                targetPrice: s3,
+                                distPct: distS3,
+                                action: '🎯 S3 Destek Sekmesi LONG Pususu',
+                                bias: '🟡 Tepki Beklentisi'
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Update Market Regime Bar
+            const totalClassified = Math.max(1, bullCount + bearCount + rangeCount);
+            const bullPct = Math.round((bullCount / totalClassified) * 100.0);
+            const bearPct = Math.round((bearCount / totalClassified) * 100.0);
+            const rangePct = Math.max(0, 100 - bullPct - bearPct);
+
+            const rCounts = document.getElementById('ai-regime-counts');
+            const bBull = document.getElementById('regime-bar-bull');
+            const bBear = document.getElementById('regime-bar-bear');
+            const bRange = document.getElementById('regime-bar-range');
+
+            if (rCounts) rCounts.innerText = `🟢 ${bullCount} Boğa (%${bullPct}) | 🔴 ${bearCount} Ayı (%${bearPct}) | ⚪ ${rangeCount} Yatay (%${rangePct})`;
+            if (bBull) bBull.style.width = `${bullPct}%`;
+            if (bBear) bBear.style.width = `${bearPct}%`;
+            if (bRange) bRange.style.width = `${rangePct}%`;
+
+            // Update AI Thought Feed
+            const feed = document.getElementById('ai-thought-feed');
+            const openPosCount = Object.keys(appState.open_positions || {}).length;
+            if (feed) {
+                let thoughtsHtml = `
+                    <div class="ai-thought-item">
+                        <span style="font-size:18px;">🛡️</span>
+                        <div>
+                            <b>1H MAKRO TREND VE KALKAN REJİMİ:</b> 100 paritenin %${bearPct}'i Ayı, %${bullPct}'i Boğa trendinde. Zayıf karşı-trend tuzakları filtreleniyor.
+                        </div>
+                    </div>
+                `;
+
+                if (openPosCount > 0) {
+                    const openSyms = Object.keys(appState.open_positions).slice(0, 4).join(', ');
+                    thoughtsHtml += `
+                        <div class="ai-thought-item" style="border-left-color:var(--green);">
+                            <span style="font-size:18px;">⚡</span>
+                            <div>
+                                <b>CANLI POZİSYON YÖNETİMİ:</b> Şu an <b>${openPosCount} aktif pozisyon</b> (${openSyms}...) yönetiliyor. TP1 hedeflerine ulaşıldığında %50 kâr realize edilip stop Breakeven'e taşınacaktır.
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (nearCandidates.length > 0) {
+                    const nearest = nearCandidates.sort((a,b) => a.distPct - b.distPct)[0];
+                    thoughtsHtml += `
+                        <div class="ai-thought-item" style="border-left-color:var(--yellow);">
+                            <span style="font-size:18px;">🎯</span>
+                            <div>
+                                <b>EN YAKIN PUSU ALARMI:</b> <b>${nearest.symbol}</b> paritesi ${nearest.targetName} seviyesine yalnızca <b>%${nearest.distPct.toFixed(2)}</b> mesafede! Onay mumu ile ${nearest.action} tetiklenebilir.
+                            </div>
+                        </div>
+                    `;
+                }
+
+                feed.innerHTML = thoughtsHtml;
+            }
+
+            // Update Near-Trigger Grid (Top 5)
+            const nearGrid = document.getElementById('near-trigger-container');
+            if (nearGrid) {
+                nearCandidates.sort((a,b) => a.distPct - b.distPct);
+                const top5 = nearCandidates.slice(0, 5);
+                if (top5.length === 0) {
+                    nearGrid.innerHTML = `
+                        <div style="grid-column:1/-1; text-align:center; padding:30px; color:#64748b; font-size:13px;">
+                            ⚡ 100 parite taranıyor, seviyelere en yakın fırsatlar oluştuğunda burada listelenecektir...
+                        </div>
+                    `;
+                } else {
+                    nearGrid.innerHTML = top5.map(c => `
+                        <div class="near-card">
+                            <div class="near-card-head">
+                                <span class="near-sym">${c.symbol}</span>
+                                <span class="near-dist-badge ${c.distPct < 0.5 ? 'dist-super-close' : 'dist-close'}">%${c.distPct.toFixed(2)} Kaldı</span>
+                            </div>
+                            <div style="font-size:12px; color:#94a3b8; margin-bottom:4px;">
+                                Anlık: <b style="color:#fff;">$${c.price}</b> ➔ Hedef: <b style="color:var(--blue);">$${c.targetPrice.toFixed(4)}</b>
+                            </div>
+                            <div style="font-size:11.5px; font-weight:700; color:var(--yellow); margin-bottom:6px;">
+                                ${c.action}
+                            </div>
+                            <div style="font-size:11px; color:#64748b; display:flex; justify-content:space-between; align-items:center;">
+                                <span>${c.bias}</span>
+                                <span style="cursor:pointer; color:var(--blue); font-weight:800;" onclick="filterWatchlistDirect('${c.symbol}')">Seviyeyi İncele ➔</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            // Update Mini Cockpit Positions
+            const miniPosContainer = document.getElementById('cockpit-mini-positions');
+            if (miniPosContainer) {
+                const openKeys = Object.keys(appState.open_positions || {});
+                if (openKeys.length === 0) {
+                    miniPosContainer.innerHTML = `
+                        <div style="grid-column:1/-1; color:#94a3b8; text-align:center; padding:24px 20px; font-size:13.5px;">
+                            Şu an açık pozisyon bulunmuyor. Robot 5M mum kapanışlarını pusuya yatarak takip ediyor.
+                        </div>
+                    `;
+                } else {
+                    miniPosContainer.innerHTML = openKeys.map(sym => {
+                        const p = appState.open_positions[sym];
+                        const curPrice = Number((livePrices && livePrices[sym]) || (appState.symbols && appState.symbols[sym] ? appState.symbols[sym].price : 0) || p.entry_price);
+                        const isLong = p.side === 'LONG';
+                        const priceDiff = isLong ? ((curPrice - p.entry_price) / p.entry_price) : ((p.entry_price - curPrice) / p.entry_price);
+                        const roePct = priceDiff * p.leverage * 100;
+                        const pnlVal = p.position_value * priceDiff;
+                        const isWin = roePct >= 0;
+
+                        return `
+                            <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <div style="font-weight:800; font-family:'JetBrains Mono'; font-size:14px; display:flex; align-items:center; gap:6px;">
+                                        <span style="color:${isLong ? 'var(--green)' : 'var(--red)'}; font-size:12px;">● ${p.side} (${p.leverage}x)</span>
+                                        ${sym}
+                                    </div>
+                                    <div style="font-size:11.5px; color:#94a3b8; margin-top:2px;">
+                                        Giriş: $${p.entry_price} | TP1: $${p.tp1 ? p.tp1.toFixed(4) : '-'}
+                                    </div>
+                                </div>
+                                <div style="text-align:right;">
+                                    <div style="font-size:15px; font-weight:900; font-family:'JetBrains Mono'; color:${isWin ? 'var(--green)' : 'var(--red)'};">
+                                        ${isWin ? '+' : ''}${roePct.toFixed(2)}%
+                                    </div>
+                                    <div style="font-size:11.5px; color:${isWin ? 'var(--green)' : 'var(--red)'};">
+                                        ${isWin ? '+' : ''}$${pnlVal.toFixed(2)}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
+            // Update Nav Tab Badges
+            const navPosBadge = document.getElementById('nav-pos-count-badge');
+            if (navPosBadge) {
+                if (openPosCount > 0) {
+                    navPosBadge.innerText = openPosCount;
+                    navPosBadge.style.display = 'inline-block';
+                } else {
+                    navPosBadge.style.display = 'none';
+                }
+            }
+            const navActiveBadge = document.getElementById('nav-active-coins-badge');
+            if (navActiveBadge && appState.symbols) {
+                const totalC = Object.keys(appState.symbols).length;
+                navActiveBadge.innerText = `${totalC}/100`;
+            }
+        }
+
         let appState = { symbols: {}, balance: 100.0, open_positions: {}, history: [], all_coins: [] };
         let livePrices = {};
         let tickCounts = 0;
@@ -3247,9 +3582,9 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 if (currentSymbolsCount !== lastRenderedSymbolsCount || (watchlistCont && watchlistCont.children.length === 0)) {
                     lastRenderedSymbolsCount = currentSymbolsCount;
                     renderCards();
+                }
                 renderCockpitView();
                 updateSystemHealthBadge();
-                }
 
                 // 4. Only re-render Open Positions if position IDs or count changed
                 const currentPosKey = Object.keys(appState.open_positions || {}).sort().join(',');
