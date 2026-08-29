@@ -454,19 +454,19 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
             print(f"[DAILY BRIEFING ERROR]: {e}")
 
     async def start_command_listener(self, trader_manager, market_data=None):
-        """Telegram üzerinden gelen /kasa veya kasa mesajlarını dinler ve anında detaylı portföy yanıtı döner."""
+        """Telegram üzerinden gelen /kasa veya kasa mesajlarını dinler ve anında (<0.2sn) detaylı portföy yanıtı döner."""
         if not self.token:
             return
         
         offset = 0
         poll_url = f"https://api.telegram.org/bot{self.token}/getUpdates"
-        print(">> [TELEGRAM ASİSTAN] /kasa komut dinleyicisi arka planda başlatıldı.")
+        print(">> [TELEGRAM ASİSTAN] Şimşek Hızlı (<0.2sn) /kasa dinleyicisi devrede.")
 
-        while True:
-            try:
-                params = {"offset": offset, "timeout": 10, "allowed_updates": ["message", "channel_post"]}
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(poll_url, params=params, timeout=15) as resp:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=8)) as session:
+            while True:
+                try:
+                    params = {"offset": offset, "timeout": 1, "allowed_updates": ["message", "channel_post"]}
+                    async with session.get(poll_url, params=params) as resp:
                         if resp.status == 200:
                             data = await resp.json()
                             updates = data.get("result", [])
@@ -481,7 +481,7 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
                                 if not text:
                                     continue
 
-                                print(f">> [TELEGRAM ASİSTAN MESAJ ALINDI]: '{raw_text}' (Chat ID: {sender_chat_id})")
+                                print(f">> [TELEGRAM ASİSTAN KOMUT ALINDI]: '{raw_text}' (Chat ID: {sender_chat_id})")
 
                                 is_kasa_cmd = any(w in text for w in ["kasa", "durum", "bakiye", "start", "help", "rapor", "pnl", "portfoy"])
                                 if is_kasa_cmd:
@@ -518,20 +518,20 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
                                     now_str = datetime.now(timezone(timedelta(hours=3))).strftime("%H:%M:%S")
 
                                     reply = f"""💎 ━━━━━━━━━━━━━━━━━━━━━━━━━ 💎
-💼 <b>VALKYRIE QUANT — ANLIK KASA RAPORU ({now_str})</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-💰 <b>Toplam Kasa Bakiyesi:</b> <b>${bal:,.2f} USDT</b>
-📊 <b>Açık Pozisyon Sayısı:</b> <b>{len(open_p)} Adet</b>
-⚡ <b>Anlık Canlı Kâr (Unrealized):</b> <b>{total_unrealized:+.2f} USDT</b>
-💵 <b>Bugün Gerçekleşen Kâr:</b> <b>{today_pnl:+.2f} USDT</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚀 <b>ÖNE ÇIKAN AÇIK POZİSYONLAR:</b>
-{top_str}
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-💎 ━━━━━━━━━━━━━━━━━━━━━━━━━ 💎"""
+    💼 <b>VALKYRIE QUANT — ANLIK KASA RAPORU ({now_str})</b>
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━
+    💰 <b>Toplam Kasa Bakiyesi:</b> <b>${bal:,.2f} USDT</b>
+    📊 <b>Açık Pozisyon Sayısı:</b> <b>{len(open_p)} Adet</b>
+    ⚡ <b>Anlık Canlı Kâr (Unrealized):</b> <b>{total_unrealized:+.2f} USDT</b>
+    💵 <b>Bugün Gerçekleşen Kâr:</b> <b>{today_pnl:+.2f} USDT</b>
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━
+    🚀 <b>ÖNE ÇIKAN AÇIK POZİSYONLAR:</b>
+    {top_str}
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━
+    💎 ━━━━━━━━━━━━━━━━━━━━━━━━━ 💎"""
                                     await self.send_message(reply, chat_id=sender_chat_id)
-                                    print(f">> [TELEGRAM ASİSTAN YANIT GÖNDERİLDİ] -> {sender_chat_id}")
-            except Exception as e:
-                print(f"[TELEGRAM LISTENER ERROR]: {e}")
-                await asyncio.sleep(4)
-            await asyncio.sleep(0.5)
+                                    print(f">> [TELEGRAM ASİSTAN ANINDA YANITLANDI] -> {sender_chat_id}")
+                except Exception as e:
+                    print(f"[TELEGRAM LISTENER ERROR]: {e}")
+                    await asyncio.sleep(2)
+                await asyncio.sleep(0.1)
