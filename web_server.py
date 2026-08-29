@@ -972,6 +972,25 @@ HTML_PAGE = """
 </head>
 <body>
 
+    
+    <!-- SYSTEM HEALTH DIAGNOSTIC MODAL -->
+    <div id="health-modal-overlay" class="modal-overlay" style="display:none;" onclick="if(event.target === this) closeHealthDiagnosticModal()">
+        <div class="modal-card" style="max-width:540px; text-align:left;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <div class="modal-title" style="margin:0; font-size:18px; display:flex; align-items:center; gap:8px;">
+                    <span>🛡️</span> BOT SAĞLIK & TEŞHİS RAPORU
+                </div>
+                <button onclick="closeHealthDiagnosticModal()" style="background:transparent; border:none; color:#94a3b8; font-size:20px; cursor:pointer;">✕</button>
+            </div>
+            <div id="health-modal-body" style="font-family:'JetBrains Mono', monospace; font-size:13px; line-height:1.7;">
+                <!-- JS ile dinamik doldurulur -->
+            </div>
+            <div style="margin-top:20px; text-align:right;">
+                <button class="modal-btn modal-btn-cancel" onclick="closeHealthDiagnosticModal()" style="background:var(--blue); color:#fff;">Tamam / Kapat</button>
+            </div>
+        </div>
+    </div>
+
     <!-- CUSTOM CONFIRMATION MODAL -->
     <div id="close-modal-overlay" class="modal-overlay" style="display:none;">
         <div class="modal-card">
@@ -1228,7 +1247,7 @@ HTML_PAGE = """
                 <span id="mode-badge-text">🟡 DEMO MODU</span>
                 <span style="opacity:0.6; font-size:12px; margin-left:3px;">⚙️</span>
             </div>
-            <div class="live-tag" id="system-health-pill" title="100 Paritenin Canlı Fiyat & 5M Mum Akış Durumu">
+            <div class="live-tag" id="system-health-pill" onclick="openHealthDiagnosticModal()" style="cursor:pointer;" title="Sistem Sağlık Raporunu & Teşhis Detaylarını Aç">
                 <div class="live-dot" id="system-health-dot"></div>
                 <span id="system-health-text">100/100 Parite Canlı Akıyor</span>
             </div>

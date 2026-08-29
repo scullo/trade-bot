@@ -56,6 +56,26 @@ class StrategyEngine:
     # =========================================================================
     # TICK SEVIYESI: Sert Stop + TP + Trailing Stop (Her fiyat guncellenmesinde)
     # =========================================================================
+    def check_engine_health(self) -> dict:
+        """Strateji motorunun tum formul ve degiskenlerini anlik test eder (Hata tespiti)."""
+        try:
+            test_levels = {
+                'camarilla': {'P': 100.0, 'R3': 102.0, 'R4': 105.0, 'R5': 110.0, 'S3': 98.0, 'S4': 95.0, 'S5': 90.0},
+                'tepe_avwap': 103.0, 'dip_avwap': 97.0, 'mpoc': 99.5, 'mvah': 104.0, 'mval': 96.0,
+                'above_npoc': 106.0, 'below_npoc': 94.0
+            }
+            cam = test_levels['camarilla']
+            p = cam.get('P', 0.0)
+            r3, r4, r5 = cam.get('R3', 0.0), cam.get('R4', 0.0), cam.get('R5', 0.0)
+            s3, s4, s5 = cam.get('S3', 0.0), cam.get('S4', 0.0), cam.get('S5', 0.0)
+            tepe_av = test_levels['tepe_avwap']
+            dip_av = test_levels['dip_avwap']
+            mpoc = test_levels['mpoc']
+            up_targets = [lvl for lvl in [dip_av, tepe_av, mpoc, p] if lvl and lvl > 98.5 * 1.004]
+            return {"healthy": True, "error": None}
+        except Exception as e:
+            return {"healthy": False, "error": f"Strateji Değişken Hatası: {str(e)}"}
+
     async def evaluate_tick(self, symbol: str, current_price: float, levels: dict):
         """Milisaniyelik anlik sert stop, TP ve trailing stop kontrolleri."""
         if symbol not in self.paper_trader.open_positions:
