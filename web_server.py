@@ -1828,6 +1828,84 @@ HTML_PAGE = """
         </div>
     </div>
 
+    <!-- =========================================================================
+         5. SEKME: 👑 MASTER ADMİN & FON YÖNETİM MASASI
+         ========================================================================= -->
+    <div id="main-tab-content-admin" class="main-tab-content" style="display:none;">
+        <!-- ADMIN 4 KPI HERO -->
+        <div class="cockpit-kpi-grid" style="margin-bottom:16px;">
+            <div class="cockpit-kpi-card">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">Toplam Yönetilen Fon (AUM)</span>
+                    <span class="kpi-card-icon">🏦</span>
+                </div>
+                <div class="kpi-card-val" id="admin-total-aum" style="color:var(--cyan);">$100,000.00</div>
+                <div class="kpi-card-sub">Bağlı Müşteri Cüzdanları Toplamı</div>
+            </div>
+
+            <div class="cockpit-kpi-card">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">Kayıtlı Yatırımcı Sayısı</span>
+                    <span class="kpi-card-icon">👥</span>
+                </div>
+                <div class="kpi-card-val" id="admin-total-users">1 Yatırımcı</div>
+                <div class="kpi-card-sub">Çok Kullanıcılı SaaS Havuzu</div>
+            </div>
+
+            <div class="cockpit-kpi-card">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">24 Saatlik Aktif Denemeler</span>
+                    <span class="kpi-card-icon">⏳</span>
+                </div>
+                <div class="kpi-card-val" id="admin-trial-count" style="color:var(--yellow);">0 Aktif</div>
+                <div class="kpi-card-sub">Suistimal Kalkanı (Anti-Abuse) Aktif</div>
+            </div>
+
+            <div class="cockpit-kpi-card">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">VIP & Pro Aboneler</span>
+                    <span class="kpi-card-icon">👑</span>
+                </div>
+                <div class="kpi-card-val" id="admin-vip-count" style="color:var(--green);">1 VIP</div>
+                <div class="kpi-card-sub">Otomatik Lisans Denetimi Aktif</div>
+            </div>
+        </div>
+
+        <!-- SUBSCRIBER MANAGEMENT TABLE -->
+        <div class="history-full-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+                <div>
+                    <div class="panel-title" style="margin:0;">📋 Yatırımcı ve Abonelik Yönetim Masası</div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Sistemde kayıtlı kullanıcıların lisans süreleri ve API bağlantı durumları</div>
+                </div>
+                <button class="btn-export" onclick="loadAdminMetrics()">🔄 Listeyi Yenile</button>
+            </div>
+
+            <div style="overflow-x:auto;">
+                <table class="trade-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>E-Posta</th>
+                            <th>Rol</th>
+                            <th>Abonelik Planı</th>
+                            <th>Kasa Bakiyesi</th>
+                            <th>API Durumu</th>
+                            <th>Lisans Bitişi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-users-table-body">
+                        <tr>
+                            <td colspan="7" style="text-align:center; padding:30px; color:#94a3b8;">
+                                Yatırımcı verileri yükleniyor...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <script>
 
         // =========================================================================
@@ -1877,7 +1955,13 @@ HTML_PAGE = """
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ email, password })
                 });
-                const data = await res.json();
+                let data;
+                try {
+                    data = await res.json();
+                } catch(pe) {
+                    data = { success: false, message: 'Sunucu geçiş aşamasında (~10sn), lütfen 5 saniye sonra tekrar deneyin.' };
+                }
+
                 if (data.success) {
                     currentUser = data.user;
                     box.style.display = 'block';
@@ -1892,10 +1976,13 @@ HTML_PAGE = """
                     box.style.display = 'block';
                     box.style.background = 'rgba(255,71,87,0.1)';
                     box.style.color = 'var(--red)';
-                    box.innerText = `❌ ${data.message}`;
+                    box.innerText = `❌ ${data.message || 'Giriş yapılamadı'}`;
                 }
             } catch (e) {
-                alert('Giriş Hatası: ' + e);
+                box.style.display = 'block';
+                box.style.background = 'rgba(255,71,87,0.1)';
+                box.style.color = 'var(--red)';
+                box.innerText = 'Bağlantı Hatası: Lütfen sayfayı yenileyip tekrar deneyin.';
             }
         }
 
@@ -1911,7 +1998,13 @@ HTML_PAGE = """
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ email, password, binance_uid })
                 });
-                const data = await res.json();
+                let data;
+                try {
+                    data = await res.json();
+                } catch(pe) {
+                    data = { success: false, message: 'Sunucu geçiş aşamasında (~10sn), lütfen 5 saniye sonra tekrar deneyin.' };
+                }
+
                 if (data.success) {
                     currentUser = data.user;
                     box.style.display = 'block';
@@ -1926,10 +2019,13 @@ HTML_PAGE = """
                     box.style.display = 'block';
                     box.style.background = 'rgba(255,71,87,0.1)';
                     box.style.color = 'var(--red)';
-                    box.innerText = `❌ ${data.message}`;
+                    box.innerText = `❌ ${data.message || 'Kayıt başarısız'}`;
                 }
             } catch (e) {
-                alert('Kayıt Hatası: ' + e);
+                box.style.display = 'block';
+                box.style.background = 'rgba(255,71,87,0.1)';
+                box.style.color = 'var(--red)';
+                box.innerText = 'Bağlantı Hatası: Lütfen sayfayı yenileyip tekrar deneyin.';
             }
         }
 
