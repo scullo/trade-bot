@@ -80,8 +80,17 @@ def generate_trade_chart_image(
     padded_max = chart_max + y_span * 0.22
 
     # 2. AVWAP Lines
-    display_timestamps = display_df['timestamp'].values
-    ts_to_idx = {int(ts): idx for idx, ts in enumerate(display_timestamps)}
+    if 'timestamp' in display_df.columns:
+        display_timestamps = display_df['timestamp'].values
+    elif 'time' in display_df.columns:
+        display_timestamps = display_df['time'].values
+    else:
+        display_timestamps = list(range(len(display_df)))
+    
+    try:
+        ts_to_idx = {int(ts): idx for idx, ts in enumerate(display_timestamps)}
+    except Exception:
+        ts_to_idx = {}
 
     if avwap_high_points:
         h_x, h_y = [], []
@@ -257,8 +266,18 @@ def generate_trade_chart_image(
                         zorder=5)
 
     # 5. Time and Price Axes Formatting
-    time_indices = np.linspace(0, n_bars - 1, 7, dtype=int)
-    time_labels = [datetime.fromtimestamp(display_df['timestamp'].iloc[idx] / 1000, tz=timezone(timedelta(hours=3))).strftime('%H:%M') for idx in time_indices]
+    time_indices = np.linspace(0, n_bars - 1, min(7, n_bars), dtype=int)
+    time_labels = []
+    for idx in time_indices:
+        try:
+            val = display_df['timestamp'].iloc[idx] if 'timestamp' in display_df.columns else (display_df['time'].iloc[idx] if 'time' in display_df.columns else None)
+            if val is not None and float(val) > 0:
+                ts_sec = float(val) / 1000.0 if float(val) > 1e11 else float(val)
+                time_labels.append(datetime.fromtimestamp(ts_sec, tz=timezone(timedelta(hours=3))).strftime('%H:%M'))
+            else:
+                time_labels.append(f"M-{n_bars - idx}")
+        except Exception:
+            time_labels.append(f"M-{n_bars - idx}")
     ax.set_xticks(time_indices)
     ax.set_xticklabels(time_labels, color='#94a3b8', fontsize=9, fontweight='bold')
     ax.tick_params(colors='#94a3b8', labelsize=9)

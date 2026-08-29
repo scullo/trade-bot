@@ -67,29 +67,25 @@ class TelegramNotifier:
         side_emoji = "🟢 <b>LONG</b>" if pos["side"] == "LONG" else "🔴 <b>SHORT</b>"
         clean_sym = pos["symbol"].replace("/USDT", "")
         
-        msg = f"""⚡ <b>YENİ POZİSYON AÇILDI</b> ⚡
+        atr_val = pos.get('atr_pct', 1.2)
+        vol_val = pos.get('volume_surge', 1.0)
+        bal_line = f"💼 <b>Serbest Kasa:</b> <code>${free_balance:.2f} USDT</code>\n" if free_balance is not None else ""
+        tp2_line = f"🚀 <b>TP2 Final:</b> <code>${pos['tp2']:.6f}</code>\n" if pos.get("tp2") else ""
+
+        msg = f"""💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎
+⚡ <b>YENİ POZİSYON AÇILDI</b> ⚡
 ━━━━━━━━━━━━━━━━━━━━━━━━
-Parite: <b>#{clean_sym}/USDT</b>
-Yön & Kaldıraç: {side_emoji} <b>({pos['leverage']}x)</b>
-Giriş Fiyatı: <code>${pos['entry_price']:.6f}</code>
-Marjin: <b>{pos.get('margin_usdt', pos.get('margin', 10.0)):.2f} USDT</b> (Hacim: {pos['position_value']:.2f} USDT)
+Parite: <b>#{clean_sym}/USDT</b> | {side_emoji} <b>({pos['leverage']}x)</b>
+Giriş: <code>${pos['entry_price']:.6f}</code> | Marjin: <b>${pos.get('margin_usdt', pos.get('margin', 100.0)):.1f}</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━
 🛑 <b>Stop:</b> <code>${pos.get('soft_stop', pos.get('hard_stop', 0.0)):.6f}</code>
 🎯 <b>TP1 Hedefi:</b> <code>${pos.get('tp1', 0.0):.6f}</code>
-"""
-        if pos.get("tp2"):
-            msg += f"🚀 <b>TP2 Hedefi:</b> <code>${pos['tp2']:.6f}</code>\n"
-
-        if free_balance is not None:
-            msg += f"💼 <b>Kalan Serbest Kasa:</b> <b>{free_balance:.2f} USDT</b>\n"
-
-        atr_val = pos.get('atr_pct', 1.2)
-        vol_val = pos.get('volume_surge', 1.0)
-        msg += f"""🛡️ <b>Kâr Zırhı:</b> <code>+%7.0 ROE veya 90dk'da %50 Kilit & 0 Risk</code>
-📊 <b>Volatilite / Hacim:</b> <code>%{atr_val:.2f} ATR | {vol_val:.2f}x Hacim</code>
-━━━━━━━━━━━━━━━━━━━━━━━━
-📌 <b>Setup Nedeni:</b> <i>{pos['reason']}</i>
-⏰ <b>Zaman:</b> <code>{pos['entry_time']}</code>"""
+{tp2_line}🛡️ <b>Kâr Zırhı:</b> <code>+%7 ROE veya 90dk (%50 Kilit)</code>
+📊 <b>ATR / Hacim:</b> <code>%{atr_val:.2f} | {vol_val:.2f}x</code>
+{bal_line}━━━━━━━━━━━━━━━━━━━━━━━━
+📌 <b>Setup:</b> <i>{pos['reason']}</i>
+⏰ <b>Zaman:</b> <code>{pos['entry_time']}</code>
+💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎"""
 
         # Grafik Fotograf Olustur
         chart_buf = None
@@ -132,18 +128,19 @@ Marjin: <b>{pos.get('margin_usdt', pos.get('margin', 10.0)):.2f} USDT</b> (Hacim
         bal_after = record.get('balance_after', '')
         bal_str = f"💼 <b>Güncel Toplam Kasa:</b> <b>{bal_after:.2f} USDT</b>\n" if bal_after != '' else ""
 
-        partial_note = "\n🛡️ <i>Kalan %50 marjin stopu risksiz Breakeven seviyesine çekildi ve ana hedefe koşuyor.</i>\n" if is_partial_tp1 else ""
-        msg = f"""{pnl_emoji}
+        partial_note = "\n🛡️ <b>Kalan %50:</b> <i>Breakeven ile 0 riskle koşuyor!</i>\n" if is_partial_tp1 else ""
+        msg = f"""💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎
+{pnl_emoji}
 ━━━━━━━━━━━━━━━━━━━━━━━━
 Parite: <b>#{clean_sym}/USDT</b> ({record['side']} {record['leverage']}x)
 Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record['exit_price']:.6f}</code>
 ━━━━━━━━━━━━━━━━━━━━━━━━
 💰 <b>Net Kâr / Zarar:</b> <b>{net_pnl:+.4f} USDT ({roe:+.2f}%)</b>
-💵 <b>Brüt Kâr:</b> {record.get('gross_pnl', net_pnl):+.4f} USDT
-💸 <b>Borsa Komisyonu:</b> {record['fees']:.4f} USDT
-━━━━━━━━━━━━━━━━━━━━━━━━
-{bal_str}📌 <b>Kapanış Nedeni:</b> <i>{record['close_reason']}</i>{manual_tag}{partial_note}
-⏰ <b>Çıkış Zamanı:</b> <code>{record['exit_time']}</code>"""
+💵 <b>Brüt:</b> {record.get('gross_pnl', net_pnl):+.4f} $ | 💸 <b>Komisyon:</b> {record['fees']:.4f} $
+{bal_str}━━━━━━━━━━━━━━━━━━━━━━━━
+📌 <b>Neden:</b> <i>{record['close_reason']}</i>{manual_tag}{partial_note}
+⏰ <b>Zaman:</b> <code>{record['exit_time']}</code>
+💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎"""
 
         chart_buf = None
         if df_5m is not None and not df_5m.empty:
