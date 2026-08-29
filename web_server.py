@@ -2808,35 +2808,53 @@ HTML_PAGE = """
                 const tp1Val = pos.tp1 ? Number(pos.tp1).toFixed(4) : '-';
                 const tp2Val = pos.tp2 ? Number(pos.tp2).toFixed(4) : '-';
                 const stopVal = pos.soft_stop ? Number(pos.soft_stop).toFixed(4) : (pos.hard_stop ? Number(pos.hard_stop).toFixed(4) : '-');
+                const stopColor = pos.is_half_closed ? 'var(--green)' : '#f87171';
+                const stopLabel = pos.is_half_closed ? '🛡️ Breakeven Stop' : '🛑 Aktif Stop';
 
                 html += `
                 <div class="active-pos-card ${pnlClass}" id="pos-card-${safeId}">
+                    <!-- 1. TOP HEADER (Ticker on left, 2-line PnL on right) -->
                     <div class="pos-top">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <span class="pos-badge ${pos.side === 'LONG' ? 'pos-long' : 'pos-short'}">${pos.leverage}x ${pos.side}</span>
-                            <span style="font-size:18px; font-weight:800; font-family:'JetBrains Mono'; color:#ffffff; letter-spacing:0.5px;">${cleanSym}</span>
+                            <span style="font-size:17px; font-weight:900; font-family:'JetBrains Mono'; color:#ffffff; letter-spacing:0.5px;">${cleanSym}</span>
                         </div>
-                        <div class="pos-main-pnl" id="pos-pnl-${safeId}" style="color:${pnlColor}">
-                            ${metrics.roePct >= 0 ? '+' : ''}${metrics.roePct.toFixed(2)}% ROE (${metrics.pnlUsdt >= 0 ? '+' : ''}${metrics.pnlUsdt.toFixed(2)} $)
+                        <div style="text-align:right;">
+                            <div style="font-size:16px; font-weight:900; font-family:'JetBrains Mono'; color:${pnlColor};" id="pos-pnl-${safeId}">
+                                ${metrics.roePct >= 0 ? '+' : ''}${metrics.roePct.toFixed(2)}% ROE
+                            </div>
+                            <div style="font-size:12px; font-weight:700; color:${pnlColor}; font-family:'JetBrains Mono';">
+                                ${metrics.pnlUsdt >= 0 ? '+' : ''}$${metrics.pnlUsdt.toFixed(2)} USDT
+                            </div>
                         </div>
                     </div>
-                    <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:10px 12px; font-size:12.5px; font-family:'JetBrains Mono'; color:#cbd5e1; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;">
-                        <div>Giriş: <b style="color:#fff;">$${pos.entry_price}</b></div>
+
+                    <!-- 2. PRICE & MARGIN GRID (2x2 Clean Box) -->
+                    <div style="background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:10px 14px; font-size:12.5px; font-family:'JetBrains Mono'; color:#cbd5e1; display:grid; grid-template-columns:1fr 1fr; gap:6px 14px;">
+                        <div>Giriş: <b style="color:#ffffff;">$${pos.entry_price}</b></div>
                         <div>Anlık: <b id="pos-cur-price-${safeId}" style="color:${pnlColor};">$${metrics.curP}</b></div>
-                        <div>Marjin: <b style="color:#fff;">$${Number(pos.margin || 100).toFixed(2)}</b></div>
-                        <div>Hacim: <b style="color:#fff;">$${Number(pos.position_value || 500).toFixed(2)}</b></div>
+                        <div>Marjin: <b style="color:#ffffff;">$${Number(pos.margin || 100).toFixed(2)}</b></div>
+                        <div>Hacim: <b style="color:#ffffff;">$${Number(pos.position_value || 500).toFixed(2)}</b></div>
                     </div>
-                    <div class="pos-target-row" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:4px;">
-                        ${pos.is_half_closed || pos.tp1_hit ? '<span class="badge-tp1-hit">🎯 TP1 ALINDI (%50 Kâr Kasada) • Breakeven Korumalı</span>' : '<span style="color:#94a3b8; font-size:12px;">🎯 İlk Hedef (TP1): <code style="color:#fff;">$' + tp1Val + '</code></span>'}
+
+                    <!-- 3. TARGETS & STOP PILLS -->
+                    <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                        ${pos.is_half_closed || pos.tp1_hit ? '<span class="badge-tp1-hit">🎯 TP1 ALINDI (%50 Kâr Kasada)</span>' : '<span style="font-size:12px; background:rgba(255,255,255,0.04); border:1px solid var(--border); padding:3px 8px; border-radius:6px;">🎯 TP1: <b style="color:#fff;">$' + tp1Val + '</b></span>'}
+                        <span style="font-size:12px; background:rgba(255,255,255,0.04); border:1px solid var(--border); padding:3px 8px; border-radius:6px;">
+                            ${stopLabel}: <b style="color:${stopColor};">$${stopVal}</b>
+                        </span>
+                        ${pos.tp2 ? '<span style="font-size:12px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; padding:3px 8px; border-radius:6px;">🚀 TP2: <b>$' + tp2Val + '</b></span>' : ''}
                         ${pos.trail_status ? '<span class="badge-trailing-lock">' + pos.trail_status + '</span>' : ''}
-                        <span style="color:#94a3b8; font-size:12px;">🛑 Aktif Stop: <code style="color:' + (pos.is_half_closed ? 'var(--green)' : '#f87171') + '; font-weight:800;">$' + stopVal + '</code></span>
-                        ${pos.tp2 ? '<span style="color:#94a3b8; font-size:12px;">🚀 Nihai Hedef (TP2): <code style="color:#38bdf8; font-weight:800;">$' + tp2Val + '</code></span>' : ''}
                     </div>
-                    <div class="pos-setup-tag" style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:11.5px; color:#cbd5e1;">
-                        📌 <b>Giriş Nedeni:</b> ${pos.reason}
+
+                    <!-- 4. SETUP REASON -->
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:11.5px; color:#cbd5e1; line-height:1.4;">
+                        📌 <b>Kurulum:</b> ${pos.reason}
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08);">
-                        <span style="font-size:12px; color:#94a3b8;">Müdahale:</span>
+
+                    <!-- 5. ACTION BUTTON -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08);">
+                        <span style="font-size:11.5px; color:#94a3b8;">Risk Müdahalesi:</span>
                         <button class="btn-card-manual-close" onclick="openConfirmModal('${sym}')" style="font-size:12px; padding:6px 14px;">
                             🛑 Pozisyonu Kapat (Market)
                         </button>
