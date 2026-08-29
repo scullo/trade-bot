@@ -454,19 +454,22 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
             print(f"[DAILY BRIEFING ERROR]: {e}")
 
     async def start_command_listener(self, trader_manager, market_data=None):
-        """Telegram üzerinden gelen /kasa veya kasa mesajlarını dinler ve anında (<0.2sn) detaylı portföy yanıtı döner."""
+        """Telegram üzerinden gelen /kasa veya kasa mesajlarını dinler ve anında detaylı portföy yanıtı döner."""
         if not self.token:
             return
         
         offset = 0
         poll_url = f"https://api.telegram.org/bot{self.token}/getUpdates"
-        print(">> [TELEGRAM ASİSTAN] Şimşek Hızlı (<0.2sn) /kasa dinleyicisi devrede.")
+        print(">> [TELEGRAM ASİSTAN] Şimşek Hızlı /kasa dinleyicisi devrede.")
 
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=8)) as session:
-            while True:
-                try:
-                    params = {"offset": offset, "timeout": 1, "allowed_updates": ["message", "channel_post"]}
-                    async with session.get(poll_url, params=params) as resp:
+        while True:
+            try:
+                params = {"timeout": 1}
+                if offset > 0:
+                    params["offset"] = offset
+
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(poll_url, params=params, timeout=aiohttp.ClientTimeout(total=6)) as resp:
                         if resp.status == 200:
                             data = await resp.json()
                             updates = data.get("result", [])
@@ -485,24 +488,30 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
 
                                 is_kasa_cmd = any(w in text for w in ["kasa", "durum", "bakiye", "start", "help", "rapor", "pnl", "portfoy"])
                                 if is_kasa_cmd:
-                                    bal = trader_manager.balance
-                                    open_p = trader_manager.open_positions
-                                    hist = trader_manager.history
+                                    bal = getattr(trader_manager, 'balance', 100000.0)
+                                    open_p = getattr(trader_manager, 'open_positions', {})
+                                    hist = getattr(trader_manager, 'history', [])
                                     
                                     total_unrealized = 0.0
                                     top_movers = []
+                                    prices = getattr(market_data, 'current_prices', {}) if market_data else {}
+                                    
                                     for sym, pos in open_p.items():
-                                        cur_p = market_data.current_prices.get(sym, pos['entry_price']) if market_data else pos['entry_price']
-                                        entry_p = pos['entry_price']
-                                        side = pos['side']
-                                        lev = pos.get('leverage', 5)
-                                        margin = pos.get('margin_usdt', pos.get('margin', 100.0))
-                                        
-                                        diff = (cur_p - entry_p)/entry_p if side == 'LONG' else (entry_p - cur_p)/entry_p
-                                        roe = diff * lev * 100.0
-                                        pnl = margin * (roe / 100.0)
-                                        total_unrealized += pnl
-                                        top_movers.append((sym, side, roe, pnl))
+                                        try:
+                                            entry_p = float(pos.get('entry_price', 0.0))
+                                            cur_p = float(prices.get(sym, entry_p))
+                                            side = str(pos.get('side', 'LONG'))
+                                            lev = float(pos.get('leverage', 5))
+                                            margin = float(pos.get('margin_usdt', pos.get('margin', 100.0)))
+                                            
+                                            if entry_p > 0 and cur_p > 0:
+                                                diff = (cur_p - entry_p)/entry_p if side == 'LONG' else (entry_p - cur_p)/entry_p
+                                                roe = diff * lev * 100.0
+                                                pnl = margin * (roe / 100.0)
+                                                total_unrealized += pnl
+                                                top_movers.append((sym, side, roe, pnl))
+                                        except Exception as e:
+                                            pass
 
                                     top_movers.sort(key=lambda x: x[2], reverse=True)
                                     top_str_list = []
@@ -518,20 +527,20 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
                                     now_str = datetime.now(timezone(timedelta(hours=3))).strftime("%H:%M:%S")
 
                                     reply = f"""💎 ━━━━━━━━━━━━━━━━━━━━━━━━━ 💎
-    💼 <b>VALKYRIE QUANT — ANLIK KASA RAPORU ({now_str})</b>
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    💰 <b>Toplam Kasa Bakiyesi:</b> <b>${bal:,.2f} USDT</b>
-    📊 <b>Açık Pozisyon Sayısı:</b> <b>{len(open_p)} Adet</b>
-    ⚡ <b>Anlık Canlı Kâr (Unrealized):</b> <b>{total_unrealized:+.2f} USDT</b>
-    💵 <b>Bugün Gerçekleşen Kâr:</b> <b>{today_pnl:+.2f} USDT</b>
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    🚀 <b>ÖNE ÇIKAN AÇIK POZİSYONLAR:</b>
-    {top_str}
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━
-    💎 ━━━━━━━━━━━━━━━━━━━━━━━━━ 💎"""
+💼 <b>VALKYRIE QUANT — ANLIK KASA RAPORU ({now_str})</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 <b>Toplam Kasa Bakiyesi:</b> <b>${bal:,.2f} USDT</b>
+📊 <b>Açık Pozisyon Sayısı:</b> <b>{len(open_p)} Adet</b>
+⚡ <b>Anlık Canlı Kâr (Unrealized):</b> <b>{total_unrealized:+.2f} USDT</b>
+💵 <b>Bugün Gerçekleşen Kâr:</b> <b>{today_pnl:+.2f} USDT</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 <b>ÖNE ÇIKAN AÇIK POZİSYONLAR:</b>
+{top_str}
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+💎 ━━━━━━━━━━━━━━━━━━━━━━━━━ 💎"""
                                     await self.send_message(reply, chat_id=sender_chat_id)
                                     print(f">> [TELEGRAM ASİSTAN ANINDA YANITLANDI] -> {sender_chat_id}")
-                except Exception as e:
-                    print(f"[TELEGRAM LISTENER ERROR]: {e}")
-                    await asyncio.sleep(2)
-                await asyncio.sleep(0.1)
+            except Exception as e:
+                print(f"[TELEGRAM LISTENER ERROR]: {e}")
+                await asyncio.sleep(2)
+            await asyncio.sleep(0.5)
