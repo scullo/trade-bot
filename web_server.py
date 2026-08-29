@@ -3638,37 +3638,48 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
             let totalFees = 0;
 
             hList.forEach(h => {
-                totalRealizedNetPnl += h.net_pnl;
-                totalFees += (h.fees || 0);
+                totalRealizedNetPnl += Number(h.net_pnl || 0);
+                totalFees += Number(h.fees || 0);
             });
 
             let totalUnrealizedPnl = 0;
             const openKeys = Object.keys(appState.open_positions || {});
             openKeys.forEach(sym => {
                 const pos = appState.open_positions[sym];
-                const curP = Number(livePrices[sym] || pos.entry_price);
-                const metrics = computePositionPnL(pos, curP);
-                totalUnrealizedPnl += metrics.pnlUsdt;
+                const curP = Number((livePrices && livePrices[sym]) || pos.entry_price || 0.0);
+                if (typeof computePositionPnL === 'function') {
+                    const metrics = computePositionPnL(pos, curP);
+                    totalUnrealizedPnl += metrics.pnlUsdt;
+                }
             });
 
-            const totalPortfolioEquity = appState.balance + totalUnrealizedPnl;
+            const bal = appState.balance || 100000.0;
+            const totalPortfolioEquity = bal + totalUnrealizedPnl;
             const totalNetPnl = totalRealizedNetPnl + totalUnrealizedPnl;
 
-            document.getElementById('kpi-fees').innerText = '$' + totalFees.toFixed(4);
-            const pnlEl = document.getElementById('kpi-pnl');
-            pnlEl.innerText = (totalNetPnl >= 0 ? '+' : '') + totalNetPnl.toFixed(2) + ' $';
-            pnlEl.style.color = totalNetPnl >= 0 ? 'var(--green)' : 'var(--red)';
+            const feesEl = document.getElementById('kpi-fees') || document.getElementById('cockpit-fees');
+            const pnlEl = document.getElementById('kpi-pnl') || document.getElementById('cockpit-pnl');
+            const growthEl = document.getElementById('kpi-growth') || document.getElementById('cockpit-growth');
+            const balEl = document.getElementById('kpi-balance') || document.getElementById('cockpit-balance');
+
+            if (feesEl) feesEl.innerText = '$' + totalFees.toFixed(4);
+            if (pnlEl) {
+                pnlEl.innerText = (totalNetPnl >= 0 ? '+' : '') + totalNetPnl.toFixed(2) + ' $';
+                pnlEl.style.color = totalNetPnl >= 0 ? 'var(--green)' : 'var(--red)';
+            }
             
             const initialBal = (appState.initial_balance || 100000.0);
             const growthPct = ((totalPortfolioEquity - initialBal) / initialBal) * 100;
-            if (growthPct >= 0) {
-                document.getElementById('kpi-growth').innerText = `+${growthPct.toFixed(2)}% BÜYÜME`;
-                document.getElementById('kpi-growth').style.color = 'var(--green)';
-            } else {
-                document.getElementById('kpi-growth').innerText = `${growthPct.toFixed(2)}% KÜÇÜLME`;
-                document.getElementById('kpi-growth').style.color = 'var(--red)';
+            if (growthEl) {
+                if (growthPct >= 0) {
+                    growthEl.innerText = `+${growthPct.toFixed(2)}% BÜYÜME`;
+                    growthEl.style.color = 'var(--green)';
+                } else {
+                    growthEl.innerText = `${growthPct.toFixed(2)}% KÜÇÜLME`;
+                    growthEl.style.color = 'var(--red)';
+                }
             }
-            document.getElementById('kpi-balance').innerText = totalPortfolioEquity.toFixed(2) + ' $';
+            if (balEl) balEl.innerText = '$' + totalPortfolioEquity.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
         }
 
                 function renderHistoryTable() {
@@ -3906,7 +3917,7 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
             globalWs = new WebSocket(wsUrl);
 
             globalWs.onopen = () => {
-                document.getElementById('ws-status').innerText = 'BİNANCE VADELİ CANLI YAYIN AKTİF (100 PARİTE)';
+                const wsSt = document.getElementById('ws-status'); if (wsSt) wsSt.innerText = 'BİNANCE VADELİ CANLI YAYIN AKTİF (100 PARİTE)';
             };
 
             globalWs.onmessage = (evt) => {
