@@ -732,9 +732,11 @@ class StrategyEngine:
         if mvah > 0 and prev_close <= mvah and close_price > mvah:
             candidates = [c for c in [above_npoc, above_nvah] if c and c > close_price]
             target = min(candidates) if candidates else close_price * 1.02
-            buffer = (r4 - r3) * BUFFER_RATIO if (r4 > r3) else (close_price * 0.005)
+            coin_atr = self.get_symbol_atr_pct(symbol)
+            dyn_stop_pct = max(0.008, min(0.025, coin_atr * 1.0))
+            buffer = mvah * dyn_stop_pct
             soft_stop = mvah - buffer
-            hard_stop = r5 if r5 > 0 else (mvah - buffer * 2)
+            hard_stop = r3 if (r3 > 0 and r3 < mvah) else (mvah - buffer * 2.0)
             await self._handle_open(
                 symbol=symbol, side="LONG", entry_price=close_price,
                 reason="mVAH Aylik Direnc Kirilimi (Macro Breakout)",
@@ -770,9 +772,11 @@ class StrategyEngine:
         if mval > 0 and prev_close >= mval and close_price < mval:
             candidates = [c for c in [below_npoc, below_nval] if c and c < close_price]
             target = max(candidates) if candidates else close_price * 0.98
-            buffer = (s3 - s4) * BUFFER_RATIO if (s3 > s4) else (close_price * 0.005)
+            coin_atr = self.get_symbol_atr_pct(symbol)
+            dyn_stop_pct = max(0.008, min(0.025, coin_atr * 1.0))
+            buffer = mval * dyn_stop_pct
             soft_stop = mval + buffer
-            hard_stop = s5 if s5 > 0 else (mval + buffer * 2)
+            hard_stop = s3 if (s3 > 0 and s3 > mval) else (mval + buffer * 2.0)
             await self._handle_open(
                 symbol=symbol, side="SHORT", entry_price=close_price,
                 reason="mVAL Aylik Destek Kirilimi (Macro Breakdown)",
