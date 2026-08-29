@@ -618,14 +618,17 @@ class StrategyEngine:
         # Tepe AVWAP filtresini gecer → Guclu boga teyidi
         # ─────────────────────────────────────────────────────────────────
         if prev_close <= r4 and close_price > r4:
+            if vol_surge < 1.25:
+                return
             if tepe_avwap == 0 or close_price > tepe_avwap:
-                tp1 = r5 if r5 > close_price else (mvah if mvah > close_price else close_price * 1.01)
-                # nPOC veya nVAH hedefi
-                candidates = [c for c in [above_npoc, above_nvah] if c and c > tp1]
-                tp2 = min(candidates) if candidates else (mvah if mvah > tp1 else None)
-                buffer = (r4 - r3) * BUFFER_RATIO
+                tp1 = r5 if (r5 > close_price * 1.008) else (mvah if (mvah > close_price * 1.008) else close_price * 1.012)
+                candidates = [c for c in [above_npoc, above_nvah] if c and c > tp1 * 1.005]
+                tp2 = min(candidates) if candidates else (mvah if (mvah > tp1 * 1.005) else None)
+                coin_atr = self.get_symbol_atr_pct(symbol)
+                dyn_stop_pct = max(0.008, min(0.025, coin_atr * 1.0))
+                buffer = r4 * dyn_stop_pct
                 soft_stop = r4 - buffer
-                hard_stop = r3
+                hard_stop = r3 if (r3 > 0 and r3 < r4) else (r4 - buffer * 2.0)
 
                 await self._handle_open(
                     symbol=symbol, side="LONG", entry_price=close_price,
@@ -643,13 +646,17 @@ class StrategyEngine:
         # Dip AVWAP filtresini gecer → Guclu ayi teyidi
         # ─────────────────────────────────────────────────────────────────
         if prev_close >= s4 and close_price < s4:
+            if vol_surge < 1.25:
+                return
             if dip_avwap == 0 or close_price < dip_avwap:
-                tp1 = s5 if s5 < close_price else (mval if (mval > 0 and mval < close_price) else close_price * 0.99)
-                candidates = [c for c in [below_npoc, below_nval] if c and c < tp1]
-                tp2 = max(candidates) if candidates else (mval if (mval > 0 and mval < tp1) else None)
-                buffer = (s3 - s4) * BUFFER_RATIO
+                tp1 = s5 if (s5 > 0 and s5 < close_price * 0.992) else (mval if (mval > 0 and mval < close_price * 0.992) else close_price * 0.988)
+                candidates = [c for c in [below_npoc, below_nval] if c and c < tp1 * 0.995]
+                tp2 = max(candidates) if candidates else (mval if (mval > 0 and mval < tp1 * 0.995) else None)
+                coin_atr = self.get_symbol_atr_pct(symbol)
+                dyn_stop_pct = max(0.008, min(0.025, coin_atr * 1.0))
+                buffer = s4 * dyn_stop_pct
                 soft_stop = s4 + buffer
-                hard_stop = s3
+                hard_stop = s3 if (s3 > 0 and s3 > s4) else (s4 + buffer * 2.0)
 
                 await self._handle_open(
                     symbol=symbol, side="SHORT", entry_price=close_price,
@@ -669,10 +676,10 @@ class StrategyEngine:
             buffer = (s3 - s4) * BUFFER_RATIO
             soft_stop = s3 - buffer
             hard_stop = s4
-            up_targets = [lvl for lvl in [dip_avwap, tepe_avwap, mpoc, p] if lvl and lvl > close_price * 1.004]
+            up_targets = [lvl for lvl in [dip_avwap, tepe_avwap, mpoc, p, r3] if lvl and lvl > close_price * 1.008]
             up_targets.sort()
-            tp1 = up_targets[0] if up_targets else p
-            tp2 = p if p > tp1 else (mpoc if mpoc > tp1 else None)
+            tp1 = up_targets[0] if up_targets else (close_price * 1.012)
+            tp2 = up_targets[-1] if len(up_targets) > 1 else (r3 if (r3 > tp1 * 1.005) else None)
             target_name = "AVWAP" if (tp1 in [dip_avwap, tepe_avwap]) else ("mPOC" if tp1 == mpoc else "Pivot P")
             await self._handle_open(
                 symbol=symbol, side="LONG", entry_price=close_price,
@@ -692,10 +699,10 @@ class StrategyEngine:
             buffer = (r4 - r3) * BUFFER_RATIO
             soft_stop = r3 + buffer
             hard_stop = r4
-            down_targets = [lvl for lvl in [tepe_avwap, dip_avwap, mpoc, p] if lvl and lvl < close_price * 0.996]
+            down_targets = [lvl for lvl in [tepe_avwap, dip_avwap, mpoc, p, s3] if lvl and lvl < close_price * 0.992]
             down_targets.sort(reverse=True)
-            tp1 = down_targets[0] if down_targets else p
-            tp2 = p if p < tp1 else (mpoc if (mpoc > 0 and mpoc < tp1) else None)
+            tp1 = down_targets[0] if down_targets else (close_price * 0.988)
+            tp2 = down_targets[-1] if len(down_targets) > 1 else (s3 if (s3 > 0 and s3 < tp1 * 0.995) else None)
             target_name = "AVWAP" if (tp1 in [tepe_avwap, dip_avwap]) else ("mPOC" if tp1 == mpoc else "Pivot P")
             await self._handle_open(
                 symbol=symbol, side="SHORT", entry_price=close_price,
@@ -800,7 +807,7 @@ class StrategyEngine:
             # Smart Multi-Target: En yakin ilk direnci TP1, nihai hedefi TP2 yap
             up_targets = [
                 lvl for lvl in [mval, s4, dip_avwap, tepe_avwap, mpoc, s3, p, above_npoc, r3, r4, r5]
-                if lvl and lvl > close_price * 1.004
+                if lvl and lvl > close_price * 1.008
             ]
             up_targets.sort()
             tp1_target = up_targets[0] if up_targets else (p if p > close_price else close_price * 1.01)
@@ -832,7 +839,7 @@ class StrategyEngine:
             # Smart Multi-Target: En yakin ilk destegi TP1, nihai hedefi TP2 yap
             down_targets = [
                 lvl for lvl in [mvah, r4, tepe_avwap, dip_avwap, mpoc, r3, p, below_npoc, s3, s4, s5]
-                if lvl and lvl < close_price * 0.996
+                if lvl and lvl < close_price * 0.992
             ]
             down_targets.sort(reverse=True)
             tp1_target = down_targets[0] if down_targets else (p if p < close_price else close_price * 0.99)
