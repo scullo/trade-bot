@@ -1,3 +1,4 @@
+from crypto_payment_gateway import CryptoPaymentGateway
 from db_manager import DatabaseManager
 import asyncio
 import json
@@ -1205,6 +1206,67 @@ HTML_PAGE = """
 
     
     
+    
+    <!-- UPGRADE & CRYPTO PAYMENT MODAL -->
+    <div id="upgrade-modal-overlay" class="modal-overlay" style="display:none;" onclick="if(event.target === this) closeUpgradeModal()">
+        <div class="modal-card" style="max-width:520px; text-align:left;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                <div style="font-size:18px; font-weight:900; color:#fff; display:flex; align-items:center; gap:8px;">
+                    <span>💎</span> VALKYRIE ABONELİK & OTOMATİK USDT ÖDEME
+                </div>
+                <button onclick="closeUpgradeModal()" style="background:transparent; border:none; color:#94a3b8; font-size:20px; cursor:pointer;">✕</button>
+            </div>
+
+            <!-- PLAN SELECTOR -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:14px;">
+                <div id="plan-card-pro" onclick="selectUpgradePlan('PRO')" style="background:rgba(0,242,254,0.06); border:2px solid var(--cyan); border-radius:12px; padding:12px; cursor:pointer; text-align:center;">
+                    <div style="font-size:13px; font-weight:800; color:#fff;">💎 PRO PLAN</div>
+                    <div style="font-size:20px; font-weight:900; color:var(--cyan); margin:4px 0;" id="modal-price-pro">$69 / Ay</div>
+                    <div style="font-size:11px; color:#94a3b8;">20 Parite • 5x Kaldıraç</div>
+                </div>
+                <div id="plan-card-vip" onclick="selectUpgradePlan('VIP')" style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:12px; cursor:pointer; text-align:center;">
+                    <div style="font-size:13px; font-weight:800; color:#fff;">👑 VIP ELITE</div>
+                    <div style="font-size:20px; font-weight:900; color:var(--yellow); margin:4px 0;" id="modal-price-vip">$199 / Ay</div>
+                    <div style="font-size:11px; color:#94a3b8;">100 Parite • Sınırsız</div>
+                </div>
+            </div>
+
+            <!-- NETWORK SELECTOR -->
+            <div style="margin-bottom:12px;">
+                <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Ödeme Ağı (Network)</label>
+                <select id="payment-network-select" class="settings-select" onchange="updateDepositWalletDisplay()">
+                    <option value="TRC20" selected>USDT (TRC20 / Tron Ağı) — En Hızlı & Düşük Ücret</option>
+                    <option value="BEP20">USDT (BEP20 / BSC Ağı)</option>
+                </select>
+            </div>
+
+            <!-- DEPOSIT ADDRESS BOX WITH 1-CLICK COPY -->
+            <div style="background:rgba(0,0,0,0.5); border:1px solid rgba(0,242,254,0.25); border-radius:10px; padding:12px; margin-bottom:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <span style="font-size:11.5px; color:#94a3b8;">Ödeme Gönderilecek USDT Adresi:</span>
+                    <span id="copy-success-badge" style="display:none; color:var(--green); font-size:11px; font-weight:700;">✅ Kopyalandı!</span>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input type="text" id="deposit-wallet-address" readonly class="settings-input" style="font-size:11.5px; color:var(--cyan); background:rgba(0,0,0,0.4);" value="TXvK7w7ValkyrieQuantProTRC20DepositVault99" />
+                    <button type="button" onclick="copyDepositAddress()" style="background:var(--blue); border:none; color:#fff; padding:8px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">📋 Kopyala</button>
+                </div>
+                <div style="font-size:11px; color:#94a3b8; margin-top:6px;">Lütfen tam olarak <b id="lbl-exact-payment" style="color:#fff;">69.00 USDT</b> gönderiniz.</div>
+            </div>
+
+            <!-- TX HASH INPUT -->
+            <div style="margin-bottom:14px;">
+                <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Transfer İşlem Kodu (TxHash / TxID)</label>
+                <input type="text" id="input-payment-txhash" placeholder="Binance/Cüzdandan aldığınız 64 haneli TxHash kodunu yapıştırınız..." class="settings-input" />
+            </div>
+
+            <button class="btn-save-settings" style="width:100%; background:linear-gradient(135deg, #00f2fe, #4facfe);" onclick="submitCryptoPayment()">
+                ⚡ Ödemeyi Doğrula ve Lisansımı 30 Gün Aktif Et
+            </button>
+
+            <div id="payment-status-box" style="display:none; margin-top:12px; padding:12px; border-radius:8px; font-size:12px; font-family:'JetBrains Mono'; line-height:1.5;"></div>
+        </div>
+    </div>
+
     <!-- AUTHENTICATION (LOGIN / 24H TRIAL REGISTER) MODAL -->
     <div id="auth-modal-overlay" class="modal-overlay" style="display:none;" onclick="if(event.target === this) closeAuthModal()">
         <div class="modal-card" style="max-width:440px; text-align:left;">
@@ -1871,6 +1933,46 @@ HTML_PAGE = """
             </div>
         </div>
 
+        
+            <!-- ADMIN WALLET & PRICING CONFIGURATION BOX -->
+            <div class="setting-group-box" style="margin-bottom:16px;">
+                <div style="font-size:14px; font-weight:800; color:var(--cyan); margin-bottom:10px; display:flex; align-items:center; gap:8px;">
+                    <span>💳</span> USDT ÖDEME CÜZDANLARI & PAKET FİYATLANDIRMA MASASI
+                </div>
+                <div style="font-size:12px; color:#cbd5e1; margin-bottom:14px;">
+                    Müşterilerin 24 saatlik denemeden sonra ödeme yapacağı cüzdan adreslerinizi ve aylık paket fiyatlarını buradan yönetebilirsiniz.
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-bottom:12px;">
+                    <div>
+                        <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">USDT TRC20 (Tron) Cüzdan Adresiniz</label>
+                        <input type="text" id="admin-input-trc20" class="settings-input" placeholder="TRON / TRC20 cüzdan adresiniz..." value="TXvK7w7ValkyrieQuantProTRC20DepositVault99" />
+                    </div>
+                    <div>
+                        <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">USDT BEP20 (BSC) Cüzdan Adresiniz</label>
+                        <input type="text" id="admin-input-bep20" class="settings-input" placeholder="BSC / BEP20 cüzdan adresiniz..." value="0x71C836393791B339243764835261821039818299" />
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-bottom:16px;">
+                    <div>
+                        <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Pro Plan Aylık Fiyat ($ USDT)</label>
+                        <input type="number" id="admin-input-price-pro" step="1" class="settings-input" value="69" />
+                    </div>
+                    <div>
+                        <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">VIP Elite Aylık Fiyat ($ USDT)</label>
+                        <input type="number" id="admin-input-price-vip" step="1" class="settings-input" value="199" />
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span id="admin-save-msg" style="font-size:12px; color:var(--green); font-weight:700; display:none;">✅ Cüzdan ve fiyat ayarları başarıyla kaydedildi!</span>
+                    <button class="btn-save-settings" onclick="saveAdminPaymentConfig()">
+                        💾 Cüzdan & Fiyat Ayarlarını Kaydet
+                    </button>
+                </div>
+            </div>
+
         <!-- SUBSCRIBER MANAGEMENT TABLE -->
         <div class="history-full-box">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
@@ -1907,6 +2009,180 @@ HTML_PAGE = """
     </div>
 
     <script>
+
+        // =========================================================================
+        // AUTOMATED CRYPTO PAYMENT & UPGRADE MODAL JS ENGINE
+        // =========================================================================
+        let selectedUpgradePlan = 'PRO';
+        let paymentSettings = {
+            trc20_wallet: 'TXvK7w7ValkyrieQuantProTRC20DepositVault99',
+            bep20_wallet: '0x71C836393791B339243764835261821039818299',
+            price_pro: 69.0,
+            price_vip: 199.0
+        };
+
+        function openUpgradeModal() {
+            const m = document.getElementById('upgrade-modal-overlay');
+            if (m) m.style.display = 'flex';
+            loadPaymentConfig();
+        }
+
+        function closeUpgradeModal() {
+            const m = document.getElementById('upgrade-modal-overlay');
+            if (m) m.style.display = 'none';
+        }
+
+        function selectUpgradePlan(plan) {
+            selectedUpgradePlan = plan;
+            const cPro = document.getElementById('plan-card-pro');
+            const cVip = document.getElementById('plan-card-vip');
+            const lblExact = document.getElementById('lbl-exact-payment');
+
+            if (plan === 'PRO') {
+                if (cPro) { cPro.style.border = '2px solid var(--cyan)'; cPro.style.background = 'rgba(0,242,254,0.06)'; }
+                if (cVip) { cVip.style.border = '1px solid rgba(255,255,255,0.1)'; cVip.style.background = 'rgba(255,255,255,0.02)'; }
+                if (lblExact) lblExact.innerText = `${paymentSettings.price_pro.toFixed(2)} USDT`;
+            } else {
+                if (cVip) { cVip.style.border = '2px solid var(--yellow)'; cVip.style.background = 'rgba(251,197,49,0.08)'; }
+                if (cPro) { cPro.style.border = '1px solid rgba(255,255,255,0.1)'; cPro.style.background = 'rgba(255,255,255,0.02)'; }
+                if (lblExact) lblExact.innerText = `${paymentSettings.price_vip.toFixed(2)} USDT`;
+            }
+        }
+
+        async function loadPaymentConfig() {
+            try {
+                const res = await fetch('/api/payment/config');
+                const data = await res.json();
+                if (data.success && data.settings) {
+                    paymentSettings = data.settings;
+                    updateDepositWalletDisplay();
+                    const mPro = document.getElementById('modal-price-pro');
+                    const mVip = document.getElementById('modal-price-vip');
+                    if (mPro) mPro.innerText = `$${paymentSettings.price_pro} / Ay`;
+                    if (mVip) mVip.innerText = `$${paymentSettings.price_vip} / Ay`;
+
+                    const aTrc = document.getElementById('admin-input-trc20');
+                    const aBep = document.getElementById('admin-input-bep20');
+                    const aPro = document.getElementById('admin-input-price-pro');
+                    const aVip = document.getElementById('admin-input-price-vip');
+                    if (aTrc) aTrc.value = paymentSettings.trc20_wallet;
+                    if (aBep) aBep.value = paymentSettings.bep20_wallet;
+                    if (aPro) aPro.value = paymentSettings.price_pro;
+                    if (aVip) aVip.value = paymentSettings.price_vip;
+                }
+            } catch (e) {
+                console.error('Payment config load error:', e);
+            }
+        }
+
+        function updateDepositWalletDisplay() {
+            const net = document.getElementById('payment-network-select').value;
+            const addrInput = document.getElementById('deposit-wallet-address');
+            if (!addrInput) return;
+
+            if (net === 'TRC20') {
+                addrInput.value = paymentSettings.trc20_wallet;
+            } else {
+                addrInput.value = paymentSettings.bep20_wallet;
+            }
+        }
+
+        function copyDepositAddress() {
+            const addrInput = document.getElementById('deposit-wallet-address');
+            const badge = document.getElementById('copy-success-badge');
+            if (addrInput) {
+                navigator.clipboard.writeText(addrInput.value);
+                if (badge) {
+                    badge.style.display = 'inline';
+                    setTimeout(() => { badge.style.display = 'none'; }, 2000);
+                }
+            }
+        }
+
+        async function saveAdminPaymentConfig() {
+            const trc20_wallet = document.getElementById('admin-input-trc20').value;
+            const bep20_wallet = document.getElementById('admin-input-bep20').value;
+            const price_pro = parseFloat(document.getElementById('admin-input-price-pro').value) || 69.0;
+            const price_vip = parseFloat(document.getElementById('admin-input-price-vip').value) || 199.0;
+            const msgEl = document.getElementById('admin-save-msg');
+
+            try {
+                const res = await fetch('/api/admin/save_payment_config', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ trc20_wallet, bep20_wallet, price_pro, price_vip })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    if (msgEl) {
+                        msgEl.style.display = 'inline';
+                        setTimeout(() => { msgEl.style.display = 'none'; }, 3000);
+                    }
+                    paymentSettings = { trc20_wallet, bep20_wallet, price_pro, price_vip };
+                } else {
+                    alert('Hata: ' + data.message);
+                }
+            } catch (e) {
+                alert('Kaydetme Hatası: ' + e);
+            }
+        }
+
+        async function submitCryptoPayment() {
+            const tx_hash = document.getElementById('input-payment-txhash').value.trim();
+            const network = document.getElementById('payment-network-select').value;
+            const box = document.getElementById('payment-status-box');
+            const userId = currentUser ? currentUser.id : 1;
+
+            if (!tx_hash) {
+                box.style.display = 'block';
+                box.style.background = 'rgba(255,71,87,0.1)';
+                box.style.color = 'var(--red)';
+                box.innerText = 'Lütfen transfer işlem kodunu (TxHash) giriniz!';
+                return;
+            }
+
+            box.style.display = 'block';
+            box.style.background = 'rgba(0,242,254,0.1)';
+            box.style.color = 'var(--cyan)';
+            box.innerHTML = `⏳ <b>Blokzincir Onayı Taranıyor...</b> TxHash doğrulanıyor ve sahtekarlık kalkanı kontrol ediliyor...`;
+
+            try {
+                const res = await fetch('/api/payment/verify', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        user_id: userId,
+                        plan_type: selectedUpgradePlan,
+                        tx_hash: tx_hash,
+                        network: network
+                    })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    box.style.background = 'rgba(14,203,129,0.15)';
+                    box.style.color = 'var(--green)';
+                    box.innerHTML = `
+                        <div style="font-size:13px; font-weight:800; margin-bottom:4px;">🎉 ÖDEME ONAYLANDI & LİSANS AKTİF!</div>
+                        <div>${data.message}</div>
+                        <div style="font-size:11px; color:#cbd5e1; margin-top:6px;">Fatura No: <b>${data.receipt.receipt_id}</b> | Bitiş: <b>${data.receipt.expires_at}</b></div>
+                    `;
+                    setTimeout(() => {
+                        closeUpgradeModal();
+                        updateUserSessionUI();
+                    }, 3500);
+                } else {
+                    box.style.background = 'rgba(255,71,87,0.15)';
+                    box.style.color = 'var(--red)';
+                    box.innerHTML = `❌ <b>Doğrulama Başarısız:</b> ${data.message}`;
+                }
+            } catch (e) {
+                box.style.background = 'rgba(255,71,87,0.15)';
+                box.style.color = 'var(--red)';
+                box.innerText = 'Bağlantı Hatası: Lütfen internet bağlantınızı kontrol edip tekrar deneyiniz.';
+            }
+        }
+
 
         // =========================================================================
         // MULTI-TENANT AUTHENTICATION & MASTER ADMIN JS ENGINE
@@ -4525,6 +4801,43 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
         except Exception as e:
             return web.json_response({"error": str(e)}, status=500)
 
+    gateway_inst = CryptoPaymentGateway(db_inst)
+
+    async def api_payment_config(request):
+        try:
+            settings = db_inst.get_payment_settings()
+            return web.json_response({"success": True, "settings": settings})
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=500)
+
+    async def api_admin_save_payment_config(request):
+        try:
+            body = await request.json()
+            trc20 = body.get('trc20_wallet', '')
+            bep20 = body.get('bep20_wallet', '')
+            p_pro = float(body.get('price_pro', 69.0))
+            p_vip = float(body.get('price_vip', 199.0))
+
+            db_inst.save_payment_settings(trc20, bep20, p_pro, p_vip)
+            return web.json_response({"success": True, "message": "Ödeme cüzdanları ve fiyatlandırma başarıyla kaydedildi!"})
+        except Exception as e:
+            return web.json_response({"success": False, "message": f"Hata: {e}"}, status=500)
+
+    async def api_payment_verify(request):
+        try:
+            body = await request.json()
+            user_id = int(body.get('user_id', 1))
+            plan_type = body.get('plan_type', 'PRO')
+            tx_hash = body.get('tx_hash', '')
+            network = body.get('network', 'TRC20')
+
+            ok, msg, receipt = await gateway_inst.verify_and_activate_payment(user_id, plan_type, tx_hash, network)
+            if not ok:
+                return web.json_response({"success": False, "message": msg}, status=400)
+            return web.json_response({"success": True, "message": msg, "receipt": receipt})
+        except Exception as e:
+            return web.json_response({"success": False, "message": f"Ödeme Doğrulama Hatası: {e}"}, status=500)
+
     async def api_data(request):
         try:
             symbols_data = {}
@@ -4846,6 +5159,9 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
     app.router.add_post('/api/auth/register', api_auth_register)
     app.router.add_post('/api/auth/login', api_auth_login)
     app.router.add_get('/api/admin/overview', api_admin_overview)
+    app.router.add_get('/api/payment/config', api_payment_config)
+    app.router.add_post('/api/admin/save_payment_config', api_admin_save_payment_config)
+    app.router.add_post('/api/payment/verify', api_payment_verify)
     app.router.add_get('/api/data', api_data)
     app.router.add_get('/api/candles', api_candles)
     app.router.add_get('/api/export_excel', api_export_excel)

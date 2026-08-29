@@ -85,6 +85,33 @@ class DatabaseManager:
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                 )
             """)
+
+            # 5. KRIPTO ODEMELERI & BLOKZINCIR ISLEM KAYITLARI (ANTI-REPLAY)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS crypto_payments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    plan_type TEXT NOT NULL,
+                    tx_hash TEXT UNIQUE NOT NULL,
+                    network TEXT NOT NULL,
+                    amount_usdt REAL NOT NULL,
+                    recipient_wallet TEXT NOT NULL,
+                    receipt_id TEXT UNIQUE NOT NULL,
+                    status TEXT DEFAULT 'VERIFIED',
+                    verified_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+            """)
+
+            # 6. SISTEM GENEL AYARLARI (ADMIN CUZDANLARI & FIYATLANDIRMA)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS system_settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
             conn.commit()
 
     def check_binance_uid_trial_eligibility(self, raw_binance_uid: str) -> tuple:
@@ -320,3 +347,44 @@ class DatabaseManager:
                 "vip_count": vip_count,
                 "users_list": users
             }
+
+
+    def get_payment_settings(self) -> dict:
+        """Admin tarafindan belirlenen resmi USDT cuzdanlarini ve paket fiyatlarini dondurur."""
+        default_settings = {
+            "trc20_wallet": "TXvK7w7ValkyrieQuantProTRC20DepositVault99",
+            "bep20_wallet": "0x71C836393791B339243764835261821039818299",
+            "price_pro": 69.0,
+            "price_vip": 199.0
+        }
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT key, value FROM system_settings")
+            for row in cursor.fetchall():
+                k = row['key']
+                v = row['value']
+                if k in ("price_pro", "price_vip"):
+                    default_settings[k] = float(v)
+                else:
+                    default_settings[k] = v
+        return default_settings
+
+    def save_payment_settings(self, trc20_wallet: str, bep20_wallet: str, price_pro: float = 69.0, price_vip: float = 199.0) -> bool:
+        """Admin panelinden girilen USDT cuzdanlarini ve fiyatlarini kaydeder."""
+        now_str = datetime.now(timezone(timedelta(hours=3))).strftime('%Y-%m-%d %H:%M:%S')
+        settings_map = {
+            "trc20_wallet": trc20_wallet.strip(),
+            "bep20_wallet": bep20_wallet.strip(),
+            "price_pro": str(float(price_pro)),
+            "price_vip": str(float(price_vip))
+        }
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            for k, v in settings_map.items():
+                cursor.execute("""
+                    INSERT INTO system_settings (key, value, updated_at)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at
+                """, (k, v, now_str))
+            conn.commit()
+            return True
