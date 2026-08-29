@@ -1501,6 +1501,138 @@ HTML_PAGE = """
         </div>
     </div>
 
+    <!-- =========================================================================
+         VALKYRIE QUANT DESK — ULTRA-LUXURY PUBLIC LANDING PAGE (AUTH GATEWAY)
+         ========================================================================= -->
+    <div id="landing-page-view" style="display:none; min-height:100vh; background:radial-gradient(circle at 50% 15%, rgba(0,242,254,0.08), transparent 60%), #07090e; color:#fff; position:relative; overflow-x:hidden;">
+        
+        <!-- LANDING NAVBAR -->
+        <nav style="display:flex; justify-content:space-between; align-items:center; padding:18px 40px; border-bottom:1px solid rgba(255,255,255,0.06); background:rgba(7,9,14,0.75); backdrop-filter:blur(15px); position:sticky; top:0; z-index:100;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div style="width:40px; height:40px; background:rgba(0,242,254,0.08); border:1.5px solid var(--cyan); border-radius:12px; display:flex; align-items:center; justify-content:center; box-shadow:0 0 25px rgba(0,242,254,0.25);">
+                    <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="landing_valk_wing" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f2fe" />
+      <stop offset="100%" stop-color="#4facfe" />
+    </linearGradient>
+    <linearGradient id="landing_valk_core" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00f2fe" />
+      <stop offset="50%" stop-color="#38ef7d" />
+      <stop offset="100%" stop-color="#ffffff" />
+    </linearGradient>
+    <filter id="landing_valk_glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="2.5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <path d="M6 14L18 26L24 42L20 22L10 12L6 14Z" fill="url(#landing_valk_wing)" opacity="0.85"/>
+  <path d="M42 14L30 26L24 42L28 22L38 12L42 14Z" fill="url(#landing_valk_wing)" opacity="0.85"/>
+  <path d="M24 6L32 20L24 36L16 20L24 6Z" fill="url(#landing_valk_wing)" filter="url(#landing_valk_glow)"/>
+  <polygon points="24,14 28,21 24,28 20,21" fill="url(#landing_valk_core)"/>
+</svg>
+                </div>
+                <div style="font-size:18px; font-weight:900; letter-spacing:0.5px;">
+                    VALKYRIE <span style="background: linear-gradient(135deg, #00f2fe, #4facfe); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">QUANT DESK</span>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px;">
+                <button onclick="openAuthModal('login')" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); color:#cbd5e1; font-weight:800; font-size:13px; padding:9px 18px; border-radius:9px; cursor:pointer;">
+                    🔐 Giriş Yap
+                </button>
+                <button onclick="openAuthModal('register')" style="background:linear-gradient(135deg, #00f2fe, #4facfe); border:none; color:#000; font-weight:900; font-size:13px; padding:9px 22px; border-radius:9px; cursor:pointer; box-shadow:0 4px 20px rgba(0,242,254,0.3);">
+                    🚀 48h Ücretsiz Demo
+                </button>
+            </div>
+        </nav>
+
+        <!-- HERO SECTION -->
+        <section style="max-width:1050px; margin:0 auto; padding:60px 24px 45px; text-align:center;">
+            <div style="display:inline-flex; align-items:center; gap:8px; background:rgba(0,242,254,0.08); border:1px solid rgba(0,242,254,0.3); padding:6px 16px; border-radius:30px; font-size:12px; font-weight:800; color:var(--cyan); margin-bottom:22px; box-shadow:0 0 20px rgba(0,242,254,0.15);">
+                <span class="live-dot" style="width:8px; height:8px;"></span>
+                YENİ NESİL KRİPTO QUANT ALGORİTMİK TİCARET TERMİNALİ
+            </div>
+
+            <h1 style="font-size:42px; font-weight:900; line-height:1.2; letter-spacing:-0.5px; margin-bottom:18px;">
+                100 Kripto Paritede <br>
+                <span style="background: linear-gradient(135deg, #00f2fe 0%, #4facfe 50%, #38ef7d 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">7/24 Otonom Algoritmik Likidite Taraması</span>
+            </h1>
+
+            <p style="font-size:16px; color:#94a3b8; max-width:740px; margin:0 auto 34px; line-height:1.6;">
+                Valkyrie Quant Desk, kurumsal seviyede likidite boşluklarını, nPOC seviye pusularını ve momentum kırılımlarını 5 dakikalık mumlarda tarar; risk kalkanı koruması altında Binance Vadeli hesabınıza milisaniyelik emir iletir.
+            </p>
+
+            <div style="display:flex; justify-content:center; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:44px;">
+                <button onclick="openAuthModal('register')" style="background:linear-gradient(135deg, #00f2fe, #4facfe); border:none; color:#000; font-weight:900; font-size:14.5px; padding:14px 30px; border-radius:12px; cursor:pointer; box-shadow:0 8px 30px rgba(0,242,254,0.35);">
+                    🚀 48 Saatlik Ücretsiz Demo Başlat ($100,000 Sanal Kasa)
+                </button>
+                <button onclick="openAuthModal('login')" style="background:rgba(255,255,255,0.04); border:1.5px solid rgba(255,255,255,0.15); color:#ffffff; font-weight:800; font-size:14.5px; padding:14px 26px; border-radius:12px; cursor:pointer;">
+                    🔐 Yatırımcı Girişi
+                </button>
+            </div>
+
+            <!-- TRUST & SECURITY BADGES -->
+            <div style="display:flex; justify-content:center; align-items:center; gap:24px; flex-wrap:wrap; font-size:12px; color:#cbd5e1; border-top:1px solid rgba(255,255,255,0.06); padding-top:22px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    <span>🔒 <b>AES-256</b> Donanım Seviyesinde Şifreli Kasa</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                    <span>🚫 <b>Para Çekme Yetkisi Yok</b> (Sadece Al-Sat)</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                    <span>⚡ <b>5M Mumlarla</b> 100/100 Canlı WebSocket Akışı</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4 FEATURE CARDS -->
+        <section style="max-width:1100px; margin:0 auto; padding:10px 24px 70px;">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:18px;">
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:22px; text-align:left;">
+                    <div style="width:38px; height:38px; background:rgba(0,242,254,0.1); border-radius:10px; display:flex; align-items:center; justify-content:center; margin-bottom:14px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
+                    </div>
+                    <div style="font-size:15px; font-weight:800; color:#fff; margin-bottom:6px;">100 Parite Canlı Radar</div>
+                    <div style="font-size:12.5px; color:#94a3b8; line-height:1.5;">Tüm Binance Vadeli piyasasını 5M mumlarla tarayarak yüksek olasılıklı pusu ve dönüş bölgelerini anlık yakalar.</div>
+                </div>
+
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:22px; text-align:left;">
+                    <div style="width:38px; height:38px; background:rgba(251,197,49,0.1); border-radius:10px; display:flex; align-items:center; justify-content:center; margin-bottom:14px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--yellow)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    </div>
+                    <div style="font-size:15px; font-weight:800; color:#fff; margin-bottom:6px;">Valkyrie Aegis Sentinel</div>
+                    <div style="font-size:12.5px; color:#94a3b8; line-height:1.5;">6 katmanlı otomatik risk zırhı, izole marjin kilidi ve günlük devre kesicilerle kasanızı piyasa şoklarına karşı korur.</div>
+                </div>
+
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:22px; text-align:left;">
+                    <div style="width:38px; height:38px; background:rgba(56,239,125,0.1); border-radius:10px; display:flex; align-items:center; justify-content:center; margin-bottom:14px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polygon points="12 2 22 8.5 12 22 2 8.5 12 2"></polygon></svg>
+                    </div>
+                    <div style="font-size:15px; font-weight:800; color:#fff; margin-bottom:6px;">Tek Fiyat ($99 / Ay)</div>
+                    <div style="font-size:12.5px; color:#94a3b8; line-height:1.5;">Karmaşık paketler yok. Tek bir aylık abonelikle 100 paritede sınırsız otonom işlem ve tüm özelliklere tam erişim.</div>
+                </div>
+
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:22px; text-align:left;">
+                    <div style="width:38px; height:38px; background:rgba(79,172,254,0.1); border-radius:10px; display:flex; align-items:center; justify-content:center; margin-bottom:14px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4facfe" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    </div>
+                    <div style="font-size:15px; font-weight:800; color:#fff; margin-bottom:6px;">48 Sütunlu Adli Defter</div>
+                    <div style="font-size:12.5px; color:#94a3b8; line-height:1.5;">Her işlemin giriş-çıkış anı, MFE/MAE derinliği ve risk çarpanları kayıt altına alınır; tek tıkla Excel (.XLSX) olarak indirilir.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FOOTER -->
+        <footer style="border-top:1px solid rgba(255,255,255,0.06); padding:24px; text-align:center; font-size:11.5px; color:#64748b;">
+            <div style="margin-bottom:6px;">VALKYRIE QUANT DESK © 2026 • Kurumsal Algoritmik Ticaret Sistemleri</div>
+            <div>Risk Bildirimi: Kripto vadeli işlemler yüksek volatilite ve risk içerir. Geçmiş performans gelecekteki getirilerin garantisi değildir.</div>
+        </footer>
+    </div>
+
+    <div id="dashboard-app-view" style="display:none;">
     <!-- TOP BAR BRANDING -->
     <!-- CUSTOM LIVE SETTINGS MODAL -->
 
@@ -2139,6 +2271,8 @@ HTML_PAGE = """
         </div>
     </div>
 
+    </div><!-- END DASHBOARD-APP-VIEW -->
+
     <script>
 
         // =========================================================================
@@ -2476,38 +2610,57 @@ HTML_PAGE = """
         }
 
         function updateUserSessionUI() {
+            const landingView = document.getElementById('landing-page-view');
+            const appView = document.getElementById('dashboard-app-view');
             const cont = document.getElementById('user-session-container');
             const navAdminTab = document.getElementById('tab-btn-admin');
 
+            if (!currentUser) {
+                // KULLANICI GIRIS YAPMAMIS -> LANDING PAGE GOSTER
+                if (landingView) landingView.style.display = 'block';
+                if (appView) appView.style.display = 'none';
+                return;
+            }
+
+            // KULLANICI GIRIS YAPMIS -> DASHBOARD GOSTER
+            if (landingView) landingView.style.display = 'none';
+            if (appView) appView.style.display = 'block';
+
             if (!cont) return;
 
-            if (currentUser && currentUser.role === 'ADMIN') {
+            if (currentUser.role === 'ADMIN') {
                 cont.innerHTML = `
-                    <div class="live-tag" onclick="openAuthModal('admin')" style="cursor:pointer; border-color:rgba(0,242,254,0.4); background:rgba(0,242,254,0.08);" title="Master Admin Masasını Yönet">
-                        👑 <b style="color:var(--cyan); margin-left:4px;">Master Admin</b>
+                    <div class="live-tag" style="border-color:rgba(0,242,254,0.4); background:rgba(0,242,254,0.08);" title="Master Admin Masası">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" style="margin-right:4px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        <b style="color:var(--cyan);">Master Admin</b>
                     </div>
+                    <button onclick="handleLogout()" style="background:rgba(255,71,87,0.12); border:1px solid rgba(255,71,87,0.3); color:var(--red); font-weight:800; font-size:11.5px; padding:6px 12px; border-radius:8px; cursor:pointer;" title="Oturumu Kapat">
+                        Çıkış Yap
+                    </button>
                 `;
                 if (navAdminTab) navAdminTab.style.display = 'inline-flex';
-            } else if (currentUser && currentUser.email) {
+            } else if (currentUser.email) {
                 const cleanName = currentUser.email.split('@')[0];
                 cont.innerHTML = `
-                    <div class="live-tag" onclick="openAuthModal('login')" style="cursor:pointer;" title="Hesabım">
-                        👤 <b style="color:#cbd5e1; margin-left:4px;">${cleanName}</b>
+                    <div class="live-tag" title="Hesap Bilgilerim">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <b style="color:#cbd5e1;">${cleanName}</b>
                         <span style="background:rgba(251,197,49,0.2); color:var(--yellow); padding:2px 6px; border-radius:4px; font-size:10px; margin-left:6px;">48h Demo</span>
                     </div>
-                `;
-                if (navAdminTab) navAdminTab.style.display = 'none';
-            } else {
-                cont.innerHTML = `
-                    <button class="nav-tab-btn" onclick="openAuthModal('register')" style="background:rgba(0,242,254,0.08); border:1.5px solid var(--cyan); color:#fff; font-size:12px; font-weight:800; padding:6px 14px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> Giriş Yap / 48h Demo
+                    <button onclick="handleLogout()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#94a3b8; font-weight:800; font-size:11.5px; padding:6px 12px; border-radius:8px; cursor:pointer;" title="Oturumu Kapat">
+                        Çıkış Yap
                     </button>
                 `;
                 if (navAdminTab) navAdminTab.style.display = 'none';
             }
         }
 
-        async function submitLogin() {
+        function handleLogout() {
+            localStorage.removeItem('valkyrie_auth_user');
+            currentUser = null;
+            updateUserSessionUI();
+        }
+async function submitLogin() {
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             const box = document.getElementById('auth-msg-box');
