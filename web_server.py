@@ -1428,12 +1428,43 @@ HTML_PAGE = """
 
                             <div>
                                 <label style="font-size:12px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Maksimum Açık Pozisyon</label>
-                                <input type="number" id="input-max-pos" step="1" min="1" max="100" value="3" class="settings-input" />
+                                <input type="number" id="input-max-pos" step="1" min="1" max="100" value="100" class="settings-input" />
+                            </div>
+                        </div>
+
+                        <!-- KULLANICI TANIMLI GUCLU GUVENLIK ZIRHI KONTROLLERI -->
+                        <div style="background:rgba(0,242,254,0.04); border:1px solid rgba(0,242,254,0.2); border-radius:10px; padding:14px; margin-bottom:16px;">
+                            <div style="font-size:12.5px; font-weight:800; color:var(--cyan); margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                                <span>🛡️</span> ÖZEL RİSK & KASA GÜVENLİK ZIRHI
+                            </div>
+                            
+                            <div style="margin-bottom:12px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                    <label style="font-size:12px; font-weight:700; color:#cbd5e1;">Portföy Marjin Tavan Kilidi (%)</label>
+                                    <span id="lbl-margin-cap" style="font-size:12px; font-weight:800; color:var(--cyan); font-family:'JetBrains Mono';">%40 Kasa Limiti</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <input type="range" id="input-margin-cap-slider" min="10" max="100" step="5" value="40" class="slider" oninput="document.getElementById('input-margin-cap').value = this.value; document.getElementById('lbl-margin-cap').innerText = '%' + this.value + ' Kasa Limiti';" />
+                                    <input type="number" id="input-margin-cap" min="10" max="100" step="5" value="40" class="settings-input" style="width:65px; text-align:center;" oninput="document.getElementById('input-margin-cap-slider').value = this.value; document.getElementById('lbl-margin-cap').innerText = '%' + this.value + ' Kasa Limiti';" />
+                                </div>
+                                <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Açık pozisyonların toplam marjini kasanın bu oranına ulaştığında yeni işlem açılmaz.</div>
+                            </div>
+
+                            <div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                    <label style="font-size:12px; font-weight:700; color:#cbd5e1;">Günlük Devre Kesici (Max Kayıp %)</label>
+                                    <span id="lbl-daily-loss" style="font-size:12px; font-weight:800; color:var(--yellow); font-family:'JetBrains Mono';">%3 Günlük Kayıp Limiti</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <input type="range" id="input-daily-loss-slider" min="1" max="20" step="1" value="3" class="slider" oninput="document.getElementById('input-daily-loss').value = this.value; document.getElementById('lbl-daily-loss').innerText = '%' + this.value + ' Günlük Kayıp Limiti';" />
+                                    <input type="number" id="input-daily-loss" min="1" max="20" step="1" value="3" class="settings-input" style="width:65px; text-align:center;" oninput="document.getElementById('input-daily-loss-slider').value = this.value; document.getElementById('lbl-daily-loss').innerText = '%' + this.value + ' Günlük Kayıp Limiti';" />
+                                </div>
+                                <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Bugün (00:00'dan beri) toplam net zarar bu orana ulaşırsa gün sonuna kadar yeni işlem açılışı kilitlenir.</div>
                             </div>
                         </div>
 
                         <button class="btn-save-settings" onclick="saveBinanceSettings()">
-                            💾 Risk Ayarlarını Kaydet
+                            💾 Özel Risk ve Güvenlik Ayarlarını Kaydet
                         </button>
                     </div>
                 </div>

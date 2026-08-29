@@ -565,22 +565,25 @@ class StrategyEngine:
         if len(self.paper_trader.open_positions) >= MAX_OPEN_POSITIONS:
             return
 
-        # 🛡️ GÜVENLİK ZIRHI 1: GÜNLÜK DEVRE KESİCİ (CIRCUIT BREAKER - Max %3 Günlük Kayıp)
+        # 🛡️ GÜVENLİK ZIRHI 1: KULLANICI TANIMLI GÜNLÜK DEVRE KESİCİ (CIRCUIT BREAKER)
+        user_daily_loss_pct = getattr(self.paper_trader, 'max_daily_drawdown_pct', 0.03)
         cb_ok, cb_msg = self.vault.check_daily_circuit_breaker(
             getattr(self.paper_trader, 'history', []),
             getattr(self.paper_trader, 'balance', 100000.0),
-            max_loss_pct=0.03
+            max_loss_pct=user_daily_loss_pct
         )
         if not cb_ok:
             print(f">> [GÜVENLİK ZIRHI] {cb_msg}")
             return
 
-        # 🛡️ GÜVENLİK ZIRHI 2: PORTFÖY MARJİN TAVAN KİLİDİ (Max %40 Kasa Kullanımı)
+        # 🛡️ GÜVENLİK ZIRHI 2: KULLANICI TANIMLI PORTFÖY MARJİN TAVAN KİLİDİ
+        user_margin_cap_pct = getattr(self.paper_trader, 'max_portfolio_margin_pct', 0.40)
+        pos_size = getattr(self.paper_trader, 'margin_per_trade', getattr(self.paper_trader, 'position_size', 100.0))
         mc_ok, mc_msg = self.vault.check_margin_cap(
             getattr(self.paper_trader, 'open_positions', {}),
-            new_trade_margin=100.0,
+            new_trade_margin=pos_size,
             balance=getattr(self.paper_trader, 'balance', 100000.0),
-            max_cap_pct=0.40
+            max_cap_pct=user_margin_cap_pct
         )
         if not mc_ok:
             # Sadece kritik durumlarda logla
