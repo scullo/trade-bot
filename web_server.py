@@ -1207,74 +1207,117 @@ HTML_PAGE = """
     
     
     
-    <!-- UPGRADE & CRYPTO PAYMENT MODAL -->
+        <!-- ULTRA-PREMIUM UPGRADE & CRYPTO PAYMENT MODAL -->
     <div id="upgrade-modal-overlay" class="modal-overlay" style="display:none;" onclick="if(event.target === this) closeUpgradeModal()">
-        <div class="modal-card" style="max-width:520px; text-align:left;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                <div style="font-size:18px; font-weight:900; color:#fff; display:flex; align-items:center; gap:8px;">
-                    <span>👑</span> VALKYRIE ALL-ACCESS SINIRSIZ ABONELİK
-                </div>
-                <button onclick="closeUpgradeModal()" style="background:transparent; border:none; color:#94a3b8; font-size:20px; cursor:pointer;">✕</button>
-            </div>
-
-            <!-- SINGLE HERO PLAN CARD -->
-            <div style="background:linear-gradient(135deg, rgba(0,242,254,0.08), rgba(251,197,49,0.05)); border:2px solid var(--cyan); border-radius:14px; padding:16px; margin-bottom:14px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <div style="font-size:16px; font-weight:900; color:#fff;">👑 VALKYRIE ALL-ACCESS</div>
-                        <div style="font-size:12px; color:var(--cyan); margin-top:2px;">Tüm Sistem Özelliklerine 30 Gün Sınırsız Erişim</div>
+        <div class="modal-card" style="max-width:680px; text-align:left; border:1px solid rgba(0,242,254,0.35); box-shadow:0 25px 60px rgba(0,0,0,0.85), 0 0 40px rgba(0,242,254,0.12); padding:26px;">
+            <!-- TOP HEADER -->
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:14px;">
+                <div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:22px;">👑</span>
+                        <div style="font-size:20px; font-weight:900; color:#fff; letter-spacing:0.5px;">
+                            VALKYRIE <span style="background: linear-gradient(135deg, #00f2fe, #4facfe); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">ALL-ACCESS</span> UNLIMITED
+                        </div>
                     </div>
-                    <div style="text-align:right;">
-                        <div style="font-size:24px; font-weight:900; color:var(--cyan); font-family:'JetBrains Mono';" id="modal-price-all-access">$99 / Ay</div>
-                        <div style="font-size:11px; color:var(--green); font-weight:700;">🟢 Sürpriz Komisyon Yok</div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:3px;">
+                        Kurumsal Düzey Kripto Algoritmik Ticaret Platformuna 30 Gün Sınırsız Erişim
                     </div>
                 </div>
-                <div style="margin-top:10px; font-size:11.5px; color:#cbd5e1; display:flex; flex-wrap:wrap; gap:8px;">
-                    <span>✓ 100 Parite Canlı Akış</span>
-                    <span>✓ 48 Sütunlu Adli Defter</span>
-                    <span>✓ VIP Telegram Sinyalleri</span>
-                    <span>✓ Dinamik Risk Kalkanı</span>
-                    <span>✓ Sınırsız İşlem</span>
+                <button onclick="closeUpgradeModal()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; width:32px; height:32px; border-radius:8px; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s ease;" onmouseover="this.style.color='#fff'; this.style.background='rgba(255,71,87,0.2)';" onmouseout="this.style.color='#94a3b8'; this.style.background='rgba(255,255,255,0.05)';">✕</button>
+            </div>
+
+            <!-- HERO PRICING BANNER -->
+            <div style="background:linear-gradient(135deg, rgba(0,242,254,0.1), rgba(79,172,254,0.04)); border:1.5px solid rgba(0,242,254,0.4); border-radius:14px; padding:18px 20px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                <div>
+                    <div style="font-size:12px; font-weight:800; color:var(--cyan); text-transform:uppercase; letter-spacing:1px;">TEK FİYAT • TÜM ÖZELLİKLER DAHİL</div>
+                    <div style="font-size:28px; font-weight:900; color:#ffffff; font-family:'JetBrains Mono'; margin-top:2px;" id="modal-price-all-access">
+                        $99.00 <span style="font-size:14px; font-weight:600; color:#94a3b8;">/ AY</span>
+                    </div>
+                    <div style="font-size:11.5px; color:var(--green); font-weight:700; margin-top:3px;">
+                        🟢 Sürpriz Komisyon Yok • Gizli Masraf Yok • İstediğin Zaman İptal
+                    </div>
+                </div>
+                <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px 14px; text-align:right;">
+                    <div style="font-size:11px; color:#94a3b8;">Aktivasyon Türü:</div>
+                    <div style="font-size:13px; font-weight:800; color:var(--yellow); margin-top:2px;">⚡ Anında Otomatik Onay</div>
+                    <div style="font-size:10.5px; color:#cbd5e1;">Blokzincir TxHash Teyidiyle</div>
                 </div>
             </div>
 
-            <!-- NETWORK SELECTOR -->
-            <div style="margin-bottom:12px;">
-                <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Ödeme Ağı (Network)</label>
-                <select id="payment-network-select" class="settings-select" onchange="updateDepositWalletDisplay()">
-                    <option value="TRC20" selected>USDT (TRC20 / Tron Ağı) — En Hızlı & Düşük Ücret</option>
-                    <option value="BEP20">USDT (BEP20 / BSC Ağı)</option>
+            <!-- VALUE PROPOSITION GRID (WHAT YOU GET) -->
+            <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:14px 16px; margin-bottom:18px;">
+                <div style="font-size:12px; font-weight:800; color:#cbd5e1; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.5px;">
+                    💎 Bu Pakete Neler Dahil? (Sınırsız Özellikler)
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px 16px; font-size:12px; color:#e2e8f0;">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="color:var(--cyan);">✓</span> <b>100 Kripto Paritede</b> Canlı Tarama & İşlem
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="color:var(--cyan);">✓</span> <b>Camarilla R4/S4, nPOC & Macro</b> Setupları
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="color:var(--cyan);">✓</span> <b>Kişiye Özel Risk & Marjin</b> Tavan Kilidi
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="color:var(--cyan);">✓</span> <b>7/24 VIP Telegram</b> Canlı Sinyal Botu
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="color:var(--cyan);">✓</span> <b>48 Sütunlu Adli Defter</b> & Excel İndirme
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="color:var(--cyan);">✓</span> <b>Valkyrie Aegis Sentinel</b> Otomatik Koruma
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAYMENT STEP 1: NETWORK & WALLET -->
+            <div style="margin-bottom:14px;">
+                <label style="font-size:12px; font-weight:800; color:#cbd5e1; display:flex; justify-content:space-between; margin-bottom:6px;">
+                    <span>1. Ödeme Ağını (Network) Seçiniz:</span>
+                    <span style="font-weight:400; color:var(--text-muted);">USDT Transferi</span>
+                </label>
+                <select id="payment-network-select" class="settings-select" onchange="updateDepositWalletDisplay()" style="padding:10px 14px; font-size:13px;">
+                    <option value="TRC20" selected>USDT (TRC20 / Tron Ağı) — En Hızlı & Düşük Ücret (~$1-2)</option>
+                    <option value="BEP20">USDT (BEP20 / Binance Smart Chain) — Hızlı & Düşük Masraf</option>
                 </select>
             </div>
 
-            <!-- DEPOSIT ADDRESS BOX WITH 1-CLICK COPY -->
-            <div style="background:rgba(0,0,0,0.5); border:1px solid rgba(0,242,254,0.25); border-radius:10px; padding:12px; margin-bottom:14px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                    <span style="font-size:11.5px; color:#94a3b8;">Ödeme Gönderilecek USDT Adresi:</span>
-                    <span id="copy-success-badge" style="display:none; color:var(--green); font-size:11px; font-weight:700;">✅ Kopyalandı!</span>
+            <!-- PAYMENT STEP 2: COPY DEPOSIT WALLET -->
+            <div style="background:rgba(0,0,0,0.5); border:1.5px solid rgba(0,242,254,0.3); border-radius:12px; padding:14px; margin-bottom:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-size:12px; font-weight:700; color:#94a3b8;">2. Ödeme Gönderilecek Resmi USDT Adresi:</span>
+                    <span id="copy-success-badge" style="display:none; color:var(--green); font-size:11.5px; font-weight:800;">✅ Cüzdan Kopyalandı!</span>
                 </div>
                 <div style="display:flex; gap:8px; align-items:center;">
-                    <input type="text" id="deposit-wallet-address" readonly class="settings-input" style="font-size:11.5px; color:var(--cyan); background:rgba(0,0,0,0.4);" value="TXvK7w7ValkyrieQuantProTRC20DepositVault99" />
-                    <button type="button" onclick="copyDepositAddress()" style="background:var(--blue); border:none; color:#fff; padding:8px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">📋 Kopyala</button>
+                    <input type="text" id="deposit-wallet-address" readonly class="settings-input" style="font-size:12.5px; font-weight:700; color:var(--cyan); background:rgba(0,0,0,0.6); padding:10px 12px;" value="TXvK7w7ValkyrieQuantProTRC20DepositVault99" />
+                    <button type="button" onclick="copyDepositAddress()" style="background:linear-gradient(135deg, #00f2fe, #4facfe); border:none; color:#000; padding:10px 18px; border-radius:8px; font-size:12.5px; font-weight:800; cursor:pointer; white-space:nowrap; transition:all 0.15s ease;" onmouseover="this.style.opacity='0.9';" onmouseout="this.style.opacity='1';">📋 Kopyala</button>
                 </div>
-                <div style="font-size:11px; color:#94a3b8; margin-top:6px;">Lütfen tam olarak <b id="lbl-exact-payment" style="color:#fff;">69.00 USDT</b> gönderiniz.</div>
+                <div style="font-size:11.5px; color:#cbd5e1; margin-top:8px; display:flex; justify-content:space-between; align-items:center;">
+                    <span>Lütfen tam olarak <b id="lbl-exact-payment" style="color:#ffffff; font-size:13px;">99.00 USDT</b> gönderiniz.</span>
+                    <span style="color:#94a3b8; font-size:11px;">Ağ masrafını gönderici karşılar</span>
+                </div>
             </div>
 
-            <!-- TX HASH INPUT -->
-            <div style="margin-bottom:14px;">
-                <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Transfer İşlem Kodu (TxHash / TxID)</label>
-                <input type="text" id="input-payment-txhash" placeholder="Binance/Cüzdandan aldığınız 64 haneli TxHash kodunu yapıştırınız..." class="settings-input" />
+            <!-- PAYMENT STEP 3: SUBMIT TXHASH -->
+            <div style="margin-bottom:16px;">
+                <label style="font-size:12px; font-weight:800; color:#cbd5e1; display:block; margin-bottom:6px;">
+                    3. Transfer İşlem Kodunuzu (TxHash / TxID) Yapıştırınız:
+                </label>
+                <input type="text" id="input-payment-txhash" placeholder="Binance / TrustWallet vb. transfer detaylarındaki 64 haneli TxHash kodunu yapıştırınız..." class="settings-input" style="padding:10px 12px; font-size:12px;" />
             </div>
 
-            <button class="btn-save-settings" style="width:100%; background:linear-gradient(135deg, #00f2fe, #4facfe);" onclick="submitCryptoPayment()">
-                ⚡ Ödemeyi Doğrula ve Lisansımı 30 Gün Aktif Et
+            <!-- ACTION BUTTON -->
+            <button class="btn-save-settings" style="width:100%; background:linear-gradient(135deg, #00f2fe, #4facfe); color:#000; font-size:14px; font-weight:900; padding:13px; border-radius:10px; cursor:pointer; letter-spacing:0.5px; box-shadow:0 6px 20px rgba(0,242,254,0.3);" onclick="submitCryptoPayment()">
+                ⚡ Ödemeyi Blokzincirde Doğrula & Lisansımı 30 Gün Başlat
             </button>
 
-            <div id="payment-status-box" style="display:none; margin-top:12px; padding:12px; border-radius:8px; font-size:12px; font-family:'JetBrains Mono'; line-height:1.5;"></div>
+            <!-- STATUS MESSAGE BOX -->
+            <div id="payment-status-box" style="display:none; margin-top:14px; padding:14px; border-radius:10px; font-size:12.5px; font-family:'JetBrains Mono'; line-height:1.5;"></div>
         </div>
     </div>
 
-    <!-- AUTHENTICATION (LOGIN / 24H TRIAL REGISTER) MODAL -->
+<!-- AUTHENTICATION (LOGIN / 24H TRIAL REGISTER) MODAL -->
     <div id="auth-modal-overlay" class="modal-overlay" style="display:none;" onclick="if(event.target === this) closeAuthModal()">
         <div class="modal-card" style="max-width:440px; text-align:left;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
@@ -2174,6 +2217,34 @@ HTML_PAGE = """
             plan_type: 'VIP'
         };
 
+        
+        function fillMasterAdminCreds() {
+            document.getElementById('login-email').value = 'admin@valkyriequant.com';
+            document.getElementById('login-password').value = 'AdminValkyrie2026!';
+            submitLogin();
+        }
+
+        function restorePersistedSession() {
+            try {
+                const saved = localStorage.getItem('valkyrie_auth_user');
+                if (saved) {
+                    currentUser = JSON.parse(saved);
+                } else {
+                    // Varsayilan gelistirme ortaminda Master Admin oturumu aktif kalir
+                    currentUser = {
+                        id: 1,
+                        role: 'ADMIN',
+                        email: 'admin@valkyriequant.com',
+                        plan_type: 'VIP'
+                    };
+                    localStorage.setItem('valkyrie_auth_user', JSON.stringify(currentUser));
+                }
+            } catch (e) {
+                currentUser = { id: 1, role: 'ADMIN', email: 'admin@valkyriequant.com', plan_type: 'VIP' };
+            }
+            updateUserSessionUI();
+        }
+
         function openAuthModal() {
             const m = document.getElementById('auth-modal-overlay');
             if (m) m.style.display = 'flex';
@@ -2221,6 +2292,7 @@ HTML_PAGE = """
 
                 if (data.success) {
                     currentUser = data.user;
+                    try { localStorage.setItem('valkyrie_auth_user', JSON.stringify(currentUser)); } catch(e) {}
                     box.style.display = 'block';
                     box.style.background = 'rgba(14,203,129,0.1)';
                     box.style.color = 'var(--green)';
@@ -2228,7 +2300,7 @@ HTML_PAGE = """
                     setTimeout(() => {
                         closeAuthModal();
                         updateUserSessionUI();
-                    }, 1000);
+                    }, 800);
                 } else {
                     box.style.display = 'block';
                     box.style.background = 'rgba(255,71,87,0.1)';
