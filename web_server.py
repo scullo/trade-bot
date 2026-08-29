@@ -2579,14 +2579,7 @@ HTML_PAGE = """
         // =========================================================================
         // MULTI-TENANT AUTHENTICATION & MASTER ADMIN JS ENGINE
         // =========================================================================
-        let currentUser = {
-            role: 'ADMIN',
-            email: 'admin@valkyriequant.com',
-            plan_type: 'VIP'
-        };
-
-        
-
+        let currentUser = null;
 
         function restorePersistedSession() {
             try {
@@ -2594,17 +2587,10 @@ HTML_PAGE = """
                 if (saved) {
                     currentUser = JSON.parse(saved);
                 } else {
-                    // Varsayilan gelistirme ortaminda Master Admin oturumu aktif kalir
-                    currentUser = {
-                        id: 1,
-                        role: 'ADMIN',
-                        email: 'admin@valkyriequant.com',
-                        plan_type: 'VIP'
-                    };
-                    localStorage.setItem('valkyrie_auth_user', JSON.stringify(currentUser));
+                    currentUser = null;
                 }
             } catch (e) {
-                currentUser = { id: 1, role: 'ADMIN', email: 'admin@valkyriequant.com', plan_type: 'VIP' };
+                currentUser = null;
             }
             updateUserSessionUI();
         }
