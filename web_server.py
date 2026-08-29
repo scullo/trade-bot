@@ -1212,22 +1212,29 @@ HTML_PAGE = """
         <div class="modal-card" style="max-width:520px; text-align:left;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
                 <div style="font-size:18px; font-weight:900; color:#fff; display:flex; align-items:center; gap:8px;">
-                    <span>💎</span> VALKYRIE ABONELİK & OTOMATİK USDT ÖDEME
+                    <span>👑</span> VALKYRIE ALL-ACCESS SINIRSIZ ABONELİK
                 </div>
                 <button onclick="closeUpgradeModal()" style="background:transparent; border:none; color:#94a3b8; font-size:20px; cursor:pointer;">✕</button>
             </div>
 
-            <!-- PLAN SELECTOR -->
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:14px;">
-                <div id="plan-card-pro" onclick="selectUpgradePlan('PRO')" style="background:rgba(0,242,254,0.06); border:2px solid var(--cyan); border-radius:12px; padding:12px; cursor:pointer; text-align:center;">
-                    <div style="font-size:13px; font-weight:800; color:#fff;">💎 PRO PLAN</div>
-                    <div style="font-size:20px; font-weight:900; color:var(--cyan); margin:4px 0;" id="modal-price-pro">$69 / Ay</div>
-                    <div style="font-size:11px; color:#94a3b8;">20 Parite • 5x Kaldıraç</div>
+            <!-- SINGLE HERO PLAN CARD -->
+            <div style="background:linear-gradient(135deg, rgba(0,242,254,0.08), rgba(251,197,49,0.05)); border:2px solid var(--cyan); border-radius:14px; padding:16px; margin-bottom:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-size:16px; font-weight:900; color:#fff;">👑 VALKYRIE ALL-ACCESS</div>
+                        <div style="font-size:12px; color:var(--cyan); margin-top:2px;">Tüm Sistem Özelliklerine 30 Gün Sınırsız Erişim</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:24px; font-weight:900; color:var(--cyan); font-family:'JetBrains Mono';" id="modal-price-all-access">$99 / Ay</div>
+                        <div style="font-size:11px; color:var(--green); font-weight:700;">🟢 Sürpriz Komisyon Yok</div>
+                    </div>
                 </div>
-                <div id="plan-card-vip" onclick="selectUpgradePlan('VIP')" style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:12px; cursor:pointer; text-align:center;">
-                    <div style="font-size:13px; font-weight:800; color:#fff;">👑 VIP ELITE</div>
-                    <div style="font-size:20px; font-weight:900; color:var(--yellow); margin:4px 0;" id="modal-price-vip">$199 / Ay</div>
-                    <div style="font-size:11px; color:#94a3b8;">100 Parite • Sınırsız</div>
+                <div style="margin-top:10px; font-size:11.5px; color:#cbd5e1; display:flex; flex-wrap:wrap; gap:8px;">
+                    <span>✓ 100 Parite Canlı Akış</span>
+                    <span>✓ 48 Sütunlu Adli Defter</span>
+                    <span>✓ VIP Telegram Sinyalleri</span>
+                    <span>✓ Dinamik Risk Kalkanı</span>
+                    <span>✓ Sınırsız İşlem</span>
                 </div>
             </div>
 
@@ -1954,15 +1961,10 @@ HTML_PAGE = """
                     </div>
                 </div>
 
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-bottom:16px;">
-                    <div>
-                        <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">Pro Plan Aylık Fiyat ($ USDT)</label>
-                        <input type="number" id="admin-input-price-pro" step="1" class="settings-input" value="69" />
-                    </div>
-                    <div>
-                        <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">VIP Elite Aylık Fiyat ($ USDT)</label>
-                        <input type="number" id="admin-input-price-vip" step="1" class="settings-input" value="199" />
-                    </div>
+                <div style="margin-bottom:16px;">
+                    <label style="font-size:11.5px; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">VALKYRIE ALL-ACCESS Aylık Tek Fiyat ($ USDT)</label>
+                    <input type="number" id="admin-input-price-monthly" step="1" class="settings-input" value="99" style="max-width:280px;" />
+                    <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Müşteriler 24 saatlik denemeden sonra bu tek fiyatı ödeyerek tüm sisteme sınırsız erişir.</div>
                 </div>
 
                 <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -2011,14 +2013,12 @@ HTML_PAGE = """
     <script>
 
         // =========================================================================
-        // AUTOMATED CRYPTO PAYMENT & UPGRADE MODAL JS ENGINE
+        // AUTOMATED CRYPTO PAYMENT & UPGRADE MODAL JS ENGINE (SINGLE FLAT PRICE)
         // =========================================================================
-        let selectedUpgradePlan = 'PRO';
         let paymentSettings = {
             trc20_wallet: 'TXvK7w7ValkyrieQuantProTRC20DepositVault99',
             bep20_wallet: '0x71C836393791B339243764835261821039818299',
-            price_pro: 69.0,
-            price_vip: 199.0
+            price_monthly: 99.0
         };
 
         function openUpgradeModal() {
@@ -2032,23 +2032,6 @@ HTML_PAGE = """
             if (m) m.style.display = 'none';
         }
 
-        function selectUpgradePlan(plan) {
-            selectedUpgradePlan = plan;
-            const cPro = document.getElementById('plan-card-pro');
-            const cVip = document.getElementById('plan-card-vip');
-            const lblExact = document.getElementById('lbl-exact-payment');
-
-            if (plan === 'PRO') {
-                if (cPro) { cPro.style.border = '2px solid var(--cyan)'; cPro.style.background = 'rgba(0,242,254,0.06)'; }
-                if (cVip) { cVip.style.border = '1px solid rgba(255,255,255,0.1)'; cVip.style.background = 'rgba(255,255,255,0.02)'; }
-                if (lblExact) lblExact.innerText = `${paymentSettings.price_pro.toFixed(2)} USDT`;
-            } else {
-                if (cVip) { cVip.style.border = '2px solid var(--yellow)'; cVip.style.background = 'rgba(251,197,49,0.08)'; }
-                if (cPro) { cPro.style.border = '1px solid rgba(255,255,255,0.1)'; cPro.style.background = 'rgba(255,255,255,0.02)'; }
-                if (lblExact) lblExact.innerText = `${paymentSettings.price_vip.toFixed(2)} USDT`;
-            }
-        }
-
         async function loadPaymentConfig() {
             try {
                 const res = await fetch('/api/payment/config');
@@ -2056,19 +2039,17 @@ HTML_PAGE = """
                 if (data.success && data.settings) {
                     paymentSettings = data.settings;
                     updateDepositWalletDisplay();
-                    const mPro = document.getElementById('modal-price-pro');
-                    const mVip = document.getElementById('modal-price-vip');
-                    if (mPro) mPro.innerText = `$${paymentSettings.price_pro} / Ay`;
-                    if (mVip) mVip.innerText = `$${paymentSettings.price_vip} / Ay`;
+                    const mPrice = document.getElementById('modal-price-all-access');
+                    const lblExact = document.getElementById('lbl-exact-payment');
+                    if (mPrice) mPrice.innerText = `$${paymentSettings.price_monthly} / Ay`;
+                    if (lblExact) lblExact.innerText = `${paymentSettings.price_monthly.toFixed(2)} USDT`;
 
                     const aTrc = document.getElementById('admin-input-trc20');
                     const aBep = document.getElementById('admin-input-bep20');
-                    const aPro = document.getElementById('admin-input-price-pro');
-                    const aVip = document.getElementById('admin-input-price-vip');
+                    const aPrice = document.getElementById('admin-input-price-monthly');
                     if (aTrc) aTrc.value = paymentSettings.trc20_wallet;
                     if (aBep) aBep.value = paymentSettings.bep20_wallet;
-                    if (aPro) aPro.value = paymentSettings.price_pro;
-                    if (aVip) aVip.value = paymentSettings.price_vip;
+                    if (aPrice) aPrice.value = paymentSettings.price_monthly;
                 }
             } catch (e) {
                 console.error('Payment config load error:', e);
@@ -2102,15 +2083,14 @@ HTML_PAGE = """
         async function saveAdminPaymentConfig() {
             const trc20_wallet = document.getElementById('admin-input-trc20').value;
             const bep20_wallet = document.getElementById('admin-input-bep20').value;
-            const price_pro = parseFloat(document.getElementById('admin-input-price-pro').value) || 69.0;
-            const price_vip = parseFloat(document.getElementById('admin-input-price-vip').value) || 199.0;
+            const price_monthly = parseFloat(document.getElementById('admin-input-price-monthly').value) || 99.0;
             const msgEl = document.getElementById('admin-save-msg');
 
             try {
                 const res = await fetch('/api/admin/save_payment_config', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ trc20_wallet, bep20_wallet, price_pro, price_vip })
+                    body: JSON.stringify({ trc20_wallet, bep20_wallet, price_monthly })
                 });
                 const data = await res.json();
                 if (data.success) {
@@ -2118,7 +2098,9 @@ HTML_PAGE = """
                         msgEl.style.display = 'inline';
                         setTimeout(() => { msgEl.style.display = 'none'; }, 3000);
                     }
-                    paymentSettings = { trc20_wallet, bep20_wallet, price_pro, price_vip };
+                    paymentSettings = { trc20_wallet, bep20_wallet, price_monthly };
+                    const lblExact = document.getElementById('lbl-exact-payment');
+                    if (lblExact) lblExact.innerText = `${price_monthly.toFixed(2)} USDT`;
                 } else {
                     alert('Hata: ' + data.message);
                 }
@@ -2152,7 +2134,6 @@ HTML_PAGE = """
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         user_id: userId,
-                        plan_type: selectedUpgradePlan,
                         tx_hash: tx_hash,
                         network: network
                     })
@@ -4815,11 +4796,10 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             body = await request.json()
             trc20 = body.get('trc20_wallet', '')
             bep20 = body.get('bep20_wallet', '')
-            p_pro = float(body.get('price_pro', 69.0))
-            p_vip = float(body.get('price_vip', 199.0))
+            price_m = float(body.get('price_monthly', 99.0))
 
-            db_inst.save_payment_settings(trc20, bep20, p_pro, p_vip)
-            return web.json_response({"success": True, "message": "Ödeme cüzdanları ve fiyatlandırma başarıyla kaydedildi!"})
+            db_inst.save_payment_settings(trc20, bep20, price_m)
+            return web.json_response({"success": True, "message": "Ödeme cüzdanları ve aylık tek fiyat başarıyla kaydedildi!"})
         except Exception as e:
             return web.json_response({"success": False, "message": f"Hata: {e}"}, status=500)
 
@@ -4827,11 +4807,10 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
         try:
             body = await request.json()
             user_id = int(body.get('user_id', 1))
-            plan_type = body.get('plan_type', 'PRO')
             tx_hash = body.get('tx_hash', '')
             network = body.get('network', 'TRC20')
 
-            ok, msg, receipt = await gateway_inst.verify_and_activate_payment(user_id, plan_type, tx_hash, network)
+            ok, msg, receipt = await gateway_inst.verify_and_activate_payment(user_id, tx_hash, network)
             if not ok:
                 return web.json_response({"success": False, "message": msg}, status=400)
             return web.json_response({"success": True, "message": msg, "receipt": receipt})

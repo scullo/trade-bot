@@ -350,12 +350,11 @@ class DatabaseManager:
 
 
     def get_payment_settings(self) -> dict:
-        """Admin tarafindan belirlenen resmi USDT cuzdanlarini ve paket fiyatlarini dondurur."""
+        """Admin tarafindan belirlenen resmi USDT cuzdanlarini ve tek fiyatini dondurur."""
         default_settings = {
             "trc20_wallet": "TXvK7w7ValkyrieQuantProTRC20DepositVault99",
             "bep20_wallet": "0x71C836393791B339243764835261821039818299",
-            "price_pro": 69.0,
-            "price_vip": 199.0
+            "price_monthly": 99.0
         }
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -363,20 +362,19 @@ class DatabaseManager:
             for row in cursor.fetchall():
                 k = row['key']
                 v = row['value']
-                if k in ("price_pro", "price_vip"):
-                    default_settings[k] = float(v)
+                if k in ("price_monthly", "price_pro", "price_vip"):
+                    default_settings["price_monthly"] = float(v)
                 else:
                     default_settings[k] = v
         return default_settings
 
-    def save_payment_settings(self, trc20_wallet: str, bep20_wallet: str, price_pro: float = 69.0, price_vip: float = 199.0) -> bool:
-        """Admin panelinden girilen USDT cuzdanlarini ve fiyatlarini kaydeder."""
+    def save_payment_settings(self, trc20_wallet: str, bep20_wallet: str, price_monthly: float = 99.0) -> bool:
+        """Admin panelinden girilen USDT cuzdanlarini ve tek aylik fiyatini kaydeder."""
         now_str = datetime.now(timezone(timedelta(hours=3))).strftime('%Y-%m-%d %H:%M:%S')
         settings_map = {
             "trc20_wallet": trc20_wallet.strip(),
             "bep20_wallet": bep20_wallet.strip(),
-            "price_pro": str(float(price_pro)),
-            "price_vip": str(float(price_vip))
+            "price_monthly": str(float(price_monthly))
         }
         with self.get_connection() as conn:
             cursor = conn.cursor()
