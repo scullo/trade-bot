@@ -4093,11 +4093,12 @@ async function loadAdminMetrics() {
 
                 html += `
                 <div class="active-pos-card ${pnlClass}" id="pos-card-${safeId}">
-                    <!-- 1. TOP HEADER (Ticker on left, 2-line PnL on right) -->
+                    <!-- 1. TOP HEADER (Ticker + Grafik Button on left, 2-line PnL on right) -->
                     <div class="pos-top">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <span class="pos-badge ${pos.side === 'LONG' ? 'pos-long' : 'pos-short'}">${pos.leverage}x ${pos.side}</span>
-                            <span style="font-size:17px; font-weight:900; font-family:'JetBrains Mono'; color:#ffffff; letter-spacing:0.5px;">${cleanSym}</span>
+                            <span onclick="openTradingViewModal('${cleanSym}')" style="font-size:17px; font-weight:900; font-family:'JetBrains Mono'; color:#ffffff; letter-spacing:0.5px; cursor:pointer;" title="${cleanSym} Özel Göstergeli Canlı Grafiğini Aç">${cleanSym}</span>
+                            <button class="btn-open-chart" onclick="openTradingViewModal('${cleanSym}')" style="padding:3px 8px; font-size:11px; margin-left:2px;" title="${cleanSym} Özel Göstergeli Canlı Grafiği Aç">📈 Grafik</button>
                         </div>
                         <div style="text-align:right;">
                             <div style="font-size:16px; font-weight:900; font-family:'JetBrains Mono'; color:${pnlColor};" id="pos-pnl-${safeId}">
@@ -4132,9 +4133,11 @@ async function loadAdminMetrics() {
                         📌 <b>Kurulum:</b> ${pos.reason}
                     </div>
 
-                    <!-- 5. ACTION BUTTON -->
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08);">
-                        <span style="font-size:11.5px; color:#94a3b8;">Risk Müdahalesi:</span>
+                    <!-- 5. ACTION BUTTONS (GRAFIK + POZISYONU KAPAT) -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08); gap:8px;">
+                        <button onclick="openTradingViewModal('${cleanSym}')" style="background:rgba(0,242,254,0.08); border:1px solid rgba(0,242,254,0.35); color:var(--cyan); font-weight:800; font-size:11.5px; padding:6px 12px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:4px; transition:all 0.15s ease;" onmouseover="this.style.background='var(--cyan)'; this.style.color='#000';" onmouseout="this.style.background='rgba(0,242,254,0.08)'; this.style.color='var(--cyan)';" title="${cleanSym} Özel Göstergeli Grafiğini İncele">
+                            📈 Grafiği İncele
+                        </button>
                         <button class="btn-card-manual-close" onclick="openConfirmModal('${sym}')" style="font-size:12px; padding:6px 14px;">
                             🛑 Pozisyonu Kapat (Market)
                         </button>
