@@ -97,6 +97,34 @@ class StrategyEngine:
         except Exception as e:
             return {"healthy": False, "error": f"Strateji Değişken Hatası: {str(e)}"}
 
+    def _get_level_name_by_price(self, target_price: float, levels: dict) -> str:
+        if not levels or not target_price or target_price <= 0:
+            return ""
+        cam = levels.get("camarilla", {})
+        tolerance = 0.004  # %0.4 esneklik payi
+        
+        candidates = [
+            ("Pivot (P)", cam.get("P", 0)),
+            ("S3 Destek", cam.get("S3", 0)),
+            ("S4 Kırılım", cam.get("S4", 0)),
+            ("S5 Dip", cam.get("S5", 0)),
+            ("R3 Direnç", cam.get("R3", 0)),
+            ("R4 Breakout", cam.get("R4", 0)),
+            ("R5 Zirve", cam.get("R5", 0)),
+            ("mPOC Aylık Hacim", levels.get("mpoc", 0)),
+            ("mVAL Aylık Taban", levels.get("mval", 0)),
+            ("mVAH Aylık Tavan", levels.get("mvah", 0)),
+            ("Aşağı nPOC Likidite", levels.get("below_npoc", 0)),
+            ("Yukarı nPOC Likidite", levels.get("above_npoc", 0)),
+            ("Dip AVWAP", levels.get("dip_avwap", 0)),
+            ("Tepe AVWAP", levels.get("tepe_avwap", 0)),
+        ]
+        for name, lvl in candidates:
+            if lvl and lvl > 0:
+                if abs(target_price - lvl) / lvl <= tolerance:
+                    return name
+        return ""
+
     async def evaluate_tick(self, symbol: str, current_price: float, levels: dict):
         """Milisaniyelik anlik sert stop, TP ve trailing stop kontrolleri."""
         if symbol not in self.paper_trader.open_positions:
@@ -127,36 +155,44 @@ class StrategyEngine:
         # ── 2. TAKE-PROFIT (KAR ALMA) KONTROLU ──────────────────────────────
         if side == "LONG":
             if tp1 > 0 and current_price >= tp1:
+                lvl_tag = self._get_level_name_by_price(tp1, levels)
+                lvl_str = f" [{lvl_tag}]" if lvl_tag else ""
                 if trade_type == "SCALP" or not tp2:
-                    record = await self._safe_close_position(symbol, current_price, f"TP Hedefine Ulasildi (${tp1:.4f})")
+                    record = await self._safe_close_position(symbol, current_price, f"🎯 TP Hedefine Ulaşıldı{lvl_str} (${tp1:.4f})")
                     if record:
                         await self._notify_close(record, levels=levels)
                         self._cleanup_tracking(symbol)
                 elif trade_type == "BREAKOUT" and not pos.get("is_half_closed"):
-                    record = await self._safe_close_position(symbol, current_price, f"TP1 Alindi (%50 Kapatildi)", is_partial=True)
+                    record = await self._safe_close_position(symbol, current_price, f"🎯 TP1 Alındı{lvl_str} (%50 Kapatıldı)", is_partial=True)
                     if record:
                         await self._notify_close(record, levels=levels)
 
             elif tp2 > 0 and pos.get("is_half_closed") and current_price >= tp2:
-                record = await self._safe_close_position(symbol, current_price, f"TP2 Final Hedefe Ulasildi (${tp2:.4f})")
+                lvl_tag2 = self._get_level_name_by_price(tp2, levels)
+                lvl_str2 = f" [{lvl_tag2}]" if lvl_tag2 else ""
+                record = await self._safe_close_position(symbol, current_price, f"🚀 TP2 Final Hedefe Ulaşıldı{lvl_str2} (${tp2:.4f})")
                 if record:
                     await self._notify_close(record, levels=levels)
                     self._cleanup_tracking(symbol)
 
         elif side == "SHORT":
             if tp1 > 0 and current_price <= tp1:
+                lvl_tag = self._get_level_name_by_price(tp1, levels)
+                lvl_str = f" [{lvl_tag}]" if lvl_tag else ""
                 if trade_type == "SCALP" or not tp2:
-                    record = await self._safe_close_position(symbol, current_price, f"TP Hedefine Ulasildi (${tp1:.4f})")
+                    record = await self._safe_close_position(symbol, current_price, f"🎯 TP Hedefine Ulaşıldı{lvl_str} (${tp1:.4f})")
                     if record:
                         await self._notify_close(record, levels=levels)
                         self._cleanup_tracking(symbol)
                 elif trade_type == "BREAKOUT" and not pos.get("is_half_closed"):
-                    record = await self._safe_close_position(symbol, current_price, f"TP1 Alindi (%50 Kapatildi)", is_partial=True)
+                    record = await self._safe_close_position(symbol, current_price, f"🎯 TP1 Alındı{lvl_str} (%50 Kapatıldı)", is_partial=True)
                     if record:
                         await self._notify_close(record, levels=levels)
 
             elif tp2 > 0 and pos.get("is_half_closed") and current_price <= tp2:
-                record = await self._safe_close_position(symbol, current_price, f"TP2 Final Hedefe Ulasildi (${tp2:.4f})")
+                lvl_tag2 = self._get_level_name_by_price(tp2, levels)
+                lvl_str2 = f" [{lvl_tag2}]" if lvl_tag2 else ""
+                record = await self._safe_close_position(symbol, current_price, f"🚀 TP2 Final Hedefe Ulaşıldı{lvl_str2} (${tp2:.4f})")
                 if record:
                     await self._notify_close(record, levels=levels)
                     self._cleanup_tracking(symbol)
@@ -566,9 +602,11 @@ class StrategyEngine:
 
             if not is_half and tp1_target > 0:
                 if (side == "LONG" and close_price >= tp1_target) or (side == "SHORT" and close_price <= tp1_target):
+                    lvl_tag = self._get_level_name_by_price(tp1_target, levels)
+                    lvl_str = f" [{lvl_tag}]" if lvl_tag else ""
                     record = await self._safe_close_position(
                         symbol, tp1_target,
-                        f"🎯 TP1 Hedefine Ulaşıldı (%50 Kâr Alındı - Stop Breakeven'e Çekildi)",
+                        f"🎯 TP1 Hedefine Ulaşıldı{lvl_str} (%50 Kâr Alındı - Stop Breakeven'e Çekildi)",
                         is_partial=True
                     )
                     if record:
@@ -578,9 +616,11 @@ class StrategyEngine:
             # 1b. NİHAİ KÂR ALMA (TP2 - Kalan %50 Kapatma)
             if is_half and tp2_target > 0:
                 if (side == "LONG" and close_price >= tp2_target) or (side == "SHORT" and close_price <= tp2_target):
+                    lvl_tag2 = self._get_level_name_by_price(tp2_target, levels)
+                    lvl_str2 = f" [{lvl_tag2}]" if lvl_tag2 else ""
                     record = await self._safe_close_position(
                         symbol, tp2_target,
-                        f"🚀 TP2 Nihai Hedefe Ulaşıldı (Kalan %50 Kapatıldı)",
+                        f"🚀 TP2 Nihai Hedefe Ulaşıldı{lvl_str2} (Kalan %50 Kapatıldı)",
                         is_partial=False
                     )
                     if record:
