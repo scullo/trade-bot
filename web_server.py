@@ -5541,6 +5541,22 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
+    async def api_reset_trading_state(request):
+        try:
+            trader_manager.paper_trader.balance = 100000.0
+            trader_manager.paper_trader.open_positions = {}
+            trader_manager.paper_trader.history = []
+            trader_manager.paper_trader.save_history()
+            return web.json_response({
+                "status": "ok",
+                "message": "Cüzdan $100,000 USDT seviyesine çekildi, tüm açık pozisyonlar ve defter sıfırlandı!",
+                "balance": 100000.0,
+                "open_positions": 0,
+                "history": 0
+            })
+        except Exception as e:
+            return web.json_response({"status": "error", "message": str(e)}, status=500)
+
     async def api_close_position_manual(request):
         try:
             payload = await request.json()
@@ -5787,6 +5803,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
     app.router.add_post('/api/toggle_symbol', api_toggle_symbol)
     app.router.add_post('/api/set_active_symbols', api_set_active_symbols)
     app.router.add_post('/api/close_position_manual', api_close_position_manual)
+    app.router.add_post('/api/admin/reset_trading_state', api_reset_trading_state)
     app.router.add_get('/api/stream', sse_handler)
     
     import os
