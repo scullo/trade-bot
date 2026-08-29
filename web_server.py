@@ -598,7 +598,30 @@ HTML_PAGE = """
         .active-pos-card.pos-card-profit { border-color: var(--green) !important; background: var(--green-bg) !important; box-shadow: 0 0 25px rgba(14, 203, 129, 0.3) !important; }
         .active-pos-card.pos-card-loss { border-color: var(--red) !important; background: var(--red-bg) !important; box-shadow: 0 0 25px rgba(255, 71, 87, 0.3) !important; }
 
-        .pos-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .pos-top { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 12px; 
+            gap: 12px; 
+            flex-wrap: wrap; 
+        }
+        .pos-badge { font-weight: 800; font-size: 12px; padding: 4px 10px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; white-space: nowrap; }
+        .pos-long { background: rgba(14, 203, 129, 0.2); color: var(--green); border: 1px solid var(--green); }
+        .pos-short { background: rgba(255, 71, 87, 0.2); color: var(--red); border: 1px solid var(--red); }
+        .pos-main-pnl { font-size: 16px; font-weight: 900; font-family: 'JetBrains Mono', monospace; white-space: nowrap; text-align: right; margin-left: auto; }
+        .active-pos-card {
+            background: linear-gradient(180deg, rgba(18, 25, 40, 0.92) 0%, rgba(13, 18, 30, 0.98) 100%);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px 18px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 10px;
+            height: fit-content;
+        }
         .pos-badge { padding: 5px 12px; border-radius: 8px; font-size: 14px; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
         .pos-long { background: var(--green); color: #000; }
         .pos-short { background: var(--red); color: #fff; }
@@ -1914,38 +1937,42 @@ HTML_PAGE = """
             if (bBear) bBear.style.width = `${bearPct}%`;
             if (bRange) bRange.style.width = `${rangePct}%`;
 
-            // Update AI Thought Feed
+            // Update AI Thought Feed with Rich Multi-Dimensional Quant Insights
             const feed = document.getElementById('ai-thought-feed');
             const openPosCount = Object.keys(appState.open_positions || {}).length;
             if (feed) {
                 let thoughtsHtml = `
-                    <div class="ai-thought-item">
-                        <span style="font-size:18px;">🛡️</span>
-                        <div>
-                            <b>1H MAKRO TREND VE KALKAN REJİMİ:</b> 100 paritenin %${bearPct}'i Ayı, %${bullPct}'i Boğa trendinde. Zayıf karşı-trend tuzakları filtreleniyor.
+                    <div class="ai-thought-item" style="border-left-color: #38bdf8;">
+                        <span style="font-size:20px;">🛡️</span>
+                        <div style="flex:1;">
+                            <div style="font-weight:800; color:#38bdf8; font-size:13px; margin-bottom:2px;">1H MAKRO TREND & DİNAMİK RİSK KALKANI</div>
+                            <div>Piyasa genelinde <b>%${bearPct} Ayı</b>, <b>%${bullPct} Boğa</b> ve <b>%${rangePct} Yatay</b> rejim hakim. Makro Kalkan devrede; zayıf karşı-trend tuzakları filtreleniyor, yalnızca güçlü kurumsal destek ve likidite teyitli fırsatlara izin veriliyor.</div>
                         </div>
                     </div>
                 `;
 
                 if (openPosCount > 0) {
-                    const openSyms = Object.keys(appState.open_positions).slice(0, 4).join(', ');
+                    const openSyms = Object.keys(appState.open_positions).slice(0, 5).map(s => s.replace('/USDT','')).join(', ');
                     thoughtsHtml += `
-                        <div class="ai-thought-item" style="border-left-color:var(--green);">
-                            <span style="font-size:18px;">⚡</span>
-                            <div>
-                                <b>CANLI POZİSYON YÖNETİMİ:</b> Şu an <b>${openPosCount} aktif pozisyon</b> (${openSyms}...) yönetiliyor. TP1 hedeflerine ulaşıldığında %50 kâr realize edilip stop Breakeven'e taşınacaktır.
+                        <div class="ai-thought-item" style="border-left-color: var(--green);">
+                            <span style="font-size:20px;">⚡</span>
+                            <div style="flex:1;">
+                                <div style="font-weight:800; color:var(--green); font-size:13px; margin-bottom:2px;">CANLI POZİSYON VE KÂR KİLİTLEME MASASI (${openPosCount} AKTİF İŞLEM)</div>
+                                <div>Takip edilen pariteler: <b>${openSyms}</b>. Fiyatlar ilk yapısal bariyere (TP1) ulaştığı an <b>%50 kâr anında realize edilecek</b>, kalan %50 ise stop Breakeven (+%0.2 tampon) korumasına alınarak TP2 nihai hedefine kadar risksiz koşturulacaktır.</div>
                             </div>
                         </div>
                     `;
                 }
 
                 if (nearCandidates.length > 0) {
-                    const nearest = nearCandidates.sort((a,b) => a.distPct - b.distPct)[0];
+                    const nearestList = nearCandidates.sort((a,b) => a.distPct - b.distPct).slice(0, 2);
+                    const nearDetails = nearestList.map(n => `<b>${n.symbol.replace('/USDT','')}</b> (%${n.distPct.toFixed(2)} mesafede ${n.targetName})`).join(' ve ');
                     thoughtsHtml += `
-                        <div class="ai-thought-item" style="border-left-color:var(--yellow);">
-                            <span style="font-size:18px;">🎯</span>
-                            <div>
-                                <b>EN YAKIN PUSU ALARMI:</b> <b>${nearest.symbol}</b> paritesi ${nearest.targetName} seviyesine yalnızca <b>%${nearest.distPct.toFixed(2)}</b> mesafede! Onay mumu ile ${nearest.action} tetiklenebilir.
+                        <div class="ai-thought-item" style="border-left-color: var(--yellow);">
+                            <span style="font-size:20px;">🎯</span>
+                            <div style="flex:1;">
+                                <div style="font-weight:800; color:var(--yellow); font-size:13px; margin-bottom:2px;">EN YÜKSEK OLASILIKLI PUSU ALARMI</div>
+                                <div>${nearDetails} kilit seviyelere çok yaklaştı. 5M mum kapanışı teyidiyle anında pusu tetiklenecek.</div>
                             </div>
                         </div>
                     `;
@@ -1987,13 +2014,13 @@ HTML_PAGE = """
                 }
             }
 
-            // Update Mini Cockpit Positions
+            // Update Mini Cockpit Positions with clean multi-column cards
             const miniPosContainer = document.getElementById('cockpit-mini-positions');
             if (miniPosContainer) {
                 const openKeys = Object.keys(appState.open_positions || {});
                 if (openKeys.length === 0) {
                     miniPosContainer.innerHTML = `
-                        <div style="grid-column:1/-1; color:#94a3b8; text-align:center; padding:24px 20px; font-size:13.5px;">
+                        <div style="grid-column:1/-1; color:#94a3b8; text-align:center; padding:30px 20px; font-size:13.5px;">
                             Şu an açık pozisyon bulunmuyor. Robot 5M mum kapanışlarını pusuya yatarak takip ediyor.
                         </div>
                     `;
@@ -2006,23 +2033,24 @@ HTML_PAGE = """
                         const roePct = priceDiff * p.leverage * 100;
                         const pnlVal = p.position_value * priceDiff;
                         const isWin = roePct >= 0;
+                        const cleanSym = sym.replace('/USDT','');
 
                         return `
-                            <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+                            <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:14px; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; transition:all 0.15s ease;">
                                 <div>
-                                    <div style="font-weight:800; font-family:'JetBrains Mono'; font-size:14px; display:flex; align-items:center; gap:6px;">
-                                        <span style="color:${isLong ? 'var(--green)' : 'var(--red)'}; font-size:12px;">● ${p.side} (${p.leverage}x)</span>
-                                        ${sym}
+                                    <div style="font-weight:800; font-family:'JetBrains Mono'; font-size:14.5px; display:flex; align-items:center; gap:8px;">
+                                        <span class="pos-badge ${isLong ? 'pos-long' : 'pos-short'}" style="padding:2px 8px; font-size:11px;">${p.leverage}x ${p.side}</span>
+                                        <span style="color:#ffffff;">${cleanSym}</span>
                                     </div>
-                                    <div style="font-size:11.5px; color:#94a3b8; margin-top:2px;">
-                                        Giriş: $${p.entry_price} | TP1: $${p.tp1 ? p.tp1.toFixed(4) : '-'}
+                                    <div style="font-size:12px; color:#94a3b8; margin-top:4px; font-family:'JetBrains Mono';">
+                                        Giriş: <b style="color:#fff;">$${p.entry_price}</b> ➔ Hedef: <b style="color:var(--cyan);">$${p.tp1 ? Number(p.tp1).toFixed(4) : '-'}</b>
                                     </div>
                                 </div>
                                 <div style="text-align:right;">
-                                    <div style="font-size:15px; font-weight:900; font-family:'JetBrains Mono'; color:${isWin ? 'var(--green)' : 'var(--red)'};">
+                                    <div style="font-size:16px; font-weight:900; font-family:'JetBrains Mono'; color:${isWin ? 'var(--green)' : 'var(--red)'};">
                                         ${isWin ? '+' : ''}${roePct.toFixed(2)}%
                                     </div>
-                                    <div style="font-size:11.5px; color:${isWin ? 'var(--green)' : 'var(--red)'};">
+                                    <div style="font-size:12px; font-weight:700; color:${isWin ? 'var(--green)' : 'var(--red)'}; font-family:'JetBrains Mono';">
                                         ${isWin ? '+' : ''}$${pnlVal.toFixed(2)}
                                     </div>
                                 </div>
@@ -2770,40 +2798,47 @@ HTML_PAGE = """
             posKeys.forEach(sym => {
                 const pos = appState.open_positions[sym];
                 const safeId = sym.replace(/[^a-zA-Z0-9]/g, '_');
-                const curP = Number(livePrices[sym] || (appState.symbols[sym] ? appState.symbols[sym].price : 0) || pos.entry_price);
+                const curP = Number((livePrices && livePrices[sym]) || (appState.symbols && appState.symbols[sym] ? appState.symbols[sym].price : 0) || pos.entry_price);
                 const metrics = computePositionPnL(pos, curP);
                 const isWin = metrics.isWin;
                 const isLoss = metrics.isLoss;
                 const pnlClass = isLoss ? 'pos-card-loss' : (isWin ? 'pos-card-profit' : '');
                 const pnlColor = isLoss ? 'var(--red)' : (isWin ? 'var(--green)' : '#ffffff');
+                const cleanSym = sym.replace('/USDT','');
+                const tp1Val = pos.tp1 ? Number(pos.tp1).toFixed(4) : '-';
+                const tp2Val = pos.tp2 ? Number(pos.tp2).toFixed(4) : '-';
+                const stopVal = pos.soft_stop ? Number(pos.soft_stop).toFixed(4) : (pos.hard_stop ? Number(pos.hard_stop).toFixed(4) : '-');
 
                 html += `
                 <div class="active-pos-card ${pnlClass}" id="pos-card-${safeId}">
                     <div class="pos-top">
-                        <div>
+                        <div style="display:flex; align-items:center; gap:8px;">
                             <span class="pos-badge ${pos.side === 'LONG' ? 'pos-long' : 'pos-short'}">${pos.leverage}x ${pos.side}</span>
-                            <b style="margin-left:10px; font-size:20px; font-family:'JetBrains Mono'; color:#ffffff;">${sym.replace('/USDT','')}</b>
+                            <span style="font-size:18px; font-weight:800; font-family:'JetBrains Mono'; color:#ffffff; letter-spacing:0.5px;">${cleanSym}</span>
                         </div>
                         <div class="pos-main-pnl" id="pos-pnl-${safeId}" style="color:${pnlColor}">
                             ${metrics.roePct >= 0 ? '+' : ''}${metrics.roePct.toFixed(2)}% ROE (${metrics.pnlUsdt >= 0 ? '+' : ''}${metrics.pnlUsdt.toFixed(2)} $)
                         </div>
                     </div>
-                    <div class="pos-detail-row">
-                        Giriş: <b>$${pos.entry_price}</b> • Anlık: <b id="pos-cur-price-${safeId}">$${metrics.curP}</b> • Pozisyon Hacmi (${pos.leverage}x): <b>$${pos.position_value.toFixed(2)}</b> (Marjin: <b>$${pos.margin.toFixed(2)}</b>)
+                    <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:10px 12px; font-size:12.5px; font-family:'JetBrains Mono'; color:#cbd5e1; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+                        <div>Giriş: <b style="color:#fff;">$${pos.entry_price}</b></div>
+                        <div>Anlık: <b id="pos-cur-price-${safeId}" style="color:${pnlColor};">$${metrics.curP}</b></div>
+                        <div>Marjin: <b style="color:#fff;">$${Number(pos.margin || 100).toFixed(2)}</b></div>
+                        <div>Hacim: <b style="color:#fff;">$${Number(pos.position_value || 500).toFixed(2)}</b></div>
                     </div>
-                    <div class="pos-target-row" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:8px;">
-                        ${pos.is_half_closed || pos.tp1_hit ? '<span class="badge-tp1-hit">🎯 TP1 ALINDI (%50 Kâr Kasada) • Breakeven Korumalı</span>' : '<span style="color:#94a3b8; font-size:12px;">🎯 İlk Hedef (TP1): <code style="color:#fff;">$' + (pos.tp1 ? pos.tp1.toFixed(4) : '-') + '</code></span>'}
+                    <div class="pos-target-row" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:4px;">
+                        ${pos.is_half_closed || pos.tp1_hit ? '<span class="badge-tp1-hit">🎯 TP1 ALINDI (%50 Kâr Kasada) • Breakeven Korumalı</span>' : '<span style="color:#94a3b8; font-size:12px;">🎯 İlk Hedef (TP1): <code style="color:#fff;">$' + tp1Val + '</code></span>'}
                         ${pos.trail_status ? '<span class="badge-trailing-lock">' + pos.trail_status + '</span>' : ''}
-                        <span style="color:#94a3b8; font-size:12px;">🛑 Aktif Stop: <code style="color:${pos.is_half_closed ? 'var(--green)' : '#f87171'}; font-weight:800;">$' + (pos.soft_stop ? pos.soft_stop.toFixed(4) : '-') + '</code></span>
-                        ${pos.tp2 ? '<span style="color:#94a3b8; font-size:12px;">🚀 Nihai Hedef (TP2): <code style="color:#38bdf8; font-weight:800;">$' + pos.tp2.toFixed(4) + '</code></span>' : ''}
+                        <span style="color:#94a3b8; font-size:12px;">🛑 Aktif Stop: <code style="color:' + (pos.is_half_closed ? 'var(--green)' : '#f87171') + '; font-weight:800;">$' + stopVal + '</code></span>
+                        ${pos.tp2 ? '<span style="color:#94a3b8; font-size:12px;">🚀 Nihai Hedef (TP2): <code style="color:#38bdf8; font-weight:800;">$' + tp2Val + '</code></span>' : ''}
                     </div>
-                    <div class="pos-setup-tag">
-                        📌 Formasyon / Neden: ${pos.reason}
+                    <div class="pos-setup-tag" style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:11.5px; color:#cbd5e1;">
+                        📌 <b>Giriş Nedeni:</b> ${pos.reason}
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.08);">
-                        <span style="font-size:13px; color:#cbd5e1;">Acil Durum Müdahalesi:</span>
-                        <button class="btn-manual-close" onclick="openConfirmModal('${sym}')">
-                            🛑 Pozisyonu Kapat (Piyasa Fiyatı)
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08);">
+                        <span style="font-size:12px; color:#94a3b8;">Müdahale:</span>
+                        <button class="btn-card-manual-close" onclick="openConfirmModal('${sym}')" style="font-size:12px; padding:6px 14px;">
+                            🛑 Pozisyonu Kapat (Market)
                         </button>
                     </div>
                 </div>
