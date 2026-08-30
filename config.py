@@ -23,10 +23,10 @@ ALL_AVAILABLE_SYMBOLS = [
     "WLD/USDT",
     "LINK/USDT",
     "UNI/USDT",
-    "PROM/USDT",
+    "PENDLE/USDT",
     # 21 - 30 (DeFi & L1/L2 Trend Pariteleri)
     "NEAR/USDT",
-    "BEAMX/USDT",
+    "HYPE/USDT",
     "AAVE/USDT",
     "AVAX/USDT",
     "BICO/USDT",
@@ -36,7 +36,7 @@ ALL_AVAILABLE_SYMBOLS = [
     "ONDO/USDT",
     "BCH/USDT",
     # 31 - 40 (Meme, Altyapı & Ekosistem)
-    "CHIP/USDT",
+    "EIGEN/USDT",
     "XPL/USDT",
     "FIL/USDT",
     "TRX/USDT",
@@ -66,7 +66,7 @@ ALL_AVAILABLE_SYMBOLS = [
     "ARB/USDT",
     "BONK/USDT",
     "ETC/USDT",
-    "PEOPLE/USDT",
+    "KAS/USDT",
     "PYTH/USDT",
     # 61 - 70 (Oracle, DEX & Kurumsal Pariteler)
     "CRV/USDT",
@@ -74,9 +74,9 @@ ALL_AVAILABLE_SYMBOLS = [
     "KMNO/USDT",
     "ONT/USDT",
     "ATOM/USDT",
-    "MORPHO/USDT",
-    "GIGGLE/USDT",
-    "MOVE/USDT",
+    "ORDI/USDT",
+    "ALGO/USDT",
+    "ENS/USDT",
     "LDO/USDT",
     "TIA/USDT",
     # 71 - 80 (Modüler Blokzincirler & Likidite Havuzları)
