@@ -83,10 +83,12 @@ class PaperTrader:
             "history": self.history
         }
 
-        # 1. Lokal dosyaya kaydet
+        # 1. Lokal dosyaya atomik kaydet (Bozulma Korumasi)
         try:
-            with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+            tmp_file = HISTORY_FILE + ".tmp"
+            with open(tmp_file, "w", encoding="utf-8") as f:
                 json.dump(state, f, indent=2, ensure_ascii=False)
+            os.replace(tmp_file, HISTORY_FILE)
         except Exception as e:
             print(f">> Lokal gecmis kaydedilirken hata: {e}")
 
