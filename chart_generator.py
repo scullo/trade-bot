@@ -7,6 +7,23 @@ import matplotlib.patches as patches
 import numpy as np
 import pandas as pd
 
+def fmt_price(p) -> str:
+    """Coinin fiyat büyüklüğüne göre kusursuz basamak hassasiyeti (BOME, PEPE gibi coinleri yuvarlamaz)."""
+    if p is None or np.isnan(p) or p == 0:
+        return "$0.00"
+    p = float(p)
+    abs_p = abs(p)
+    if abs_p >= 100:
+        return f"${p:.2f}"
+    elif abs_p >= 1:
+        return f"${p:.4f}"
+    elif abs_p >= 0.01:
+        return f"${p:.5f}"
+    elif abs_p >= 0.0001:
+        return f"${p:.6f}"
+    else:
+        return f"${p:.8f}"
+
 def generate_trade_chart_image(
     symbol: str,
     df_5m: pd.DataFrame,
@@ -173,7 +190,7 @@ def generate_trade_chart_image(
         font_wt = 'heavy' if is_trade else 'bold'
         font_sz = 8.5 if is_trade else 7.8
         bg_box = dict(boxstyle='round,pad=0.25', facecolor='#090d16', edgecolor=c, linewidth=1.2, alpha=0.95) if is_trade else None
-        ax.text(n_bars + 1.8, adj_y, f"{lbl} (${orig_p:.4f})", color=c, fontsize=font_sz, fontweight=font_wt, va='center', bbox=bg_box, zorder=6)
+        ax.text(n_bars + 1.8, adj_y, f"{lbl} ({fmt_price(orig_p)})", color=c, fontsize=font_sz, fontweight=font_wt, va='center', bbox=bg_box, zorder=6)
 
     # 4. Giriş ve Çıkış Mumları Üzerinde Dikey Dotted Çizgiler ve Pinler
     if 'timestamp' in display_df.columns:
@@ -208,7 +225,7 @@ def generate_trade_chart_image(
         
         # 3. Giriş Noktası Etiketi (Mumun üzerinde)
         ax.text(entry_idx, pin_y + (y_span * 0.045 if side == 'SHORT' else -y_span * 0.045),
-                f"GİRİŞ (${entry_price:.4f})",
+                f"GİRİŞ ({fmt_price(entry_price)})",
                 color='#ffffff', fontsize=8.2, fontweight='heavy', ha='center', va='center',
                 bbox=dict(boxstyle='round,pad=0.2', facecolor=entry_col, edgecolor='#ffffff', linewidth=1.0, alpha=0.95),
                 zorder=9)
@@ -228,7 +245,7 @@ def generate_trade_chart_image(
         ax.scatter(exit_idx, pin_exit_y, color=exit_col, s=280, marker='X', edgecolors='#ffffff', linewidth=2.2, zorder=8)
 
         # 3. Çıkış Rozet Etiketi
-        exit_txt = f"ÇIKIŞ (${exit_price:.4f})"
+        exit_txt = f"ÇIKIŞ ({fmt_price(exit_price)})"
         if roe_pct is not None:
             exit_txt += f"\n{roe_pct:+.1f}%"
         ax.text(exit_idx, pin_exit_y + (y_span * 0.055 if is_profit else -y_span * 0.055),
@@ -276,17 +293,17 @@ def generate_trade_chart_image(
         is_profit = (net_pnl is not None and net_pnl >= 0)
         banner_border = '#10b981' if is_profit else '#f43f5e'
         banner_tag = '>> KÂRLI KAPANIŞ' if is_profit else '>> STOP / KORUMALI ÇIKIŞ'
-        banner_text = f"{banner_tag}: {reason} | Giriş: ${entry_price:.4f} ➔ Çıkış: ${exit_price:.4f}"
+        banner_text = f"{banner_tag}: {reason} | Giriş: {fmt_price(entry_price)} ➔ Çıkış: {fmt_price(exit_price)}"
         ax.text(0.02, 0.94, banner_text, transform=ax.transAxes,
                 color='#ffffff', fontsize=9.2, fontweight='bold',
                 bbox=dict(boxstyle='round,pad=0.35', facecolor='#090d16', edgecolor=banner_border, linewidth=1.5, alpha=0.95),
                 zorder=10)
     else:
-        title_str = f"VALKYRIE QUANT DESK -- #{clean_sym}/USDT (5M) | [{side_text}] | Anlık: ${cur_p:.4f}"
+        title_str = f"VALKYRIE QUANT DESK -- #{clean_sym}/USDT (5M) | [{side_text}] | Anlık: {fmt_price(cur_p)}"
         ax.set_title(title_str, color='#ffffff', fontsize=11.0, fontweight='bold', pad=26, loc='left')
 
         if reason:
-            banner_text = f">> GİRİŞ NEDENİ: {reason} | Giriş Seviyesi: ${entry_price:.4f}"
+            banner_text = f">> GİRİŞ NEDENİ: {reason} | Giriş Seviyesi: {fmt_price(entry_price)}"
             ax.text(0.02, 0.94, banner_text, transform=ax.transAxes,
                     color='#f8fafc', fontsize=9.2, fontweight='bold',
                     bbox=dict(boxstyle='round,pad=0.35', facecolor='#090d16', edgecolor='#3b82f6', linewidth=1.5, alpha=0.95),
@@ -301,4 +318,3 @@ def generate_trade_chart_image(
     plt.close(fig)
     buf.seek(0)
     return buf
-
