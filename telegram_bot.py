@@ -117,10 +117,13 @@ Giriş: <code>${pos['entry_price']:.6f}</code> | Marjin: <b>${pos.get('margin_us
         roe = record["roe_pct"]
         is_win = net_pnl >= 0
         is_partial_tp1 = record.get("id", "").endswith("-TP1") or "Dinamik" in str(record.get("close_reason", "")) or "Zaman Kalkanı" in str(record.get("close_reason", ""))
+        is_breakeven = "Breakeven" in str(record.get("close_reason", "")) or (record.get("is_half_closed") and not is_win)
         if is_manual:
             pnl_emoji = "🚨 <b>MANUEL MÜDAHALE — POZİSYON KAPATILDI</b> 🚨"
         elif is_partial_tp1:
             pnl_emoji = "🎯 <b>DİNAMİK KÂR KİLİTLENDİ (%50 NAKİT ALINDI)</b> 💎"
+        elif is_breakeven:
+            pnl_emoji = "🛡️ <b>BREAKEVEN KORUMASI İLE KAPATILDI (0 RİSK KORUMASI)</b> 🟢"
         else:
             pnl_emoji = "🎉 <b>KÂRLI KAPANIŞ (TAM HEDEF)</b> 🟢" if is_win else "🛑 <b>ZARAR KES (STOP)</b> 🔴"
         clean_sym = record["symbol"].replace("/USDT", "")
@@ -131,7 +134,7 @@ Giriş: <code>${pos['entry_price']:.6f}</code> | Marjin: <b>${pos.get('margin_us
 
         open_reason = record.get("reason", "Strateji Sinyali")
         close_reason = record.get("close_reason", "Hedef/Stop Kapanışı")
-        partial_note = "\n🛡️ <b>Kalan %50:</b> <i>Breakeven ile 0 riskle koşuyor!</i>\n" if is_partial_tp1 else ""
+        partial_note = "\n🛡️ <b>Kalan %50:</b> <i>Breakeven ile 0 riskle koşuyor!</i>\n" if is_partial_tp1 else ("\nℹ️ <i>İlk %50 kârı daha önce kasaya kilitlenmişti; kalan kısım koruma stopuyla risksiz kapatıldı.</i>\n" if is_breakeven else "")
         msg = f"""💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎
 {pnl_emoji}
 ━━━━━━━━━━━━━━━━━━━━━━━━
