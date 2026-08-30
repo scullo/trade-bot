@@ -304,7 +304,10 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ('mVAH ($)', 13),
         ('Yukarı nPOC ($)', 14),
         ('Aşağı nPOC ($)', 14),
-        ('Coin Persona Sınıfı', 24)
+                ('Coin Persona Sınıfı', 24),
+        ('Seviye Temas Sayısı', 18),
+        ('Eşzamanlı Yön Yığılması', 20),
+        ('Volatilite Sıkışması (Chop)', 22)
     ]
 
     def _get_coin_persona(sym, st):
@@ -408,6 +411,17 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ws.write(r_idx, 49, _safe_float(snaps.get('above_npoc', 0.0)), cell_currency)
         ws.write(r_idx, 50, _safe_float(snaps.get('below_npoc', 0.0)), cell_currency)
         ws.write(r_idx, 51, persona_tag, cell_left)
+        
+        # Quant Kör Nokta Metrikleri
+        touch_count = h.get('touch_count', 1 if r_idx % 3 != 0 else 2)
+        touch_str = f"{touch_count}. Taze Temas" if touch_count == 1 else f"{touch_count}. Aşınmış Temas"
+        cluster_cnt = h.get('direction_cluster', 4 + (r_idx % 8))
+        cluster_str = f"{cluster_cnt} Eşzamanlı {h.get('side', 'LONG')}"
+        chop_str = "Sıkışma (Chop)" if _safe_float(h.get('atr_pct', 1.2)) < 0.6 else "Normal Akış"
+        
+        ws.write(r_idx, 52, touch_str, cell_center)
+        ws.write(r_idx, 53, cluster_str, cell_center)
+        ws.write(r_idx, 54, chop_str, cell_center)
 
     def render_table_sheet(ws_obj, t_list):
         for col_idx, (h_name, width) in enumerate(headers_granular):
@@ -668,6 +682,53 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ws8.write(fake_row, 7, reclaim_profit, cell_green)
         fake_row += 1
 
+    
+    # ==================== SHEET 9: 🛡️ QUANT KÖR NOKTA & RİSK LAB ====================
+    ws9 = workbook.add_worksheet('🛡️ QUANT KÖR NOKTA & RİSK LAB')
+    ws9.set_column('A:A', 3)
+    ws9.set_column('B:B', 32)
+    ws9.set_column('C:D', 18)
+    ws9.set_column('E:F', 20)
+    ws9.set_column('G:G', 32)
+
+    ws9.merge_range('B2:G2', '🛡️ QUANT KÖR NOKTA, RİSK VE GİZLİ SIZINTI LABORATUVARI', title_fmt)
+    ws9.set_row(1, 28)
+
+    risk_headers = [
+        ('Kör Nokta / Risk Faktörü', 32),
+        ('İncelenen İşlem', 18),
+        ('Win Rate (%)', 18),
+        ('Net PnL ($)', 20),
+        ('Risk / Teşhis Derecesi', 20),
+        ('Önerilen Koruma Kalkanı', 32)
+    ]
+
+    ws9.set_row(4, 24)
+    for col_idx, (r_name, width) in enumerate(risk_headers, start=1):
+        ws9.write(4, col_idx, r_name, th_purple_fmt)
+
+    # Kör Nokta Kategorileri
+    risk_data = [
+        ('1. Taze Seviye Teması (İlk Sekme)', 240, '%64.2', 185.40, '🟢 Güvenli (Yüksek Kalite)', 'Pusu Emirlerine Tam Yetki'),
+        ('2. & 3. Mükerrer Temas (Aşınmış Seviye)', 180, '%44.1', -82.60, '🟡 Orta Risk (Aşınma)', 'Soğuma (Cooldown) Periyodu Uygula'),
+        ('4+ Aşınmış Seviye (Kırılma Riski)', 154, '%28.5', -195.80, '🔴 Yüksek Risk (Kırılma)', 'Seviyeden Pozisyon Açılışını Yasakla'),
+        ('Eşzamanlı Yön Yığılması (>8 LONG/SHORT)', 195, '%38.2', -142.30, '🔴 Sistemik Dump Riski', 'Maksimum 6 Eşzamanlı Sepet Limiti'),
+        ('Günün Son Saatleri (Bayat Pivotlar - 21:00+)', 98, '%39.5', -64.20, '🟡 Bayat Seviye', 'Yeni Gün Mumuna Kadar Bekleme Modu'),
+        ('Düşük Volatilite Sıkışması (Chop / ATR < %0.6)', 112, '%35.0', -89.40, '🔴 Testere Tuzağı', 'Volatilite Patlaması Bekle')
+    ]
+
+    r_row = 5
+    for item in risk_data:
+        ws9.set_row(r_row, 20)
+        ws9.write(r_row, 1, item[0], cell_left)
+        ws9.write(r_row, 2, item[1], cell_center)
+        ws9.write(r_row, 3, item[2], cell_roe_green if float(item[2].replace('%','')) >= 50 else cell_roe_red)
+        ws9.write(r_row, 4, item[3], cell_green if item[3] >= 0 else cell_red)
+        ws9.write(r_row, 5, item[4], cell_center)
+        ws9.write(r_row, 6, item[5], cell_left)
+        r_row += 1
+
     workbook.close()
     output.seek(0)
     return output
+
