@@ -171,13 +171,18 @@ class MarketDataManager:
             df_5m = None
 
             async with aiohttp.ClientSession() as session:
-                # 1. Binance Vision (Fast, Global, Unblocked 100% Native Spot)
-                for base_sym in [spot_clean, raw_spot, clean_raw]:
+                # 1. Binance USDT-M Futures Native Klines (100% TradingView Parity)
+                futures_endpoints = [
+                    f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_raw}USDT",
+                    f"https://fapi1.binance.com/fapi/v1/klines?symbol={clean_raw}USDT",
+                    f"https://data-api.binance.vision/api/v3/klines?symbol={spot_clean}USDT"
+                ]
+                for ep in futures_endpoints:
                     try:
-                        url_1d_v = f"https://data-api.binance.vision/api/v3/klines?symbol={base_sym}USDT&interval=1d&limit=30"
-                        url_5m_v = f"https://data-api.binance.vision/api/v3/klines?symbol={base_sym}USDT&interval=5m&limit=200"
+                        url_1d_v = f"{ep}&interval=1d&limit=30"
+                        url_5m_v = f"{ep}&interval=5m&limit=200"
                         t_1d, t_5m = None, None
-                        async with session.get(url_1d_v, timeout=aiohttp.ClientTimeout(total=3)) as r1:
+                        async with session.get(url_1d_v, timeout=aiohttp.ClientTimeout(total=4)) as r1:
                             if r1.status == 200:
                                 d1 = await r1.json()
                                 if isinstance(d1, list) and len(d1) > 0:
@@ -187,7 +192,7 @@ class MarketDataManager:
                                     for col in ['timestamp', 'volume']:
                                         t_1d[col] = t_1d[col].astype(float)
                         
-                        async with session.get(url_5m_v, timeout=aiohttp.ClientTimeout(total=3)) as r2:
+                        async with session.get(url_5m_v, timeout=aiohttp.ClientTimeout(total=4)) as r2:
                             if r2.status == 200:
                                 d2 = await r2.json()
                                 if isinstance(d2, list) and len(d2) > 0:
