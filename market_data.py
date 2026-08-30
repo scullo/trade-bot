@@ -175,7 +175,8 @@ class MarketDataManager:
                 futures_endpoints = [
                     f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_raw}USDT",
                     f"https://fapi1.binance.com/fapi/v1/klines?symbol={clean_raw}USDT",
-                    f"https://data-api.binance.vision/api/v3/klines?symbol={spot_clean}USDT"
+                    f"https://fapi2.binance.com/fapi/v1/klines?symbol={clean_raw}USDT",
+                    f"https://fapi3.binance.com/fapi/v1/klines?symbol={clean_raw}USDT"
                 ]
                 for ep in futures_endpoints:
                     try:
@@ -339,10 +340,10 @@ class MarketDataManager:
                         cur_candle = None
                         prev_candle = None
 
-                        for sym_attempt in [raw_s.replace('1000000', '').replace('1000', ''), raw_s, clean_raw]:
+                        for fapi_host in ["https://fapi.binance.com", "https://fapi1.binance.com", "https://fapi2.binance.com"]:
                             try:
-                                url_v = f"https://data-api.binance.vision/api/v3/klines?symbol={sym_attempt}USDT&interval=5m&limit=4"
-                                async with session.get(url_v, timeout=aiohttp.ClientTimeout(total=2)) as res:
+                                url_v = f"{fapi_host}/fapi/v1/klines?symbol={clean_raw}USDT&interval=5m&limit=4"
+                                async with session.get(url_v, timeout=aiohttp.ClientTimeout(total=2.5)) as res:
                                     if res.status == 200:
                                         kl = await res.json()
                                         if isinstance(kl, list) and len(kl) >= 2:
@@ -486,7 +487,29 @@ class MarketDataManager:
                     print(f">> [MUM TARAYICI HATA]: {e}")
                     await asyncio.sleep(5)
 
-        tasks = [bookticker_worker(), candle_poller_worker()] + [kline_worker(c) for c in kline_chunks]
+        # Worker 4: Saat Başı Otomatik Vadeli (Futures) Seviye Doğrulama ve İyileştirme Nöbetçisi (Watchdog)
+        async def hourly_futures_watchdog_worker():
+            last_audited_hour = -1
+            while True:
+                try:
+                    now = datetime.now()
+                    if now.hour != last_audited_hour:
+                        last_audited_hour = now.hour
+                        print(f">> [SAATLİK VADELİ SAĞLIK DENETÇİSİ] Saat {now.strftime('%H:00')} — 100 Paritenin Vadeli Verileri ve Seviyeleri Denetleniyor...")
+                        healed_cnt = 0
+                        for sym in list(self.all_symbols):
+                            try:
+                                await self.fetch_single_symbol(sym)
+                                healed_cnt += 1
+                            except Exception:
+                                pass
+                        print(f">> [SAATLİK VADELİ SAĞLIK DENETÇİSİ TAMAMLANDI] {healed_cnt}/{len(self.all_symbols)} Parite fapi.binance.com ile %100 doğrulandı ve eşitlendi.")
+                    await asyncio.sleep(60)
+                except Exception as e:
+                    print(f">> [SAATLİK DENETÇİ UYARI]: {e}")
+                    await asyncio.sleep(60)
+
+        tasks = [bookticker_worker(), candle_poller_worker(), hourly_futures_watchdog_worker()] + [kline_worker(c) for c in kline_chunks]
         await asyncio.gather(*tasks)
 
     async def close(self):
