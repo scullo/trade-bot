@@ -1,28 +1,22 @@
-import io, time, os, sys
-from datetime import datetime, timezone, timedelta
+import io, sys, os
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
 import pandas as pd
+from datetime import datetime, timezone, timedelta
 
-def fmt_price(p) -> str:
-    """Coinin fiyat büyüklüğüne göre kusursuz basamak hassasiyeti (BOME, PEPE gibi coinleri yuvarlamaz)."""
+def fmt_p(p) -> str:
     if p is None or np.isnan(p) or p == 0:
         return "$0.00"
     p = float(p)
     abs_p = abs(p)
-    if abs_p >= 100:
-        return f"${p:.2f}"
-    elif abs_p >= 1:
-        return f"${p:.4f}"
-    elif abs_p >= 0.01:
-        return f"${p:.5f}"
-    elif abs_p >= 0.0001:
-        return f"${p:.6f}"
-    else:
-        return f"${p:.8f}"
+    if abs_p >= 100: return f"${p:.2f}"
+    elif abs_p >= 1: return f"${p:.4f}"
+    elif abs_p >= 0.01: return f"${p:.5f}"
+    elif abs_p >= 0.0001: return f"${p:.6f}"
+    else: return f"${p:.8f}"
 
 def generate_trade_chart_image(
     symbol: str,
@@ -50,15 +44,11 @@ def generate_trade_chart_image(
     display_df = df_5m.iloc[-60:].copy().reset_index(drop=True)
     n_bars = len(display_df)
 
-    # 1. Dark Theme
     fig, ax = plt.subplots(figsize=(15.0, 7.8), dpi=140)
     fig.patch.set_facecolor('#090d16')
     ax.set_facecolor('#0e1626')
+    ax.grid(True, color='#1e293b', linestyle='--', linewidth=0.5, alpha=0.5)
 
-    # Grid
-    ax.grid(True, color='#1e293b', linestyle='--', linewidth=0.5, alpha=0.6)
-
-    # Candlestick Drawing
     green_col = '#10b981'
     red_col = '#f43f5e'
     width = 0.65
@@ -90,10 +80,10 @@ def generate_trade_chart_image(
     chart_max = max(all_prices)
     y_span = chart_max - chart_min if chart_max > chart_min else 1.0
 
-    padded_min = chart_min - y_span * 0.14
-    padded_max = chart_max + y_span * 0.24
+    padded_min = chart_min - y_span * 0.12
+    padded_max = chart_max + y_span * 0.22
 
-    # Level Candidates
+    # Level Candidates (Right Margin)
     cam = levels.get('camarilla', {})
     raw_levels = []
 
@@ -130,15 +120,6 @@ def generate_trade_chart_image(
         add_candidate(tp1, '#10b981', 'TP1 HEDEF', ':', is_trade_level=True)
 
     is_actually_closed = is_closed or (exit_price is not None and exit_price > 0)
-    if entry_price and entry_price > 0:
-        entry_side_col = '#10b981' if side == 'LONG' else '#f43f5e'
-        add_candidate(entry_price, entry_side_col, f"★ GİRİŞ ({side})", '--', is_trade_level=True)
-
-    if is_actually_closed and exit_price and exit_price > 0:
-        is_profit = (net_pnl is not None and net_pnl >= 0) or (exit_price > entry_price if side == 'LONG' else exit_price < entry_price)
-        exit_side_col = '#10b981' if is_profit else '#f43f5e'
-        exit_lbl = "★ KÂR ALINDI" if is_profit else "★ STOP KAPANIŞ"
-        add_candidate(exit_price, exit_side_col, exit_lbl, '-.', is_trade_level=True)
 
     # Merge very close levels (< 0.25% difference)
     raw_levels.sort(key=lambda x: x['price'])
@@ -172,7 +153,6 @@ def generate_trade_chart_image(
                 cur['adjusted_y'] -= overlap
                 nxt['adjusted_y'] += overlap
 
-    # Render horizontal levels and non-overlapping badges
     for item in filtered_levels:
         orig_p = item['price']
         adj_y = item['adjusted_y']
@@ -182,7 +162,7 @@ def generate_trade_chart_image(
         is_trade = item.get('is_trade_level', False)
 
         lw = 2.0 if is_trade else 1.0
-        alpha_val = 0.95 if is_trade else 0.55
+        alpha_val = 0.95 if is_trade else 0.50
 
         ax.plot([-0.5, n_bars - 0.5], [orig_p, orig_p], color=c, linestyle=st, linewidth=lw, alpha=alpha_val, zorder=4)
         ax.plot([n_bars - 0.5, n_bars + 1.2], [orig_p, adj_y], color=c, linestyle=':', linewidth=0.8, alpha=0.5, zorder=5)
@@ -190,9 +170,9 @@ def generate_trade_chart_image(
         font_wt = 'heavy' if is_trade else 'bold'
         font_sz = 8.5 if is_trade else 7.8
         bg_box = dict(boxstyle='round,pad=0.25', facecolor='#090d16', edgecolor=c, linewidth=1.2, alpha=0.95) if is_trade else None
-        ax.text(n_bars + 1.8, adj_y, f"{lbl} ({fmt_price(orig_p)})", color=c, fontsize=font_sz, fontweight=font_wt, va='center', bbox=bg_box, zorder=6)
+        ax.text(n_bars + 1.8, adj_y, f"{lbl} ({fmt_p(orig_p)})", color=c, fontsize=font_sz, fontweight=font_wt, va='center', bbox=bg_box, zorder=6)
 
-    # 4. Giriş ve Çıkış Mumları Üzerinde Dikey Dotted Çizgiler ve Pinler
+    # 4. GİRİŞ VE ÇIKIŞ MUMU ÜZERİNDE TAM NOKTASAL FİYAT İŞARETLEMESİ (NET & KUSURSUZ)
     if 'timestamp' in display_df.columns:
         display_timestamps = display_df['timestamp'].values
     elif 'time' in display_df.columns:
@@ -200,7 +180,7 @@ def generate_trade_chart_image(
     else:
         display_timestamps = list(range(len(display_df)))
 
-    entry_idx = max(0, n_bars - 12) if is_actually_closed else (n_bars - 1)
+    entry_idx = max(0, n_bars - 14) if is_actually_closed else (n_bars - 1)
     if entry_timestamp and entry_timestamp > 0:
         entry_ts_ms = entry_timestamp * 1000 if entry_timestamp < 1e11 else entry_timestamp
         best_diff = float('inf')
@@ -210,58 +190,58 @@ def generate_trade_chart_image(
                 best_diff = diff
                 entry_idx = idx
 
-    # Entry Marker & Dikey Noktalı Sütun Çizgisi
+    # ── GİRİŞ FİYATI İŞARETÇİSİ (Tam Giriş Fiyatı Üzerinde Yatay Çizgi + Rozet) ──
     if entry_price and entry_price > 0:
         entry_col = '#10b981' if side == 'LONG' else '#f43f5e'
-        entry_candle = display_df.iloc[entry_idx]
         
-        # 1. Mum boyunca yukarıdan aşağıya uzanan zarif noktalı çizgi
-        ax.plot([entry_idx, entry_idx], [padded_min, padded_max * 0.92], color=entry_col, linestyle=':', linewidth=1.5, alpha=0.7, zorder=5)
-
-        # 2. Mumun tepesinde/dibinde Giriş Pin Rozeti
-        pin_y = float(entry_candle['high']) + y_span * 0.04 if side == 'SHORT' else float(entry_candle['low']) - y_span * 0.04
-        marker = 'v' if side == 'SHORT' else '^'
-        ax.scatter(entry_idx, pin_y, color=entry_col, s=260, marker=marker, edgecolors='#ffffff', linewidth=2.0, zorder=8)
+        # 1. Mum üzerinde tam giriş fiyatında belirgin yatay çentik çizgisi
+        ax.plot([entry_idx - 1.2, entry_idx + 1.2], [entry_price, entry_price], color=entry_col, linestyle='-', linewidth=3.0, zorder=8)
         
-        # 3. Giriş Noktası Etiketi (Mumun üzerinde)
-        ax.text(entry_idx, pin_y + (y_span * 0.045 if side == 'SHORT' else -y_span * 0.045),
-                f"GİRİŞ ({fmt_price(entry_price)})",
-                color='#ffffff', fontsize=8.2, fontweight='heavy', ha='center', va='center',
-                bbox=dict(boxstyle='round,pad=0.2', facecolor=entry_col, edgecolor='#ffffff', linewidth=1.0, alpha=0.95),
-                zorder=9)
+        # 2. Tam o fiyatta parlak nokta
+        ax.scatter([entry_idx], [entry_price], color='#ffffff', s=100, edgecolors=entry_col, linewidth=2.5, zorder=9)
+        
+        # 3. Giriş Fiyatı Etiket Kutucuğu (Sol/Sağ yana veya üste tam hizada)
+        # Long ise girişin hafif sol-altına, Short ise sol-üstüne
+        tag_x = entry_idx - 1.5 if entry_idx > 4 else entry_idx + 1.5
+        ha_align = 'right' if entry_idx > 4 else 'left'
+        
+        ax.text(tag_x, entry_price,
+                f"★ GİRİŞ: {fmt_p(entry_price)}",
+                color='#ffffff', fontsize=8.6, fontweight='heavy', ha=ha_align, va='center',
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='#090d16', edgecolor=entry_col, linewidth=1.5, alpha=0.98),
+                zorder=10)
 
-    # Exit Marker & Dikey Noktalı Sütun Çizgisi
+    # ── ÇIKIŞ FİYATI İŞARETÇİSİ (Tam Çıkış Fiyatı Üzerinde Yatay Çizgi + Rozet) ──
     if is_actually_closed and exit_price and exit_price > 0:
         is_profit = (net_pnl is not None and net_pnl >= 0) or (exit_price > entry_price if side == 'LONG' else exit_price < entry_price)
         exit_col = '#10b981' if is_profit else '#f43f5e'
         exit_idx = n_bars - 1
-        exit_candle = display_df.iloc[exit_idx]
 
-        # 1. Çıkış Mumu boyunca dikey noktalı çizgi
-        ax.plot([exit_idx, exit_idx], [padded_min, padded_max * 0.92], color=exit_col, linestyle=':', linewidth=1.5, alpha=0.7, zorder=5)
+        # 1. Çıkış mumu üzerinde tam çıkış fiyatında yatay çentik çizgisi
+        ax.plot([exit_idx - 1.2, exit_idx + 1.2], [exit_price, exit_price], color=exit_col, linestyle='-', linewidth=3.0, zorder=8)
 
-        # 2. Çıkış X Rozeti
-        pin_exit_y = float(exit_candle['high']) + y_span * 0.04 if is_profit else float(exit_candle['low']) - y_span * 0.04
-        ax.scatter(exit_idx, pin_exit_y, color=exit_col, s=280, marker='X', edgecolors='#ffffff', linewidth=2.2, zorder=8)
+        # 2. Tam o fiyatta 'X' veya Parlak Nokta
+        ax.scatter([exit_idx], [exit_price], color='#ffffff', s=120, marker='X' if not is_profit else 'o', edgecolors=exit_col, linewidth=2.5, zorder=9)
 
-        # 3. Çıkış Rozet Etiketi
-        exit_txt = f"ÇIKIŞ ({fmt_price(exit_price)})"
-        if roe_pct is not None:
-            exit_txt += f"\n{roe_pct:+.1f}%"
-        ax.text(exit_idx, pin_exit_y + (y_span * 0.055 if is_profit else -y_span * 0.055),
-                exit_txt,
-                color='#ffffff', fontsize=8.2, fontweight='heavy', ha='center', va='center',
-                bbox=dict(boxstyle='round,pad=0.2', facecolor=exit_col, edgecolor='#ffffff', linewidth=1.0, alpha=0.95),
-                zorder=9)
+        # 3. Çıkış Fiyatı Etiket Kutucuğu
+        tag_exit_x = exit_idx - 1.8 if exit_idx > 4 else exit_idx + 1.8
+        ha_exit_align = 'right'
+        
+        pnl_badge = f" ({roe_pct:+.1f}%)" if roe_pct is not None else ""
+        exit_tag_label = f"★ ÇIKIŞ: {fmt_p(exit_price)}{pnl_badge}"
+        
+        ax.text(tag_exit_x, exit_price,
+                exit_tag_label,
+                color='#ffffff', fontsize=8.6, fontweight='heavy', ha=ha_exit_align, va='center',
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='#090d16', edgecolor=exit_col, linewidth=1.5, alpha=0.98),
+                zorder=10)
 
-        # 4. Giriş - Çıkış Arası Yörünge Oku ve Kutu
+        # 4. Giriş ile Çıkış Noktalarını Doğrudan Birbirine Bağlayan Kesikli Yörünge Çizgisi
         if entry_price and entry_price > 0:
+            ax.plot([entry_idx, exit_idx], [entry_price, exit_price], color=exit_col, linestyle='--', linewidth=1.8, alpha=0.85, zorder=6)
             fill_x = np.array([entry_idx, exit_idx, exit_idx, entry_idx])
             fill_y = np.array([entry_price, entry_price, exit_price, exit_price])
-            ax.fill(fill_x, fill_y, color=exit_col, alpha=0.08, zorder=2)
-            ax.annotate('', xy=(exit_idx, exit_price), xytext=(entry_idx, entry_price),
-                        arrowprops=dict(arrowstyle='->,head_width=0.35,head_length=0.5', color=exit_col, linewidth=2.2, linestyle='--', alpha=0.9),
-                        zorder=6)
+            ax.fill(fill_x, fill_y, color=exit_col, alpha=0.07, zorder=2)
 
     # 5. Zaman Eksen Formatı
     time_indices = np.linspace(0, n_bars - 1, min(7, n_bars), dtype=int)
@@ -281,7 +261,7 @@ def generate_trade_chart_image(
     ax.tick_params(colors='#94a3b8', labelsize=9)
     for spine in ax.spines.values(): spine.set_color('#1e293b')
 
-    # 6. Üst Başlık ve HUD Bilgi Paneli (Üst Üste Binmeyen Düzen)
+    # 6. Üst Başlık ve HUD Bilgi Paneli
     clean_sym = symbol.replace('/USDT', '')
     side_text = "LONG (Alış)" if side == "LONG" else "SHORT (Satış)"
 
@@ -293,17 +273,17 @@ def generate_trade_chart_image(
         is_profit = (net_pnl is not None and net_pnl >= 0)
         banner_border = '#10b981' if is_profit else '#f43f5e'
         banner_tag = '>> KÂRLI KAPANIŞ' if is_profit else '>> STOP / KORUMALI ÇIKIŞ'
-        banner_text = f"{banner_tag}: {reason} | Giriş: {fmt_price(entry_price)} ➔ Çıkış: {fmt_price(exit_price)}"
+        banner_text = f"{banner_tag}: {reason} | Giriş: {fmt_p(entry_price)} ➔ Çıkış: {fmt_p(exit_p)}" if 'exit_p' in locals() else f"{banner_tag}: {reason} | Giriş: {fmt_p(entry_price)} ➔ Çıkış: {fmt_p(exit_price)}"
         ax.text(0.02, 0.94, banner_text, transform=ax.transAxes,
                 color='#ffffff', fontsize=9.2, fontweight='bold',
                 bbox=dict(boxstyle='round,pad=0.35', facecolor='#090d16', edgecolor=banner_border, linewidth=1.5, alpha=0.95),
                 zorder=10)
     else:
-        title_str = f"VALKYRIE QUANT DESK -- #{clean_sym}/USDT (5M) | [{side_text}] | Anlık: {fmt_price(cur_p)}"
+        title_str = f"VALKYRIE QUANT DESK -- #{clean_sym}/USDT (5M) | [{side_text}] | Anlık: {fmt_p(cur_p)}"
         ax.set_title(title_str, color='#ffffff', fontsize=11.0, fontweight='bold', pad=26, loc='left')
 
         if reason:
-            banner_text = f">> GİRİŞ NEDENİ: {reason} | Giriş Seviyesi: {fmt_price(entry_price)}"
+            banner_text = f">> GİRİŞ NEDENİ: {reason} | Giriş Seviyesi: {fmt_p(entry_price)}"
             ax.text(0.02, 0.94, banner_text, transform=ax.transAxes,
                     color='#f8fafc', fontsize=9.2, fontweight='bold',
                     bbox=dict(boxstyle='round,pad=0.35', facecolor='#090d16', edgecolor='#3b82f6', linewidth=1.5, alpha=0.95),
@@ -318,3 +298,4 @@ def generate_trade_chart_image(
     plt.close(fig)
     buf.seek(0)
     return buf
+
