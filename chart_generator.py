@@ -41,7 +41,18 @@ def generate_trade_chart_image(
         return None
 
     levels = levels or {}
-    display_df = df_5m.iloc[-60:].copy().reset_index(drop=True)
+    
+    # Giriş mumu grafikte mutlaka görünsün diye dinamik dilimleme
+    slice_start = max(0, len(df_5m) - 60)
+    if entry_timestamp and entry_timestamp > 0 and 'timestamp' in df_5m.columns:
+        entry_ts_ms = entry_timestamp * 1000 if entry_timestamp < 1e11 else entry_timestamp
+        entry_match_idx = (df_5m['timestamp'] - entry_ts_ms).abs().idxmin()
+        # Giriş mumunun 4 mum öncesinden başlat
+        slice_start = max(0, min(slice_start, entry_match_idx - 4))
+
+    display_df = df_5m.iloc[slice_start:].copy().reset_index(drop=True)
+    if len(display_df) > 80:
+        display_df = display_df.iloc[-80:].copy().reset_index(drop=True)
     n_bars = len(display_df)
 
     fig, ax = plt.subplots(figsize=(15.0, 7.8), dpi=140)
