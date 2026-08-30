@@ -556,6 +556,18 @@ class StrategyEngine:
         close_price = current_candle['close']
         prev_close = prev_candle['close'] if prev_candle else close_price
 
+        # Hacim Patlama Katsayısı (Volume Surge Ratio)
+        vol_surge = 1.0
+        if self.market_data and symbol in self.market_data.candles_5m:
+            df = self.market_data.candles_5m[symbol]
+            if isinstance(df, pd.DataFrame) and not df.empty and len(df) >= 20:
+                try:
+                    avg_vol = df['volume'].iloc[-21:-1].mean()
+                    cur_vol = df['volume'].iloc[-1]
+                    vol_surge = round(float(cur_vol / avg_vol), 2) if avg_vol > 0 else 1.0
+                except Exception:
+                    vol_surge = 1.0
+
         cam = levels.get("camarilla", {})
         p = cam.get("P", 0.0)
         r3 = cam.get("R3", 0.0)

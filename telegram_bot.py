@@ -1,4 +1,5 @@
 from aegis_sentinel import ValkyrieAegisSentinel
+import os
 import aiohttp
 import asyncio
 import io

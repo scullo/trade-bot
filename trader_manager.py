@@ -49,3 +49,7 @@ class TraderManager:
             return await self.live_trader.close_position(*args, **kwargs)
         else:
             return self.paper_trader.close_position(*args, **kwargs)
+
+    def save_history(self):
+        if hasattr(self.active_trader, 'save_history'):
+            return self.active_trader.save_history()
