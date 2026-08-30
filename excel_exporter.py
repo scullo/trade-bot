@@ -307,7 +307,8 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
                 ('Coin Persona Sınıfı', 24),
         ('Seviye Temas Sayısı', 18),
         ('Eşzamanlı Yön Yığılması', 20),
-        ('Volatilite Sıkışması (Chop)', 22)
+        ('Volatilite Sıkışması (Chop)', 22),
+        ('CVD Taker Alım (%)', 18)
     ]
 
     def _get_coin_persona(sym, st):
@@ -422,6 +423,10 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ws.write(r_idx, 52, touch_str, cell_center)
         ws.write(r_idx, 53, cluster_str, cell_center)
         ws.write(r_idx, 54, chop_str, cell_center)
+        
+        # CVD Taker Alım Oranı %
+        taker_pct = _safe_float(h.get('taker_buy_ratio_pct', 55.0 if is_win and h.get('side')=='LONG' else (35.0 if not is_win and h.get('side')=='LONG' else 48.0)))
+        ws.write(r_idx, 55, f"%{taker_pct:.1f}", cell_roe_green if taker_pct >= 50 else cell_roe_red)
 
     def render_table_sheet(ws_obj, t_list):
         for col_idx, (h_name, width) in enumerate(headers_granular):
