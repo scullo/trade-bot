@@ -26,7 +26,7 @@ ALL_AVAILABLE_SYMBOLS = [
     "PENDLE/USDT",
     # 21 - 30 (DeFi & L1/L2 Trend Pariteleri)
     "NEAR/USDT",
-    "HYPE/USDT",
+    "W/USDT",
     "AAVE/USDT",
     "AVAX/USDT",
     "BICO/USDT",
@@ -66,7 +66,7 @@ ALL_AVAILABLE_SYMBOLS = [
     "ARB/USDT",
     "BONK/USDT",
     "ETC/USDT",
-    "KAS/USDT",
+    "DYM/USDT",
     "PYTH/USDT",
     # 61 - 70 (Oracle, DEX & Kurumsal Pariteler)
     "CRV/USDT",
