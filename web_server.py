@@ -3138,7 +3138,7 @@ async function loadAdminMetrics() {
             if (appState.symbols) {
                 for (const sym in appState.symbols) {
                     const c = appState.symbols[sym];
-                    const price = c.price || 0.0;
+                    const price = Number((livePrices && livePrices[sym]) || (c && c.price) || 0.0);
                     const levels = c.levels || {};
                     const cam = levels.camarilla || {};
                     const p = cam.P || 0.0;
@@ -5474,6 +5474,9 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             for s in market_data.active_symbols:
                 lev = market_data.levels.get(s, {})
                 cur_p = market_data.current_prices.get(s, 0.0)
+                if cur_p <= 0.0 and s in market_data.candles_5m and not market_data.candles_5m[s].empty:
+                    cur_p = float(market_data.candles_5m[s]['close'].iloc[-1])
+                    market_data.current_prices[s] = cur_p
                 if not lev or not lev.get("camarilla"):
                     market_data.recalculate_levels(s)
                     lev = market_data.levels.get(s, {})
