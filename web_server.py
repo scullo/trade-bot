@@ -3154,46 +3154,45 @@ async function loadAdminMetrics() {
                         else if (dip > 0 && price < dip && price < p) bearCount++;
                         else rangeCount++;
 
-                        // Check distances for near-trigger radar
-                        if (r4 > 0 && price < r4) {
-                            const distR4 = ((r4 - price) / price) * 100.0;
-                            if (distR4 > 0 && distR4 <= 2.0) {
-                                nearCandidates.push({
+                        // Check all institutional levels for near-trigger radar
+                        const belowNpoc = levels.below_npoc || 0.0;
+                        const aboveNpoc = levels.above_npoc || 0.0;
+                        const mval = levels.mval || 0.0;
+                        const mvah = levels.mvah || 0.0;
+
+                        let bestCandidate = null;
+                        let minCoinDist = 999.0;
+
+                        function checkLvl(targetName, targetPrice, action, bias, isLong) {
+                            if (!targetPrice || targetPrice <= 0) return;
+                            const dist = Math.abs(price - targetPrice) / price * 100.0;
+                            if (dist < minCoinDist && dist <= 4.0) {
+                                minCoinDist = dist;
+                                bestCandidate = {
                                     symbol: sym,
                                     price: price,
-                                    targetName: 'R4 Breakout',
-                                    targetPrice: r4,
-                                    distPct: distR4,
-                                    action: '🚀 R4 Breakout LONG Pususu',
-                                    bias: '🟢 Boğa Eğilimi'
-                                });
+                                    targetName: targetName,
+                                    targetPrice: targetPrice,
+                                    distPct: dist,
+                                    action: action,
+                                    bias: bias
+                                };
                             }
                         }
-                        if (s4 > 0 && price > s4) {
-                            const distS4 = ((price - s4) / price) * 100.0;
-                            if (distS4 > 0 && distS4 <= 2.0) {
-                                nearCandidates.push({
-                                    symbol: sym,
-                                    price: price,
-                                    targetName: 'S4 Breakdown',
-                                    targetPrice: s4,
-                                    distPct: distS4,
-                                    action: '🔻 S4 Breakdown SHORT Pususu',
-                                    bias: '🔴 Ayı Eğilimi'
-                                });
-                            }
-                        }
-                        if (s3 > 0 && price >= s3 && price <= s3 * 1.015) {
-                            const distS3 = ((price - s3) / price) * 100.0;
-                            nearCandidates.push({
-                                symbol: sym,
-                                price: price,
-                                targetName: 'S3 Destek',
-                                targetPrice: s3,
-                                distPct: distS3,
-                                action: '🎯 S3 Destek Sekmesi LONG Pususu',
-                                bias: '🟡 Tepki Beklentisi'
-                            });
+
+                        if (r4 > 0 && price < r4) checkLvl('R4 Breakout', r4, '🚀 R4 Breakout LONG Pususu', '🟢 Boğa Kırılımı', true);
+                        if (s4 > 0 && price > s4) checkLvl('S4 Breakdown', s4, '🔻 S4 Breakdown SHORT Pususu', '🔴 Ayı Kırılımı', false);
+                        if (s3 > 0) checkLvl('S3 Destek', s3, '🎯 S3 Destek Sekmesi LONG Pususu', '🟡 Tepki Pusu', true);
+                        if (r3 > 0) checkLvl('R3 Direnç', r3, '🛡️ R3 Direnç Retest SHORT Pususu', '🟠 Direnç Pusu', false);
+                        if (belowNpoc > 0) checkLvl('Aşağı nPOC', belowNpoc, '💎 nPOC Balina Destek LONG Pususu', '🟢 Kurumsal Destek', true);
+                        if (aboveNpoc > 0) checkLvl('Yukarı nPOC', aboveNpoc, '🧱 nPOC Hacim Direnç SHORT Pususu', '🔴 Kurumsal Direnç', false);
+                        if (mval > 0) checkLvl('mVAL Taban', mval, '🏛️ mVAL Aylık Taban LONG Pususu', '🟢 Makro Taban', true);
+                        if (mvah > 0) checkLvl('mVAH Tavan', mvah, '🚀 mVAH Aylık Tavan Breakout LONG', '🟢 Makro Kırılım', true);
+                        if (dip > 0) checkLvl('Dip AVWAP', dip, '⚓ Dip AVWAP Destek LONG Pususu', '🟢 AVWAP Destek', true);
+                        if (tepe > 0) checkLvl('Tepe AVWAP', tepe, '🛑 Tepe AVWAP Direnç SHORT Pususu', '🔴 AVWAP Direnç', false);
+
+                        if (bestCandidate) {
+                            nearCandidates.push(bestCandidate);
                         }
                     }
                 }
@@ -3278,7 +3277,7 @@ async function loadAdminMetrics() {
                                 <span class="near-dist-badge ${c.distPct < 0.5 ? 'dist-super-close' : 'dist-close'}">%${c.distPct.toFixed(2)} Kaldı</span>
                             </div>
                             <div style="font-size:12px; color:#94a3b8; margin-bottom:4px;">
-                                Anlık: <b style="color:#fff;">$${c.price}</b> ➔ Hedef: <b style="color:var(--blue);">$${c.targetPrice.toFixed(4)}</b>
+                                Anlık: <b style="color:#fff;">$${Number(c.price) >= 1 ? Number(c.price).toFixed(4) : Number(c.price).toFixed(6)}</b> ➔ Hedef: <b style="color:var(--blue);">$${Number(c.targetPrice) >= 1 ? Number(c.targetPrice).toFixed(4) : Number(c.targetPrice).toFixed(6)}</b>
                             </div>
                             <div style="font-size:11.5px; font-weight:700; color:var(--yellow); margin-bottom:6px;">
                                 ${c.action}
