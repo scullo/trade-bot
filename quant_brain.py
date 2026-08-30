@@ -148,10 +148,23 @@ class ValkyrieQuantBrain:
             wr = d['wins'] / d['trades'] * 100 if d['trades'] > 0 else 0
             print(f'   • {sym:12s}: -${abs(d["pnl"]):6.2f} USDT ({d["wins"]:2d}W / {d["losses"]:2d}L - %{wr:.0f} WR) | Komisyon: ${d["fees"]:.2f}')
 
-        print('\n🔬 5. SETUP BAZINDA QUANT LAB PERFORMANSI:')
+        print(f'\n🔬 5. SETUP BAZINDA QUANT LAB PERFORMANSI:')
         for st, d in sorted(r['setup_stats'].items(), key=lambda x: x[1]['pnl'], reverse=True):
             wr = d['wins'] / d['trades'] * 100 if d['trades'] > 0 else 0
             print(f'   • {st:35s}: ${d["pnl"]:+,.2f} USDT | {d["wins"]:2d}W / {d["losses"]:2d}L (%{wr:4.1f} WR)')
+
+        # 6. Görsel ve Adli Grafik Delilleri
+        charts_dir = 'c:/Users/aucar/Desktop/trade-bot/ANALİZ/KRİTİK_GRAFİKLER'
+        archived_charts = []
+        if os.path.exists(charts_dir):
+            archived_charts = [f for f in os.listdir(charts_dir) if f.endswith('.png') or f.endswith('.jpeg') or f.endswith('.jpg')]
+
+        print(f'\n🖼️ 6. ADLİ GÖRSEL DELİL ARŞİVİ ({len(archived_charts)} Adet Kritik Grafik Kayıtlı):')
+        if archived_charts:
+            for f_name in sorted(archived_charts, reverse=True)[:6]:
+                print(f'   • 📸 {f_name}')
+        else:
+            print('   • Henüz yeni arşivlenmiş kritik grafik yok (Otomatik yakalayıcı devrede).')
 
         print('=' * 85)
 

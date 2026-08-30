@@ -150,6 +150,7 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
 💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎"""
 
         chart_buf = None
+        archive_tag = ""
         if df_5m is not None and not df_5m.empty:
             try:
                 entry_ts = record.get("entry_timestamp")
@@ -172,8 +173,26 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
                     net_pnl=net_pnl,
                     roe_pct=roe
                 )
+                
+                # Otomatik Kritik Pozisyon Grafik Arşivleyicisi
+                is_critical = abs(net_pnl) >= 2.0 or abs(roe) >= 5.0 or is_manual or "Stop" in str(close_reason) or "TP" in str(close_reason) or "Dinamik" in str(close_reason)
+                if chart_buf and is_critical:
+                    try:
+                        os.makedirs("ANALİZ/KRİTİK_GRAFİKLER", exist_ok=True)
+                        clean_dt = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        pnl_label = f"KÂR_{net_pnl:+.2f}USDT" if is_win else f"ZARAR_{net_pnl:+.2f}USDT"
+                        fname = f"{clean_dt}_{clean_sym}_{record['side']}_{pnl_label}.png".replace("+", "plus_").replace("-", "minus_").replace("$", "")
+                        fpath = os.path.join("ANALİZ/KRİTİK_GRAFİKLER", fname)
+                        with open(fpath, "wb") as f_img:
+                            f_img.write(chart_buf.getvalue())
+                        archive_tag = f"\n📸 <b>Adli Analiz Grafiği Kaydedildi:</b> <code>ANALİZ/KRİTİK_GRAFİKLER/{fname}</code>\n"
+                    except Exception as ex_arch:
+                        print(f"[ARŞİVLEME HATA]: {ex_arch}")
             except Exception as e:
                 print(f"[TELEGRAM] Kapanis grafigi olusturulamadi: {e}")
+
+        if archive_tag:
+            msg = msg.replace("💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎\n⏰", f"{archive_tag}💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎\n⏰")
 
         if chart_buf:
             await self.send_photo(chart_buf, msg)
