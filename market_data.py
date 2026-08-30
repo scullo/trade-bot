@@ -345,7 +345,8 @@ class MarketDataManager:
                         for url_v in [
                             f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_raw}USDT&interval=5m&limit=4",
                             f"https://fapi1.binance.com/fapi/v1/klines?symbol={clean_raw}USDT&interval=5m&limit=4",
-                            f"https://data-api.binance.vision/api/v3/klines?symbol={spot_clean}USDT&interval=5m&limit=4"
+                            f"https://fapi2.binance.com/fapi/v1/klines?symbol={clean_raw}USDT&interval=5m&limit=4",
+                            f"https://fapi3.binance.com/fapi/v1/klines?symbol={clean_raw}USDT&interval=5m&limit=4"
                         ]:
                             try:
                                 async with session.get(url_v, timeout=aiohttp.ClientTimeout(total=2.5)) as res:
