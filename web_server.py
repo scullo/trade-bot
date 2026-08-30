@@ -3270,11 +3270,14 @@ async function loadAdminMetrics() {
                         </div>
                     `;
                 } else {
-                    nearGrid.innerHTML = top5.map(c => `
+                    nearGrid.innerHTML = top5.map(c => {
+                        const distText = c.distPct < 0.01 ? '🎯 Seviyede (Temasta)' : `%${c.distPct.toFixed(2)} Kaldı`;
+                        const badgeClass = c.distPct < 0.01 ? 'dist-super-close' : (c.distPct < 0.5 ? 'dist-super-close' : 'dist-close');
+                        return `
                         <div class="near-card">
                             <div class="near-card-head">
                                 <span class="near-sym">${c.symbol}</span>
-                                <span class="near-dist-badge ${c.distPct < 0.5 ? 'dist-super-close' : 'dist-close'}">%${c.distPct.toFixed(2)} Kaldı</span>
+                                <span class="near-dist-badge ${badgeClass}" title="Fiyat şu an kilit seviyeye temas ediyor. 5M mum kapanış teyidi bekleniyor.">${distText}</span>
                             </div>
                             <div style="font-size:12px; color:#94a3b8; margin-bottom:4px;">
                                 Anlık: <b style="color:#fff;">$${Number(c.price) >= 1 ? Number(c.price).toFixed(4) : Number(c.price).toFixed(6)}</b> ➔ Hedef: <b style="color:var(--blue);">$${Number(c.targetPrice) >= 1 ? Number(c.targetPrice).toFixed(4) : Number(c.targetPrice).toFixed(6)}</b>
@@ -3286,8 +3289,8 @@ async function loadAdminMetrics() {
                                 <span>${c.bias}</span>
                                 <span style="cursor:pointer; color:var(--blue); font-weight:800;" onclick="filterWatchlistDirect('${c.symbol}')">Seviyeyi İncele ➔</span>
                             </div>
-                        </div>
-                    `).join('');
+                        </div>`;
+                    }).join('');
                 }
             }
 
