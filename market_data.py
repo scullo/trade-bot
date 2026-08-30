@@ -38,13 +38,18 @@ class MarketDataManager:
             'MOG/USDT': '1000000MOG/USDT',
             'CHEEMS/USDT': '1000CHEEMS/USDT',
             'WHY/USDT': '1000WHY/USDT',
-            'CAT/USDT': '1000CAT/USDT',
-            'NEIRO/USDT': '1000NEIRO/USDT'
+            'CAT/USDT': '1000CAT/USDT'
+            # Not: NEIRO Binance Vadeli'de 'NEIROUSDT' dir (1000 degildir)
         }
         return multiplier_coins.get(clean, clean)
 
     def _get_spot_multiplier(self, symbol: str) -> float:
-        # %100 Saf Binance Vadeli (Perpetual): Tum fiyatlar 1000LUNC/1000PEPE formatinda dogal olarak gelir
+        """Spot API (data-api.binance.vision) yedek olarak kullanildiginda 1000x ve 1M carpanlari uygular."""
+        clean = symbol.replace(':USDT', '')
+        if clean in ['PEPE/USDT', 'SHIB/USDT', 'BONK/USDT', 'FLOKI/USDT', 'SATS/USDT', 'RATS/USDT', 'LUNC/USDT', 'XEC/USDT', 'CHEEMS/USDT', 'WHY/USDT', 'CAT/USDT']:
+            return 1000.0
+        elif clean in ['MOG/USDT']:
+            return 1000000.0
         return 1.0
 
     def get_system_health(self) -> dict:
@@ -176,6 +181,8 @@ class MarketDataManager:
                 ]
                 for ep in futures_endpoints:
                     try:
+                        is_spot = "binance.vision" in ep
+                        mult = spot_mult if is_spot else 1.0
                         url_1d_v = f"{ep}&interval=1d&limit=30"
                         url_5m_v = f"{ep}&interval=5m&limit=200"
                         t_1d, t_5m = None, None
@@ -185,7 +192,7 @@ class MarketDataManager:
                                 if isinstance(d1, list) and len(d1) > 0:
                                     t_1d = pd.DataFrame(d1, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'qav', 'num_trades', 'taker_base', 'taker_quote', 'ignore'])
                                     for col in ['open', 'high', 'low', 'close']:
-                                        t_1d[col] = t_1d[col].astype(float) * spot_mult
+                                        t_1d[col] = t_1d[col].astype(float) * mult
                                     for col in ['timestamp', 'volume']:
                                         t_1d[col] = t_1d[col].astype(float)
                         
@@ -195,7 +202,7 @@ class MarketDataManager:
                                 if isinstance(d2, list) and len(d2) > 0:
                                     t_5m = pd.DataFrame(d2, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'qav', 'num_trades', 'taker_base', 'taker_quote', 'ignore'])
                                     for col in ['open', 'high', 'low', 'close']:
-                                        t_5m[col] = t_5m[col].astype(float) * spot_mult
+                                        t_5m[col] = t_5m[col].astype(float) * mult
                                     for col in ['timestamp', 'volume']:
                                         t_5m[col] = t_5m[col].astype(float)
                         

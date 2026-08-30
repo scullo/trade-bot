@@ -3308,11 +3308,8 @@ async function loadAdminMetrics() {
                     const sortedMini = openKeys.map(sym => {
                         const p = appState.open_positions[sym];
                         const curPrice = Number((livePrices && livePrices[sym]) || (appState.symbols && appState.symbols[sym] ? appState.symbols[sym].price : 0) || p.entry_price);
-                        const isLong = p.side === 'LONG';
-                        const priceDiff = isLong ? ((curPrice - p.entry_price) / p.entry_price) : ((p.entry_price - curPrice) / p.entry_price);
-                        const roePct = priceDiff * p.leverage * 100;
-                        const pnlVal = p.position_value * priceDiff;
-                        return { sym, p, curPrice, isLong, roePct, pnlVal };
+                        const metrics = computePositionPnL(p, curPrice);
+                        return { sym, p, curPrice: metrics.curP, isLong: metrics.isLong, roePct: metrics.roePct, pnlVal: metrics.pnlUsdt };
                     }).sort((a, b) => b.roePct - a.roePct);
 
                     miniPosContainer.innerHTML = sortedMini.map(item => {
@@ -3400,7 +3397,7 @@ async function loadAdminMetrics() {
             'TIAUSDT': 'TIA/USDT', 'INJUSDT': 'INJ/USDT', 'FETUSDT': 'FET/USDT', 'DOTUSDT': 'DOT/USDT',
             '1000SHIBUSDT': 'SHIB/USDT', 'TONUSDT': 'TON/USDT', 'WIFUSDT': 'WIF/USDT', 'GALAUSDT': 'GALA/USDT',
             'SEIUSDT': 'SEI/USDT', 'RENDERUSDT': 'RENDER/USDT', 'FTMUSDT': 'FTM/USDT', 'ATOMUSDT': 'ATOM/USDT',
-            'LTCUSDT': 'LTC/USDT', 'POLUSDT': 'POL/USDT', '1000NEIROUSDT': 'NEIRO/USDT', '1000BONKUSDT': 'BONK/USDT',
+            'LTCUSDT': 'LTC/USDT', 'POLUSDT': 'POL/USDT', 'NEIROUSDT': 'NEIRO/USDT', '1000NEIROUSDT': 'NEIRO/USDT', '1000BONKUSDT': 'BONK/USDT',
             '1000FLOKIUSDT': 'FLOKI/USDT', '1000LUNCUSDT': 'LUNC/USDT', '1000XECUSDT': 'XEC/USDT',
             '1000CHEEMSUSDT': 'CHEEMS/USDT', '1000WHYUSDT': 'WHY/USDT', '1000CATUSDT': 'CAT/USDT'
         };
@@ -3409,18 +3406,37 @@ async function loadAdminMetrics() {
         function computePositionPnL(pos, livePrice) {
             let curP = Number(livePrice || pos.entry_price);
             if (!curP || isNaN(curP) || curP <= 0) curP = Number(pos.entry_price);
+            const entryP = Number(pos.entry_price) || curP;
+
+            // Auto-align 1000x / 1M meme coin multiplier between spot and futures
+            if (entryP > 0) {
+                if (curP < entryP * 0.02) {
+                    if (curP * 1000 >= entryP * 0.4 && curP * 1000 <= entryP * 2.5) {
+                        curP = curP * 1000;
+                    } else if (curP * 1000000 >= entryP * 0.4 && curP * 1000000 <= entryP * 2.5) {
+                        curP = curP * 1000000;
+                    }
+                } else if (curP > entryP * 50) {
+                    if ((curP / 1000) >= entryP * 0.4 && (curP / 1000) <= entryP * 2.5) {
+                        curP = curP / 1000;
+                    } else if ((curP / 1000000) >= entryP * 0.4 && (curP / 1000000) <= entryP * 2.5) {
+                        curP = curP / 1000000;
+                    }
+                }
+            }
 
             const isLong = pos.side === 'LONG';
-            let priceDiffPct = isLong ? ((curP - pos.entry_price) / pos.entry_price) * 100 : ((pos.entry_price - curP) / pos.entry_price) * 100;
+            let priceDiffPct = isLong ? ((curP - entryP) / entryP) * 100 : ((entryP - curP) / entryP) * 100;
 
-            // Multiplier & Outlier Glitch Shield (Örn: 1000x meme coin sapmasını koru)
-            if (priceDiffPct < -75.0 || priceDiffPct > 500.0) {
-                curP = Number(pos.entry_price);
+            // Outlier Glitch Shield
+            if (priceDiffPct < -85.0 || priceDiffPct > 500.0) {
+                curP = entryP;
                 priceDiffPct = 0.0;
             }
 
-            const roePct = priceDiffPct * pos.leverage;
-            const pnlUsdt = (pos.position_value || (pos.margin * pos.leverage) || 500) * (priceDiffPct / 100);
+            const roePct = priceDiffPct * (pos.leverage || 5);
+            const posVal = Number(pos.position_value) || (Number(pos.margin || 100) * Number(pos.leverage || 5));
+            const pnlUsdt = posVal * (priceDiffPct / 100);
             const isWin = pnlUsdt > 0.0001;
             const isLoss = pnlUsdt < -0.0001;
             return { curP, isLong, priceDiffPct, roePct, pnlUsdt, isWin, isLoss };

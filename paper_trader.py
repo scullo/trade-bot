@@ -163,6 +163,19 @@ class PaperTrader:
         entry = pos["entry_price"]
         lev = pos.get("leverage", 5)
 
+        # Multiplier Guard (1000x ve 1M coinlerde spot/vadeli ölçek eşitlemesi)
+        if entry > 0 and current_price > 0:
+            if current_price < entry * 0.02:
+                if current_price * 1000 >= entry * 0.4 and current_price * 1000 <= entry * 2.5:
+                    current_price = current_price * 1000.0
+                elif current_price * 1000000 >= entry * 0.4 and current_price * 1000000 <= entry * 2.5:
+                    current_price = current_price * 1000000.0
+            elif current_price > entry * 50.0:
+                if (current_price / 1000.0) >= entry * 0.4 and (current_price / 1000.0) <= entry * 2.5:
+                    current_price = current_price / 1000.0
+                elif (current_price / 1000000.0) >= entry * 0.4 and (current_price / 1000000.0) <= entry * 2.5:
+                    current_price = current_price / 1000000.0
+
         if current_price > pos.get("peak_price", entry):
             pos["peak_price"] = current_price
         if current_price < pos.get("trough_price", entry):
