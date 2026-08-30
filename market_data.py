@@ -176,7 +176,8 @@ class MarketDataManager:
                     f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_raw}USDT",
                     f"https://fapi1.binance.com/fapi/v1/klines?symbol={clean_raw}USDT",
                     f"https://fapi2.binance.com/fapi/v1/klines?symbol={clean_raw}USDT",
-                    f"https://fapi3.binance.com/fapi/v1/klines?symbol={clean_raw}USDT"
+                    f"https://fapi3.binance.com/fapi/v1/klines?symbol={clean_raw}USDT",
+                    f"https://data-api.binance.vision/api/v3/klines?symbol={spot_clean}USDT"
                 ]
                 for ep in futures_endpoints:
                     try:
@@ -340,9 +341,12 @@ class MarketDataManager:
                         cur_candle = None
                         prev_candle = None
 
-                        for fapi_host in ["https://fapi.binance.com", "https://fapi1.binance.com", "https://fapi2.binance.com"]:
+                        for url_v in [
+                            f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_raw}USDT&interval=5m&limit=4",
+                            f"https://fapi1.binance.com/fapi/v1/klines?symbol={clean_raw}USDT&interval=5m&limit=4",
+                            f"https://data-api.binance.vision/api/v3/klines?symbol={spot_clean}USDT&interval=5m&limit=4"
+                        ]:
                             try:
-                                url_v = f"{fapi_host}/fapi/v1/klines?symbol={clean_raw}USDT&interval=5m&limit=4"
                                 async with session.get(url_v, timeout=aiohttp.ClientTimeout(total=2.5)) as res:
                                     if res.status == 200:
                                         kl = await res.json()
