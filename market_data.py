@@ -299,8 +299,9 @@ class MarketDataManager:
             tepe_avwap = float(calculate_anchored_vwap(df_5m, high_idx))
             dip_avwap = float(calculate_anchored_vwap(df_5m, low_idx))
 
-        # === VOLUME PROFILE ===
-        vp_result = calculate_volume_profile(df_5m, num_rows=30, value_area_pct=0.68)
+        # === VOLUME PROFILE (Son 30 Günlük Makro Profil: mPOC, mVAH, mVAL) ===
+        vp_df = df_1d if (df_1d is not None and not df_1d.empty and len(df_1d) >= 5) else df_5m
+        vp_result = calculate_volume_profile(vp_df, num_rows=30, value_area_pct=0.68)
 
         # === NAKED LINES ===
         current_p = self.current_prices.get(symbol, float(df_5m['close'].iloc[-1]))
