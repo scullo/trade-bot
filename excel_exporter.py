@@ -304,11 +304,13 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ('mVAH ($)', 13),
         ('Yukarı nPOC ($)', 14),
         ('Aşağı nPOC ($)', 14),
-                ('Coin Persona Sınıfı', 24),
+        ('Coin Persona Sınıfı', 24),
         ('Seviye Temas Sayısı', 18),
         ('Eşzamanlı Yön Yığılması', 20),
         ('Volatilite Sıkışması (Chop)', 22),
-        ('CVD Taker Alım (%)', 18)
+        ('CVD Taker Alım (%)', 18),
+        ('Göreceli Güç (RS vs BTC %)', 22),
+        ('Ayrışma (Decoupling) Durumu', 26)
     ]
 
     def _get_coin_persona(sym, st):
@@ -427,6 +429,11 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         # CVD Taker Alım Oranı %
         taker_pct = _safe_float(h.get('taker_buy_ratio_pct', 55.0 if is_win and h.get('side')=='LONG' else (35.0 if not is_win and h.get('side')=='LONG' else 48.0)))
         ws.write(r_idx, 55, f"%{taker_pct:.1f}", cell_roe_green if taker_pct >= 50 else cell_roe_red)
+
+        # Göreceli Güç (RS vs BTC %) & Ayrışma Durumu
+        rs_val = _safe_float(h.get('rs_vs_btc', 0.0))
+        ws.write(r_idx, 56, f"%{rs_val:+.2f}", cell_roe_green if rs_val >= 0 else cell_roe_red)
+        ws.write(r_idx, 57, str(h.get('decoupling_status', '⚪ NÖTR_TAKİPÇİ')), cell_left)
 
     def render_table_sheet(ws_obj, t_list):
         for col_idx, (h_name, width) in enumerate(headers_granular):

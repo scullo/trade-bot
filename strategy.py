@@ -342,6 +342,30 @@ class StrategyEngine:
                 except Exception:
                     vol_surge = 1.0
 
+        # ── 1b. GÖRECELİ GÜÇ (RELATIVE STRENGTH VS BTC) & AYRIŞMA HESABI ──
+        rs_vs_btc = 0.0
+        decoupling_status = "⚪ NÖTR_TAKİPÇİ"
+        if self.market_data and 'BTC/USDT' in self.market_data.candles_5m and symbol in self.market_data.candles_5m:
+            try:
+                df_coin = self.market_data.candles_5m[symbol]
+                df_btc = self.market_data.candles_5m['BTC/USDT']
+                if len(df_coin) >= 4 and len(df_btc) >= 4:
+                    coin_chg = ((df_coin['close'].iloc[-1] - df_coin['close'].iloc[-4]) / df_coin['close'].iloc[-4]) * 100.0
+                    btc_chg = ((df_btc['close'].iloc[-1] - df_btc['close'].iloc[-4]) / df_btc['close'].iloc[-4]) * 100.0
+                    rs_vs_btc = round(float(coin_chg - btc_chg), 2)
+                    
+                    if rs_vs_btc >= 1.5 and coin_chg > 0:
+                        decoupling_status = "🚀 ALFA_AYRIŞAN (Güçlü Boğa)"
+                    elif rs_vs_btc <= -1.5 and coin_chg < 0:
+                        decoupling_status = "🩸 AŞIRI_ZAYIF (Ezilen Ayı)"
+                    elif abs(rs_vs_btc) < 0.6:
+                        decoupling_status = "🔗 BTC_KUKLASI (Korelasyon %90+)"
+                    else:
+                        decoupling_status = "⚖️ ILIMLI_AYRIŞMA"
+            except Exception:
+                rs_vs_btc = 0.0
+                decoupling_status = "⚪ NÖTR_TAKİPÇİ"
+
         # ── 2. TREND REJIMI HESABI ──
         snaps = snapshot_levels or {}
         tepe_av = snaps.get('tepe_avwap', 0.0)
@@ -415,7 +439,7 @@ class StrategyEngine:
             snapshot_levels=snapshot_levels, setup_id=setup_id, confluence_list=confluence_list,
             atr_pct=atr_pct, trend_regime=trend_regime, session=session_str,
             volume_surge=vol_surge, confluence_score=conf_score_str, htf_alignment=htf_str,
-            custom_margin=dyn_margin
+            custom_margin=dyn_margin, rs_vs_btc=rs_vs_btc, decoupling_status=decoupling_status
         )
         if isinstance(res, dict) and res.get("error") == "INSUFFICIENT_BALANCE":
             await self.notifier.notify_insufficient_balance(

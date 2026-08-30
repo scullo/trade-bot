@@ -222,7 +222,7 @@ class PaperTrader:
         if updated_stop:
             self.save_history()
 
-    def open_position(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None, atr_pct: float = 1.0, trend_regime: str = "YATAY", session: str = "LONDRA", volume_surge: float = 1.0, confluence_score: str = "2/4", htf_alignment: str = "TREND YÖNÜNDE", custom_margin: float = None):
+    def open_position(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None, atr_pct: float = 1.0, trend_regime: str = "YATAY", session: str = "LONDRA", volume_surge: float = 1.0, confluence_score: str = "2/4", htf_alignment: str = "TREND YÖNÜNDE", custom_margin: float = None, rs_vs_btc: float = 0.0, decoupling_status: str = "⚪ NÖTR_TAKİPÇİ"):
         if symbol in self.open_positions:
             return None
 
@@ -292,6 +292,8 @@ class PaperTrader:
             "volume_surge": float(volume_surge),
             "confluence_score": confluence_score,
             "htf_alignment": htf_alignment,
+            "rs_vs_btc": float(rs_vs_btc),
+            "decoupling_status": str(decoupling_status),
             "peak_price": float(entry_price),
             "trough_price": float(entry_price),
             "max_mfe_roe": 0.0,
@@ -375,7 +377,18 @@ class PaperTrader:
                 "tp1": pos.get("tp1", 0.0),
                 "tp2": pos.get("tp2", 0.0),
                 "soft_stop": pos.get("soft_stop", 0.0),
-                "hard_stop": pos.get("hard_stop", 0.0)
+                "hard_stop": pos.get("hard_stop", 0.0),
+                "atr_pct": pos.get("atr_pct", 1.2),
+                "volume_surge": pos.get("volume_surge", 1.0),
+                "trend_regime": pos.get("trend_regime", "YATAY"),
+                "session": pos.get("session", "LONDRA"),
+                "confluence_score": pos.get("confluence_score", "2/4"),
+                "htf_alignment": pos.get("htf_alignment", "TREND YÖNÜNDE"),
+                "rs_vs_btc": pos.get("rs_vs_btc", 0.0),
+                "decoupling_status": pos.get("decoupling_status", "⚪ NÖTR_TAKİPÇİ"),
+                "max_mfe_roe": pos.get("max_mfe_roe", 0.0),
+                "max_mae_roe": pos.get("max_mae_roe", 0.0),
+                "snapshot_levels": pos.get("snapshot_levels", {})
             }
             self.history.append(record)
             self.save_history()
@@ -430,7 +443,18 @@ class PaperTrader:
                 "tp1": pos.get("tp1", 0.0),
                 "tp2": pos.get("tp2", 0.0),
                 "soft_stop": pos.get("soft_stop", 0.0),
-                "hard_stop": pos.get("hard_stop", 0.0)
+                "hard_stop": pos.get("hard_stop", 0.0),
+                "atr_pct": pos.get("atr_pct", 1.2),
+                "volume_surge": pos.get("volume_surge", 1.0),
+                "trend_regime": pos.get("trend_regime", "YATAY"),
+                "session": pos.get("session", "LONDRA"),
+                "confluence_score": pos.get("confluence_score", "2/4"),
+                "htf_alignment": pos.get("htf_alignment", "TREND YÖNÜNDE"),
+                "rs_vs_btc": pos.get("rs_vs_btc", 0.0),
+                "decoupling_status": pos.get("decoupling_status", "⚪ NÖTR_TAKİPÇİ"),
+                "max_mfe_roe": pos.get("max_mfe_roe", 0.0),
+                "max_mae_roe": pos.get("max_mae_roe", 0.0),
+                "snapshot_levels": pos.get("snapshot_levels", {})
             }
             self.history.append(record)
             del self.open_positions[symbol]
