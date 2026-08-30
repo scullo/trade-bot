@@ -44,12 +44,7 @@ class MarketDataManager:
         return multiplier_coins.get(clean, clean)
 
     def _get_spot_multiplier(self, symbol: str) -> float:
-        clean = symbol.replace('/', '').replace(':USDT', '')
-        multiplier_coins = ['1000PEPE', '1000BONK', '1000SHIB', '1000FLOKI', '1000SATS', '1000RATS', '1000LUNC', '1000XEC', '1000CHEEMS', '1000WHY', '1000CAT', '1000NEIRO', 'PEPE', 'BONK', 'SHIB', 'FLOKI', 'SATS', 'RATS', 'LUNC', 'XEC', 'CHEEMS', 'WHY', 'CAT', 'NEIRO']
-        if any(k in clean for k in multiplier_coins):
-            return 1000.0
-        elif 'MOG' in clean:
-            return 1000000.0
+        # %100 Saf Binance Vadeli (Perpetual): Tum fiyatlar 1000LUNC/1000PEPE formatinda dogal olarak gelir
         return 1.0
 
     def get_system_health(self) -> dict:
