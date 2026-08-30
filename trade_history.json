@@ -1,5 +1,5 @@
 {
-  "balance": 99662.79661557116,
+  "balance": 99666.04830313144,
   "open_positions": {
     "BCH/USDT": {
       "id": "TRD-0041",
@@ -2295,15 +2295,15 @@
       "symbol": "HUMA/USDT",
       "side": "SHORT",
       "entry_price": 0.02074,
-      "margin": 100.0,
+      "margin": 50.0,
       "leverage": 5,
-      "position_value": 500.0,
-      "quantity": 24108.003857280615,
-      "entry_fee": 0.25,
+      "position_value": 250.0,
+      "quantity": 12054.001928640308,
+      "entry_fee": 0.125,
       "entry_time": "2026-08-30 11:10:01",
       "entry_timestamp": 1788077401.6558955,
-      "soft_stop": 0.02071926,
-      "hard_stop": 0.02088475,
+      "soft_stop": 0.02069852,
+      "hard_stop": 0.02069852,
       "tp1": 0.020088900000000003,
       "tp2": 0.0,
       "trade_type": "BREAKOUT",
@@ -2333,7 +2333,7 @@
       "atr_pct": 0.57,
       "trend_regime": "🔴 GÜÇLÜ AYI (Bearish)",
       "session": "🌏 ASYA (Tokyo/Singapur)",
-      "tp1_hit": false,
+      "tp1_hit": true,
       "volume_surge": 0.37,
       "confluence_score": "2/4 (Çift Teyit)",
       "htf_alignment": "🔴 TREND YÖNÜNDE (1H Ayı Uyumu)",
@@ -2342,8 +2342,9 @@
       "max_mfe_roe": 0.0,
       "max_mae_roe": 0.0,
       "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
-      "is_half_closed": false,
-      "_trail_be": true
+      "is_half_closed": true,
+      "_trail_be": true,
+      "trail_status": "🎯 TP1 KİLİTLENDİ (%50 Alındı - Breakeven Korumalı)"
     },
     "MORPHO/USDT": {
       "id": "TRD-0665",
@@ -19390,6 +19391,30 @@
       "tp2": 50.01475,
       "soft_stop": 48.75732,
       "hard_stop": 48.75732
+    },
+    {
+      "id": "TRD-0662-TP1",
+      "symbol": "HUMA/USDT",
+      "side": "SHORT",
+      "trade_type": "BREAKOUT",
+      "leverage": 5,
+      "margin": 50.0,
+      "entry_price": 0.02074,
+      "exit_price": 0.0204495,
+      "gross_pnl": 3.5017,
+      "fees": 0.25,
+      "net_pnl": 3.2517,
+      "roe_pct": 6.5,
+      "balance_after": 99666.05,
+      "entry_time": "2026-08-30 11:10:01",
+      "exit_time": "2026-08-30 12:06:54",
+      "duration": "56dk",
+      "reason": "mVAL Aylik Destek Kirilimi (Macro Breakdown)",
+      "close_reason": "🎯 Dinamik ROE Kâr Kilidi (+%7.0 Kâr Alındı - %50 Kapatıldı)",
+      "tp1": 0.020088900000000003,
+      "tp2": 0.0,
+      "soft_stop": 0.02069852,
+      "hard_stop": 0.02069852
     }
   ]
 }
