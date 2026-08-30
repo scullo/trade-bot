@@ -336,6 +336,7 @@ class MarketDataManager:
                         clean_sym = self._clean_symbol(s)
                         clean_raw = clean_sym.replace('/', '').replace(':USDT', '').replace('USDT', '')
                         raw_s = s.replace('/', '').replace(':USDT', '').replace('USDT', '')
+                        spot_clean = raw_s.replace('1000000', '').replace('1000', '')
                         spot_mult = self._get_spot_multiplier(s)
                         
                         cur_candle = None
