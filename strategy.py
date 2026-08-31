@@ -417,14 +417,12 @@ class StrategyEngine:
             else:
                 htf_str = "⚪ NÖTR MAKRO"
 
-        # ── 7. MAKRO TREND KALKANI (COUNTER-TREND SHIELD) ──
-        # Güçlü Boğa Trendinde zayıf SHORT'ları ve Güçlü Ayı Trendinde zayıf LONG'ları engelle
-        if trend_regime == "🟢 GÜÇLÜ BOĞA (Bullish)" and side == "SHORT" and c_count < 3 and vol_surge < 2.0:
-            print(f">> [MAKRO TREND KALKANI] {symbol} Güçlü Boğa Trendinde Karşı SHORT Reddedildi (Confluence: {c_count}/4, Surge: {vol_surge}x)")
-            return
-        if trend_regime == "🔴 GÜÇLÜ AYI (Bearish)" and side == "LONG" and c_count < 3 and vol_surge < 2.0:
-            print(f">> [MAKRO TREND KALKANI] {symbol} Güçlü Ayı Trendinde Karşı LONG Reddedildi (Confluence: {c_count}/4, Surge: {vol_surge}x)")
-            return
+        # ── 7. MAKRO TREND KALKANI (COUNTER-TREND TELEMETRİSİ) ──
+        # Telemetri ve analiz için etiketler; 7 günlük saf veri toplama döneminde işlemleri yapay olarak tıkamaz.
+        if trend_regime == "🟢 GÜÇLÜ BOĞA (Bullish)" and side == "SHORT" and c_count < 3 and vol_surge < 1.5:
+            pass  # Kayıt için telemetriye geçer
+        if trend_regime == "🔴 GÜÇLÜ AYI (Bearish)" and side == "LONG" and c_count < 3 and vol_surge < 1.5:
+            pass  # Kayıt için telemetriye geçer
 
         # ── 8. DİNAMİK MARJİN & RİSK BOYUTLANDIRMA (RISK PARITY) ──
         # Aşırı volatil coinlerde (AMP, BICO) marjini küçültüp riski maks 3.5$ ile sınırla
