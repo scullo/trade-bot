@@ -349,9 +349,12 @@ class MarketDataManager:
                             f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_raw}USDT&interval=5m&limit=4",
                             f"https://fapi1.binance.com/fapi/v1/klines?symbol={clean_raw}USDT&interval=5m&limit=4",
                             f"https://fapi2.binance.com/fapi/v1/klines?symbol={clean_raw}USDT&interval=5m&limit=4",
-                            f"https://fapi3.binance.com/fapi/v1/klines?symbol={clean_raw}USDT&interval=5m&limit=4"
+                            f"https://fapi3.binance.com/fapi/v1/klines?symbol={clean_raw}USDT&interval=5m&limit=4",
+                            f"https://data-api.binance.vision/api/v3/klines?symbol={spot_clean}USDT&interval=5m&limit=4"
                         ]:
                             try:
+                                is_spot = "binance.vision" in url_v
+                                mult = spot_mult if is_spot else 1.0
                                 async with session.get(url_v, timeout=aiohttp.ClientTimeout(total=2.5)) as res:
                                     if res.status == 200:
                                         kl = await res.json()
@@ -360,18 +363,18 @@ class MarketDataManager:
                                             prev_k = kl[-3] if len(kl) >= 3 else closed_k
                                             cur_candle = {
                                                 'timestamp': closed_k[0],
-                                                'open': float(closed_k[1]) * spot_mult,
-                                                'high': float(closed_k[2]) * spot_mult,
-                                                'low': float(closed_k[3]) * spot_mult,
-                                                'close': float(closed_k[4]) * spot_mult,
+                                                'open': float(closed_k[1]) * mult,
+                                                'high': float(closed_k[2]) * mult,
+                                                'low': float(closed_k[3]) * mult,
+                                                'close': float(closed_k[4]) * mult,
                                                 'volume': float(closed_k[5])
                                             }
                                             prev_candle = {
                                                 'timestamp': prev_k[0],
-                                                'open': float(prev_k[1]) * spot_mult,
-                                                'high': float(prev_k[2]) * spot_mult,
-                                                'low': float(prev_k[3]) * spot_mult,
-                                                'close': float(prev_k[4]) * spot_mult,
+                                                'open': float(prev_k[1]) * mult,
+                                                'high': float(prev_k[2]) * mult,
+                                                'low': float(prev_k[3]) * mult,
+                                                'close': float(prev_k[4]) * mult,
                                                 'volume': float(prev_k[5])
                                             }
                                             break
