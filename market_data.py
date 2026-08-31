@@ -183,8 +183,8 @@ class MarketDataManager:
                     try:
                         is_spot = "binance.vision" in ep
                         mult = spot_mult if is_spot else 1.0
-                        url_1d_v = f"{ep}&interval=1d&limit=30"
-                        url_5m_v = f"{ep}&interval=5m&limit=200"
+                        url_1d_v = f"{ep}&interval=1d&limit=35"
+                        url_5m_v = f"{ep}&interval=5m&limit=500"
                         t_1d, t_5m = None, None
                         async with session.get(url_1d_v, timeout=aiohttp.ClientTimeout(total=4)) as r1:
                             if r1.status == 200:
@@ -270,36 +270,24 @@ class MarketDataManager:
             }
             return
 
-        # === CAMARILLA PIVOT ===
-        if not df_1d.empty:
-            prev_day = df_1d.iloc[-2] if len(df_1d) >= 2 else df_1d.iloc[-1]
+        # === CAMARILLA PIVOT (TradingView 1D UTC 00:00 Tam Uyumu) ===
+        if not df_1d.empty and len(df_1d) >= 2:
+            prev_day = df_1d.iloc[-2]
+            camarilla = calculate_camarilla_pivots(prev_day['high'], prev_day['low'], prev_day['close'])
+        elif not df_1d.empty:
+            prev_day = df_1d.iloc[-1]
             camarilla = calculate_camarilla_pivots(prev_day['high'], prev_day['low'], prev_day['close'])
         else:
             camarilla = calculate_camarilla_pivots(df_5m['high'].max(), df_5m['low'].min(), df_5m['close'].iloc[-1])
 
-        # === ANCHORED VWAP ===
-        if not df_1d.empty:
-            lookback_count = min(LOOKBACK_DAYS_AVWAP, len(df_1d))
-            lookback_days = df_1d.iloc[-lookback_count:]
-            max_high_idx = lookback_days['high'].idxmax()
-            min_low_idx = lookback_days['low'].idxmin()
-
-            tepe_time = lookback_days.loc[max_high_idx, 'timestamp']
-            dip_time = lookback_days.loc[min_low_idx, 'timestamp']
-
-            earliest_5m_ts = df_5m['timestamp'].iloc[0]
-
-            if tepe_time >= earliest_5m_ts:
-                tepe_idx_5m = (df_5m['timestamp'] - tepe_time).abs().idxmin()
-                tepe_avwap = float(calculate_anchored_vwap(df_5m, tepe_idx_5m))
-            else:
-                tepe_avwap = float(calculate_anchored_vwap(df_5m, 0))
-
-            if dip_time >= earliest_5m_ts:
-                dip_idx_5m = (df_5m['timestamp'] - dip_time).abs().idxmin()
-                dip_avwap = float(calculate_anchored_vwap(df_5m, dip_idx_5m))
-            else:
-                dip_avwap = float(calculate_anchored_vwap(df_5m, 0))
+        # === ANCHORED VWAP (TradingView 24h-48h Swing High/Low Paritesi) ===
+        if len(df_5m) >= 20:
+            lookback_bars = min(len(df_5m), 288)
+            sub_5m = df_5m.iloc[-lookback_bars:]
+            peak_idx = sub_5m['high'].idxmax()
+            trough_idx = sub_5m['low'].idxmin()
+            tepe_avwap = float(calculate_anchored_vwap(df_5m, peak_idx))
+            dip_avwap = float(calculate_anchored_vwap(df_5m, trough_idx))
         else:
             high_idx = df_5m['high'].idxmax()
             low_idx = df_5m['low'].idxmin()
@@ -307,7 +295,10 @@ class MarketDataManager:
             dip_avwap = float(calculate_anchored_vwap(df_5m, low_idx))
 
         # === VOLUME PROFILE (Son 30 Günlük Makro Profil: mPOC, mVAH, mVAL) ===
-        vp_df = df_1d if (df_1d is not None and not df_1d.empty and len(df_1d) >= 5) else df_5m
+        if df_1d is not None and not df_1d.empty and len(df_1d) >= 5:
+            vp_df = df_1d.iloc[-min(30, len(df_1d)):]
+        else:
+            vp_df = df_5m
         vp_result = calculate_volume_profile(vp_df, num_rows=30, value_area_pct=0.68)
 
         # === NAKED LINES ===
