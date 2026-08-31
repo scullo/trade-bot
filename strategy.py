@@ -703,19 +703,19 @@ class StrategyEngine:
         if len(self.paper_trader.open_positions) >= MAX_OPEN_POSITIONS:
             return
 
-        # 🛡️ GÜVENLİK ZIRHI 1: KULLANICI TANIMLI GÜNLÜK DEVRE KESİCİ (CIRCUIT BREAKER)
-        user_daily_loss_pct = getattr(self.paper_trader, 'max_daily_drawdown_pct', 0.03)
+        # 🛡️ GÜVENLİK ZIRHI 1: GÜNLÜK DEVRE KESİCİ TELEMETRİSİ (7 Günlük Test/Veri Toplama Modunda İşlemi Durdurmaz)
+        user_daily_loss_pct = getattr(self.paper_trader, 'max_daily_drawdown_pct', 0.05)
         cb_ok, cb_msg = self.vault.check_daily_circuit_breaker(
             getattr(self.paper_trader, 'history', []),
             getattr(self.paper_trader, 'balance', 100000.0),
             max_loss_pct=user_daily_loss_pct
         )
         if not cb_ok:
-            print(f">> [GÜVENLİK ZIRHI] {cb_msg}")
-            return
+            # 7 Günlük Araştırma Laboratuvarında veri toplamayı kesintisiz sürdürür, adli log kaydeder
+            print(f">> [DEVRE KESİCİ TELEMETRİ BİLDİRİMİ] {cb_msg}")
 
-        # 🛡️ GÜVENLİK ZIRHI 2: KULLANICI TANIMLI PORTFÖY MARJİN TAVAN KİLİDİ
-        user_margin_cap_pct = getattr(self.paper_trader, 'max_portfolio_margin_pct', 0.40)
+        # 🛡️ GÜVENLİK ZIRHI 2: PORTFÖY MARJİN TAVAN KİLİDİ
+        user_margin_cap_pct = getattr(self.paper_trader, 'max_portfolio_margin_pct', 0.80)
         pos_size = getattr(self.paper_trader, 'margin_per_trade', getattr(self.paper_trader, 'position_size', 100.0))
         mc_ok, mc_msg = self.vault.check_margin_cap(
             getattr(self.paper_trader, 'open_positions', {}),
@@ -724,8 +724,7 @@ class StrategyEngine:
             max_cap_pct=user_margin_cap_pct
         )
         if not mc_ok:
-            # Sadece kritik durumlarda logla
-            return
+            print(f">> [MARJİN TAVAN UYARISI] {mc_msg}")
 
         r3, r4, r5 = cam.get("R3", 0), cam.get("R4", 0), cam.get("R5", 0)
         s3, s4, s5 = cam.get("S3", 0), cam.get("S4", 0), cam.get("S5", 0)
