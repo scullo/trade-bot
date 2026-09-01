@@ -387,6 +387,8 @@ class MarketDataManager:
                         print(f">> [TARAMA HATA] {s}: {e}")
 
             await asyncio.gather(*(fetch_and_eval(s) for s in list(self.active_symbols)))
+            import gc
+            gc.collect()
 
     async def start_websocket(self):
         symbol_map = {}

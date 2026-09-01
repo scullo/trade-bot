@@ -5617,7 +5617,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             }
         )
         await response.prepare(request)
-        queue = asyncio.Queue()
+        queue = asyncio.Queue(maxsize=50)
         sse_clients.add(queue)
 
         try:
@@ -5854,6 +5854,11 @@ async def broadcast_tick(symbol, price):
     data = {"type": "tick", "symbol": symbol, "price": price}
     for q in list(sse_clients):
         try:
+            if q.full():
+                try:
+                    q.get_nowait()
+                except Exception:
+                    pass
             q.put_nowait(data)
         except Exception:
             pass
