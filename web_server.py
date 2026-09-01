@@ -5668,24 +5668,34 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 await market_data.fetch_single_symbol(clean_sym)
                 df_5m = market_data.candles_5m.get(clean_sym)
             
-            # Direct fallback fetch via fapi (bypasses ccxt 451 geo-restriction on Render)
+            # Direct fallback fetch via fapi & vision (bypasses ccxt 451 geo-restriction on Render)
             if df_5m is None or df_5m.empty:
                 import aiohttp
                 clean_raw = clean_sym.replace('/', '').replace(':USDT', '').replace('USDT', '')
-                fapi_url = f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_raw}USDT&interval=5m&limit=500"
+                spot_clean = clean_raw.replace('1000000', '').replace('1000', '')
+                fapi_urls = [
+                    f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_raw}USDT&interval=5m&limit=500",
+                    f"https://fapi.binance.com/fapi/v1/continuousKlines?pair={clean_raw}USDT&contractType=PERPETUAL&interval=5m&limit=500",
+                    f"https://data-api.binance.vision/api/v3/klines?symbol={spot_clean}USDT&interval=5m&limit=500"
+                ]
                 try:
                     async with aiohttp.ClientSession() as sess:
-                        async with sess.get(fapi_url, timeout=aiohttp.ClientTimeout(total=5)) as r:
-                            if r.status == 200:
-                                raw = await r.json()
-                                if isinstance(raw, list) and len(raw) > 0:
-                                    df_5m = pd.DataFrame(raw, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'ct', 'qav', 'nt', 'tb', 'tq', 'ig'])
-                                    for col in ['open', 'high', 'low', 'close']:
-                                        df_5m[col] = df_5m[col].astype(float)
-                                    for col in ['timestamp', 'volume']:
-                                        df_5m[col] = df_5m[col].astype(float)
-                                    market_data.candles_5m[clean_sym] = df_5m
-                                    market_data.recalculate_levels(clean_sym)
+                        for fapi_url in fapi_urls:
+                            try:
+                                async with sess.get(fapi_url, timeout=aiohttp.ClientTimeout(total=3)) as r:
+                                    if r.status == 200:
+                                        raw = await r.json()
+                                        if isinstance(raw, list) and len(raw) > 0:
+                                            df_5m = pd.DataFrame(raw, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'ct', 'qav', 'nt', 'tb', 'tq', 'ig'])
+                                            for col in ['open', 'high', 'low', 'close']:
+                                                df_5m[col] = df_5m[col].astype(float)
+                                            for col in ['timestamp', 'volume']:
+                                                df_5m[col] = df_5m[col].astype(float)
+                                            market_data.candles_5m[clean_sym] = df_5m
+                                            market_data.recalculate_levels(clean_sym)
+                                            break
+                            except Exception:
+                                pass
                 except Exception:
                     pass
 

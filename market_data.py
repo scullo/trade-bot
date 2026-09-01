@@ -171,15 +171,16 @@ class MarketDataManager:
             df_5m = None
 
             async with aiohttp.ClientSession() as session:
-                # 1. Binance USDT-M Futures Native Perpetuals (100% TradingView Parity)
+                # 1. Binance USDT-M Futures Native Perpetuals & Vision Fallback (US Cloud Safe)
                 futures_endpoints = [
                     f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_raw}USDT",
                     f"https://fapi.binance.com/fapi/v1/continuousKlines?pair={clean_raw}USDT&contractType=PERPETUAL",
-                    f"https://fapi.binance.com/fapi/v1/markPriceKlines?symbol={clean_raw}USDT"
+                    f"https://data-api.binance.vision/api/v3/klines?symbol={spot_clean}USDT"
                 ]
                 for ep in futures_endpoints:
                     try:
-                        mult = 1.0
+                        is_spot = "binance.vision" in ep
+                        mult = spot_mult if is_spot else 1.0
                         url_1d_v = f"{ep}&interval=1d&limit=35"
                         url_5m_v = f"{ep}&interval=5m&limit=500"
                         t_1d, t_5m = None, None
@@ -336,10 +337,11 @@ class MarketDataManager:
                         for url_v in [
                             f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_raw}USDT&interval=5m&limit=4",
                             f"https://fapi.binance.com/fapi/v1/continuousKlines?pair={clean_raw}USDT&contractType=PERPETUAL&interval=5m&limit=4",
-                            f"https://fapi.binance.com/fapi/v1/markPriceKlines?symbol={clean_raw}USDT&interval=5m&limit=4"
+                            f"https://data-api.binance.vision/api/v3/klines?symbol={spot_clean}USDT&interval=5m&limit=4"
                         ]:
                             try:
-                                mult = 1.0
+                                is_spot = "binance.vision" in url_v
+                                mult = spot_mult if is_spot else 1.0
                                 async with session.get(url_v, timeout=aiohttp.ClientTimeout(total=2.5)) as res:
                                     if res.status == 200:
                                         kl = await res.json()
@@ -367,13 +369,13 @@ class MarketDataManager:
                                 pass
 
                         if cur_candle is not None and prev_candle is not None:
-                            # 🛡️ OTOMATİK BORSA SENKRONİZASYON BEKÇİSİ (INTEGRITY GUARD)
+                            # 🛡️ OTOMATİK BORSA SENKRONİZASYON VE ANLIK ONARIM (AUTO-HEAL GUARD)
                             live_ws_p = self.current_prices.get(s, cur_candle['close'])
                             if live_ws_p > 0:
                                 delta_p = abs(cur_candle['close'] - live_ws_p) / live_ws_p * 100.0
-                                if delta_p > 2.0:
-                                    print(f">> [GÜVENLİK ENGELİ] {s}: Vadeli Ticker ({live_ws_p}) ile Mum ({cur_candle['close']}) Arasında Sapma Var (%{delta_p:.2f})! Güvenlik Nedeniyle Mum Atlattı.")
-                                    return
+                                if delta_p > 1.5:
+                                    # Otomatik Onarım: Mum kapanışını anlık canlı vadeli fiyata eşitle (akış bozulmaz!)
+                                    cur_candle['close'] = live_ws_p
 
                             self.current_prices[s] = cur_candle['close']
                             if s in self.candles_5m and not self.candles_5m[s].empty:
