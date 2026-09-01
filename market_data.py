@@ -367,6 +367,14 @@ class MarketDataManager:
                                 pass
 
                         if cur_candle is not None and prev_candle is not None:
+                            # 🛡️ OTOMATİK BORSA SENKRONİZASYON BEKÇİSİ (INTEGRITY GUARD)
+                            live_ws_p = self.current_prices.get(s, cur_candle['close'])
+                            if live_ws_p > 0:
+                                delta_p = abs(cur_candle['close'] - live_ws_p) / live_ws_p * 100.0
+                                if delta_p > 2.0:
+                                    print(f">> [GÜVENLİK ENGELİ] {s}: Vadeli Ticker ({live_ws_p}) ile Mum ({cur_candle['close']}) Arasında Sapma Var (%{delta_p:.2f})! Güvenlik Nedeniyle Mum Atlattı.")
+                                    return
+
                             self.current_prices[s] = cur_candle['close']
                             if s in self.candles_5m and not self.candles_5m[s].empty:
                                 last_ts = self.candles_5m[s]['timestamp'].iloc[-1]
