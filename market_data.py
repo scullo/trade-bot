@@ -171,18 +171,15 @@ class MarketDataManager:
             df_5m = None
 
             async with aiohttp.ClientSession() as session:
-                # 1. Binance USDT-M Futures Native Klines (100% TradingView Parity)
+                # 1. Binance USDT-M Futures Native Perpetuals (100% TradingView Parity)
                 futures_endpoints = [
                     f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_raw}USDT",
-                    f"https://fapi1.binance.com/fapi/v1/klines?symbol={clean_raw}USDT",
-                    f"https://fapi2.binance.com/fapi/v1/klines?symbol={clean_raw}USDT",
-                    f"https://fapi3.binance.com/fapi/v1/klines?symbol={clean_raw}USDT",
-                    f"https://data-api.binance.vision/api/v3/klines?symbol={spot_clean}USDT"
+                    f"https://fapi.binance.com/fapi/v1/continuousKlines?pair={clean_raw}USDT&contractType=PERPETUAL",
+                    f"https://fapi.binance.com/fapi/v1/markPriceKlines?symbol={clean_raw}USDT"
                 ]
                 for ep in futures_endpoints:
                     try:
-                        is_spot = "binance.vision" in ep
-                        mult = spot_mult if is_spot else 1.0
+                        mult = 1.0
                         url_1d_v = f"{ep}&interval=1d&limit=35"
                         url_5m_v = f"{ep}&interval=5m&limit=500"
                         t_1d, t_5m = None, None
@@ -338,14 +335,11 @@ class MarketDataManager:
 
                         for url_v in [
                             f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_raw}USDT&interval=5m&limit=4",
-                            f"https://fapi1.binance.com/fapi/v1/klines?symbol={clean_raw}USDT&interval=5m&limit=4",
-                            f"https://fapi2.binance.com/fapi/v1/klines?symbol={clean_raw}USDT&interval=5m&limit=4",
-                            f"https://fapi3.binance.com/fapi/v1/klines?symbol={clean_raw}USDT&interval=5m&limit=4",
-                            f"https://data-api.binance.vision/api/v3/klines?symbol={spot_clean}USDT&interval=5m&limit=4"
+                            f"https://fapi.binance.com/fapi/v1/continuousKlines?pair={clean_raw}USDT&contractType=PERPETUAL&interval=5m&limit=4",
+                            f"https://fapi.binance.com/fapi/v1/markPriceKlines?symbol={clean_raw}USDT&interval=5m&limit=4"
                         ]:
                             try:
-                                is_spot = "binance.vision" in url_v
-                                mult = spot_mult if is_spot else 1.0
+                                mult = 1.0
                                 async with session.get(url_v, timeout=aiohttp.ClientTimeout(total=2.5)) as res:
                                     if res.status == 200:
                                         kl = await res.json()
