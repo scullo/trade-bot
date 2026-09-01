@@ -3,6 +3,8 @@ from crypto_payment_gateway import CryptoPaymentGateway
 from db_manager import DatabaseManager
 import asyncio
 import json
+import numpy as np
+import pandas as pd
 from datetime import datetime, timezone, timedelta
 from aiohttp import web
 from config import SYMBOLS
