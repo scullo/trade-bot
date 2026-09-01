@@ -5694,8 +5694,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             avwap_lookback = min(len(df_5m), LOOKBACK_DAYS_AVWAP * candles_per_day)
             recent_df = df_5m.iloc[-avwap_lookback:]
             
-            high_idx_rel = recent_df['high'].argmax()
-            low_idx_rel = recent_df['low'].argmin()
+            high_idx_rel = int(np.argmax(recent_df['high'].values))
+            low_idx_rel = int(np.argmin(recent_df['low'].values))
             
             high_idx_abs = len(df_5m) - avwap_lookback + high_idx_rel
             low_idx_abs = len(df_5m) - avwap_lookback + low_idx_rel
