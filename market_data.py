@@ -382,8 +382,8 @@ class MarketDataManager:
                                 last_ts = self.candles_5m[s]['timestamp'].iloc[-1]
                                 if cur_candle['timestamp'] > last_ts:
                                     self.candles_5m[s] = pd.concat([self.candles_5m[s], pd.DataFrame([cur_candle])], ignore_index=True)
-                                    if len(self.candles_5m[s]) > 500:
-                                        self.candles_5m[s] = self.candles_5m[s].iloc[-500:].reset_index(drop=True)
+                                    if len(self.candles_5m[s]) > 300:
+                                        self.candles_5m[s] = self.candles_5m[s].iloc[-300:].reset_index(drop=True)
                                     self.recalculate_levels(s)
                             if self.on_candle_close_callback and s in self.active_symbols:
                                 await self.on_candle_close_callback(s, cur_candle, prev_candle)

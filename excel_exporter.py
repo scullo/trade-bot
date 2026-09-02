@@ -10,9 +10,14 @@ def _safe_float(val, default=0.0):
     except (ValueError, TypeError):
         return default
 
+import os
+import tempfile
+
 def create_styled_excel_report(history_data: list, current_balance: float = 100000.0, initial_balance: float = 100000.0) -> io.BytesIO:
-    output = io.BytesIO()
-    workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+    with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp:
+        tmp_path = tmp.name
+        
+    workbook = xlsxwriter.Workbook(tmp_path)
 
     # ==================== FORMATLAR ====================
     title_fmt = workbook.add_format({
@@ -741,6 +746,13 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         r_row += 1
 
     workbook.close()
-    output.seek(0)
-    return output
+    
+    with open(tmp_path, 'rb') as f:
+        file_bytes = f.read()
+    try:
+        os.remove(tmp_path)
+    except Exception:
+        pass
+
+    return io.BytesIO(file_bytes)
 

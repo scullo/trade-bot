@@ -5643,8 +5643,12 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 initial_balance=INITIAL_BALANCE
             )
             filename = f"Valkyrie_Ticaret_Raporu_{datetime.now(timezone(timedelta(hours=3))).strftime('%Y%m%d_%H%M')}.xlsx"
+            import gc
+            file_bytes = buf.read()
+            del buf
+            gc.collect()
             return web.Response(
-                body=buf.read(),
+                body=file_bytes,
                 content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 headers={
                     'Content-Disposition': f'attachment; filename="{filename}"'
