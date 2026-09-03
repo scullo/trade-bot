@@ -343,26 +343,59 @@ class StrategyEngine:
                     vol_surge = 1.0
 
         # ── 1b. GÖRECELİ GÜÇ (RELATIVE STRENGTH VS BTC) & AYRIŞMA HESABI ──
+        # Multi-Timeframe RS: 12 mum (1H) ana sinyal + 4 mum (20dk) momentum
         rs_vs_btc = 0.0
         decoupling_status = "⚪ NÖTR_TAKİPÇİ"
         if self.market_data and 'BTC/USDT' in self.market_data.candles_5m and symbol in self.market_data.candles_5m:
             try:
                 df_coin = self.market_data.candles_5m[symbol]
                 df_btc = self.market_data.candles_5m['BTC/USDT']
-                if len(df_coin) >= 4 and len(df_btc) >= 4:
+                min_len = min(len(df_coin), len(df_btc))
+
+                if min_len >= 12:
+                    # 1H RS (ana sinyal — 12 mum = 60 dakika)
+                    coin_chg_1h = ((df_coin['close'].iloc[-1] - df_coin['close'].iloc[-12]) / df_coin['close'].iloc[-12]) * 100.0
+                    btc_chg_1h = ((df_btc['close'].iloc[-1] - df_btc['close'].iloc[-12]) / df_btc['close'].iloc[-12]) * 100.0
+                    rs_1h = round(float(coin_chg_1h - btc_chg_1h), 2)
+
+                    # 20dk RS (hızlı momentum — 4 mum)
+                    coin_chg_fast = ((df_coin['close'].iloc[-1] - df_coin['close'].iloc[-4]) / df_coin['close'].iloc[-4]) * 100.0
+                    btc_chg_fast = ((df_btc['close'].iloc[-1] - df_btc['close'].iloc[-4]) / df_btc['close'].iloc[-4]) * 100.0
+                    rs_fast = round(float(coin_chg_fast - btc_chg_fast), 2)
+
+                    # Bileşik RS: 1H ağırlıklı (%70 ana + %30 momentum)
+                    rs_vs_btc = round(rs_1h * 0.7 + rs_fast * 0.3, 2)
+
+                    # Ayrışma sınıflandırması — 1H RS + bileşik RS birlikte değerlendirilir
+                    if rs_1h >= 1.5 and coin_chg_1h > 0:
+                        decoupling_status = "🚀 ALFA_AYRIŞAN (Güçlü Boğa)"
+                    elif rs_1h <= -1.5 and coin_chg_1h < 0:
+                        decoupling_status = "🩸 AŞIRI_ZAYIF (Ezilen Ayı)"
+                    elif abs(rs_1h) >= 0.8:
+                        decoupling_status = "⚖️ ILIMLI_AYRIŞMA"
+                    elif abs(rs_1h) < 0.3:
+                        decoupling_status = "🔗 BTC_KUKLASI (Korelasyon %90+)"
+                    else:
+                        decoupling_status = "⚪ NÖTR_TAKİPÇİ"
+
+                elif min_len >= 4:
+                    # Fallback: sadece 20dk RS (veri az ama sıfır değil)
                     coin_chg = ((df_coin['close'].iloc[-1] - df_coin['close'].iloc[-4]) / df_coin['close'].iloc[-4]) * 100.0
                     btc_chg = ((df_btc['close'].iloc[-1] - df_btc['close'].iloc[-4]) / df_btc['close'].iloc[-4]) * 100.0
                     rs_vs_btc = round(float(coin_chg - btc_chg), 2)
-                    
+
                     if rs_vs_btc >= 1.5 and coin_chg > 0:
                         decoupling_status = "🚀 ALFA_AYRIŞAN (Güçlü Boğa)"
                     elif rs_vs_btc <= -1.5 and coin_chg < 0:
                         decoupling_status = "🩸 AŞIRI_ZAYIF (Ezilen Ayı)"
-                    elif abs(rs_vs_btc) < 0.6:
+                    elif abs(rs_vs_btc) >= 0.8:
+                        decoupling_status = "⚖️ ILIMLI_AYRIŞMA"
+                    elif abs(rs_vs_btc) < 0.3:
                         decoupling_status = "🔗 BTC_KUKLASI (Korelasyon %90+)"
                     else:
-                        decoupling_status = "⚖️ ILIMLI_AYRIŞMA"
-            except Exception:
+                        decoupling_status = "⚪ NÖTR_TAKİPÇİ"
+            except Exception as e:
+                print(f">> [RS HATA] {symbol}: {e}")
                 rs_vs_btc = 0.0
                 decoupling_status = "⚪ NÖTR_TAKİPÇİ"
 
