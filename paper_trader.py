@@ -9,7 +9,22 @@ from config import INITIAL_BALANCE, LEVERAGE, POSITION_SIZE_USDT, COMMISSION_RAT
 HISTORY_FILE = "trade_history.json"
 
 # GitHub Remote Persistence Config
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+def _get_gh_token():
+    tok = os.environ.get("GITHUB_TOKEN", "")
+    if not tok:
+        try:
+            if os.path.exists(".git/config"):
+                with open(".git/config", "r", encoding="utf-8") as gf:
+                    txt = gf.read()
+                import re
+                m = re.search(r'https://[^:]+:([^@]+)@github\.com', txt)
+                if m:
+                    tok = m.group(1)
+        except Exception:
+            pass
+    return tok
+
+GITHUB_TOKEN = _get_gh_token()
 GITHUB_REPO = os.environ.get("GITHUB_REPO", "scullo/trade-bot")
 GITHUB_FILE_PATH = "trade_history.json"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_FILE_PATH}"
@@ -103,19 +118,18 @@ class PaperTrader:
             content_str = json.dumps(state, indent=2, ensure_ascii=False)
             content_b64 = base64.b64encode(content_str.encode("utf-8")).decode("utf-8")
 
-            # Güncel SHA'yı al (conflict olmaması için)
-            if not self._github_sha:
-                try:
-                    req = urllib.request.Request(GITHUB_API_URL, headers={
-                        "Authorization": f"token {GITHUB_TOKEN}",
-                        "Accept": "application/vnd.github.v3+json",
-                        "User-Agent": "TradeBot/1.0"
-                    })
-                    res = urllib.request.urlopen(req, timeout=10)
-                    gh = json.loads(res.read().decode("utf-8"))
-                    self._github_sha = gh.get("sha")
-                except Exception:
-                    pass
+            # Her push oncesi guncel SHA'yi al (conflict olmamasi icin)
+            try:
+                req = urllib.request.Request(GITHUB_API_URL, headers={
+                    "Authorization": f"token {GITHUB_TOKEN}",
+                    "Accept": "application/vnd.github.v3+json",
+                    "User-Agent": "TradeBot/1.0"
+                })
+                res = urllib.request.urlopen(req, timeout=10)
+                gh = json.loads(res.read().decode("utf-8"))
+                self._github_sha = gh.get("sha")
+            except Exception:
+                pass
 
             payload = {
                 "message": f"[BOT] Trade state auto-save ({datetime.now(timezone(timedelta(hours=3))).strftime('%H:%M:%S')})",
