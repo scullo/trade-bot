@@ -314,6 +314,7 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ('Eşzamanlı Yön Yığılması', 20),
         ('Volatilite Sıkışması (Chop)', 22),
         ('CVD Taker Alım (%)', 18),
+        ('Breakout İvmesi (Hız xATR)', 22),
         ('Göreceli Güç (RS vs BTC %)', 22),
         ('Ayrışma (Decoupling) Durumu', 26)
     ]
@@ -431,14 +432,18 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ws.write(r_idx, 53, cluster_str, cell_center)
         ws.write(r_idx, 54, chop_str, cell_center)
         
-        # CVD Taker Alım Oranı %
-        taker_pct = _safe_float(h.get('taker_buy_ratio_pct', 55.0 if is_win and h.get('side')=='LONG' else (35.0 if not is_win and h.get('side')=='LONG' else 48.0)))
+        # CVD Taker Alım Oranı % (Gerçek Veri)
+        taker_pct = _safe_float(h.get('cvd_pct', 50.0))
         ws.write(r_idx, 55, f"%{taker_pct:.1f}", cell_roe_green if taker_pct >= 50 else cell_roe_red)
+
+        # Breakout İvmesi (Candle Velocity)
+        ivme = _safe_float(h.get('candle_velocity', 1.0))
+        ws.write(r_idx, 56, f"{ivme:.2f}x", cell_roe_green if ivme >= 2.0 else cell_center)
 
         # Göreceli Güç (RS vs BTC %) & Ayrışma Durumu
         rs_val = _safe_float(h.get('rs_vs_btc', 0.0))
-        ws.write(r_idx, 56, f"%{rs_val:+.2f}", cell_roe_green if rs_val >= 0 else cell_roe_red)
-        ws.write(r_idx, 57, str(h.get('decoupling_status', '⚪ NÖTR_TAKİPÇİ')), cell_left)
+        ws.write(r_idx, 57, f"%{rs_val:+.2f}", cell_roe_green if rs_val >= 0 else cell_roe_red)
+        ws.write(r_idx, 58, str(h.get('decoupling_status', '⚪ NÖTR_TAKİPÇİ')), cell_left)
 
     def render_table_sheet(ws_obj, t_list):
         for col_idx, (h_name, width) in enumerate(headers_granular):

@@ -463,6 +463,32 @@ class StrategyEngine:
         dyn_margin = min(100.0, max(20.0, round(3.5 / (safe_atr * 0.02 * 5.0) * 100.0 / 3.5, 2)))
         dyn_margin = min(100.0, max(25.0, round(100.0 / (safe_atr / 1.0), 2)))
 
+        # ── 1c. GERÇEK CVD (TAKER BUY RATIO) VE İVME (CANDLE VELOCITY) HESABI ──
+        cvd_pct = 50.0
+        candle_velocity = 1.0
+        if self.market_data and symbol in self.market_data.candles_5m:
+            try:
+                df = self.market_data.candles_5m[symbol]
+                if len(df) > 0:
+                    # 1. Gerçek CVD Hesaplama
+                    if 'taker_quote' in df.columns and 'qav' in df.columns:
+                        t_q = df['taker_quote'].iloc[-1]
+                        qav = df['qav'].iloc[-1]
+                        if qav > 0:
+                            cvd_pct = round(float((t_q / qav) * 100.0), 1)
+
+                    # 2. Breakout İvmesi (Hız) Hesaplama
+                    if 'open' in df.columns and 'close' in df.columns:
+                        body_size = abs(df['close'].iloc[-1] - df['open'].iloc[-1])
+                        # ATR usd cinsinden yukarıda tr listesinden hesaplanmıştı, try-except icindeydi
+                        # Eğer atr varsa onu kullanacağız. Biz atr_pct üzerinden usd cinsine dönelim.
+                        current_close = df['close'].iloc[-1]
+                        atr_usd = (atr_pct / 100.0) * current_close
+                        if atr_usd > 0:
+                            candle_velocity = round(float(body_size / atr_usd), 2)
+            except Exception as e:
+                print(f">> [CVD/HIZ HATA] {symbol}: {e}")
+
         res = await self._safe_open_position(
             symbol=symbol, side=side, entry_price=entry_price,
             reason=reason, soft_stop=soft_stop, hard_stop=hard_stop,
@@ -470,7 +496,8 @@ class StrategyEngine:
             snapshot_levels=snapshot_levels, setup_id=setup_id, confluence_list=confluence_list,
             atr_pct=atr_pct, trend_regime=trend_regime, session=session_str,
             volume_surge=vol_surge, confluence_score=conf_score_str, htf_alignment=htf_str,
-            custom_margin=dyn_margin, rs_vs_btc=rs_vs_btc, decoupling_status=decoupling_status
+            custom_margin=dyn_margin, rs_vs_btc=rs_vs_btc, decoupling_status=decoupling_status,
+            cvd_pct=cvd_pct, candle_velocity=candle_velocity
         )
         if isinstance(res, dict) and res.get("error") == "INSUFFICIENT_BALANCE":
             await self.notifier.notify_insufficient_balance(

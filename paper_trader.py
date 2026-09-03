@@ -235,7 +235,7 @@ class PaperTrader:
         if updated_stop:
             self.save_history()
 
-    def open_position(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None, atr_pct: float = 1.0, trend_regime: str = "YATAY", session: str = "LONDRA", volume_surge: float = 1.0, confluence_score: str = "2/4", htf_alignment: str = "TREND YÖNÜNDE", custom_margin: float = None, rs_vs_btc: float = 0.0, decoupling_status: str = "⚪ NÖTR_TAKİPÇİ"):
+    def open_position(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None, atr_pct: float = 1.0, trend_regime: str = "YATAY", session: str = "LONDRA", volume_surge: float = 1.0, confluence_score: str = "2/4", htf_alignment: str = "TREND YÖNÜNDE", custom_margin: float = None, rs_vs_btc: float = 0.0, decoupling_status: str = "⚪ NÖTR_TAKİPÇİ", cvd_pct: float = 50.0, candle_velocity: float = 1.0):
         if symbol in self.open_positions:
             return None
 
@@ -307,6 +307,8 @@ class PaperTrader:
             "htf_alignment": htf_alignment,
             "rs_vs_btc": float(rs_vs_btc),
             "decoupling_status": str(decoupling_status),
+            "cvd_pct": float(cvd_pct),
+            "candle_velocity": float(candle_velocity),
             "peak_price": float(entry_price),
             "trough_price": float(entry_price),
             "max_mfe_roe": 0.0,
