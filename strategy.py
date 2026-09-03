@@ -18,6 +18,8 @@ class StrategyEngine:
         self.vault = SecurityVault()
         self.peak_prices = {}  # symbol -> trailing icin en iyi fiyat
         self.last_trade_times = {}  # (symbol, side) -> timestamp (30dk Cooldown)
+        self.boot_time = time.time()  # Sunucu baslangic zamani (Isinma Kalkanı)
+        self.warmup_seconds = 45.0   # Ilk 45 saniye ani kapatmalari onle
 
     def get_symbol_atr_pct(self, symbol: str) -> float:
         """Paritenin son 14 mumluk ATR yuzdesini hesaplayarak coine ozel dinamik esik uretir."""
@@ -722,39 +724,43 @@ class StrategyEngine:
                         self._cleanup_tracking(symbol)
                     return
 
-            # 1c. YUMUSAK STOP KONTROL (Breakeven veya Koruma Stopu)
-            if side == "LONG" and close_price < soft_stop:
-                reason_stop = "🛡️ Breakeven Koruması Tetiklendi" if is_half else "Yumusak Stop (Mum Seviye Altinda Kapandi)"
-                record = await self._safe_close_position(symbol, close_price, reason_stop)
-                if record:
-                    await self._notify_close(record, levels=levels)
-                    self._cleanup_tracking(symbol)
-                return
-            elif side == "SHORT" and close_price > soft_stop:
-                reason_stop = "🛡️ Breakeven Koruması Tetiklendi" if is_half else "Yumusak Stop (Mum Seviye Ustunde Kapandi)"
-                record = await self._safe_close_position(symbol, close_price, reason_stop)
-                if record:
-                    await self._notify_close(record, levels=levels)
-                    self._cleanup_tracking(symbol)
-                return
+            # 🛡️ ISINMA KALKANI: Bot basladiktan sonraki ilk 45 saniyede soket/fiyatlar oturana kadar toplu stop ve zaman asimi kapatmasi yapma
+            is_warming_up = (time.time() - getattr(self, "boot_time", 0)) < getattr(self, "warmup_seconds", 45.0)
 
-            # 1b. SEVIYE GUNCELLEME (Pivot Kaymasi Kontrolu)
-            closed = await self._refresh_position_levels(symbol, pos, close_price, levels)
-            if closed:
-                return
-
-            # 1c. SCALP ZAMAN ASIMI
-            if pos.get("trade_type") == "SCALP":
-                hold_seconds = time.time() - pos.get("entry_timestamp", 0)
-                max_seconds = SCALP_MAX_HOLD_CANDLES * 300  # candle sayisi x 5dk
-                if hold_seconds > max_seconds:
-                    hours = hold_seconds / 3600.0
-                    record = await self._safe_close_position(
-                        symbol, close_price,
-                        f"Scalp Zaman Asimi ({hours:.1f} saat)")
+            if not is_warming_up:
+                # 1c. YUMUSAK STOP KONTROL (Breakeven veya Koruma Stopu)
+                if side == "LONG" and close_price < soft_stop:
+                    reason_stop = "🛡️ Breakeven Koruması Tetiklendi" if is_half else "Yumusak Stop (Mum Seviye Altinda Kapandi)"
+                    record = await self._safe_close_position(symbol, close_price, reason_stop)
                     if record:
                         await self._notify_close(record, levels=levels)
                         self._cleanup_tracking(symbol)
+                    return
+                elif side == "SHORT" and close_price > soft_stop:
+                    reason_stop = "🛡️ Breakeven Koruması Tetiklendi" if is_half else "Yumusak Stop (Mum Seviye Ustunde Kapandi)"
+                    record = await self._safe_close_position(symbol, close_price, reason_stop)
+                    if record:
+                        await self._notify_close(record, levels=levels)
+                        self._cleanup_tracking(symbol)
+                    return
+
+                # 1d. SEVIYE GUNCELLEME (Pivot Kaymasi Kontrolu)
+                closed = await self._refresh_position_levels(symbol, pos, close_price, levels)
+                if closed:
+                    return
+
+                # 1e. SCALP ZAMAN ASIMI
+                if pos.get("trade_type") == "SCALP":
+                    hold_seconds = time.time() - pos.get("entry_timestamp", 0)
+                    max_seconds = SCALP_MAX_HOLD_CANDLES * 300  # candle sayisi x 5dk
+                    if hold_seconds > max_seconds:
+                        hours = hold_seconds / 3600.0
+                        record = await self._safe_close_position(
+                            symbol, close_price,
+                            f"Scalp Zaman Asimi ({hours:.1f} saat)")
+                        if record:
+                            await self._notify_close(record, levels=levels)
+                            self._cleanup_tracking(symbol)
             return
 
         # ═══════════════════════════════════════════════════════════════════
