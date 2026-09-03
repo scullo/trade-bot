@@ -4,6 +4,7 @@ import os
 import time
 from datetime import datetime, timezone, timedelta
 import ccxt.async_support as ccxt_async
+from security_vault import SecurityVault
 
 LIVE_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "live_config.json")
 LIVE_HISTORY_PATH = os.path.join(os.path.dirname(__file__), "live_trade_history.json")
@@ -32,6 +33,7 @@ def save_live_config(cfg: dict):
 
 class LiveTrader:
     def __init__(self):
+        self.vault = SecurityVault()
         self.config = load_live_config()
         self.exchange = None
         self.open_positions = {}
@@ -41,8 +43,14 @@ class LiveTrader:
         self._init_exchange()
 
     def _init_exchange(self):
-        api_key = self.config.get("api_key", "").strip()
-        api_secret = self.config.get("api_secret", "").strip()
+        enc_key = self.config.get("api_key", "").strip()
+        enc_secret = self.config.get("api_secret", "").strip()
+        
+        # If the key doesn't start with 'enc:' (legacy plaintext), we'll try to use it directly,
+        # but in update_credentials we will always save it as encrypted.
+        api_key = self.vault.decrypt(enc_key[4:]) if enc_key.startswith("enc:") else enc_key
+        api_secret = self.vault.decrypt(enc_secret[4:]) if enc_secret.startswith("enc:") else enc_secret
+
         if api_key and api_secret:
             self.exchange = ccxt_async.binanceusdm({
                 'apiKey': api_key,
@@ -116,8 +124,16 @@ class LiveTrader:
         if self.exchange:
             await self.exchange.close()
 
-        self.config["api_key"] = api_key.strip()
-        self.config["api_secret"] = api_secret.strip()
+        clean_key = api_key.strip()
+        clean_secret = api_secret.strip()
+        
+        # Sadece yeni/degisen keyleri sifreleyerek kaydet
+        if clean_key and not clean_key.startswith("enc:"):
+            self.config["api_key"] = "enc:" + self.vault.encrypt(clean_key)
+        
+        if clean_secret and not clean_secret.startswith("enc:"):
+            self.config["api_secret"] = "enc:" + self.vault.encrypt(clean_secret)
+
         self.config["leverage"] = int(leverage)
         self.config["margin_type"] = margin_type.upper()
         self.config["position_size_usdt"] = float(position_size_usdt)
@@ -177,13 +193,19 @@ class LiveTrader:
         try:
             try:
                 await self.exchange.set_leverage(leverage, clean_sym)
-            except Exception:
-                pass
+            except Exception as e:
+                # Eger hata '-2128' (zaten ayni kaldiracta) degilse, islemden GUVENLI CIKIS yap
+                if "-2128" not in str(e):
+                    print(f">> [GÜVENLİK İPTALİ] {clean_sym} Kaldıraç ayarlanamadı! Hata: {e}. İşlem iptal edildi.")
+                    return None
 
             try:
                 await self.exchange.set_margin_mode(self.config.get("margin_type", "ISOLATED").lower(), clean_sym)
-            except Exception:
-                pass
+            except Exception as e:
+                # Eger hata '-4046' (No need to change margin type) degilse, iptal et
+                if "-4046" not in str(e):
+                    print(f">> [GÜVENLİK İPTALİ] {clean_sym} Marjin tipi ayarlanamadı! Hata: {e}. İşlem iptal edildi.")
+                    return None
 
             notional = margin_usdt * leverage
             amount = notional / current_price
