@@ -50,6 +50,15 @@ async def main():
     except Exception as e:
         print(f">> [ILK TARAMA UYARI]: {e}")
 
+    # 60 Saniyelik Otomatik Bellek Temizleyici (OOM & Status 137 Kalkanı)
+    async def memory_watchdog():
+        import gc
+        while True:
+            await asyncio.sleep(60)
+            gc.collect()
+
+    asyncio.create_task(memory_watchdog())
+
     # Saatlik otomatik Telegram Kasa & Portföy Raporlayıcıyı Başlat
     asyncio.create_task(notifier.start_hourly_scheduler(trader_manager, initial_balance=INITIAL_BALANCE, market_data=market_data))
     # Telegram /kasa ve kasa İnteraktif Komut Dinleyicisini Başlat

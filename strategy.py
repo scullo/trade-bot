@@ -25,11 +25,11 @@ class StrategyEngine:
             df = self.market_data.candles_5m[symbol]
             if df is not None and len(df) >= 14:
                 try:
-                    tr1 = df['high'] - df['low']
-                    tr2 = (df['high'] - df['close'].shift(1)).abs()
-                    tr3 = (df['low'] - df['close'].shift(1)).abs()
-                    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-                    atr_val = tr.rolling(14).mean().iloc[-1]
+                    high = df['high'].values[-14:]
+                    low = df['low'].values[-14:]
+                    close = df['close'].values[-15:-1]
+                    tr = np.maximum(high - low, np.maximum(np.abs(high - close), np.abs(low - close)))
+                    atr_val = np.mean(tr)
                     cur_p = df['close'].iloc[-1]
                     if cur_p > 0 and not np.isnan(atr_val):
                         return float(atr_val / cur_p)
