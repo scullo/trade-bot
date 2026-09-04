@@ -100,8 +100,8 @@ class PaperTrader:
         if not loaded:
             print(f">> [INIT] Yeni trade_history baslatiliyor. Baslangic Kasa: {self.initial_balance}")
 
-    def save_history(self):
-        """Hem lokale hem GitHub'a kaydet."""
+    def save_history(self, critical=False):
+        """Hem lokale hem GitHub'a kaydet. critical=True ise GitHub push senkron yapılır (veri kaybı önleme)."""
         state = {
             "balance": round(self.balance, 4),
             "open_positions": self.open_positions,
@@ -111,23 +111,20 @@ class PaperTrader:
         # 1. Lokal dosyaya atomik kaydet (Bozulma Korumasi & Yedekleme)
         try:
             tmp_file = HISTORY_FILE + ".tmp"
-            bak_file = HISTORY_FILE + ".bak"
             with open(tmp_file, "w", encoding="utf-8") as f:
                 json.dump(state, f, ensure_ascii=False, separators=(',', ':'))
             os.replace(tmp_file, HISTORY_FILE)
-            # Yedek kopyayi da guncelle
-            try:
-                import shutil
-                shutil.copyfile(HISTORY_FILE, bak_file)
-            except Exception:
-                pass
         except Exception as e:
             print(f">> Lokal gecmis kaydedilirken hata: {e}")
 
-        # 2. GitHub'a kaydet (arka planda, ana threadi bloklamadan)
+        # 2. GitHub'a kaydet
         if GITHUB_TOKEN:
             self._pending_state = state
-            threading.Thread(target=self._push_to_github, args=(state,), daemon=True).start()
+            if critical:
+                # KRİTİK: İşlem kapanışlarında senkron push (veri kaybı önleme)
+                self._push_to_github(state)
+            else:
+                threading.Thread(target=self._push_to_github, args=(state,), daemon=True).start()
 
     def _push_to_github(self, state: dict):
         """trade_history.json dosyasini GitHub API uzerinden repo'ya kaydeder (Otomatik Yeniden Deneme ile)."""
@@ -465,7 +462,7 @@ class PaperTrader:
                 "snapshot_levels": pos.get("snapshot_levels", {})
             }
             self.history.append(record)
-            self.save_history()
+            self.save_history(critical=True)
             print(f">> [TP1 %50 KAPATILDI] {symbol} Net: {net_pnl:+.2f}$ ({roe_pct:+.1f}%) | Kasa: {self.balance:.2f}$")
             return record
 
@@ -532,6 +529,6 @@ class PaperTrader:
             }
             self.history.append(record)
             del self.open_positions[symbol]
-            self.save_history()
+            self.save_history(critical=True)
             print(f">> [POZISYON KAPANDI] {symbol} Net: {net_pnl:+.2f}$ ({roe_pct:+.1f}%) | Kasa: {self.balance:.2f}$")
             return record
