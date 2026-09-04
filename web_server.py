@@ -3082,19 +3082,28 @@ async function loadAdminMetrics() {
             let winPnlSum = 0.0;
             let lossPnlSum = 0.0;
 
-            hist.forEach(t => {
-                const pnl = parseFloat(t.net_pnl || 0.0);
-                const fee = parseFloat(t.commission || 0.0);
-                totalNetPnl += pnl;
-                totalFees += fee;
-                if (pnl >= 0) {
-                    wins++;
-                    winPnlSum += pnl;
-                } else {
-                    losses++;
-                    lossPnlSum += Math.abs(pnl);
-                }
-            });
+            if (appState.history_summary) {
+                wins = appState.history_summary.wins || 0;
+                losses = appState.history_summary.losses || 0;
+                winPnlSum = appState.history_summary.win_pnl_sum || 0;
+                lossPnlSum = appState.history_summary.loss_pnl_sum || 0;
+                totalNetPnl = appState.history_summary.total_realized_pnl || 0;
+                totalFees = appState.history_summary.total_fees || 0;
+            } else {
+                hist.forEach(t => {
+                    const pnl = parseFloat(t.net_pnl || 0.0);
+                    const fee = parseFloat(t.commission || 0.0);
+                    totalNetPnl += pnl;
+                    totalFees += fee;
+                    if (pnl >= 0) {
+                        wins++;
+                        winPnlSum += pnl;
+                    } else {
+                        losses++;
+                        lossPnlSum += Math.abs(pnl);
+                    }
+                });
+            }
 
             const growthPct = ((bal - initBal) / initBal) * 100.0;
             const totalTrades = wins + losses;
@@ -5547,7 +5556,11 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             history_summary = {
                 "total_realized_pnl": sum([float(h.get('net_pnl', 0)) for h in hist_full]),
                 "total_fees": sum([float(h.get('fees', 0)) for h in hist_full]),
-                "total_trades": len(hist_full)
+                "total_trades": len(hist_full),
+                "wins": sum([1 for h in hist_full if float(h.get('net_pnl', 0)) >= 0]),
+                "losses": sum([1 for h in hist_full if float(h.get('net_pnl', 0)) < 0]),
+                "win_pnl_sum": sum([float(h.get('net_pnl', 0)) for h in hist_full if float(h.get('net_pnl', 0)) >= 0]),
+                "loss_pnl_sum": sum([abs(float(h.get('net_pnl', 0))) for h in hist_full if float(h.get('net_pnl', 0)) < 0])
             }
 
             return web.json_response({
@@ -5569,7 +5582,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "free_balance": trader_manager.get_free_balance(),
                 "open_positions": trader_manager.open_positions,
                 "history": hist_full[-150:],
-                "history_summary": {"total_realized_pnl": 0, "total_fees": 0, "total_trades": len(hist_full)},
+                "history_summary": {"total_realized_pnl": 0, "total_fees": 0, "total_trades": len(hist_full), "wins": 0, "losses": 0, "win_pnl_sum": 0, "loss_pnl_sum": 0},
                 "symbols": {},
                 "all_coins": [],
                 "system_health": {"is_perfect": False, "status_text": f"Hata: {e}"}
