@@ -414,21 +414,7 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
                 current_hour = (datetime.utcnow().hour + 3) % 24
                 mode = getattr(trader_manager, 'mode', 'DEMO')
 
-                # 6-Katmanli Valkyrie Aegis Sentinel Denetimini Calistir
-                if market_data:
-                    audit_res = await self.sentinel.run_full_sentinel_audit(market_data, trader_manager, mode=mode)
-                    exec_report = self.sentinel.generate_executive_telegram_report(audit_res, trader_manager, initial_balance=initial_balance)
-                    await self.send_message(exec_report)
-                else:
-                    await self.send_hourly_report(
-                        balance=trader_manager.balance,
-                        initial_balance=initial_balance,
-                        open_positions=trader_manager.open_positions,
-                        history=trader_manager.history,
-                        mode=mode
-                    )
-
-                # Excel raporu olustur ve Telegram uzerinden gonder (Sifir yer kaplar, %100 bulut yedek)
+                # 1) Excel raporu olustur ve Telegram uzerinden gonder (Sifir yer kaplar, %100 bulut yedek)
                 try:
                     from excel_exporter import create_styled_excel_report
                     print(">> [BACKUP] Saatlik Telegram Excel yedegi hazirlaniyor...")
@@ -442,6 +428,20 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
                     await self.send_document(excel_buf.getvalue(), filename, f"📁 <b>Saatlik Otomatik Yedek</b>\n{now_str} itibariyle tüm ticari geçmiş güvende.")
                 except Exception as excel_err:
                     print(f">> [BACKUP ERROR] Excel yedegi gonderilemedi: {excel_err}")
+
+                # 2) 6-Katmanli Valkyrie Aegis Sentinel Denetimini Calistir
+                if market_data:
+                    audit_res = await self.sentinel.run_full_sentinel_audit(market_data, trader_manager, mode=mode)
+                    exec_report = self.sentinel.generate_executive_telegram_report(audit_res, trader_manager, initial_balance=initial_balance)
+                    await self.send_message(exec_report)
+                else:
+                    await self.send_hourly_report(
+                        balance=trader_manager.balance,
+                        initial_balance=initial_balance,
+                        open_positions=trader_manager.open_positions,
+                        history=trader_manager.history,
+                        mode=mode
+                    )
 
                 # Sabah 08:00 ve Gece 00:00'da Günlük Yönetici Brifingi Gönder
                 if current_hour in [0, 8]:
