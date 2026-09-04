@@ -4616,14 +4616,19 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
         });
 
         function updateFinancialSummary() {
-            const hList = appState.history || [];
             let totalRealizedNetPnl = 0;
             let totalFees = 0;
-
-            hList.forEach(h => {
-                totalRealizedNetPnl += Number(h.net_pnl || 0);
-                totalFees += Number(h.fees || 0);
-            });
+            
+            if (appState.history_summary) {
+                totalRealizedNetPnl = appState.history_summary.total_realized_pnl;
+                totalFees = appState.history_summary.total_fees;
+            } else {
+                const hList = appState.history || [];
+                hList.forEach(h => {
+                    totalRealizedNetPnl += Number(h.net_pnl || 0);
+                    totalFees += Number(h.fees || 0);
+                });
+            }
 
             let totalUnrealizedPnl = 0;
             const openKeys = Object.keys(appState.open_positions || {});
@@ -4685,7 +4690,11 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 const hList = appState.history || [];
 
                 const totalCountEl = document.getElementById('history-total-count');
-                if (totalCountEl) totalCountEl.innerText = `${hList.length} Toplam İşlem`;
+                let totalTrades = hList.length;
+                if (appState.history_summary) {
+                    totalTrades = appState.history_summary.total_trades;
+                }
+                if (totalCountEl) totalCountEl.innerText = `${totalTrades} Toplam İşlem (Son 150 Gösteriliyor)`;
                 
                 try { updateFinancialSummary(); } catch(e) {}
 
@@ -5393,7 +5402,8 @@ function downloadExcelReport() {
             await syncBackendState();
             startBinanceGlobalFeed();
             startSSEFallback();
-            setInterval(syncBackendState, 2000);
+            setInterval(syncBackendState, 10000); // 10 Saniyede bir arka plan senkronizasyonu (Bellek dostu)
+            setInterval(updateUIPeriodically, 1000);
         }
 
         init();
@@ -5533,23 +5543,33 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                     "ws_active": True
                 }
 
+            hist_full = trader_manager.history
+            history_summary = {
+                "total_realized_pnl": sum([float(h.get('net_pnl', 0)) for h in hist_full]),
+                "total_fees": sum([float(h.get('fees', 0)) for h in hist_full]),
+                "total_trades": len(hist_full)
+            }
+
             return web.json_response({
                 "balance": trader_manager.balance,
                 "initial_balance": 100000.0,
                 "free_balance": trader_manager.get_free_balance(),
                 "open_positions": trader_manager.open_positions,
-                "history": trader_manager.history,
+                "history": hist_full[-150:], # BELLEK DOSTU: Sadece son 150 işlem
+                "history_summary": history_summary,
                 "symbols": symbols_data,
                 "all_coins": all_coins,
                 "system_health": sys_health
             })
         except Exception as e:
+            hist_full = trader_manager.history
             return web.json_response({
                 "balance": trader_manager.balance,
                 "initial_balance": 100000.0,
                 "free_balance": trader_manager.get_free_balance(),
                 "open_positions": trader_manager.open_positions,
-                "history": trader_manager.history,
+                "history": hist_full[-150:],
+                "history_summary": {"total_realized_pnl": 0, "total_fees": 0, "total_trades": len(hist_full)},
                 "symbols": {},
                 "all_coins": [],
                 "system_health": {"is_perfect": False, "status_text": f"Hata: {e}"}
