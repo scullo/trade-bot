@@ -50,14 +50,32 @@ async def main():
     except Exception as e:
         print(f">> [ILK TARAMA UYARI]: {e}")
 
-    # 60 Saniyelik Otomatik Bellek Temizleyici (OOM & Status 137 Kalkanı)
-    async def memory_watchdog():
+    # 60 Saniyelik Bellek Temizleyici + 5 Dakikalık Periyodik GitHub Sync (OOM & Veri Kaybı Kalkanı)
+    async def memory_and_sync_watchdog():
         import gc
+        sync_counter = 0
         while True:
             await asyncio.sleep(60)
+            # Agresif bellek temizliği
             gc.collect()
+            # 5M mum verilerini 200 satıra sınırla (her döngüde, OOM önleme)
+            try:
+                for sym in list(market_data.candles_5m.keys()):
+                    df = market_data.candles_5m[sym]
+                    if hasattr(df, '__len__') and len(df) > 200:
+                        market_data.candles_5m[sym] = df.iloc[-200:].reset_index(drop=True)
+            except Exception:
+                pass
+            # Her 5 dakikada bir (5 * 60s = 5 döngü) GitHub'a zorla push
+            sync_counter += 1
+            if sync_counter >= 5:
+                sync_counter = 0
+                try:
+                    paper_trader.retry_pending_push()
+                except Exception as e:
+                    print(f">> [PERİYODİK SYNC HATA] {e}")
 
-    asyncio.create_task(memory_watchdog())
+    asyncio.create_task(memory_and_sync_watchdog())
 
     # Saatlik otomatik Telegram Kasa & Portföy Raporlayıcıyı Başlat
     asyncio.create_task(notifier.start_hourly_scheduler(trader_manager, initial_balance=INITIAL_BALANCE, market_data=market_data))
