@@ -65,6 +65,25 @@ class TelegramNotifier:
             print(f">> Telegram sendPhoto istisnasi: {e}, metin gonderiliyor...")
             await self.send_message(caption)
 
+    async def send_document(self, buf, filename: str, caption: str = ""):
+        if not self.token or not self.chat_id:
+            return
+        doc_url = f"https://api.telegram.org/bot{self.token}/sendDocument"
+        try:
+            data = aiohttp.FormData()
+            data.add_field('chat_id', str(self.chat_id))
+            data.add_field('caption', caption[:1024])
+            data.add_field('parse_mode', 'HTML')
+            data.add_field('document', buf, filename=filename, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+            async with aiohttp.ClientSession() as session:
+                async with session.post(doc_url, data=data, timeout=30) as resp:
+                    if resp.status != 200:
+                        err_text = await resp.text()
+                        print(f">> Telegram sendDocument Hatasi (HTTP {resp.status}): {err_text}")
+        except Exception as e:
+            print(f">> Telegram sendDocument istisnasi: {e}")
+
     async def notify_position_opened(self, pos: dict, free_balance: float = None, df_5m = None, levels: dict = None):
         side_emoji = "🟢 <b>LONG</b>" if pos["side"] == "LONG" else "🔴 <b>SHORT</b>"
         clean_sym = pos["symbol"].replace("/USDT", "")
@@ -408,6 +427,21 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
                         history=trader_manager.history,
                         mode=mode
                     )
+
+                # Excel raporu olustur ve Telegram uzerinden gonder (Sifir yer kaplar, %100 bulut yedek)
+                try:
+                    from excel_exporter import create_styled_excel_report
+                    print(">> [BACKUP] Saatlik Telegram Excel yedegi hazirlaniyor...")
+                    excel_buf = create_styled_excel_report(
+                        history_data=trader_manager.history,
+                        current_balance=trader_manager.balance,
+                        initial_balance=initial_balance
+                    )
+                    now_str = datetime.now(timezone(timedelta(hours=3))).strftime("%d.%m.%Y_%H-%M")
+                    filename = f"Valkyrie_Yedek_{now_str}.xlsx"
+                    await self.send_document(excel_buf.getvalue(), filename, f"📁 <b>Saatlik Otomatik Yedek</b>\n{now_str} itibariyle tüm ticari geçmiş güvende.")
+                except Exception as excel_err:
+                    print(f">> [BACKUP ERROR] Excel yedegi gonderilemedi: {excel_err}")
 
                 # Sabah 08:00 ve Gece 00:00'da Günlük Yönetici Brifingi Gönder
                 if current_hour in [0, 8]:
