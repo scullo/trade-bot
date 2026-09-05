@@ -1169,24 +1169,75 @@ HTML_PAGE = """
         .regime-bar-bear { background: var(--red); transition: width 0.3s ease; }
         .regime-bar-range { background: var(--yellow); transition: width 0.3s ease; }
 
+        .ai-thought-filters {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+        .ai-filter-btn {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .ai-filter-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+        }
+        .ai-filter-btn.active {
+            background: rgba(0, 242, 254, 0.12);
+            border-color: rgba(0, 242, 254, 0.4);
+            color: #00f2fe;
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.15);
+        }
         .ai-thought-feed {
             display: flex;
             flex-direction: column;
             gap: 10px;
         }
         .ai-thought-item {
-            background: rgba(0, 0, 0, 0.4);
+            background: rgba(15, 23, 42, 0.65);
             border: 1px solid rgba(255, 255, 255, 0.06);
             border-radius: 12px;
             padding: 12px 16px;
-            font-size: 13px;
+            font-size: 12.5px;
             line-height: 1.55;
             color: #f1f5f9;
             display: flex;
             align-items: flex-start;
             gap: 12px;
             border-left: 4px solid var(--blue);
+            transition: all 0.2s ease;
         }
+        .ai-thought-item:hover {
+            background: rgba(30, 41, 59, 0.7);
+            border-color: rgba(255, 255, 255, 0.12);
+            transform: translateX(2px);
+        }
+        .ai-thought-tag {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-right: 6px;
+            text-transform: uppercase;
+        }
+        .tag-vol { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .tag-pos { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .tag-autopsy-win { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+        .tag-autopsy-loss { background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); }
+        .tag-macro { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
 
         /* 🎯 TETIKLENMEYE EN YAKIN TOP 5 COIN PUSU GRID */
         .near-trigger-grid {
@@ -2046,6 +2097,14 @@ HTML_PAGE = """
                 <div class="regime-bar-bull" id="regime-bar-bull" style="width: 20%;"></div>
                 <div class="regime-bar-bear" id="regime-bar-bear" style="width: 60%;"></div>
                 <div class="regime-bar-range" id="regime-bar-range" style="width: 20%;"></div>
+            </div>
+
+            <!-- 🧠 AI ZEKASI KATEGORİ FİLTRELERİ -->
+            <div class="ai-thought-filters">
+                <button class="ai-filter-btn active" id="btn-filter-all" onclick="setAiThoughtFilter('all')">TÜMÜ (<span id="ai-cnt-all">0</span>)</button>
+                <button class="ai-filter-btn" id="btn-filter-volume" onclick="setAiThoughtFilter('volume')">🔥 Hacim & Sıkışma Radarı (<span id="ai-cnt-vol">0</span>)</button>
+                <button class="ai-filter-btn" id="btn-filter-positions" onclick="setAiThoughtFilter('positions')">⚡ Aktif Pozisyon Taktikleri (<span id="ai-cnt-pos">0</span>)</button>
+                <button class="ai-filter-btn" id="btn-filter-autopsy" onclick="setAiThoughtFilter('autopsy')">📋 İşlem Otopisi & Dersler (<span id="ai-cnt-autopsy">0</span>)</button>
             </div>
 
             <div class="ai-thought-feed" id="ai-thought-feed">
@@ -3226,48 +3285,203 @@ async function loadAdminMetrics() {
             if (bBear) bBear.style.width = `${bearPct}%`;
             if (bRange) bRange.style.width = `${rangePct}%`;
 
-            // Update AI Thought Feed with Rich Multi-Dimensional Quant Insights
+            // =========================================================================
+            // 🧠 VALKYRIE AI QUANT ZEKASI 2.0 • CANLI PİYASA & PUSU DÜŞÜNCE AKIŞI
+            // =========================================================================
             const feed = document.getElementById('ai-thought-feed');
-            const openPosCount = Object.keys(appState.open_positions || {}).length;
             if (feed) {
-                let thoughtsHtml = `
-                    <div class="ai-thought-item" style="border-left-color: #38bdf8;">
-                        <span style="font-size:20px;">🛡️</span>
-                        <div style="flex:1;">
-                            <div style="font-weight:800; color:#38bdf8; font-size:13px; margin-bottom:2px;">1H MAKRO TREND & DİNAMİK RİSK KALKANI</div>
-                            <div>Piyasa genelinde <b>%${bearPct} Ayı</b>, <b>%${bullPct} Boğa</b> ve <b>%${rangePct} Yatay</b> rejim hakim. Makro Kalkan devrede; zayıf karşı-trend tuzakları filtreleniyor, yalnızca güçlü kurumsal destek ve likidite teyitli fırsatlara izin veriliyor.</div>
-                        </div>
-                    </div>
-                `;
+                if (!window.currentAiFilter) window.currentAiFilter = 'all';
+                window.setAiThoughtFilter = function(f) {
+                    window.currentAiFilter = f;
+                    document.querySelectorAll('.ai-filter-btn').forEach(btn => btn.classList.remove('active'));
+                    const activeBtn = document.getElementById('btn-filter-' + f);
+                    if (activeBtn) activeBtn.classList.add('active');
+                    if (typeof window.renderAiThoughts === 'function') window.renderAiThoughts();
+                };
 
-                if (openPosCount > 0) {
-                    const openSyms = Object.keys(appState.open_positions).slice(0, 5).map(s => s.replace('/USDT','')).join(', ');
-                    thoughtsHtml += `
-                        <div class="ai-thought-item" style="border-left-color: var(--green);">
-                            <span style="font-size:20px;">⚡</span>
-                            <div style="flex:1;">
-                                <div style="font-weight:800; color:var(--green); font-size:13px; margin-bottom:2px;">CANLI POZİSYON VE KÂR KİLİTLEME MASASI (${openPosCount} AKTİF İŞLEM)</div>
-                                <div>Takip edilen pariteler: <b>${openSyms}</b>. Fiyatlar ilk yapısal bariyere (TP1) ulaştığı an <b>%50 kâr anında realize edilecek</b>, kalan %50 ise stop Breakeven (+%0.2 tampon) korumasına alınarak TP2 nihai hedefine kadar risksiz koşturulacaktır.</div>
-                            </div>
-                        </div>
-                    `;
+                const thoughtItems = [];
+                const nowStr = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+
+                // 1. MAKRO & DİNAMİK RİSK KALKANI
+                thoughtItems.push({
+                    cat: 'volume',
+                    color: '#c084fc',
+                    icon: '🌐',
+                    tag: 'MAKRO NABIZ',
+                    tagClass: 'tag-macro',
+                    title: `1H MAKRO TREND & DİNAMİK REJİM (${nowStr})`,
+                    text: `Piyasa genelinde <b>%${bearPct} Ayı</b>, <b>%${bullPct} Boğa</b> ve <b>%${rangePct} Yatay</b> rejim hakim. Makro trend kalkanı devrede; zayıf karşı-trend tuzakları filtreleniyor, sadece kurumsal hacim ve likidite teyitli fırsatlara izin veriliyor.`
+                });
+
+                // 2. HACİM & SIKIŞMA (SQUEEZE & CLIMAX RADARI)
+                let squeezeAlerts = [];
+                if (nearCandidates && nearCandidates.length > 0) {
+                    nearCandidates.forEach(c => {
+                        const cleanS = c.symbol.replace('/USDT', '');
+                        if (c.distPct < 0.35) {
+                            squeezeAlerts.push(`<b>${cleanS}</b> (%${c.distPct.toFixed(2)} mesafede ${c.targetName})`);
+                        }
+                    });
                 }
 
-                if (nearCandidates.length > 0) {
-                    const nearestList = nearCandidates.sort((a,b) => a.distPct - b.distPct).slice(0, 2);
-                    const nearDetails = nearestList.map(n => `<b>${n.symbol.replace('/USDT','')}</b> (%${n.distPct.toFixed(2)} mesafede ${n.targetName})`).join(' ve ');
-                    thoughtsHtml += `
-                        <div class="ai-thought-item" style="border-left-color: var(--yellow);">
-                            <span style="font-size:20px;">🎯</span>
-                            <div style="flex:1;">
-                                <div style="font-weight:800; color:var(--yellow); font-size:13px; margin-bottom:2px;">EN YÜKSEK OLASILIKLI PUSU ALARMI</div>
-                                <div>${nearDetails} kilit seviyelere çok yaklaştı. 5M mum kapanışı teyidiyle anında pusu tetiklenecek.</div>
-                            </div>
-                        </div>
-                    `;
+                if (squeezeAlerts.length > 0) {
+                    thoughtItems.push({
+                        cat: 'volume',
+                        color: '#f59e0b',
+                        icon: '⚡',
+                        tag: 'HACİM SIKIŞMASI (SQUEEZE)',
+                        tagClass: 'tag-vol',
+                        title: `VOLATİLİTE PATLAMASI ÖNCÜSÜ (${nowStr})`,
+                        text: `${squeezeAlerts.slice(0, 3).join(', ')} kilit kırılım seviyelerine aşırı sıkıştı. 5M hacim bantları daralıyor; birazdan yönlü sert bir volatilite patlaması (kırılım) gelebilir, radar kilitlendi.`
+                    });
+                } else {
+                    thoughtItems.push({
+                        cat: 'volume',
+                        color: '#f59e0b',
+                        icon: '📡',
+                        tag: 'LİKİDİTE RADARI',
+                        tagClass: 'tag-vol',
+                        title: `100 PARİTE PUSU RADARI AKTİF (${nowStr})`,
+                        text: `Kurumsal nPOC hatları ve Camarilla pivotları sürekli taranıyor. Hacim patlaması 1.5x üzerine çıkan ve seviye desteği bulan pariteler milisaniyelik pusu listesine alınacaktır.`
+                    });
                 }
 
-                feed.innerHTML = thoughtsHtml;
+                // 3. AKTİF POZİSYONLAR İÇİN CANLI MENTORLUK & TAKTİKLER
+                const openPositions = appState.open_positions || {};
+                const openPosKeys = Object.keys(openPositions);
+
+                if (openPosKeys.length > 0) {
+                    openPosKeys.forEach(sym => {
+                        const pos = openPositions[sym];
+                        const cleanS = sym.replace('/USDT', '');
+                        const curP = appState.symbols && appState.symbols[sym] ? appState.symbols[sym].price : pos.entry_price;
+                        const lev = pos.leverage || 5;
+                        const priceDiff = pos.side === 'LONG' ? (curP - pos.entry_price) : (pos.entry_price - curP);
+                        const roePct = (priceDiff / pos.entry_price) * lev * 100.0;
+                        const isHalf = pos.is_half_closed || pos.tp1_hit;
+                        const tp1Val = pos.tp1 ? Number(pos.tp1).toFixed(4) : '-';
+                        const tp2Val = pos.tp2 ? Number(pos.tp2).toFixed(4) : '-';
+                        const stopVal = pos.hard_stop ? Number(pos.hard_stop).toFixed(4) : '-';
+
+                        let tacticText = '';
+                        let tacticTitle = `${cleanS} [${pos.side} ${lev}x] CANLI TAKTİK RAPORU`;
+                        let tagColor = 'var(--green)';
+
+                        if (isHalf) {
+                            tacticText = `🎯 <b>TP1 Kârı Kasada!</b> Kalan %50 pozisyon Breakeven koruma stopu ($${stopVal}) ile sıfır risk zırhında. Nihai hedef <b>TP2 ($${tp2Val})</b> bekleniyor. Bu işlemde sermaye kaybı riski matematiksel olarak sıfırlandı.`;
+                        } else if (roePct >= 3.0) {
+                            const distToTp1 = pos.tp1 && curP > 0 ? Math.abs((pos.tp1 - curP) / curP * 100).toFixed(2) : '1.0';
+                            tacticText = `🟢 <b>Kâr Bölgesindeyiz (+%${roePct.toFixed(2)} ROE):</b> Alıcı/Satıcı baskısı lehimize. Fiyat TP1 ($${tp1Val}) hedefine sadece <b>%${distToTp1}</b> mesafede. İlk hedef geldiğinde anında %50 kâr realize edilip stop Breakeven'a çekilecek.`;
+                        } else if (roePct <= -2.0) {
+                            tacticText = `⚖️ <b>Direnç Test Ediliyor (%${roePct.toFixed(2)} ROE):</b> Fiyat konsolide oluyor. Sert Stop seviyemiz ($${stopVal}) 1.5 ATR dinamik tamponla pozisyonu koruyor. Panik satışı yok, planlanan stop seviyesi korunuyor.`;
+                            tagColor = '#f43f5e';
+                        } else {
+                            tacticText = `⏳ <b>Giriş Bölgesi Testi (%${roePct.toFixed(2)} ROE):</b> Pozisyon taze açıldı ($${pos.entry_price}). 1.5 ATR risk koruması aktif. 5M mum hacmi takip ediliyor.`;
+                        }
+
+                        thoughtItems.push({
+                            cat: 'positions',
+                            color: tagColor,
+                            icon: isHalf ? '🛡️' : '⚡',
+                            tag: isHalf ? 'BREAKEVEN KOŞUSU' : 'AKTİF TAKTİK',
+                            tagClass: 'tag-pos',
+                            title: tacticTitle,
+                            text: tacticText
+                        });
+                    });
+                } else {
+                    thoughtItems.push({
+                        cat: 'positions',
+                        color: '#10b981',
+                        icon: '🔭',
+                        tag: 'PUSU VE TETİK MASASI',
+                        tagClass: 'tag-pos',
+                        title: `AÇIK İŞLEM MASASI • PUSU MODU (${nowStr})`,
+                        text: `Şu an aktif açık işlem yok. Sistem serbest sermayeyi koruyarak 100 paritede sahte kırılım filtreleri, 1.5x hacim şartı ve nPOC temaslarını tarıyor.`
+                    });
+                }
+
+                // 4. KAPANAN İŞLEMLERİN CANLI OTOPSİSİ & DERSLERİ (POST-MORTEM)
+                const historyTrades = appState.history || [];
+                if (historyTrades.length > 0) {
+                    const recentTrades = historyTrades.slice(-4).reverse();
+                    recentTrades.forEach(tr => {
+                        const cleanS = tr.symbol.replace('/USDT', '');
+                        const pnl = Number(tr.net_pnl || 0);
+                        const roe = Number(tr.roe_pct || 0);
+                        const isWin = pnl >= 0;
+                        const reason = tr.close_reason || '';
+                        let autopsyTitle = `📋 ${cleanS} ${tr.side || ''} OTOPSİSİ (${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}$)`;
+                        let autopsyText = '';
+                        let autopsyColor = isWin ? '#38bdf8' : '#f43f5e';
+                        let autopsyTag = isWin ? 'KÂR OTOPSİSİ' : 'STOP OTOPSİSİ';
+                        let autopsyTagClass = isWin ? 'tag-autopsy-win' : 'tag-autopsy-loss';
+
+                        if (reason.includes('TP2') || reason.includes('Final')) {
+                            autopsyText = `🏆 <b>Maksimum Verimle Tamamlandı:</b> Pozisyon planlandığı gibi TP2 nihai hedefine ulaştı (+%${roe.toFixed(1)} ROE). İlk yarı TP1'de realize edilmiş, kalan %50 Breakeven korumasıyla koşmuştu. Mükemmel kurgulanmış bir trade.`;
+                        } else if (reason.includes('Dinamik ROE') || reason.includes('Zaman Kalkanı')) {
+                            autopsyText = `💎 <b>Kâr Güvenle Kilitlendi:</b> +%${roe.toFixed(1)} ROE görüldükten sonra kâr kilidi devreye girdi ve kazanç kasaya atıldı. Dalgalı piyasa koşullarında kârı piyasaya geri vermemek en büyük sermaye disiplinidir.`;
+                        } else if (reason.includes('TP1')) {
+                            autopsyText = `🎯 <b>İlk Hedef Kârı Alındı:</b> TP1 seviyesinde %50 kâr realize edildi (+${pnl.toFixed(2)}$). Kalan bakiye Breakeven zırhıyla korunuyor.`;
+                        } else if (reason.includes('Breakeven')) {
+                            autopsyText = `🛡️ <b>Sıfır Kayıp Kalkanı:</b> Fiyat ilk kâr alımından sonra terse döndü; ancak Breakeven kalkanı devreye girerek kalan pozisyonu başabaş noktasında kapattı. Anapara kuruşu kuruşuna korundu.`;
+                        } else if (reason.includes('Sert Stop')) {
+                            autopsyText = `🛑 <b>Disiplinli Risk Kontrolü:</b> Beklenen seviye tutunamadı ve Sert Stop (${tr.hard_stop ? '$' + Number(tr.hard_stop).toFixed(4) : ''}) devreye girerek zararı küçük bir dilimde kesti (-${Math.abs(pnl).toFixed(2)}$). Sermaye olası derin bir çöküşten korundu.`;
+                        } else {
+                            autopsyText = `ℹ️ <b>Kapanış Notu:</b> ${reason}. Net sonuç: ${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}$ (${roe >= 0 ? '+' : ''}${roe.toFixed(1)}% ROE).`;
+                        }
+
+                        thoughtItems.push({
+                            cat: 'autopsy',
+                            color: autopsyColor,
+                            icon: isWin ? '🎉' : '🛡️',
+                            tag: autopsyTag,
+                            tagClass: autopsyTagClass,
+                            title: autopsyTitle,
+                            text: autopsyText
+                        });
+                    });
+                }
+
+                // Update Counts on Filter Buttons
+                const allCnt = thoughtItems.length;
+                const volCnt = thoughtItems.filter(t => t.cat === 'volume').length;
+                const posCnt = thoughtItems.filter(t => t.cat === 'positions').length;
+                const autCnt = thoughtItems.filter(t => t.cat === 'autopsy').length;
+
+                const elAll = document.getElementById('ai-cnt-all');
+                const elVol = document.getElementById('ai-cnt-vol');
+                const elPos = document.getElementById('ai-cnt-pos');
+                const elAut = document.getElementById('ai-cnt-autopsy');
+                if (elAll) elAll.innerText = allCnt;
+                if (elVol) elVol.innerText = volCnt;
+                if (elPos) elPos.innerText = posCnt;
+                if (elAut) elAut.innerText = autCnt;
+
+                window.renderAiThoughts = function() {
+                    const f = window.currentAiFilter || 'all';
+                    const filtered = f === 'all' ? thoughtItems : thoughtItems.filter(t => t.cat === f);
+                    if (filtered.length === 0) {
+                        feed.innerHTML = `<div style="text-align:center; padding:20px; color:#64748b; font-size:12.5px;">Bu kategoride henüz yeni bir akıl yürütme notu bulunmuyor.</div>`;
+                        return;
+                    }
+                    feed.innerHTML = filtered.map(t => `
+                        <div class="ai-thought-item" style="border-left-color: ${t.color};">
+                            <span style="font-size:20px;">${t.icon}</span>
+                            <div style="flex:1;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:6px;">
+                                    <div style="font-weight:800; color:${t.color}; font-size:13px; font-family:'JetBrains Mono', monospace;">
+                                        <span class="ai-thought-tag ${t.tagClass}">${t.tag}</span>
+                                        ${t.title}
+                                    </div>
+                                </div>
+                                <div style="font-size:12.5px; color:#cbd5e1; line-height:1.5;">${t.text}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                };
+
+                window.renderAiThoughts();
             }
 
             // Update Near-Trigger Grid (Top 5)

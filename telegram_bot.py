@@ -93,6 +93,18 @@ class TelegramNotifier:
         bal_line = f"💼 <b>Serbest Kasa:</b> <code>${free_balance:.2f} USDT</code>\n" if free_balance is not None else ""
         tp2_line = f"🚀 <b>TP2 Final:</b> <code>${pos['tp2']:.6f}</code>\n" if pos.get("tp2") else ""
 
+        # 🧠 Valkyrie AI Taktiksel Mentorluk Notu
+        ai_tactic_note = ""
+        if "Breakout" in pos.get("trade_type", ""):
+            if vol_val >= 3.0:
+                ai_tactic_note = f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>Kurumsal hacim teyidi ({vol_val:.1f}x) çok güçlü. İlk hedef TP1'de (%50) kâr realize edilip stop derhal başabaşa çekilecek.</i>\n"
+            else:
+                ai_tactic_note = f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>Kilit direnç aşıldı. TP1 hedefine odaklanıldı; ardından Breakeven zırhı ile risksiz TP2 koşusu planlandı.</i>\n"
+        elif "SCALP" in pos.get("trade_type", ""):
+            ai_tactic_note = f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>Seviye tepkisinden hızlı kâr alma (Scalp) planlandı. 1.5 ATR dinamik korumamız aktif, erken hedeflerde kâr cebe alınacak.</i>\n"
+        else:
+            ai_tactic_note = f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>Matematiksel kural teyidiyle pusu tetiklendi. Risk sermayesi koruma kalkanıyla kontrol altında.</i>\n"
+
         msg = f"""💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎
 ⚡ <b>YENİ POZİSYON AÇILDI</b> ⚡
 ━━━━━━━━━━━━━━━━━━━━━━━━
@@ -105,7 +117,7 @@ Giriş: <code>${pos['entry_price']:.6f}</code> | Marjin: <b>${pos.get('margin_us
 📊 <b>ATR / Hacim:</b> <code>%{atr_val:.2f} | {vol_val:.2f}x</code>
 {bal_line}━━━━━━━━━━━━━━━━━━━━━━━━
 📌 <b>Setup:</b> <i>{pos['reason']}</i>
-⏰ <b>Zaman:</b> <code>{pos['entry_time']}</code>
+{ai_tactic_note}⏰ <b>Zaman:</b> <code>{pos['entry_time']}</code>
 💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎"""
 
         # Grafik Fotograf Olustur
@@ -155,6 +167,20 @@ Giriş: <code>${pos['entry_price']:.6f}</code> | Marjin: <b>${pos.get('margin_us
         open_reason = record.get("reason", "Strateji Sinyali")
         close_reason = record.get("close_reason", "Hedef/Stop Kapanışı")
         partial_note = "\n🛡️ <b>Kalan %50:</b> <i>Breakeven ile 0 riskle koşuyor!</i>\n" if is_partial_tp1 else ("\nℹ️ <i>İlk %50 kârı daha önce kasaya kilitlenmişti; kalan kısım koruma stopuyla risksiz kapatıldı.</i>\n" if is_breakeven else "")
+        
+        # 🧠 Yapay Zeka İşlem Otopisi & Öğrenim Notu
+        ai_autopsy_note = ""
+        if is_win:
+            if is_partial_tp1:
+                ai_autopsy_note = "🧠 <b>Yapay Zeka Otopisi:</b> <i>Dinamik kâr kilidi disiplinle çalıştı ve kârı cebe kilitledi. Kalan %50 artık tamamen sıfır riskle koşuyor.</i>\n"
+            else:
+                ai_autopsy_note = f"🧠 <b>Yapay Zeka Otopisi:</b> <i>Plan kusursuz işledi! Zirve hedefe ulaşıldı ve {net_pnl:+.2f}$ net kâr kasaya eklendi.</i>\n"
+        else:
+            if is_breakeven:
+                ai_autopsy_note = "🧠 <b>Yapay Zeka Otopisi:</b> <i>Fiyat ilk hedeften sonra terse döndü; ancak Breakeven kalkanı devreye girerek anaparayı kuruşu kuruşuna korudu.</i>\n"
+            else:
+                ai_autopsy_note = f"🧠 <b>Yapay Zeka Otopisi:</b> <i>Sert stop ({record.get('hard_stop', 0):.4f}$) felaket koruması olarak görevini yaptı ve kaybı sınırladı. Sermaye korundu, yeni fırsat taranıyor.</i>\n"
+
         msg = f"""💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎
 {pnl_emoji}
 ━━━━━━━━━━━━━━━━━━━━━━━━
@@ -166,7 +192,7 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
 {bal_str}━━━━━━━━━━━━━━━━━━━━━━━━
 📥 <b>Açılış Nedeni:</b> <i>{open_reason}</i>
 📤 <b>Kapanış Nedeni:</b> <i>{close_reason}</i>{manual_tag}{partial_note}
-⏰ <b>Çıkış Zamanı:</b> <code>{record['exit_time']}</code>
+{ai_autopsy_note}⏰ <b>Çıkış Zamanı:</b> <code>{record['exit_time']}</code>
 💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎"""
 
         chart_buf = None
