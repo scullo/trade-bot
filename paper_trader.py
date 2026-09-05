@@ -313,7 +313,8 @@ class PaperTrader:
         entry_time_str = datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S")
 
         # Risk hesabi (1R degeri)
-        risk_dist = abs(entry_price - soft_stop) if soft_stop else (entry_price * 0.01)
+        stop_level = hard_stop if (hard_stop and hard_stop > 0) else (soft_stop if (soft_stop and soft_stop > 0) else 0)
+        risk_dist = abs(entry_price - stop_level) if stop_level > 0 else (entry_price * 0.015)
         initial_risk_usdt = round((risk_dist / entry_price) * position_value, 4)
 
         # Snapshot temizleme (JSON uyumlu hale getirme)

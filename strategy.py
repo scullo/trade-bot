@@ -286,47 +286,52 @@ class StrategyEngine:
 
         updated = False
 
-        # ── ASAMA 1: ROE >= %6 → Soft stop breakeven'e (giris fiyatina) ─────
+        # ── ASAMA 1: ROE >= %6 → Breakeven korumasi (giris fiyatina) ─────────
         if roe >= TRAILING_BREAKEVEN_ROE and not pos.get("_trail_be"):
             if side == "LONG":
                 new_stop = entry * 1.001  # Giris + kucuk tampon
-                if new_stop > pos["soft_stop"]:
-                    pos["soft_stop"] = new_stop
+                pos["hard_stop"] = max(pos.get("hard_stop", 0), new_stop)
+                pos["soft_stop"] = max(pos.get("soft_stop", 0), new_stop)
             else:
                 new_stop = entry * 0.999  # Giris - kucuk tampon
-                if new_stop < pos["soft_stop"]:
-                    pos["soft_stop"] = new_stop
+                pos["hard_stop"] = min(pos.get("hard_stop", float('inf')), new_stop)
+                pos["soft_stop"] = min(pos.get("soft_stop", float('inf')), new_stop)
             pos["_trail_be"] = True
+            pos["trail_status"] = "🛡️ BREAKEVEN KORUMA AKTİF"
             updated = True
-            print(f">> [TRAILING] {symbol} ★ Breakeven koruma AKTIF (ROE: {roe:.1f}%)")
+            print(f">> [TRAILING] {symbol} [*] Breakeven koruma AKTIF (ROE: {roe:.1f}%)")
 
         # ── ASAMA 2: ROE >= %12 → Karin %30'unu kilitle ─────────────────────
         if roe >= TRAILING_LOCK_30_ROE and not pos.get("_trail_30"):
             peak = self.peak_prices[symbol]
             if side == "LONG":
                 lock_price = entry + (peak - entry) * 0.3
-                pos["soft_stop"] = max(pos["soft_stop"], lock_price)
+                pos["hard_stop"] = max(pos.get("hard_stop", 0), lock_price)
+                pos["soft_stop"] = max(pos.get("soft_stop", 0), lock_price)
             else:
                 lock_price = entry - (entry - peak) * 0.3
-                pos["soft_stop"] = min(pos["soft_stop"], lock_price)
+                pos["hard_stop"] = min(pos.get("hard_stop", float('inf')), lock_price)
+                pos["soft_stop"] = min(pos.get("soft_stop", float('inf')), lock_price)
             pos["_trail_30"] = True
+            pos["trail_status"] = "🔒 %30 KÂR KİLİTLENDİ"
             updated = True
-            print(f">> [TRAILING] {symbol} ★★ %30 kar kilidi AKTIF (ROE: {roe:.1f}%)")
+            print(f">> [TRAILING] {symbol} [**] %30 kar kilidi AKTIF (ROE: {roe:.1f}%)")
 
         # ── ASAMA 3: ROE >= %20 → Hard stop ile karin %50'sini kilitle ───────
         if roe >= TRAILING_LOCK_50_ROE and not pos.get("_trail_50"):
             peak = self.peak_prices[symbol]
             if side == "LONG":
                 lock_price = entry + (peak - entry) * 0.5
-                pos["hard_stop"] = max(pos["hard_stop"], lock_price)
-                pos["soft_stop"] = max(pos["soft_stop"], lock_price)
+                pos["hard_stop"] = max(pos.get("hard_stop", 0), lock_price)
+                pos["soft_stop"] = max(pos.get("soft_stop", 0), lock_price)
             else:
                 lock_price = entry - (entry - peak) * 0.5
-                pos["hard_stop"] = min(pos["hard_stop"], lock_price)
-                pos["soft_stop"] = min(pos["soft_stop"], lock_price)
+                pos["hard_stop"] = min(pos.get("hard_stop", float('inf')), lock_price)
+                pos["soft_stop"] = min(pos.get("soft_stop", float('inf')), lock_price)
             pos["_trail_50"] = True
+            pos["trail_status"] = "🔒 %50 SERT KÂR KİLİTLENDİ"
             updated = True
-            print(f">> [TRAILING] {symbol} ★★★ %50 SERT kar kilidi AKTIF (ROE: {roe:.1f}%)")
+            print(f">> [TRAILING] {symbol} [***] %50 SERT kar kilidi AKTIF (ROE: {roe:.1f}%)")
 
         if updated:
             self.paper_trader.save_history()
@@ -606,35 +611,46 @@ class StrategyEngine:
             except Exception as e:
                 print(f">> [CVD/HIZ HATA] {symbol}: {e}")
 
-        # MADDE 4 & EKSIK 2: YUMUSAK STOP IPTALI, DINAMIK ATR STOPU VE HEDEFLERI
+        # MADDE 4 & EKSİK 2: 1.5 ATR DİNAMİK STOP VE HEDEFLERİ
         # _handle_open basinda atr_pct hesaplanmisti
         safe_atr_pct = max(0.5, min(5.0, atr_pct))
         
         # Sert Stop: 1.5 ATR (Dinamik risk mesafesi)
         stop_dist = entry_price * (safe_atr_pct / 100.0) * 1.5
         
-        # Hedef TP1: 1.5 ATR (R:R 1:1), TP2: 3.0 ATR (R:R 1:2)
+        # Hedef TP1: 1.5 ATR (R:R 1:1 Hızlı Kâr & Breakeven Kilidi), TP2: 3.0 ATR / Makro Seviye (R:R 1:2 Runner)
         tp1_dist = entry_price * (safe_atr_pct / 100.0) * 1.5
         tp2_dist = entry_price * (safe_atr_pct / 100.0) * 3.0
 
+        caller_tp1 = tp1
+        caller_tp2 = tp2
+
         if side == "LONG":
             hard_stop = round(entry_price - stop_dist, 6)
-            tp1_calc = round(entry_price + tp1_dist, 6)
-            tp2_calc = round(entry_price + tp2_dist, 6)
-            # Her zaman TP1'in girise daha YAKIN, TP2'nin DAHA UZAK oldugundan emin ol
-            tp1 = min(tp1_calc, tp2_calc) if tp1_calc > 0 and tp2_calc > 0 else tp1_calc
-            tp2 = max(tp1_calc, tp2_calc) if tp1_calc > 0 and tp2_calc > 0 else tp2_calc
-            # Mum kapanisi (Yumusak Stop) iptali icin imkansiz bir degere atama yapiyoruz
-            soft_stop = round(entry_price * 0.05, 6)
+            soft_stop = hard_stop  # 1.5 ATR Dinamik Stop: UI, telemetri ve risk motoru ile tam senkron
+            
+            atr_tp1 = round(entry_price + tp1_dist, 6)
+            atr_tp2 = round(entry_price + tp2_dist, 6)
+            
+            macro_target = caller_tp2 if (caller_tp2 and caller_tp2 > entry_price) else (caller_tp1 if (caller_tp1 and caller_tp1 > entry_price) else None)
+            tp1 = atr_tp1
+            if macro_target and macro_target > tp1:
+                tp2 = round(macro_target, 6)
+            else:
+                tp2 = atr_tp2
         else:
             hard_stop = round(entry_price + stop_dist, 6)
-            tp1_calc = round(entry_price - tp1_dist, 6)
-            tp2_calc = round(entry_price - tp2_dist, 6)
-            # Short islemde yakin olan hedef, RAKAMSAL OLARAK DAHA BUYUKTUR (cunku asagi iniyoruz)
-            tp1 = max(tp1_calc, tp2_calc) if tp1_calc > 0 and tp2_calc > 0 else tp1_calc
-            tp2 = min(tp1_calc, tp2_calc) if tp1_calc > 0 and tp2_calc > 0 else tp2_calc
-            # Mum kapanisi (Yumusak Stop) iptali icin imkansiz bir degere atama yapiyoruz
-            soft_stop = round(entry_price * 5.0, 6)
+            soft_stop = hard_stop  # 1.5 ATR Dinamik Stop: UI, telemetri ve risk motoru ile tam senkron
+            
+            atr_tp1 = round(entry_price - tp1_dist, 6)
+            atr_tp2 = round(entry_price - tp2_dist, 6)
+            
+            macro_target = caller_tp2 if (caller_tp2 and caller_tp2 < entry_price) else (caller_tp1 if (caller_tp1 and caller_tp1 < entry_price) else None)
+            tp1 = atr_tp1
+            if macro_target and macro_target < tp1:
+                tp2 = round(macro_target, 6)
+            else:
+                tp2 = atr_tp2
 
         res = await self._safe_open_position(
             symbol=symbol, side=side, entry_price=entry_price,
@@ -872,16 +888,17 @@ class StrategyEngine:
             is_warming_up = (time.time() - getattr(self, "boot_time", 0)) < getattr(self, "warmup_seconds", 45.0)
 
             if not is_warming_up:
-                # 1c. YUMUSAK STOP KONTROL (Breakeven veya Koruma Stopu)
-                if side == "LONG" and close_price < soft_stop:
-                    reason_stop = "🛡️ Breakeven Koruması Tetiklendi" if is_half else "Yumusak Stop (Mum Seviye Altinda Kapandi)"
+                # 1c. DINAMIK ATR / BREAKEVEN STOP KONTROLU
+                active_stop = pos.get("hard_stop") or pos.get("soft_stop", 0.0)
+                if side == "LONG" and active_stop > 0 and close_price <= active_stop:
+                    reason_stop = "🛡️ Breakeven Koruması Tetiklendi" if is_half else f"🛑 Dinamik ATR Stopu Tetiklendi (${active_stop:.4f})"
                     record = await self._safe_close_position(symbol, close_price, reason_stop)
                     if record:
                         await self._notify_close(record, levels=levels)
                         self._cleanup_tracking(symbol)
                     return
-                elif side == "SHORT" and close_price > soft_stop:
-                    reason_stop = "🛡️ Breakeven Koruması Tetiklendi" if is_half else "Yumusak Stop (Mum Seviye Ustunde Kapandi)"
+                elif side == "SHORT" and active_stop > 0 and close_price >= active_stop:
+                    reason_stop = "🛡️ Breakeven Koruması Tetiklendi" if is_half else f"🛑 Dinamik ATR Stopu Tetiklendi (${active_stop:.4f})"
                     record = await self._safe_close_position(symbol, close_price, reason_stop)
                     if record:
                         await self._notify_close(record, levels=levels)

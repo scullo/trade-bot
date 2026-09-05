@@ -3721,6 +3721,17 @@ async function loadAdminMetrics() {
             return { curP, isLong, priceDiffPct, roePct, pnlUsdt, isWin, isLoss };
         }
 
+        function formatSmartPrice(val) {
+            if (val === null || val === undefined || isNaN(val) || Number(val) <= 0) return '-';
+            const n = Number(val);
+            if (n >= 1000) return n.toFixed(2);
+            if (n >= 10) return n.toFixed(3);
+            if (n >= 1) return n.toFixed(4);
+            if (n >= 0.01) return n.toFixed(5);
+            if (n >= 0.0001) return n.toFixed(7);
+            return n.toFixed(8);
+        }
+
         function togglePoolCollapse() {
             const grid = document.getElementById('coin-chips-container');
             const btn = document.getElementById('pool-collapse-btn');
@@ -3887,7 +3898,7 @@ async function loadAdminMetrics() {
             const aboveNvah = Number(levels.above_nvah) || 0;
             const belowNval = Number(levels.below_nval) || 0;
 
-            const formatVal = (v) => (v && !isNaN(v) && Number(v) > 0) ? (Number(v) < 0.001 ? Number(v).toFixed(6) : (Number(v) < 1 ? Number(v).toFixed(4) : Number(v).toFixed(4))) : '-';
+            const formatVal = (v) => formatSmartPrice(v);
 
             // 1. 1H MAKRO TREND HESABI
             let macroTrend = "⚪ YATAY / SIKIŞMA";
@@ -3920,12 +3931,13 @@ async function loadAdminMetrics() {
             // 3. CANLI POZİSYON DURUM YORUMU
             let posCommentary = "";
             if (openPos) {
+                const liveStop = openPos.is_half_closed ? (openPos.soft_stop || openPos.hard_stop) : (openPos.hard_stop || openPos.soft_stop);
                 if (openPos.is_half_closed || openPos.tp1_hit) {
                     posCommentary = "🎯 TP1 ALINDI (%50 Kâr Kasada) • Stop Breakeven Korumalı • TP2 Hedefine Koşuyor";
                 } else if (openPos.trail_status) {
                     posCommentary = openPos.trail_status;
                 } else {
-                    posCommentary = `⚡ ${openPos.side} Aktif • TP1: $${openPos.tp1 ? formatVal(openPos.tp1) : '-'} • Stop: $${openPos.soft_stop ? formatVal(openPos.soft_stop) : '-'}`;
+                    posCommentary = `⚡ ${openPos.side} Aktif • TP1: $${openPos.tp1 ? formatSmartPrice(openPos.tp1) : '-'} • Stop: $${liveStop ? formatSmartPrice(liveStop) : '-'}`;
                 }
             }
 
@@ -3951,12 +3963,13 @@ async function loadAdminMetrics() {
                 const isWin = metrics.isWin;
                 const isLoss = metrics.isLoss;
                 const statusColor = isLoss ? 'var(--red)' : (isWin ? 'var(--green)' : '#ffffff');
+                const liveStop = openPos.is_half_closed ? (openPos.soft_stop || openPos.hard_stop) : (openPos.hard_stop || openPos.soft_stop);
 
                 return packResult(
                     `🛡️ ${openPos.leverage}x ${openPos.side} POZİSYONU CANLI YÖNETİLİYOR`,
                     statusColor,
-                    `Bot şu anda <b>${openPos.side}</b> pozisyonunu aktif koruyor. Giriş: <b>$${openPos.entry_price}</b> | Anlık: <b>$${metrics.curP}</b> | Durum: <b style="color:${statusColor}">${metrics.roePct >= 0 ? '+' : ''}${metrics.roePct.toFixed(2)}% ROE (${metrics.pnlUsdt >= 0 ? '+' : ''}${metrics.pnlUsdt.toFixed(2)} $)</b>`,
-                    `🎯 <b>Botun Canlı Takip Planı:</b> 5M mum kapanışı Stop Seviyesi ($${formatVal(openPos.soft_stop)}) ${openPos.side === 'LONG' ? 'altına inerse' : 'üstüne çıkarsa'} işlem kapatılacak. Pozisyon <b>+%7.0 ROE kâra ulaştığında</b> veya <b>90dk kârda beklediğinde</b> (ya da TP1 $${formatVal(openPos.tp1)} hedefine geldiğinde) <b>%50 kâr anında nakite kilitlenecek</b>, kalan %50 pozisyon stopu risksiz Breakeven seviyesine çekilerek zirveye kadar koşturulacak.`
+                    `Bot şu anda <b>${openPos.side}</b> pozisyonunu aktif koruyor. Giriş: <b>$${formatSmartPrice(openPos.entry_price)}</b> | Anlık: <b>$${formatSmartPrice(metrics.curP)}</b> | Durum: <b style="color:${statusColor}">${metrics.roePct >= 0 ? '+' : ''}${metrics.roePct.toFixed(2)}% ROE (${metrics.pnlUsdt >= 0 ? '+' : ''}${metrics.pnlUsdt.toFixed(2)} $)</b>`,
+                    `🎯 <b>Botun Canlı Takip Planı:</b> 1.5 ATR Dinamik Stop Seviyesi ($${formatSmartPrice(liveStop)}) ${openPos.side === 'LONG' ? 'altına inerse' : 'üstüne çıkarsa'} işlem kapatılacak. Pozisyon <b>+%7.0 ROE kâra ulaştığında</b> veya <b>90dk kârda beklediğinde</b> (ya da TP1 $${formatSmartPrice(openPos.tp1)} hedefine geldiğinde) <b>%50 kâr anında nakite kilitlenecek</b>, kalan %50 pozisyon stopu risksiz Breakeven seviyesine çekilerek zirveye kadar koşturulacak.`
                 );
             }
 
@@ -4360,7 +4373,7 @@ async function loadAdminMetrics() {
                             posPnl.innerText = `${metrics.roePct >= 0 ? '+' : ''}${metrics.roePct.toFixed(2)}% ROE (${metrics.pnlUsdt >= 0 ? '+' : ''}${metrics.pnlUsdt.toFixed(2)} $)`;
                         }
                         if (posCurP) {
-                            posCurP.innerText = `$${metrics.curP.toFixed(4)}`;
+                            posCurP.innerText = `$${formatSmartPrice(metrics.curP)}`;
                         }
                         if (pill) {
                             pill.className = isLoss ? 'pos-pill-loss' : 'pos-pill-profit';
@@ -4415,9 +4428,14 @@ async function loadAdminMetrics() {
                 const pnlClass = isLoss ? 'pos-card-loss' : (isWin ? 'pos-card-profit' : '');
                 const pnlColor = isLoss ? 'var(--red)' : (isWin ? 'var(--green)' : '#ffffff');
                 const cleanSym = sym.replace('/USDT','');
-                const tp1Val = pos.tp1 ? Number(pos.tp1).toFixed(4) : '-';
-                const tp2Val = pos.tp2 ? Number(pos.tp2).toFixed(4) : '-';
-                const stopVal = pos.soft_stop ? Number(pos.soft_stop).toFixed(4) : (pos.hard_stop ? Number(pos.hard_stop).toFixed(4) : '-');
+                const entryVal = formatSmartPrice(pos.entry_price);
+                const curPriceVal = formatSmartPrice(metrics.curP);
+                const tp1Val = pos.tp1 ? formatSmartPrice(pos.tp1) : '-';
+                const tp2Val = pos.tp2 ? formatSmartPrice(pos.tp2) : '-';
+                
+                // Stop: Kademeli kâr veya trailing ile stop taşınmışsa Breakeven/Lock, yoksa 1.5 ATR dinamik sert stop
+                const activeStop = pos.is_half_closed ? (pos.soft_stop || pos.hard_stop) : (pos.hard_stop || pos.soft_stop);
+                const stopVal = activeStop ? formatSmartPrice(activeStop) : '-';
                 const stopColor = pos.is_half_closed ? 'var(--green)' : '#f87171';
                 const stopLabel = pos.is_half_closed ? '🛡️ Breakeven Stop' : '🛑 Aktif Stop';
 
@@ -4442,8 +4460,8 @@ async function loadAdminMetrics() {
 
                     <!-- 2. PRICE & MARGIN GRID (2x2 Clean Box) -->
                     <div style="background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:10px 14px; font-size:12.5px; font-family:'JetBrains Mono'; color:#cbd5e1; display:grid; grid-template-columns:1fr 1fr; gap:6px 14px;">
-                        <div>Giriş: <b style="color:#ffffff;">$${pos.entry_price}</b></div>
-                        <div>Anlık: <b id="pos-cur-price-${safeId}" style="color:${pnlColor};">$${metrics.curP}</b></div>
+                        <div>Giriş: <b style="color:#ffffff;">$${entryVal}</b></div>
+                        <div>Anlık: <b id="pos-cur-price-${safeId}" style="color:${pnlColor};">$${curPriceVal}</b></div>
                         <div>Marjin: <b style="color:#ffffff;">$${Number(pos.margin || 100).toFixed(2)}</b></div>
                         <div>Hacim: <b style="color:#ffffff;">$${Number(pos.position_value || 500).toFixed(2)}</b></div>
                     </div>
@@ -4493,8 +4511,8 @@ async function loadAdminMetrics() {
             document.getElementById('modal-title').innerText = `${clean} Pozisyonunu Kapat`;
             document.getElementById('modal-metrics').innerHTML = `
                 <div>• Yön & Kaldıraç: <b style="color:${pos.side === 'LONG' ? 'var(--green)' : 'var(--red)'}">${pos.leverage}x ${pos.side}</b></div>
-                <div>• Giriş Fiyatı: <b>$${pos.entry_price}</b></div>
-                <div>• Anlık Piyasa Fiyatı: <b>$${metrics.curP}</b></div>
+                <div>• Giriş Fiyatı: <b>$${formatSmartPrice(pos.entry_price)}</b></div>
+                <div>• Anlık Piyasa Fiyatı: <b>$${formatSmartPrice(metrics.curP)}</b></div>
                 <div>• Tahmini Kâr/Zarar: <b style="color:${metrics.pnlUsdt >= 0 ? 'var(--green)' : 'var(--red)'}">${metrics.roePct >= 0 ? '+' : ''}${metrics.roePct.toFixed(2)}% ROE (${metrics.pnlUsdt >= 0 ? '+' : ''}${metrics.pnlUsdt.toFixed(2)} $)</b></div>
             `;
 
@@ -5643,8 +5661,8 @@ function downloadExcelReport() {
                             <b>• Hacim Patlama Katsayısı:</b> <span style="color:#38bdf8; font-weight:700;">${item.volume_surge || '1.0'}x Ort. Hacim</span> | <b>Confluence Güç Skoru:</b> <span style="color:#c084fc; font-weight:700;">${item.confluence_score || '2/4'}</span><br>
                             <b>• Makro Uyum (1H/4H):</b> <span style="color:#fcd34d; font-weight:700;">${item.htf_alignment || 'Nötr'}</span> | <b>Piyasa Seansı:</b> <span style="color:#e2e8f0;">${item.session || 'Küresel Seans'}</span><br>
                             <b>• Kademeli TP1 Durumu:</b> <span style="color:#86efac; font-weight:700;">${item.tp1_hit || (item.id.includes('TP1') ? 'EVET (%50 Kilitlendi)' : 'HAYIR')}</span> | <b>Çıkış Verimliliği:</b> %${eff.toFixed(1)}<br>
-                            <b>• Giriş / Çıkış Fiyatı:</b> $${item.entry_price} ➔ $${item.exit_price} | <b>Komisyon:</b> $${item.fees.toFixed(4)}<br>
-                            <b>• Planlanan Hedef (TP1):</b> ${item.tp1 ? '$' + item.tp1 : 'Yok'} | <b>Planlanan Stop:</b> ${item.soft_stop ? '$' + item.soft_stop : 'Yok'}
+                            <b>• Giriş / Çıkış Fiyatı:</b> $${formatSmartPrice(item.entry_price)} ➔ $${formatSmartPrice(item.exit_price)} | <b>Komisyon:</b> $${item.fees.toFixed(4)}<br>
+                            <b>• Planlanan Hedef (TP1):</b> ${item.tp1 ? '$' + formatSmartPrice(item.tp1) : 'Yok'} | <b>Planlanan Stop:</b> ${(item.hard_stop || item.soft_stop) ? '$' + formatSmartPrice(item.hard_stop || item.soft_stop) : 'Yok'}
                         </div>
                     </div>
 
