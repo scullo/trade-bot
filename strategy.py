@@ -581,14 +581,20 @@ class StrategyEngine:
 
         if side == "LONG":
             hard_stop = round(entry_price - stop_dist, 6)
-            tp1 = round(entry_price + tp1_dist, 6)
-            tp2 = round(entry_price + tp2_dist, 6)
+            tp1_calc = round(entry_price + tp1_dist, 6)
+            tp2_calc = round(entry_price + tp2_dist, 6)
+            # Her zaman TP1'in girise daha YAKIN, TP2'nin DAHA UZAK oldugundan emin ol
+            tp1 = min(tp1_calc, tp2_calc) if tp1_calc > 0 and tp2_calc > 0 else tp1_calc
+            tp2 = max(tp1_calc, tp2_calc) if tp1_calc > 0 and tp2_calc > 0 else tp2_calc
             # Mum kapanisi (Yumusak Stop) iptali icin imkansiz bir degere atama yapiyoruz
             soft_stop = round(entry_price * 0.05, 6)
         else:
             hard_stop = round(entry_price + stop_dist, 6)
-            tp1 = round(entry_price - tp1_dist, 6)
-            tp2 = round(entry_price - tp2_dist, 6)
+            tp1_calc = round(entry_price - tp1_dist, 6)
+            tp2_calc = round(entry_price - tp2_dist, 6)
+            # Short islemde yakin olan hedef, RAKAMSAL OLARAK DAHA BUYUKTUR (cunku asagi iniyoruz)
+            tp1 = max(tp1_calc, tp2_calc) if tp1_calc > 0 and tp2_calc > 0 else tp1_calc
+            tp2 = min(tp1_calc, tp2_calc) if tp1_calc > 0 and tp2_calc > 0 else tp2_calc
             # Mum kapanisi (Yumusak Stop) iptali icin imkansiz bir degere atama yapiyoruz
             soft_stop = round(entry_price * 5.0, 6)
 
