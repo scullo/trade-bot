@@ -99,7 +99,7 @@ class TelegramNotifier:
 Parite: <b>#{clean_sym}/USDT</b> | {side_emoji} <b>({pos['leverage']}x)</b>
 Giriş: <code>${pos['entry_price']:.6f}</code> | Marjin: <b>${pos.get('margin_usdt', pos.get('margin', 100.0)):.1f}</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━
-🛑 <b>Stop:</b> <code>${pos.get('soft_stop', pos.get('hard_stop', 0.0)):.6f}</code>
+🛑 <b>Stop:</b> <code>${pos.get('hard_stop', pos.get('soft_stop', 0.0)):.6f}</code>
 🎯 <b>TP1 Hedefi:</b> <code>${pos.get('tp1', 0.0):.6f}</code>
 {tp2_line}🛡️ <b>Kâr Zırhı:</b> <code>+%7 ROE veya 90dk (%50 Kilit)</code>
 📊 <b>ATR / Hacim:</b> <code>%{atr_val:.2f} | {vol_val:.2f}x</code>
@@ -118,7 +118,7 @@ Giriş: <code>${pos['entry_price']:.6f}</code> | Marjin: <b>${pos.get('margin_us
                     levels=levels or {},
                     side=pos["side"],
                     entry_price=pos["entry_price"],
-                    soft_stop=pos.get('soft_stop', pos.get('hard_stop', 0.0)),
+                    soft_stop=pos.get('hard_stop', pos.get('soft_stop', 0.0)),
                     tp1=pos.get('tp1', 0.0),
                     tp2=pos.get('tp2', 0.0),
                     trade_type=pos.get('trade_type', 'SCALP'),
