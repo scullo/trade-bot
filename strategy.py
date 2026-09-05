@@ -132,6 +132,13 @@ class StrategyEngine:
         if symbol not in self.paper_trader.open_positions:
             return
 
+        # 🎯 TELEMETRİ: Anlık milisaniyelik MFE (Zirve Kâr) ve MAE (Dip Zarar) takibini güncelle
+        if hasattr(self.paper_trader, "update_tick_telemetry"):
+            try:
+                self.paper_trader.update_tick_telemetry(symbol, current_price)
+            except Exception as e:
+                pass
+
         pos = self.paper_trader.open_positions[symbol]
         side = pos["side"]
         trade_type = pos.get("trade_type")
@@ -392,7 +399,17 @@ class StrategyEngine:
                 print(f">> [RED - MADDE 6] {symbol}: Hacim {min_vol_surge}x altinda ({vol_surge}x). Iptal.")
                 return {"error": "VOLUME_SURGE_LOW"}
                 
-        if vol_surge >= 2.0:
+        # 🛡️ AŞIRI HACİM CLIMAX KALKANI (Tükeniş / Tuzak Koruması)
+        if vol_surge >= 4.0:
+            if trade_type == "BREAKOUT":
+                print(f">> [CLIMAX KALKANI] {symbol}: Aşırı Hacim Climax ({vol_surge:.2f}x). Tepe tükeniş riskine karşı marjin x0.5 kısıldı.")
+                self.margin_multiplier *= 0.5
+            elif "nPOC" in reason or "Reddi" in reason:
+                print(f">> [CLIMAX ONAYI] {symbol}: nPOC Reddi için {vol_surge:.2f}x hacim likidite emilimini onaylıyor. Marjin x1.2")
+                self.margin_multiplier *= 1.2
+            else:
+                self.margin_multiplier *= 0.8
+        elif vol_surge >= 2.0:
             self.margin_multiplier *= 1.5
             
         # Confluence 4/4 Odulu
@@ -663,9 +680,7 @@ class StrategyEngine:
                     pos["tp1"] = p
                     print(f">> [SEVIYE GUNCELLEME] {symbol} SHORT TP1: {old_tp1:.4f} → {p:.4f}")
             # Stop guncelle (trailing yoksa)
-            if r3 > 0 and r4 > 0 and not trail_active:
-                pos["soft_stop"] = r3 + (r4 - r3) * BUFFER_RATIO
-                pos["hard_stop"] = r4
+            # [STOP GÜNCELLEMESİ KALDIRILDI - 1.5 ATR SERT STOP KORUNDU]
 
         # ── SCALP LONG (S3 Destek Sekmesi → hedef Pivot P) ──────────────────
         elif "S3 Destek" in reason and side == "LONG":
@@ -681,43 +696,33 @@ class StrategyEngine:
                 else:
                     pos["tp1"] = p
                     print(f">> [SEVIYE GUNCELLEME] {symbol} LONG TP1: {old_tp1:.4f} → {p:.4f}")
-            if s3 > 0 and s4 > 0 and not trail_active:
-                pos["soft_stop"] = s3 - (s3 - s4) * BUFFER_RATIO
-                pos["hard_stop"] = s4
+            # [STOP GÜNCELLEMESİ KALDIRILDI - 1.5 ATR SERT STOP KORUNDU]
 
         # ── BREAKOUT LONG (R4 Breakout) ──────────────────────────────────────
         elif "R4 Breakout" in reason and side == "LONG":
             if r5 > 0 and abs(old_tp1 - r5) > 0.0001:
                 pos["tp1"] = r5
                 print(f">> [SEVIYE GUNCELLEME] {symbol} LONG TP1: {old_tp1:.4f} → {r5:.4f}")
-            if r4 > 0 and r3 > 0 and not trail_active:
-                pos["soft_stop"] = r4 - (r4 - r3) * BUFFER_RATIO
-                pos["hard_stop"] = r3
+            # [STOP GÜNCELLEMESİ KALDIRILDI - 1.5 ATR SERT STOP KORUNDU]
 
         # ── BREAKOUT SHORT (S4 Breakdown) ────────────────────────────────────
         elif "S4 Breakdown" in reason and side == "SHORT":
             if s5 > 0 and abs(old_tp1 - s5) > 0.0001:
                 pos["tp1"] = s5
                 print(f">> [SEVIYE GUNCELLEME] {symbol} SHORT TP1: {old_tp1:.4f} → {s5:.4f}")
-            if s4 > 0 and s3 > 0 and not trail_active:
-                pos["soft_stop"] = s4 + (s3 - s4) * BUFFER_RATIO
-                pos["hard_stop"] = s3
+            # [STOP GÜNCELLEMESİ KALDIRILDI - 1.5 ATR SERT STOP KORUNDU]
 
         # ── R4 Destek Retest LONG ────────────────────────────────────────────
         elif "R4 Destek Retest" in reason and side == "LONG":
             if r5 > 0 and abs(old_tp1 - r5) > 0.0001:
                 pos["tp1"] = r5
-            if r4 > 0 and r3 > 0 and not trail_active:
-                pos["soft_stop"] = r4 - (r4 - r3) * BUFFER_RATIO
-                pos["hard_stop"] = r3
+            # [STOP GÜNCELLEMESİ KALDIRILDI - 1.5 ATR SERT STOP KORUNDU]
 
         # ── S4 Direnc Retest SHORT ───────────────────────────────────────────
         elif "S4 Direnc Retest" in reason and side == "SHORT":
             if s5 > 0 and abs(old_tp1 - s5) > 0.0001:
                 pos["tp1"] = s5
-            if s4 > 0 and s3 > 0 and not trail_active:
-                pos["soft_stop"] = s4 + (s3 - s4) * BUFFER_RATIO
-                pos["hard_stop"] = s3
+            # [STOP GÜNCELLEMESİ KALDIRILDI - 1.5 ATR SERT STOP KORUNDU]
 
         # ── nPOC SCALP POZISYONLAR (Hedef Pivot P) ─────────────────────────
         elif "nPOC" in reason or "Likidite" in reason:
@@ -783,6 +788,15 @@ class StrategyEngine:
         # BOLUM 1: ACIK POZISYON YONETIMI
         # ═══════════════════════════════════════════════════════════════════
         if symbol in self.paper_trader.open_positions:
+            # 🎯 TELEMETRİ: Mum kapanışında da High, Low ve Close ile tepe/dip noktalarını güncelle
+            if hasattr(self.paper_trader, "update_tick_telemetry"):
+                try:
+                    self.paper_trader.update_tick_telemetry(symbol, current_candle.get('high', close_price))
+                    self.paper_trader.update_tick_telemetry(symbol, current_candle.get('low', close_price))
+                    self.paper_trader.update_tick_telemetry(symbol, close_price)
+                except Exception:
+                    pass
+
             pos = self.paper_trader.open_positions[symbol]
             soft_stop = pos.get("soft_stop", 0.0)
             side = pos["side"]
@@ -1129,6 +1143,22 @@ class StrategyEngine:
         # ─────────────────────────────────────────────────────────────────
         resist_npoc = above_npoc if (above_npoc and above_npoc > 0) else above_nvah
         if resist_npoc and resist_npoc > 0 and current_candle['high'] >= resist_npoc and close_price < resist_npoc and close_price > p:
+            # 🛡️ YUKARI nPOC REJECTION KALKANI: Güçlü Boğa trendinde yukarı nPOC'ye kafa atılmaz
+            if "GÜÇLÜ BOĞA" in trend_regime:
+                return
+
+            # 🛡️ PİNBAS / ÜST FİTİL ŞARTI: Mum tepeden gerçek bir satış baskısıyla reddedilmeli
+            c_high = current_candle['high']
+            c_low = current_candle['low']
+            c_open = current_candle['open']
+            c_range = c_high - c_low
+            if c_range > 0:
+                upper_wick = c_high - max(c_open, close_price)
+                upper_wick_ratio = upper_wick / c_range
+                # Mumun en az %28'i üst fitil olmalı (Satıcı İğnesi)
+                if upper_wick_ratio < 0.28:
+                    return
+
             buffer = (resist_npoc - p) * BUFFER_RATIO if (resist_npoc > p) else (resist_npoc * 0.004)
             soft_stop = resist_npoc + buffer
             hard_stop = r4 if (r4 > 0 and r4 > resist_npoc) else (resist_npoc + buffer * 2)

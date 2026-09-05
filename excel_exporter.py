@@ -200,8 +200,8 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
             }
         pnl = _safe_float(h.get('net_pnl', 0.0))
         gross = _safe_float(h.get('gross_pnl', pnl))
-        mfe = _safe_float(h.get('mfe_roe', max(0.0, _safe_float(h.get('roe_pct', 0.0)))))
-        mae = _safe_float(h.get('mae_roe', abs(min(0.0, _safe_float(h.get('roe_pct', 0.0))))))
+        mfe = _safe_float(h.get('max_mfe_roe', h.get('mfe_roe', max(0.0, _safe_float(h.get('roe_pct', 0.0))))))
+        mae = _safe_float(h.get('max_mae_roe', h.get('mae_roe', abs(min(0.0, _safe_float(h.get('roe_pct', 0.0)))))))
         atr = _safe_float(h.get('atr_pct', 1.2))
 
         pair_stats[sym]['trades'] += 1
@@ -340,8 +340,8 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         roe_fmt = cell_roe_green if is_win else cell_roe_red
         r_mult = _safe_float(h.get('r_multiple', 1.0))
         
-        mfe_val = _safe_float(h.get('mfe_roe', max(0.0, _safe_float(h.get('roe_pct', 0.0)))))
-        mae_val = _safe_float(h.get('mae_roe', abs(min(0.0, _safe_float(h.get('roe_pct', 0.0))))))
+        mfe_val = _safe_float(h.get('max_mfe_roe', h.get('mfe_roe', max(0.0, _safe_float(h.get('roe_pct', 0.0))))))
+        mae_val = _safe_float(h.get('max_mae_roe', h.get('mae_roe', abs(min(0.0, _safe_float(h.get('roe_pct', 0.0)))))))
         c_reason = str(h.get('close_reason', ''))
 
         # Fitil ve Tuzak Tespiti
@@ -563,8 +563,8 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         pnl = _safe_float(h.get('net_pnl', 0.0))
         strat_stats[cat]['trades'] += 1
         strat_stats[cat]['net_pnl'] += pnl
-        strat_stats[cat]['mfe_sum'] += _safe_float(h.get('mfe_roe', max(0.0, _safe_float(h.get('roe_pct', 0.0)))))
-        strat_stats[cat]['mae_sum'] += _safe_float(h.get('mae_roe', abs(min(0.0, _safe_float(h.get('roe_pct', 0.0))))))
+        strat_stats[cat]['mfe_sum'] += _safe_float(h.get('max_mfe_roe', h.get('mfe_roe', max(0.0, _safe_float(h.get('roe_pct', 0.0))))))
+        strat_stats[cat]['mae_sum'] += _safe_float(h.get('max_mae_roe', h.get('mae_roe', abs(min(0.0, _safe_float(h.get('roe_pct', 0.0)))))))
         if h.get('id', '').endswith('-TP1') or 'TP1' in str(h.get('close_reason', '')) or 'Dinamik' in str(h.get('close_reason', '')):
             strat_stats[cat]['tp1_hits'] += 1
 
@@ -686,12 +686,12 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ws8.write(4, col_idx, f_name, th_gold_fmt)
 
     fake_row = 5
-    fakeout_trades = [h for h in history_data if _safe_float(h.get('mfe_roe', 0)) < 0.8 and _safe_float(h.get('net_pnl', 0)) < 0 and ('Stop' in str(h.get('close_reason', '')) or 'stop' in str(h.get('close_reason', '')))]
+    fakeout_trades = [h for h in history_data if _safe_float(h.get('max_mfe_roe', h.get('mfe_roe', 0))) < 0.8 and _safe_float(h.get('net_pnl', 0)) < 0 and ('Stop' in str(h.get('close_reason', '')) or 'stop' in str(h.get('close_reason', '')))]
 
     for f in fakeout_trades[:60]:
         ws8.set_row(fake_row, 20)
         pnl_loss = _safe_float(f.get('net_pnl', 0))
-        mfe_val = _safe_float(f.get('mfe_roe', 0))
+        mfe_val = _safe_float(f.get('max_mfe_roe', f.get('mfe_roe', 0)))
         mae_val = _safe_float(f.get('mae_roe', abs(_safe_float(f.get('roe_pct', 0)))))
         reclaim_profit = abs(pnl_loss) * 1.8  # Simüle Reclaim Kârı
 
