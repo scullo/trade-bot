@@ -2102,8 +2102,9 @@ HTML_PAGE = """
             <!-- 🧠 AI ZEKASI KATEGORİ FİLTRELERİ -->
             <div class="ai-thought-filters">
                 <button class="ai-filter-btn active" id="btn-filter-all" onclick="setAiThoughtFilter('all')">TÜMÜ (<span id="ai-cnt-all">0</span>)</button>
-                <button class="ai-filter-btn" id="btn-filter-volume" onclick="setAiThoughtFilter('volume')">🔥 Hacim & Sıkışma Radarı (<span id="ai-cnt-vol">0</span>)</button>
-                <button class="ai-filter-btn" id="btn-filter-positions" onclick="setAiThoughtFilter('positions')">⚡ Aktif Pozisyon Taktikleri (<span id="ai-cnt-pos">0</span>)</button>
+                <button class="ai-filter-btn" id="btn-filter-near" onclick="setAiThoughtFilter('near')">🎯 Pusu & Temas Analizi (<span id="ai-cnt-near">0</span>)</button>
+                <button class="ai-filter-btn" id="btn-filter-rejected" onclick="setAiThoughtFilter('rejected')">⛔ Elenen Sinyaller (<span id="ai-cnt-rej">0</span>)</button>
+                <button class="ai-filter-btn" id="btn-filter-positions" onclick="setAiThoughtFilter('positions')">⚡ Aktif Pozisyonlar (<span id="ai-cnt-pos">0</span>)</button>
                 <button class="ai-filter-btn" id="btn-filter-autopsy" onclick="setAiThoughtFilter('autopsy')">📋 İşlem Otopisi & Dersler (<span id="ai-cnt-autopsy">0</span>)</button>
             </div>
 
@@ -3302,47 +3303,84 @@ async function loadAdminMetrics() {
                 const thoughtItems = [];
                 const nowStr = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 
-                // 1. MAKRO & DİNAMİK RİSK KALKANI
-                thoughtItems.push({
-                    cat: 'volume',
-                    color: '#c084fc',
-                    icon: '🌐',
-                    tag: 'MAKRO NABIZ',
-                    tagClass: 'tag-macro',
-                    title: `1H MAKRO TREND & DİNAMİK REJİM (${nowStr})`,
-                    text: `Piyasa genelinde <b>%${bearPct} Ayı</b>, <b>%${bullPct} Boğa</b> ve <b>%${rangePct} Yatay</b> rejim hakim. Makro trend kalkanı devrede; zayıf karşı-trend tuzakları filtreleniyor, sadece kurumsal hacim ve likidite teyitli fırsatlara izin veriliyor.`
-                });
-
-                // 2. HACİM & SIKIŞMA (SQUEEZE & CLIMAX RADARI)
-                let squeezeAlerts = [];
+                // 1. TEMASTA OLAN VE YAKLAŞAN COİNLERİN DERİN ANALİZİ (Pusu / Neden Girmedi / Ne Bekliyor?)
                 if (nearCandidates && nearCandidates.length > 0) {
-                    nearCandidates.forEach(c => {
+                    nearCandidates.sort((a,b) => a.distPct - b.distPct);
+                    const topNear = nearCandidates.slice(0, 6);
+                    
+                    topNear.forEach(c => {
                         const cleanS = c.symbol.replace('/USDT', '');
-                        if (c.distPct < 0.35) {
-                            squeezeAlerts.push(`<b>${cleanS}</b> (%${c.distPct.toFixed(2)} mesafede ${c.targetName})`);
-                        }
-                    });
-                }
+                        const dist = c.distPct;
+                        const isContact = dist < 0.25;
 
-                if (squeezeAlerts.length > 0) {
-                    thoughtItems.push({
-                        cat: 'volume',
-                        color: '#f59e0b',
-                        icon: '⚡',
-                        tag: 'HACİM SIKIŞMASI (SQUEEZE)',
-                        tagClass: 'tag-vol',
-                        title: `VOLATİLİTE PATLAMASI ÖNCÜSÜ (${nowStr})`,
-                        text: `${squeezeAlerts.slice(0, 3).join(', ')} kilit kırılım seviyelerine aşırı sıkıştı. 5M hacim bantları daralıyor; birazdan yönlü sert bir volatilite patlaması (kırılım) gelebilir, radar kilitlendi.`
+                        if (isContact) {
+                            thoughtItems.push({
+                                cat: 'near',
+                                color: '#f59e0b',
+                                icon: '🔥',
+                                tag: 'TEMASTA (TEYİT BEKLENİYOR)',
+                                tagClass: 'tag-vol',
+                                title: `🔥 ${cleanS} • ${c.targetName} SEVİYESİNDE TAM TEMAS! (${nowStr})`,
+                                text: `Fiyat şu an <b>$${Number(c.price) >= 1 ? Number(c.price).toFixed(4) : Number(c.price).toFixed(6)}</b> ile <b>${c.targetName} ($${Number(c.targetPrice) >= 1 ? Number(c.targetPrice).toFixed(4) : Number(c.targetPrice).toFixed(6)})</b> seviyesine tam temas halinde.<br>
+                                <div style="margin-top:4px; padding:6px 10px; background:rgba(245,158,11,0.08); border-left:3px solid #f59e0b; border-radius:4px;">
+                                    <b>❓ Neden Pozisyona Hemen Girilmedi?</b> Robot seviyeye anlık fitil atılmalarına hemen atlamaz; seviyenin kırıldığını veya sekme aldığını doğrulamak için <b>5M mum kapanışı</b> şarttır. Anlık iğne atıp geri çekilirse bu bir <i>Likidite Tuzağı (Fakeout)</i> olur.<br>
+                                    <b>✅ Hangi Şart Sağlanırsa Girecek?</b> 5 dakikalık mum bu seviyenin üzerinde/altında net gövde kapatırsa VE hacim patlaması en az <b>1.5x</b> teyit verirse anında <b>${c.action}</b> tetiklenecektir.
+                                </div>`
+                            });
+                        } else if (dist <= 0.85) {
+                            thoughtItems.push({
+                                cat: 'near',
+                                color: '#38bdf8',
+                                icon: '🎯',
+                                tag: 'PUSUDA (YAKLAŞIYOR)',
+                                tagClass: 'tag-autopsy-win',
+                                title: `🎯 ${cleanS} • ${c.targetName} PUSUSU (Kalan Mesafe: %${dist.toFixed(2)})`,
+                                text: `Fiyat ${c.targetName} ($${Number(c.targetPrice) >= 1 ? Number(c.targetPrice).toFixed(4) : Number(c.targetPrice).toFixed(6)}) seviyesine doğru süzülüyor.<br>
+                                <div style="margin-top:4px; padding:6px 10px; background:rgba(56,189,248,0.08); border-left:3px solid #38bdf8; border-radius:4px;">
+                                    <b>⚡ Beklenen Senaryo:</b> Seviyeye ulaşıldığında hacim ve fitil dinamikleri canlı taranacak. Hacim 1.5x ile 3.5x arasında kurumsal ivme yakalarsa pusu anında tetiklenecek. Hacimsiz sarkarsa tuzak sayılarak beklenmeye devam edilecek.
+                                </div>`
+                            });
+                        }
                     });
                 } else {
                     thoughtItems.push({
-                        cat: 'volume',
-                        color: '#f59e0b',
-                        icon: '📡',
+                        cat: 'near',
+                        color: '#38bdf8',
+                        icon: '🔭',
                         tag: 'LİKİDİTE RADARI',
-                        tagClass: 'tag-vol',
+                        tagClass: 'tag-autopsy-win',
                         title: `100 PARİTE PUSU RADARI AKTİF (${nowStr})`,
-                        text: `Kurumsal nPOC hatları ve Camarilla pivotları sürekli taranıyor. Hacim patlaması 1.5x üzerine çıkan ve seviye desteği bulan pariteler milisaniyelik pusu listesine alınacaktır.`
+                        text: `Kurumsal nPOC hatları ve Camarilla pivotları sürekli taranıyor. Seviyelere %1.0'den daha fazla yaklaşan pariteler burada anlık teyit analizleriyle listelenecektir.`
+                    });
+                }
+
+                // 2. GİRECEKTİ AMA GİRMEDİ (CANLI ELENEN SİNYALLER & SEBEPLERİ)
+                const rejections = appState.recent_rejections || [];
+                if (rejections.length > 0) {
+                    rejections.slice(-6).reverse().forEach(rej => {
+                        thoughtItems.push({
+                            cat: 'rejected',
+                            color: '#f43f5e',
+                            icon: '🛡️',
+                            tag: 'GİRECEKTİ AMA GİRMEDİ',
+                            tagClass: 'tag-autopsy-loss',
+                            title: `⛔ ${rej.symbol} • ${rej.setup} SİNYALİ ELENDİ (${rej.time})`,
+                            text: `Robot bu paritede <b>${rej.setup}</b> kurulumunu tespit etti ve işleme girmeyi değerlendirdi.<br>
+                            <div style="margin-top:4px; padding:6px 10px; background:rgba(244,63,94,0.08); border-left:3px solid #f43f5e; border-radius:4px;">
+                                <b>🚫 Neden Poz Açılmadı?</b> <span style="color:#fda4af; font-weight:700;">${rej.reason}</span>.<br>
+                                <b>💡 Alınan Önlem:</b> Sahte kırılım, tükeniş mumu veya trende kafa atma riski bertaraf edildi; sermaye gereksiz bir stop kaybından korundu.
+                            </div>`
+                        });
+                    });
+                } else {
+                    thoughtItems.push({
+                        cat: 'rejected',
+                        color: '#94a3b8',
+                        icon: '✅',
+                        tag: 'RİSK DENETİMİ',
+                        tagClass: 'tag-macro',
+                        title: `RİSK FİLTRELERİ AKTİF (${nowStr})`,
+                        text: `Kurumsal Hacim Kalkanı (min 1.5x), Trend Kalkanı ve 3. Temas Aşınma filtreleri devrede. Şartları sağlayamayan riskli sinyaller burada nedenleriyle birlikte canlı listelenecektir.`
                     });
                 }
 
@@ -3445,16 +3483,19 @@ async function loadAdminMetrics() {
 
                 // Update Counts on Filter Buttons
                 const allCnt = thoughtItems.length;
-                const volCnt = thoughtItems.filter(t => t.cat === 'volume').length;
+                const nearCnt = thoughtItems.filter(t => t.cat === 'near').length;
+                const rejCnt = thoughtItems.filter(t => t.cat === 'rejected').length;
                 const posCnt = thoughtItems.filter(t => t.cat === 'positions').length;
                 const autCnt = thoughtItems.filter(t => t.cat === 'autopsy').length;
 
                 const elAll = document.getElementById('ai-cnt-all');
-                const elVol = document.getElementById('ai-cnt-vol');
+                const elNear = document.getElementById('ai-cnt-near');
+                const elRej = document.getElementById('ai-cnt-rej');
                 const elPos = document.getElementById('ai-cnt-pos');
                 const elAut = document.getElementById('ai-cnt-autopsy');
                 if (elAll) elAll.innerText = allCnt;
-                if (elVol) elVol.innerText = volCnt;
+                if (elNear) elNear.innerText = nearCnt;
+                if (elRej) elRej.innerText = rejCnt;
                 if (elPos) elPos.innerText = posCnt;
                 if (elAut) elAut.innerText = autCnt;
 
@@ -3499,6 +3540,17 @@ async function loadAdminMetrics() {
                     nearGrid.innerHTML = top5.map(c => {
                         const distText = c.distPct < 0.01 ? '🎯 Seviyede (Temasta)' : `%${c.distPct.toFixed(2)} Kaldı`;
                         const badgeClass = c.distPct < 0.01 ? 'dist-super-close' : (c.distPct < 0.5 ? 'dist-super-close' : 'dist-close');
+                        const isContact = c.distPct < 0.25;
+                        const reasonBox = `
+                            <div style="background:rgba(0,0,0,0.35); border:1px dashed ${isContact ? 'rgba(245,158,11,0.35)' : 'rgba(255,255,255,0.08)'}; border-radius:6px; padding:6px 8px; font-size:11px; color:#cbd5e1; margin:6px 0 8px 0; line-height:1.45;">
+                                <span style="color:${isContact ? '#f59e0b' : '#38bdf8'}; font-weight:800;">
+                                    ${isContact ? '⚠️ SEVİYEDE (TEMASTA):' : '🎯 PUSUDA (YAKLAŞIYOR):'}
+                                </span> 
+                                ${isContact 
+                                    ? '5M mum kapanış gövdesi ve min 1.5x hacim bekleniyor. Sadece fitil atarsa Fakeout (tuzak) sayılıp girilmeyecek.' 
+                                    : 'Kilit seviyeye %' + c.distPct.toFixed(2) + ' kaldı. 1.5x hacim ivmesi oluşursa tetiklenecek.'}
+                            </div>
+                        `;
                         return `
                         <div class="near-card">
                             <div class="near-card-head">
@@ -3508,9 +3560,10 @@ async function loadAdminMetrics() {
                             <div style="font-size:12px; color:#94a3b8; margin-bottom:4px;">
                                 Anlık: <b style="color:#fff;">$${Number(c.price) >= 1 ? Number(c.price).toFixed(4) : Number(c.price).toFixed(6)}</b> ➔ Hedef: <b style="color:var(--blue);">$${Number(c.targetPrice) >= 1 ? Number(c.targetPrice).toFixed(4) : Number(c.targetPrice).toFixed(6)}</b>
                             </div>
-                            <div style="font-size:11.5px; font-weight:700; color:var(--yellow); margin-bottom:6px;">
+                            <div style="font-size:11.5px; font-weight:700; color:var(--yellow); margin-bottom:4px;">
                                 ${c.action}
                             </div>
+                            ${reasonBox}
                             <div style="font-size:11px; color:#64748b; display:flex; justify-content:space-between; align-items:center;">
                                 <span>${c.bias}</span>
                                 <span style="cursor:pointer; color:var(--blue); font-weight:800;" onclick="filterWatchlistDirect('${c.symbol}')">Seviyeyi İncele ➔</span>
@@ -5638,7 +5691,7 @@ function downloadExcelReport() {
 
 GZIPPED_HTML_PAGE = gzip.compress(HTML_PAGE.encode('utf-8'))
 
-async def start_server(market_data, trader_manager, notifier=None, live_trader=None):
+async def start_server(market_data, trader_manager, notifier=None, live_trader=None, strategy=None):
     app = web.Application()
     
     async def index(request):
@@ -5799,6 +5852,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "history_summary": history_summary,
                 "symbols": symbols_data,
                 "all_coins": all_coins,
+                "recent_rejections": getattr(strategy, "recent_rejections", [])[-20:] if strategy else [],
                 "system_health": sys_health
             })
         except Exception as e:

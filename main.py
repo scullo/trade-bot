@@ -40,7 +40,7 @@ async def main():
     market_data.on_candle_close_callback = on_candle_close
 
     init_task = asyncio.create_task(market_data.initialize())
-    await start_server(market_data, trader_manager, notifier, live_trader=live_trader)
+    await start_server(market_data, trader_manager, notifier, live_trader=live_trader, strategy=strategy)
     await init_task
 
     # Sistem Hazır — İlk 5M Mum Taramasını Yap

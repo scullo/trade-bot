@@ -20,6 +20,21 @@ class StrategyEngine:
         self.last_trade_times = {}  # (symbol, side) -> timestamp (30dk Cooldown)
         self.boot_time = time.time()  # Sunucu baslangic zamani (Isinma Kalkanı)
         self.warmup_seconds = 45.0   # Ilk 45 saniye ani kapatmalari onle
+        self.recent_rejections = []  # 🧠 Son elenen / girilmeyen sinyaller ve nedenleri (Canlı Dashboard Zekası)
+
+    def log_rejection(self, symbol: str, setup_name: str, reason: str):
+        now_str = datetime.now().strftime("%H:%M:%S")
+        entry = {
+            "time": now_str,
+            "symbol": symbol.replace("/USDT", ""),
+            "setup": setup_name.split('(')[0].strip(),
+            "reason": reason
+        }
+        if not hasattr(self, "recent_rejections"):
+            self.recent_rejections = []
+        self.recent_rejections.append(entry)
+        if len(self.recent_rejections) > 25:
+            self.recent_rejections.pop(0)
 
     def get_symbol_atr_pct(self, symbol: str) -> float:
         """Paritenin son 14 mumluk ATR yuzdesini hesaplayarak coine ozel dinamik esik uretir."""
@@ -377,6 +392,7 @@ class StrategyEngine:
         
         if current_touch >= 3:
             print(f">> [RED - MADDE 5] {symbol}: 3. Asinmis Temas (Likidite Tukendi). Islem iptal.")
+            self.log_rejection(symbol, reason, "Seviye 3. kez test edildiği için taze likidite tükendi, işlem açılmadı")
             return {"error": "MAX_TOUCH_REACHED"}
             
         self.setup_attempts[setup_key] = current_touch
@@ -388,15 +404,18 @@ class StrategyEngine:
             self.margin_multiplier *= 0.5
             if vol_surge < 2.0:
                 print(f">> [RED - MADDE 5] {symbol}: 2. Temasta hacim patlamasi 2.0x altinda ({vol_surge}x). Iptal.")
+                self.log_rejection(symbol, reason, f"2. temasta hacim patlaması {vol_surge:.2f}x (en az 2.0x teyit aranıyor)")
                 return {"error": "INSUFFICIENT_VOLUME_FOR_2ND_TOUCH"}
                 
         # Madde 6 Kurali
         if current_touch == 1:
             if not is_top_80:
                 print(f">> [RED - MADDE 6] {symbol}: Hacim Top %80'de degil. Iptal.")
+                self.log_rejection(symbol, reason, "24S hacim sıralamasında Top %80 diliminde değil (yetersiz likidite)")
                 return {"error": "VOLUME_PERCENTILE_LOW"}
             if vol_surge < min_vol_surge:
                 print(f">> [RED - MADDE 6] {symbol}: Hacim {min_vol_surge}x altinda ({vol_surge}x). Iptal.")
+                self.log_rejection(symbol, reason, f"5M hacim patlaması {vol_surge:.2f}x (en az {min_vol_surge}x patlama şartı aranıyor)")
                 return {"error": "VOLUME_SURGE_LOW"}
                 
         # 🛡️ AŞIRI HACİM CLIMAX KALKANI (Tükeniş / Tuzak Koruması)
@@ -513,9 +532,11 @@ class StrategyEngine:
             # Coin BTC kuklasi durumunda. Trende karsi yuzemez.
             if side == "LONG" and "AYI" in trend_regime:
                 print(f">> [RED - MADDE 9] {symbol}: Nötr coin, makro trend AYI iken LONG acamaz.")
+                self.log_rejection(symbol, reason, f"Makro trend {trend_regime} iken ters yöne LONG açılması engellendi (Trend Kalkanı)")
                 return {"error": "MACRO_TREND_VIOLATION"}
             if side == "SHORT" and "BOĞA" in trend_regime:
                 print(f">> [RED - MADDE 9] {symbol}: Nötr coin, makro trend BOĞA iken SHORT acamaz.")
+                self.log_rejection(symbol, reason, f"Makro trend {trend_regime} iken ters yöne SHORT açılması engellendi (Trend Kalkanı)")
                 return {"error": "MACRO_TREND_VIOLATION"}
 
         # ── 8. DİNAMİK MARJİN & RİSK BOYUTLANDIRMA (RISK PARITY) ──
@@ -1145,6 +1166,7 @@ class StrategyEngine:
         if resist_npoc and resist_npoc > 0 and current_candle['high'] >= resist_npoc and close_price < resist_npoc and close_price > p:
             # 🛡️ YUKARI nPOC REJECTION KALKANI: Güçlü Boğa trendinde yukarı nPOC'ye kafa atılmaz
             if "GÜÇLÜ BOĞA" in trend_regime:
+                self.log_rejection(symbol, "Yukarı nPOC Reddi", "Piyasa Güçlü Boğa rejimindeyken Yukarı nPOC'den SHORT açılmadı (Short Squeeze Koruması)")
                 return
 
             # 🛡️ PİNBAS / ÜST FİTİL ŞARTI: Mum tepeden gerçek bir satış baskısıyla reddedilmeli
@@ -1157,6 +1179,7 @@ class StrategyEngine:
                 upper_wick_ratio = upper_wick / c_range
                 # Mumun en az %28'i üst fitil olmalı (Satıcı İğnesi)
                 if upper_wick_ratio < 0.28:
+                    self.log_rejection(symbol, "Yukarı nPOC Reddi", f"Üst fitil oranı %{upper_wick_ratio*100:.1f} (en az %28 satıcı iğnesi aranıyor, dolu mumla girilmedi)")
                     return
 
             buffer = (resist_npoc - p) * BUFFER_RATIO if (resist_npoc > p) else (resist_npoc * 0.004)
