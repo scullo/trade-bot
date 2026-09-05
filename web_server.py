@@ -5899,8 +5899,6 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
     app.router.add_post('/api/live/save_config', api_live_save_config)
     app.router.add_get('/health', health_check)
     app.router.add_get('/ping', health_check)
-    app.router.add_head('/health', health_check)
-    app.router.add_head('/', health_check)
     app.router.add_get('/', index)
     app.router.add_post('/api/auth/register', api_auth_register)
     app.router.add_post('/api/auth/login', api_auth_login)
