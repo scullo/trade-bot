@@ -341,10 +341,66 @@ class StrategyEngine:
                         avg_vol = df['volume'].iloc[-21:-1].mean()
                         cur_vol = df['volume'].iloc[-1]
                         vol_surge = round(float(cur_vol / avg_vol), 2) if avg_vol > 0 else 1.0
+                        
+                        # MADDE 6: DINAMIK YUZDELIK VE HACIM SARTLARI
+                        if len(df) >= 288:
+                            vol_80th = df['volume'].iloc[-288:-1].quantile(0.80)
+                        else:
+                            vol_80th = df['volume'].iloc[:-1].quantile(0.80) if len(df) > 1 else 0
+                        is_top_80 = (cur_vol >= vol_80th)
+                        majors = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "ADA/USDT"]
+                        min_vol_surge = 1.2 if symbol in majors else 1.5
                 except Exception:
                     vol_surge = 1.0
+                    is_top_80 = True
+                    min_vol_surge = 1.2
 
-        # ── 1b. GÖRECELİ GÜÇ (RELATIVE STRENGTH VS BTC) & AYRIŞMA HESABI ──
+        # MADDE 5: TEMAS (TOUCH) TAKIBI VE FAKEOUT KORUMASI
+        from datetime import datetime
+        current_date = datetime.now().date()
+        if not hasattr(self, 'setup_attempts'):
+            self.setup_attempts = {}
+        if not hasattr(self, 'last_attempt_date') or self.last_attempt_date != current_date:
+            self.setup_attempts = {}
+            self.last_attempt_date = current_date
+            
+        setup_key = f"{symbol}_{setup_id}"
+        touches_so_far = self.setup_attempts.get(setup_key, 0)
+        current_touch = touches_so_far + 1
+        
+        if current_touch >= 3:
+            print(f">> [RED - MADDE 5] {symbol}: 3. Asinmis Temas (Likidite Tukendi). Islem iptal.")
+            return {"error": "MAX_TOUCH_REACHED"}
+            
+        self.setup_attempts[setup_key] = current_touch
+
+        self.margin_multiplier = 1.0
+        
+        # Madde 5 Kurali
+        if current_touch == 2:
+            self.margin_multiplier *= 0.5
+            if vol_surge < 2.0:
+                print(f">> [RED - MADDE 5] {symbol}: 2. Temasta hacim patlamasi 2.0x altinda ({vol_surge}x). Iptal.")
+                return {"error": "INSUFFICIENT_VOLUME_FOR_2ND_TOUCH"}
+                
+        # Madde 6 Kurali
+        if current_touch == 1:
+            if not is_top_80:
+                print(f">> [RED - MADDE 6] {symbol}: Hacim Top %80'de degil. Iptal.")
+                return {"error": "VOLUME_PERCENTILE_LOW"}
+            if vol_surge < min_vol_surge:
+                print(f">> [RED - MADDE 6] {symbol}: Hacim {min_vol_surge}x altinda ({vol_surge}x). Iptal.")
+                return {"error": "VOLUME_SURGE_LOW"}
+                
+        if vol_surge >= 2.0:
+            self.margin_multiplier *= 1.5
+            
+        # Confluence 4/4 Odulu
+        c_count = len(confluence_list or [1])
+        if c_count >= 4:
+            self.margin_multiplier *= 1.2
+
+        # 1b. GORECELI GUC (RELATIVE STRENGTH VS BTC) & DINAMIK RS HESABI (MADDE 9)
         # Multi-Timeframe RS: 12 mum (1H) ana sinyal + 4 mum (20dk) momentum
         rs_vs_btc = 0.0
         decoupling_status = "⚪ NÖTR_TAKİPÇİ"
@@ -355,47 +411,30 @@ class StrategyEngine:
                 min_len = min(len(df_coin), len(df_btc))
 
                 if min_len >= 12:
-                    # 1H RS (ana sinyal — 12 mum = 60 dakika)
                     coin_chg_1h = ((df_coin['close'].iloc[-1] - df_coin['close'].iloc[-12]) / df_coin['close'].iloc[-12]) * 100.0
                     btc_chg_1h = ((df_btc['close'].iloc[-1] - df_btc['close'].iloc[-12]) / df_btc['close'].iloc[-12]) * 100.0
-                    rs_1h = round(float(coin_chg_1h - btc_chg_1h), 2)
+                    rs_1h = float(coin_chg_1h - btc_chg_1h)
 
-                    # 20dk RS (hızlı momentum — 4 mum)
                     coin_chg_fast = ((df_coin['close'].iloc[-1] - df_coin['close'].iloc[-4]) / df_coin['close'].iloc[-4]) * 100.0
                     btc_chg_fast = ((df_btc['close'].iloc[-1] - df_btc['close'].iloc[-4]) / df_btc['close'].iloc[-4]) * 100.0
-                    rs_fast = round(float(coin_chg_fast - btc_chg_fast), 2)
-
-                    # Bileşik RS: 1H ağırlıklı (%70 ana + %30 momentum)
+                    rs_fast = float(coin_chg_fast - btc_chg_fast)
                     rs_vs_btc = round(rs_1h * 0.7 + rs_fast * 0.3, 2)
-
-                    # Ayrışma sınıflandırması — 1H RS + bileşik RS birlikte değerlendirilir
-                    if rs_1h >= 1.5 and coin_chg_1h > 0:
-                        decoupling_status = "🚀 ALFA_AYRIŞAN (Güçlü Boğa)"
-                    elif rs_1h <= -1.5 and coin_chg_1h < 0:
-                        decoupling_status = "🩸 AŞIRI_ZAYIF (Ezilen Ayı)"
-                    elif abs(rs_1h) >= 0.8:
-                        decoupling_status = "⚖️ ILIMLI_AYRIŞMA"
-                    elif abs(rs_1h) < 0.3:
-                        decoupling_status = "🔗 BTC_KUKLASI (Korelasyon %90+)"
-                    else:
-                        decoupling_status = "⚪ NÖTR_TAKİPÇİ"
-
                 elif min_len >= 4:
-                    # Fallback: sadece 20dk RS (veri az ama sıfır değil)
                     coin_chg = ((df_coin['close'].iloc[-1] - df_coin['close'].iloc[-4]) / df_coin['close'].iloc[-4]) * 100.0
                     btc_chg = ((df_btc['close'].iloc[-1] - df_btc['close'].iloc[-4]) / df_btc['close'].iloc[-4]) * 100.0
                     rs_vs_btc = round(float(coin_chg - btc_chg), 2)
 
-                    if rs_vs_btc >= 1.5 and coin_chg > 0:
-                        decoupling_status = "🚀 ALFA_AYRIŞAN (Güçlü Boğa)"
-                    elif rs_vs_btc <= -1.5 and coin_chg < 0:
-                        decoupling_status = "🩸 AŞIRI_ZAYIF (Ezilen Ayı)"
-                    elif abs(rs_vs_btc) >= 0.8:
-                        decoupling_status = "⚖️ ILIMLI_AYRIŞMA"
-                    elif abs(rs_vs_btc) < 0.3:
-                        decoupling_status = "🔗 BTC_KUKLASI (Korelasyon %90+)"
-                    else:
-                        decoupling_status = "⚪ NÖTR_TAKİPÇİ"
+                # DINAMIK RS HESAPLAMASI (MADDE 9)
+                safe_atr_for_rs = max(0.2, atr_pct)  # Divide by zero korumasi
+                dynamic_rs_score = round(rs_vs_btc / safe_atr_for_rs, 2)
+
+                if dynamic_rs_score >= 1.0:
+                    decoupling_status = "🚀 ALFA_AYRIŞAN (Güçlü Boğa)"
+                elif dynamic_rs_score <= -1.0:
+                    decoupling_status = "🩸 AŞIRI_ZAYIF (Ezilen Ayı)"
+                else:
+                    decoupling_status = "⚪ NÖTR_TAKİPÇİ"
+                    
             except Exception as e:
                 print(f">> [RS HATA] {symbol}: {e}")
                 rs_vs_btc = 0.0
@@ -452,18 +491,56 @@ class StrategyEngine:
             else:
                 htf_str = "⚪ NÖTR MAKRO"
 
-        # ── 7. MAKRO TREND KALKANI (COUNTER-TREND TELEMETRİSİ) ──
-        # Telemetri ve analiz için etiketler; 7 günlük saf veri toplama döneminde işlemleri yapay olarak tıkamaz.
-        if trend_regime == "🟢 GÜÇLÜ BOĞA (Bullish)" and side == "SHORT" and c_count < 3 and vol_surge < 1.5:
-            pass  # Kayıt için telemetriye geçer
-        if trend_regime == "🔴 GÜÇLÜ AYI (Bearish)" and side == "LONG" and c_count < 3 and vol_surge < 1.5:
-            pass  # Kayıt için telemetriye geçer
+        # 7. MAKRO TREND KALKANI VE DINAMIK RS KORUMASI (MADDE 9)
+        if "NÖTR" in decoupling_status:
+            # Coin BTC kuklasi durumunda. Trende karsi yuzemez.
+            if side == "LONG" and "AYI" in trend_regime:
+                print(f">> [RED - MADDE 9] {symbol}: Nötr coin, makro trend AYI iken LONG acamaz.")
+                return {"error": "MACRO_TREND_VIOLATION"}
+            if side == "SHORT" and "BOĞA" in trend_regime:
+                print(f">> [RED - MADDE 9] {symbol}: Nötr coin, makro trend BOĞA iken SHORT acamaz.")
+                return {"error": "MACRO_TREND_VIOLATION"}
 
         # ── 8. DİNAMİK MARJİN & RİSK BOYUTLANDIRMA (RISK PARITY) ──
         # Aşırı volatil coinlerde (AMP, BICO) marjini küçültüp riski maks 3.5$ ile sınırla
+        # MADDE 2 & 8: SEANS VE YON BAZLI DINAMIK MARJIN CEZASI/ODULU
+        if "LONDRA" in session_str:
+            if side == "SHORT":
+                print(f">> [ODUL - MADDE 2/8] {symbol}: Londra Seansi SHORT (Ruzgar arkamizda). Marjin x1.5")
+                self.margin_multiplier *= 1.5
+            elif side == "LONG":
+                print(f">> [CEZA - MADDE 2/8] {symbol}: Londra Seansi LONG (Riskli). Marjin x0.2")
+                self.margin_multiplier *= 0.2
+        elif "ASYA" in session_str:
+            if side == "SHORT":
+                print(f">> [CEZA - MADDE 2/8] {symbol}: Asya Seansi SHORT (Yuksek Tuzak). Marjin x0.2")
+                self.margin_multiplier *= 0.2
+
+        # MADDE 1: OTONOM COIN DNA LIGLERI (Gecmis Win Rate Tababli Marjin)
+        try:
+            if self.paper_trader and hasattr(self.paper_trader, 'history'):
+                history = self.paper_trader.history
+                coin_trades = [h for h in history if h.get('symbol') == symbol]
+                recent_trades = coin_trades[-20:]
+                total_t = len(recent_trades)
+                
+                if total_t >= 3:
+                    wins = sum(1 for t in recent_trades if t.get('net_pnl', t.get('pnl', 0)) > 0)
+                    wr = (wins / total_t) * 100.0
+                    
+                    if wr > 60.0:
+                        print(f">> [ODUL - MADDE 1] {symbol}: Altin Lig (WR %{wr:.1f}). Marjin x1.5")
+                        self.margin_multiplier *= 1.5
+                    elif wr < 45.0:
+                        print(f">> [CEZA - MADDE 1] {symbol}: Karantina Ligi (WR %{wr:.1f}). Marjin x0.2")
+                        self.margin_multiplier *= 0.2
+        except Exception as e:
+            print(f">> [DNA HATA] Madde 1 Karantina hatasi: {e}")
+
         safe_atr = max(0.5, atr_pct)
         dyn_margin = min(100.0, max(20.0, round(3.5 / (safe_atr * 0.02 * 5.0) * 100.0 / 3.5, 2)))
         dyn_margin = min(100.0, max(25.0, round(100.0 / (safe_atr / 1.0), 2)))
+        dyn_margin = round(dyn_margin * getattr(self, 'margin_multiplier', 1.0), 2)
 
         # ── 1c. GERÇEK CVD (TAKER BUY RATIO) VE İVME (CANDLE VELOCITY) HESABI ──
         cvd_pct = 50.0
@@ -491,6 +568,30 @@ class StrategyEngine:
             except Exception as e:
                 print(f">> [CVD/HIZ HATA] {symbol}: {e}")
 
+        # MADDE 4 & EKSIK 2: YUMUSAK STOP IPTALI, DINAMIK ATR STOPU VE HEDEFLERI
+        # _handle_open basinda atr_pct hesaplanmisti
+        safe_atr_pct = max(0.5, min(5.0, atr_pct))
+        
+        # Sert Stop: 1.5 ATR (Dinamik risk mesafesi)
+        stop_dist = entry_price * (safe_atr_pct / 100.0) * 1.5
+        
+        # Hedef TP1: 1.5 ATR (R:R 1:1), TP2: 3.0 ATR (R:R 1:2)
+        tp1_dist = entry_price * (safe_atr_pct / 100.0) * 1.5
+        tp2_dist = entry_price * (safe_atr_pct / 100.0) * 3.0
+
+        if side == "LONG":
+            hard_stop = round(entry_price - stop_dist, 6)
+            tp1 = round(entry_price + tp1_dist, 6)
+            tp2 = round(entry_price + tp2_dist, 6)
+            # Mum kapanisi (Yumusak Stop) iptali icin imkansiz bir degere atama yapiyoruz
+            soft_stop = round(entry_price * 0.05, 6)
+        else:
+            hard_stop = round(entry_price + stop_dist, 6)
+            tp1 = round(entry_price - tp1_dist, 6)
+            tp2 = round(entry_price - tp2_dist, 6)
+            # Mum kapanisi (Yumusak Stop) iptali icin imkansiz bir degere atama yapiyoruz
+            soft_stop = round(entry_price * 5.0, 6)
+
         res = await self._safe_open_position(
             symbol=symbol, side=side, entry_price=entry_price,
             reason=reason, soft_stop=soft_stop, hard_stop=hard_stop,
@@ -499,7 +600,9 @@ class StrategyEngine:
             atr_pct=atr_pct, trend_regime=trend_regime, session=session_str,
             volume_surge=vol_surge, confluence_score=conf_score_str, htf_alignment=htf_str,
             custom_margin=dyn_margin, rs_vs_btc=rs_vs_btc, decoupling_status=decoupling_status,
-            cvd_pct=cvd_pct, candle_velocity=candle_velocity
+            cvd_pct=cvd_pct, candle_velocity=candle_velocity,
+            margin_multiplier=getattr(self, 'margin_multiplier', 1.0),
+            touch_count=current_touch if 'current_touch' in locals() else 1
         )
         if isinstance(res, dict) and res.get("error") == "INSUFFICIENT_BALANCE":
             await self.notifier.notify_insufficient_balance(

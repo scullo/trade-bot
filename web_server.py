@@ -2,6 +2,7 @@ from wallet_listener_cron import AutonomousWalletListener
 from crypto_payment_gateway import CryptoPaymentGateway
 from db_manager import DatabaseManager
 import asyncio
+import gzip
 import json
 import numpy as np
 import pandas as pd
@@ -5421,11 +5422,23 @@ function downloadExcelReport() {
 </html>
 """
 
+GZIPPED_HTML_PAGE = gzip.compress(HTML_PAGE.encode('utf-8'))
+
 async def start_server(market_data, trader_manager, notifier=None, live_trader=None):
     app = web.Application()
     
     async def index(request):
+        accept_encoding = request.headers.get('Accept-Encoding', '')
+        if 'gzip' in accept_encoding:
+            return web.Response(
+                body=GZIPPED_HTML_PAGE,
+                content_type='text/html',
+                headers={'Content-Encoding': 'gzip'}
+            )
         return web.Response(text=HTML_PAGE, content_type='text/html')
+
+    async def health_check(request):
+        return web.Response(text="OK", content_type="text/plain")
         
     
     # =========================================================================
@@ -5884,6 +5897,10 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
     app.router.add_get('/api/live/status', api_live_status)
     app.router.add_post('/api/live/test_connection', api_live_test_connection)
     app.router.add_post('/api/live/save_config', api_live_save_config)
+    app.router.add_get('/health', health_check)
+    app.router.add_get('/ping', health_check)
+    app.router.add_head('/health', health_check)
+    app.router.add_head('/', health_check)
     app.router.add_get('/', index)
     app.router.add_post('/api/auth/register', api_auth_register)
     app.router.add_post('/api/auth/login', api_auth_login)
