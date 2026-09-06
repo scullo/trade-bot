@@ -4819,6 +4819,14 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 });
                 nativeChartObj = chart;
 
+                let chartPrecision = 2;
+                let chartMinMove = 0.01;
+                const samplePrice = (data.candles && data.candles.length > 0) ? Number(data.candles[data.candles.length - 1].close) : 1;
+                if (samplePrice < 0.0001) { chartPrecision = 8; chartMinMove = 0.00000001; }
+                else if (samplePrice < 0.01) { chartPrecision = 6; chartMinMove = 0.000001; }
+                else if (samplePrice < 1) { chartPrecision = 4; chartMinMove = 0.0001; }
+                else if (samplePrice < 10) { chartPrecision = 3; chartMinMove = 0.001; }
+
                 // 1. Candlestick Serisi
                 const candleSeries = chart.addCandlestickSeries({
                     upColor: '#0ecb81',
@@ -4826,6 +4834,11 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                     borderVisible: false,
                     wickUpColor: '#0ecb81',
                     wickDownColor: '#ff4757',
+                    priceFormat: {
+                        type: 'price',
+                        precision: chartPrecision,
+                        minMove: chartMinMove,
+                    }
                 });
                 candleSeries.setData(data.candles || []);
                 candleSeriesObj = candleSeries;
@@ -4837,6 +4850,11 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                         lineWidth: 2,
                         title: 'Tepe AVWAP',
                         priceLineVisible: false,
+                        priceFormat: {
+                            type: 'price',
+                            precision: chartPrecision,
+                            minMove: chartMinMove,
+                        }
                     });
                     avHighSeries.setData(data.avwap_high);
                 }
@@ -4847,6 +4865,11 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                         lineWidth: 2,
                         title: 'Dip AVWAP',
                         priceLineVisible: false,
+                        priceFormat: {
+                            type: 'price',
+                            precision: chartPrecision,
+                            minMove: chartMinMove,
+                        }
                     });
                     avLowSeries.setData(data.avwap_low);
                 }
