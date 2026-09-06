@@ -377,42 +377,83 @@ class MarketDataManager:
                 is_top_80 = True
 
         # === DİNAMİK RS (RELATIVE STRENGTH VS BTC - MADDE 9) ===
+        # === DİNAMİK RS (RELATIVE STRENGTH VS BTC + ETH - ÇİFT ŞEFLİ ALFA MOTORU) ===
         if symbol == "BTC/USDT":
-            decoupling_status = "👑 PİYASA LİDERİ (BTC)"
+            decoupling_status = "👑 MAKRO KRAL (BTC)"
             rs_vs_btc = 0.0
             dynamic_rs_score = 0.0
+        elif symbol == "ETH/USDT":
+            btc_df = self.candles_5m.get('BTC/USDT', pd.DataFrame())
+            if not btc_df.empty and not df_5m.empty and len(df_5m) >= 12 and len(btc_df) >= 12:
+                try:
+                    eth_chg = ((df_5m['close'].iloc[-1] - df_5m['close'].iloc[-12]) / df_5m['close'].iloc[-12]) * 100.0
+                    btc_chg = ((btc_df['close'].iloc[-1] - btc_df['close'].iloc[-12]) / btc_df['close'].iloc[-12]) * 100.0
+                    diff = float(eth_chg - btc_chg)
+                    rs_vs_btc = round(diff, 2)
+                    dynamic_rs_score = round(diff / max(0.2, atr_pct), 2)
+                    if dynamic_rs_score >= 0.7:
+                        decoupling_status = "🟡 ALTCOİN LOKOMOTİFİ (ETH Liderliği)"
+                    elif dynamic_rs_score <= -0.7:
+                        decoupling_status = "🟠 ZAYIF ETH (BTC Baskısı)"
+                    else:
+                        decoupling_status = "⚪ NÖTR LİDER (ETH)"
+                except Exception:
+                    decoupling_status = "👑 ALTCOİN LOKOMOTİFİ (ETH)"
+                    rs_vs_btc = 0.0
+                    dynamic_rs_score = 0.0
+            else:
+                decoupling_status = "👑 ALTCOİN LOKOMOTİFİ (ETH)"
+                rs_vs_btc = 0.0
+                dynamic_rs_score = 0.0
         else:
             btc_df = self.candles_5m.get('BTC/USDT', pd.DataFrame())
+            eth_df = self.candles_5m.get('ETH/USDT', pd.DataFrame())
             if not btc_df.empty and not df_5m.empty:
                 try:
-                    min_len = min(len(df_5m), len(btc_df))
-                    if min_len >= 12:
+                    min_len_btc = min(len(df_5m), len(btc_df))
+                    if min_len_btc >= 12:
                         coin_chg_1h = ((df_5m['close'].iloc[-1] - df_5m['close'].iloc[-12]) / df_5m['close'].iloc[-12]) * 100.0
                         btc_chg_1h = ((btc_df['close'].iloc[-1] - btc_df['close'].iloc[-12]) / btc_df['close'].iloc[-12]) * 100.0
-                        rs_1h = float(coin_chg_1h - btc_chg_1h)
+                        rs_btc_1h = float(coin_chg_1h - btc_chg_1h)
 
                         coin_chg_fast = ((df_5m['close'].iloc[-1] - df_5m['close'].iloc[-4]) / df_5m['close'].iloc[-4]) * 100.0
                         btc_chg_fast = ((btc_df['close'].iloc[-1] - btc_df['close'].iloc[-4]) / btc_df['close'].iloc[-4]) * 100.0
-                        rs_fast = float(coin_chg_fast - btc_chg_fast)
-                        rs_vs_btc = round(rs_1h * 0.7 + rs_fast * 0.3, 2)
-                    elif min_len >= 4:
+                        rs_btc_fast = float(coin_chg_fast - btc_chg_fast)
+                        rs_btc = rs_btc_1h * 0.7 + rs_btc_fast * 0.3
+                    elif min_len_btc >= 4:
                         coin_chg = ((df_5m['close'].iloc[-1] - df_5m['close'].iloc[-4]) / df_5m['close'].iloc[-4]) * 100.0
                         btc_chg = ((btc_df['close'].iloc[-1] - btc_df['close'].iloc[-4]) / btc_df['close'].iloc[-4]) * 100.0
-                        rs_vs_btc = round(float(coin_chg - btc_chg), 2)
+                        rs_btc = float(coin_chg - btc_chg)
+                    else:
+                        rs_btc = 0.0
+
+                    # ETH Kıyaslaması (Altcoin liderliği teyidi)
+                    rs_eth = rs_btc
+                    if eth_df is not None and not eth_df.empty:
+                        min_len_eth = min(len(df_5m), len(eth_df))
+                        if min_len_eth >= 12:
+                            eth_chg_1h = ((eth_df['close'].iloc[-1] - eth_df['close'].iloc[-12]) / eth_df['close'].iloc[-12]) * 100.0
+                            rs_eth = float(coin_chg_1h - eth_chg_1h)
+
+                    # Bileşik RS: %60 BTC, %40 ETH ağırlıklı
+                    composite_rs = rs_btc * 0.60 + rs_eth * 0.40
+                    rs_vs_btc = round(composite_rs, 2)
 
                     safe_atr = max(0.2, atr_pct)
-                    dynamic_rs_score = round(rs_vs_btc / safe_atr, 2)
+                    dynamic_rs_score = round(composite_rs / safe_atr, 2)
 
-                    if dynamic_rs_score >= 1.0:
+                    if dynamic_rs_score >= 1.0 and vol_surge >= 1.5:
                         decoupling_status = "🚀 ALFA_AYRIŞAN (Güçlü Boğa)"
+                    elif dynamic_rs_score >= 1.0:
+                        decoupling_status = "🟢 DİRENÇLİ BOĞA (Makrodan Güçlü)"
                     elif dynamic_rs_score <= -1.0:
                         decoupling_status = "🩸 AŞIRI_ZAYIF (Ezilen Ayı)"
                     else:
-                        decoupling_status = "⚪ NÖTR_TAKİPÇİ"
+                        decoupling_status = "⚪ NÖTR_TAKİPÇİ (Beta)"
                 except Exception:
                     rs_vs_btc = 0.0
                     dynamic_rs_score = 0.0
-                    decoupling_status = "⚪ NÖTR_TAKİPÇİ"
+                    decoupling_status = "⚪ NÖTR_TAKİPÇİ (Beta)"
 
         if not hasattr(self, 'symbol_metrics'):
             self.symbol_metrics = {}

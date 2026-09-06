@@ -96,14 +96,20 @@ class TelegramNotifier:
         # 🧠 Valkyrie AI Taktiksel Mentorluk Notu
         ai_tactic_note = ""
         if "Breakout" in pos.get("trade_type", ""):
-            if vol_val >= 3.0:
+            if "ALFA" in str(pos.get("decoupling_status", "")):
+                ai_tactic_note = f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>Parite genel piyasadan bağımsız kurumsal hacimle ({vol_val:.1f}x) ayrıştı! Rüzgar arkamızda, TP1'de kâr kilitlenip Breakeven zırhına geçilecek.</i>\n"
+            elif vol_val >= 3.0:
                 ai_tactic_note = f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>Kurumsal hacim teyidi ({vol_val:.1f}x) çok güçlü. İlk hedef TP1'de (%50) kâr realize edilip stop derhal başabaşa çekilecek.</i>\n"
             else:
                 ai_tactic_note = f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>Kilit direnç aşıldı. TP1 hedefine odaklanıldı; ardından Breakeven zırhı ile risksiz TP2 koşusu planlandı.</i>\n"
-        elif "SCALP" in pos.get("trade_type", ""):
-            ai_tactic_note = f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>Seviye tepkisinden hızlı kâr alma (Scalp) planlandı. 1.5 ATR dinamik korumamız aktif, erken hedeflerde kâr cebe alınacak.</i>\n"
+        elif "SCALP" in pos.get("trade_type", "") or "nPOC" in pos.get("reason", ""):
+            ai_tactic_note = f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>Seviye likidite sekmesi (Mean Reversion) hedeflendi. Yatay/dar bant koşullarında kurumsal istasyondan hızlı kâr cebe alınacak.</i>\n"
         else:
             ai_tactic_note = f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>Matematiksel kural teyidiyle pusu tetiklendi. Risk sermayesi koruma kalkanıyla kontrol altında.</i>\n"
+
+        macro_str = pos.get('macro_climate', '⚪ Nötr / Dengeli Piyasa')
+        decouple_str = pos.get('decoupling_status', '⚪ Nötr_Takipçi (Beta)')
+        rs_score = pos.get('dynamic_rs_score', pos.get('rs_vs_btc', 0.0))
 
         msg = f"""💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎
 ⚡ <b>YENİ POZİSYON AÇILDI</b> ⚡
@@ -115,6 +121,8 @@ Giriş: <code>${pos['entry_price']:.6f}</code> | Marjin: <b>${pos.get('margin_us
 🎯 <b>TP1 Hedefi:</b> <code>${pos.get('tp1', 0.0):.6f}</code>
 {tp2_line}🛡️ <b>Kâr Zırhı:</b> <code>+%7 ROE veya 90dk (%50 Kilit)</code>
 📊 <b>ATR / Hacim:</b> <code>%{atr_val:.2f} | {vol_val:.2f}x</code>
+🌐 <b>Makro İklim:</b> <code>{macro_str}</code>
+⚡ <b>Alfa/Beta Gücü:</b> <code>{decouple_str} (RS: {rs_score:+.2f})</code>
 {bal_line}━━━━━━━━━━━━━━━━━━━━━━━━
 📌 <b>Setup:</b> <i>{pos['reason']}</i>
 {ai_tactic_note}⏰ <b>Zaman:</b> <code>{pos['entry_time']}</code>
@@ -181,6 +189,8 @@ Giriş: <code>${pos['entry_price']:.6f}</code> | Marjin: <b>${pos.get('margin_us
             else:
                 ai_autopsy_note = f"🧠 <b>Yapay Zeka Otopisi:</b> <i>Sert stop ({record.get('hard_stop', 0):.4f}$) felaket koruması olarak görevini yaptı ve kaybı sınırladı. Sermaye korundu, yeni fırsat taranıyor.</i>\n"
 
+        macro_line = f"🌐 <b>İşlem İklimi:</b> <code>{record.get('macro_climate')}</code>\n" if record.get('macro_climate') else ""
+
         msg = f"""💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎
 {pnl_emoji}
 ━━━━━━━━━━━━━━━━━━━━━━━━
@@ -192,7 +202,7 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
 {bal_str}━━━━━━━━━━━━━━━━━━━━━━━━
 📥 <b>Açılış Nedeni:</b> <i>{open_reason}</i>
 📤 <b>Kapanış Nedeni:</b> <i>{close_reason}</i>{manual_tag}{partial_note}
-{ai_autopsy_note}⏰ <b>Çıkış Zamanı:</b> <code>{record['exit_time']}</code>
+{macro_line}{ai_autopsy_note}⏰ <b>Çıkış Zamanı:</b> <code>{record['exit_time']}</code>
 💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎"""
 
         chart_buf = None

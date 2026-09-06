@@ -137,6 +137,120 @@ class StrategyEngine:
                     pass
         return 0.012  # Varsayilan %1.2
 
+    def get_macro_climate(self) -> dict:
+        """
+        BTC + ETH Çift Şefli Makro Piyasa İklim Analiz Motoru.
+        Piyasa iletkenliğini yalnızca BTC'ye indirgemez; altcoinlerin asıl lokomotifi olan ETH'yi ve
+        BTC-ETH korelasyonunu eşzamanlı değerlendirir.
+        """
+        default_climate = {
+            "regime": "NEUTRAL",
+            "status": "⚪ NÖTR / DENGELİ PİYASA",
+            "desc": "BTC ve ETH dengeli aralıkta işlem görüyor.",
+            "is_dead_zone": False,
+            "eth_leading": False,
+            "btc_range_1h": 0.0,
+            "eth_range_1h": 0.0,
+            "btc_chg_1h": 0.0,
+            "eth_chg_1h": 0.0,
+            "eth_lead_pct": 0.0,
+            "btc_price": 0.0,
+            "eth_price": 0.0
+        }
+
+        if not self.market_data or not hasattr(self.market_data, 'candles_5m'):
+            return default_climate
+
+        df_btc = self.market_data.candles_5m.get('BTC/USDT')
+        df_eth = self.market_data.candles_5m.get('ETH/USDT')
+
+        if df_btc is None or df_btc.empty or len(df_btc) < 12:
+            return default_climate
+
+        try:
+            btc_close = float(df_btc['close'].iloc[-1])
+            btc_high_1h = float(df_btc['high'].iloc[-12:].max())
+            btc_low_1h = float(df_btc['low'].iloc[-12:].min())
+            btc_range_1h = round(((btc_high_1h - btc_low_1h) / btc_close) * 100.0, 2) if btc_close > 0 else 0.0
+            btc_chg_1h = round(((btc_close - df_btc['close'].iloc[-12]) / df_btc['close'].iloc[-12]) * 100.0, 2)
+        except Exception:
+            return default_climate
+
+        eth_close, eth_range_1h, eth_chg_1h = 0.0, 0.0, 0.0
+        if df_eth is not None and not df_eth.empty and len(df_eth) >= 12:
+            try:
+                eth_close = float(df_eth['close'].iloc[-1])
+                eth_high_1h = float(df_eth['high'].iloc[-12:].max())
+                eth_low_1h = float(df_eth['low'].iloc[-12:].min())
+                eth_range_1h = round(((eth_high_1h - eth_low_1h) / eth_close) * 100.0, 2) if eth_close > 0 else 0.0
+                eth_chg_1h = round(((eth_close - df_eth['close'].iloc[-12]) / df_eth['close'].iloc[-12]) * 100.0, 2)
+            except Exception:
+                pass
+
+        eth_lead_pct = round(eth_chg_1h - btc_chg_1h, 2)
+        eth_leading = eth_lead_pct >= 0.70 and eth_chg_1h > 0
+
+        # Seviye tespiti (Camarilla S3/R3/R4/S4)
+        btc_levels = self.market_data.levels.get('BTC/USDT', {}) if self.market_data else {}
+        eth_levels = self.market_data.levels.get('ETH/USDT', {}) if self.market_data else {}
+        btc_cam = btc_levels.get('camarilla', {}) if isinstance(btc_levels, dict) else {}
+        eth_cam = eth_levels.get('camarilla', {}) if isinstance(eth_levels, dict) else {}
+
+        btc_in_va = True
+        eth_in_va = True
+        if btc_cam.get('R3', 0) > 0 and btc_cam.get('S3', 0) > 0:
+            btc_in_va = (btc_close <= btc_cam['R3'] and btc_close >= btc_cam['S3'])
+        if eth_cam.get('R3', 0) > 0 and eth_cam.get('S3', 0) > 0:
+            eth_in_va = (eth_close <= eth_cam['R3'] and eth_close >= eth_cam['S3'])
+
+        btc_above_r4 = btc_close > btc_cam.get('R4', 999999) if btc_cam.get('R4', 0) > 0 else False
+        eth_above_r4 = eth_close > eth_cam.get('R4', 999999) if eth_cam.get('R4', 0) > 0 else False
+        btc_below_s4 = btc_close < btc_cam.get('S4', 0) if btc_cam.get('S4', 0) > 0 else False
+        eth_below_s4 = eth_close < eth_cam.get('S4', 0) if eth_cam.get('S4', 0) > 0 else False
+
+        # İklim Karar Matrisi
+        is_dead_zone = False
+        regime = "NEUTRAL"
+        status = "⚪ NÖTR / DENGELİ PİYASA"
+        desc = f"BTC (%{btc_chg_1h:+.2f}) ve ETH (%{eth_chg_1h:+.2f}) dengeli bantta."
+
+        if eth_leading and (eth_chg_1h >= 0.8 or eth_above_r4):
+            regime = "ETH_EXPANSION"
+            status = "🟡 ETH ÖNCÜLÜĞÜNDE BOĞA GENİŞLEMESİ"
+            desc = f"ETH, BTC'ye +%{eth_lead_pct:.2f} fark atarak altcoinlere rüzgar sağlıyor (ETH 1S: %{eth_chg_1h:+.2f}). Altcoin kırılımlarına yeşil ışık."
+        elif (btc_above_r4 or btc_chg_1h >= 1.2) and eth_chg_1h >= 0:
+            regime = "BULL_TREND"
+            status = "🟢 MAKRO BOĞA TRENDİ (BTC Liderliği)"
+            desc = f"BTC kurumsal dirençleri kırıyor (1S: %{btc_chg_1h:+.2f}). Piyasa genelinde boğa ivmesi hakim."
+        elif (btc_below_s4 or btc_chg_1h <= -1.2) or (eth_below_s4 or eth_chg_1h <= -1.5):
+            regime = "BEAR_DUMP"
+            status = "🔴 MAKRO AYI BASKISI"
+            desc = f"BTC (%{btc_chg_1h:+.2f}) veya ETH (%{eth_chg_1h:+.2f}) ana destekleri kırdı. Yüksek satış baskısı."
+        elif btc_in_va and eth_in_va and btc_range_1h < 0.65 and eth_range_1h < 0.85:
+            is_dead_zone = True
+            regime = "DEAD_ZONE"
+            status = "⚪ ÖLÜ BÖLGE / DEĞER ALANI SIKIŞMASI"
+            desc = f"BTC (1S: %{btc_range_1h:.2f}) ve ETH (1S: %{eth_range_1h:.2f}) Camarilla S3-R3 Değer Alanı içine kilitlendi. Beta paritelerde sahte kırılım riski yüksek. nPOC/S3/R3 tepkileri ve bağımsız Alfa ayrışanlar aktif."
+        else:
+            regime = "CONSOLIDATION"
+            status = "⚪ YATAY KONSOLİDASYON"
+            desc = f"BTC 1S: %{btc_range_1h:.2f}, ETH 1S: %{eth_range_1h:.2f}. Piyasa seviye arıyor."
+
+        return {
+            "regime": regime,
+            "status": status,
+            "desc": desc,
+            "is_dead_zone": is_dead_zone,
+            "eth_leading": eth_leading,
+            "btc_range_1h": btc_range_1h,
+            "eth_range_1h": eth_range_1h,
+            "btc_chg_1h": btc_chg_1h,
+            "eth_chg_1h": eth_chg_1h,
+            "eth_lead_pct": eth_lead_pct,
+            "btc_price": btc_close,
+            "eth_price": eth_close
+        }
+
     async def _notify_open(self, pos: dict, levels: dict = None):
         if not self.notifier:
             return
@@ -466,6 +580,13 @@ class StrategyEngine:
                     is_top_80 = True
                     min_vol_surge = 1.2
 
+        if self.market_data and hasattr(self.market_data, 'get_symbol_metrics'):
+            met = self.market_data.get_symbol_metrics(symbol)
+            if met:
+                vol_surge = met.get("vol_surge", vol_surge)
+                is_top_80 = met.get("is_top_80", is_top_80)
+                min_vol_surge = met.get("min_vol_surge", min_vol_surge)
+
         # MADDE 5: TEMAS (TOUCH) TAKIBI VE FAKEOUT KORUMASI
         from datetime import datetime
         current_date = datetime.now().date()
@@ -525,45 +646,34 @@ class StrategyEngine:
         if c_count >= 4:
             self.margin_multiplier *= 1.2
 
-        # 1b. GORECELI GUC (RELATIVE STRENGTH VS BTC) & DINAMIK RS HESABI (MADDE 9)
-        # Multi-Timeframe RS: 12 mum (1H) ana sinyal + 4 mum (20dk) momentum
+        # 1b. GÖRECELİ GÜÇ (RELATIVE STRENGTH VS BTC + ETH) & DİNAMİK RS HESABI (MADDE 9)
         rs_vs_btc = 0.0
-        decoupling_status = "⚪ NÖTR_TAKİPÇİ"
-        if self.market_data and 'BTC/USDT' in self.market_data.candles_5m and symbol in self.market_data.candles_5m:
+        decoupling_status = "⚪ NÖTR_TAKİPÇİ (Beta)"
+        dynamic_rs_score = 0.0
+        if self.market_data and hasattr(self.market_data, 'get_symbol_metrics'):
+            met = self.market_data.get_symbol_metrics(symbol)
+            rs_vs_btc = met.get("rs_vs_btc", 0.0)
+            dynamic_rs_score = met.get("dynamic_rs_score", 0.0)
+            decoupling_status = met.get("decoupling_status", "⚪ NÖTR_TAKİPÇİ (Beta)")
+        elif self.market_data and 'BTC/USDT' in self.market_data.candles_5m and symbol in self.market_data.candles_5m:
             try:
                 df_coin = self.market_data.candles_5m[symbol]
                 df_btc = self.market_data.candles_5m['BTC/USDT']
                 min_len = min(len(df_coin), len(df_btc))
-
                 if min_len >= 12:
                     coin_chg_1h = ((df_coin['close'].iloc[-1] - df_coin['close'].iloc[-12]) / df_coin['close'].iloc[-12]) * 100.0
                     btc_chg_1h = ((df_btc['close'].iloc[-1] - df_btc['close'].iloc[-12]) / df_btc['close'].iloc[-12]) * 100.0
-                    rs_1h = float(coin_chg_1h - btc_chg_1h)
-
-                    coin_chg_fast = ((df_coin['close'].iloc[-1] - df_coin['close'].iloc[-4]) / df_coin['close'].iloc[-4]) * 100.0
-                    btc_chg_fast = ((df_btc['close'].iloc[-1] - df_btc['close'].iloc[-4]) / df_btc['close'].iloc[-4]) * 100.0
-                    rs_fast = float(coin_chg_fast - btc_chg_fast)
-                    rs_vs_btc = round(rs_1h * 0.7 + rs_fast * 0.3, 2)
-                elif min_len >= 4:
-                    coin_chg = ((df_coin['close'].iloc[-1] - df_coin['close'].iloc[-4]) / df_coin['close'].iloc[-4]) * 100.0
-                    btc_chg = ((df_btc['close'].iloc[-1] - df_btc['close'].iloc[-4]) / df_btc['close'].iloc[-4]) * 100.0
-                    rs_vs_btc = round(float(coin_chg - btc_chg), 2)
-
-                # DINAMIK RS HESAPLAMASI (MADDE 9)
-                safe_atr_for_rs = max(0.2, atr_pct)  # Divide by zero korumasi
-                dynamic_rs_score = round(rs_vs_btc / safe_atr_for_rs, 2)
-
-                if dynamic_rs_score >= 1.0:
-                    decoupling_status = "🚀 ALFA_AYRIŞAN (Güçlü Boğa)"
-                elif dynamic_rs_score <= -1.0:
-                    decoupling_status = "🩸 AŞIRI_ZAYIF (Ezilen Ayı)"
-                else:
-                    decoupling_status = "⚪ NÖTR_TAKİPÇİ"
-                    
-            except Exception as e:
-                print(f">> [RS HATA] {symbol}: {e}")
+                    rs_vs_btc = round(float(coin_chg_1h - btc_chg_1h), 2)
+                    dynamic_rs_score = round(rs_vs_btc / max(0.2, atr_pct), 2)
+                    if dynamic_rs_score >= 1.0 and vol_surge >= 1.5:
+                        decoupling_status = "🚀 ALFA_AYRIŞAN (Güçlü Boğa)"
+                    elif dynamic_rs_score >= 1.0:
+                        decoupling_status = "🟢 DİRENÇLİ BOĞA"
+                    elif dynamic_rs_score <= -1.0:
+                        decoupling_status = "🩸 AŞIRI_ZAYIF"
+            except Exception:
                 rs_vs_btc = 0.0
-                decoupling_status = "⚪ NÖTR_TAKİPÇİ"
+                dynamic_rs_score = 0.0
 
         # ── 2. TREND REJIMI HESABI ──
         snaps = snapshot_levels or {}
@@ -617,31 +727,31 @@ class StrategyEngine:
                 htf_str = "⚪ NÖTR MAKRO"
 
         # 7. MAKRO TREND KALKANI VE DINAMIK RS KORUMASI (MADDE 9)
-        if "NÖTR" in decoupling_status:
-            # Coin BTC kuklasi durumunda. Trende karsi yuzemez.
-            if side == "LONG" and "AYI" in trend_regime:
-                print(f">> [RED - MADDE 9] {symbol}: Nötr coin, makro trend AYI iken LONG acamaz.")
-                self.log_rejection(symbol, reason, f"Makro trend {trend_regime} iken ters yöne LONG açılması engellendi (Trend Kalkanı)")
+        # Sadece TREND / BREAKOUT işlemlerinde ters yöne atlama engellenir.
+        # Mean Reversion (SCALP / S3 / R3 / nPOC) ise doğası gereği dip/tepe sekmesini hedefler!
+        is_mean_rev = (trade_type == "SCALP" or "nPOC" in reason or "Destek" in reason or "Direnç" in reason or "Sekmesi" in reason)
+        if "NÖTR" in decoupling_status and not is_mean_rev:
+            # Coin BTC kuklasi durumunda ve kırılım kovalıyor. Sert trende karşı kafa atamaz.
+            if side == "LONG" and "GÜÇLÜ AYI" in trend_regime:
+                print(f">> [RED - MADDE 9] {symbol}: Nötr coin, güçlü AYI trendinde LONG kırılımı açamaz.")
+                self.log_rejection(symbol, reason, f"Piyasa {trend_regime} iken ters yöne LONG açılması engellendi (Trend Kalkanı)")
                 return {"error": "MACRO_TREND_VIOLATION"}
-            if side == "SHORT" and "BOĞA" in trend_regime:
-                print(f">> [RED - MADDE 9] {symbol}: Nötr coin, makro trend BOĞA iken SHORT acamaz.")
-                self.log_rejection(symbol, reason, f"Makro trend {trend_regime} iken ters yöne SHORT açılması engellendi (Trend Kalkanı)")
+            if side == "SHORT" and "GÜÇLÜ BOĞA" in trend_regime:
+                print(f">> [RED - MADDE 9] {symbol}: Nötr coin, güçlü BOĞA trendinde SHORT kırılımı açamaz.")
+                self.log_rejection(symbol, reason, f"Piyasa {trend_regime} iken ters yöne SHORT açılması engellendi (Trend Kalkanı)")
                 return {"error": "MACRO_TREND_VIOLATION"}
 
         # ── 8. DİNAMİK MARJİN & RİSK BOYUTLANDIRMA (RISK PARITY) ──
         # Aşırı volatil coinlerde (AMP, BICO) marjini küçültüp riski maks 3.5$ ile sınırla
-        # MADDE 2 & 8: SEANS VE YON BAZLI DINAMIK MARJIN CEZASI/ODULU
+        # MADDE 2 & 8: SEANS VE YON BAZLI DINAMIK MARJIN DENGELEMESI
         if "LONDRA" in session_str:
             if side == "SHORT":
-                print(f">> [ODUL - MADDE 2/8] {symbol}: Londra Seansi SHORT (Ruzgar arkamizda). Marjin x1.5")
-                self.margin_multiplier *= 1.5
+                self.margin_multiplier *= 1.2
             elif side == "LONG":
-                print(f">> [CEZA - MADDE 2/8] {symbol}: Londra Seansi LONG (Riskli). Marjin x0.2")
-                self.margin_multiplier *= 0.2
+                self.margin_multiplier *= 0.8
         elif "ASYA" in session_str:
             if side == "SHORT":
-                print(f">> [CEZA - MADDE 2/8] {symbol}: Asya Seansi SHORT (Yuksek Tuzak). Marjin x0.2")
-                self.margin_multiplier *= 0.2
+                self.margin_multiplier *= 0.8
 
         # MADDE 1: OTONOM COIN DNA LIGLERI (Gecmis Win Rate Tababli Marjin)
         try:
@@ -736,6 +846,7 @@ class StrategyEngine:
             else:
                 tp2 = atr_tp2
 
+        macro_clim = self.get_macro_climate()
         res = await self._safe_open_position(
             symbol=symbol, side=side, entry_price=entry_price,
             reason=reason, soft_stop=soft_stop, hard_stop=hard_stop,
@@ -744,6 +855,9 @@ class StrategyEngine:
             atr_pct=atr_pct, trend_regime=trend_regime, session=session_str,
             volume_surge=vol_surge, confluence_score=conf_score_str, htf_alignment=htf_str,
             custom_margin=dyn_margin, rs_vs_btc=rs_vs_btc, decoupling_status=decoupling_status,
+            dynamic_rs_score=dynamic_rs_score,
+            macro_climate=macro_clim.get('status', '⚪ Nötr / Dengeli Piyasa'),
+            eth_leading=macro_clim.get('eth_leading', False),
             cvd_pct=cvd_pct, candle_velocity=candle_velocity,
             margin_multiplier=getattr(self, 'margin_multiplier', 1.0),
             touch_count=current_touch if 'current_touch' in locals() else 1
@@ -879,12 +993,16 @@ class StrategyEngine:
 
         # Hacim Patlama Katsayısı (Volume Surge Ratio)
         vol_surge = 1.0
-        if self.market_data and symbol in self.market_data.candles_5m:
+        if self.market_data and hasattr(self.market_data, 'get_symbol_metrics'):
+            met = self.market_data.get_symbol_metrics(symbol)
+            vol_surge = met.get("vol_surge", 1.0)
+        elif self.market_data and symbol in self.market_data.candles_5m:
             df = self.market_data.candles_5m[symbol]
             if isinstance(df, pd.DataFrame) and not df.empty and len(df) >= 20:
                 try:
-                    avg_vol = df['volume'].iloc[-21:-1].mean()
-                    cur_vol = df['volume'].iloc[-1]
+                    vol_col = 'quote_volume' if ('quote_volume' in df.columns and df['quote_volume'].iloc[-1] > 0) else 'volume'
+                    avg_vol = df[vol_col].iloc[-21:-1].mean()
+                    cur_vol = df[vol_col].iloc[-1]
                     vol_surge = round(float(cur_vol / avg_vol), 2) if avg_vol > 0 else 1.0
                 except Exception:
                     vol_surge = 1.0
@@ -1043,8 +1161,12 @@ class StrategyEngine:
         s3, s4, s5 = cam.get("S3", 0), cam.get("S4", 0), cam.get("S5", 0)
         p = cam.get("P", 0)
 
-        # ── PİYASA REJİMİ TESPİTİ (REGIME ADAPTIVE) ──
-        is_range_regime = False
+        # ── PİYASA REJİMİ & MAKRO İKLİM TESPİTİ (BTC + ETH ÇİFT ŞEFLİ MOTOR) ──
+        macro = self.get_macro_climate()
+        is_dead_zone = macro.get("is_dead_zone", False)
+        eth_leading = macro.get("eth_leading", False)
+        is_range_regime = is_dead_zone
+
         if tepe_avwap > 0 and p > 0 and close_price > tepe_avwap and close_price > p:
             regime_desc = "🟢 GÜÇLÜ BOĞA (Bullish)"
         elif dip_avwap > 0 and p > 0 and close_price < dip_avwap and close_price < p:
@@ -1057,19 +1179,14 @@ class StrategyEngine:
             regime_desc = "⚪ YATAY / SIKIŞMA (Ranging)"
             is_range_regime = True
 
-        # BTC Rejimi Kontrolü (BTC 1 Saatlik Aralık Sıkışması)
-        if self.market_data and 'BTC/USDT' in self.market_data.candles_5m:
-            df_btc = self.market_data.candles_5m['BTC/USDT']
-            if isinstance(df_btc, pd.DataFrame) and len(df_btc) >= 12:
-                try:
-                    btc_high = df_btc['high'].iloc[-12:].max()
-                    btc_low = df_btc['low'].iloc[-12:].min()
-                    btc_close = df_btc['close'].iloc[-1]
-                    btc_1h_range_pct = ((btc_high - btc_low) / btc_close) * 100.0 if btc_close > 0 else 0
-                    if btc_1h_range_pct < 0.60:
-                        is_range_regime = True
-                except Exception:
-                    pass
+        # Parite Bazlı Alfa ve Hacim Metrikleri (Dinamik Ayrışma)
+        sym_met = self.market_data.get_symbol_metrics(symbol) if (self.market_data and hasattr(self.market_data, 'get_symbol_metrics')) else {}
+        coin_rs_score = sym_met.get("dynamic_rs_score", 0.0)
+        coin_is_top80 = sym_met.get("is_top_80", True)
+        coin_vol_surge = sym_met.get("vol_surge", vol_surge)
+        # Bağımsız Alfa Ayrışan Parite (Ölü Bölgede Kırılıma Giriş Onayı)
+        is_decoupled_bull = (coin_rs_score >= 1.2 and coin_vol_surge >= 2.0 and coin_is_top80)
+        is_decoupled_bear = (coin_rs_score <= -1.2 and coin_vol_surge >= 2.0 and coin_is_top80)
 
         # ─────────────────────────────────────────────────────────────────
         # SETUP 1: TAZE R4 BREAKOUT LONG
@@ -1082,7 +1199,15 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 1 R4 Breakout", struct_reason)
                 return
 
-            min_breakout_vol = 1.8 if is_range_regime else 1.25
+            # 🛡️ MAKRO ÖLÜ BÖLGE KALKANI: BTC+ETH Sıkışmasında Beta Kırılımını Filtrele
+            if is_dead_zone and not is_decoupled_bull:
+                self.log_rejection(
+                    symbol, "SETUP 1 R4 Breakout",
+                    f"Makro Ölü Bölge (BTC 1S: %{macro['btc_range_1h']:.2f}, ETH 1S: %{macro['eth_range_1h']:.2f}); Beta sahte kırılım riski nedeniyle elendi (Bağımsız Alfa RS: {coin_rs_score:+.2f} / Hacim: {coin_vol_surge:.1f}x teyidi yok)"
+                )
+                return
+
+            min_breakout_vol = 1.25 if eth_leading else (1.8 if is_range_regime else 1.35)
             if vol_surge < min_breakout_vol:
                 self.log_rejection(symbol, "SETUP 1 R4 Breakout", f"{'Yatay piyasada sahte kırılım kalkanı: ' if is_range_regime else ''}Hacim patlaması {vol_surge:.2f}x yetersiz (en az {min_breakout_vol:.2f}x patlama aranıyor)")
                 return
@@ -1120,7 +1245,15 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 2 S4 Breakdown", struct_reason)
                 return
 
-            min_breakout_vol = 1.8 if is_range_regime else 1.25
+            # 🛡️ MAKRO ÖLÜ BÖLGE KALKANI: BTC+ETH Sıkışmasında Beta Dökülmesini Filtrele
+            if is_dead_zone and not is_decoupled_bear:
+                self.log_rejection(
+                    symbol, "SETUP 2 S4 Breakdown",
+                    f"Makro Ölü Bölge (BTC 1S: %{macro['btc_range_1h']:.2f}, ETH 1S: %{macro['eth_range_1h']:.2f}); Beta sahte dökülme riski nedeniyle elendi (Bağımsız Alfa RS: {coin_rs_score:+.2f} / Hacim: {coin_vol_surge:.1f}x teyidi yok)"
+                )
+                return
+
+            min_breakout_vol = 1.25 if eth_leading else (1.8 if is_range_regime else 1.35)
             if vol_surge < min_breakout_vol:
                 self.log_rejection(symbol, "SETUP 2 S4 Breakdown", f"{'Yatay piyasada sahte kırılım kalkanı: ' if is_range_regime else ''}Hacim patlaması {vol_surge:.2f}x yetersiz (en az {min_breakout_vol:.2f}x patlama aranıyor)")
                 return
@@ -1252,6 +1385,12 @@ class StrategyEngine:
             if not struct_ok:
                 self.log_rejection(symbol, "SETUP 6 mVAH Breakout", struct_reason)
                 return
+
+            # 🛡️ MAKRO ÖLÜ BÖLGE KALKANI: mVAH Kırılımında Bağımsız Alfa Kontrolü
+            if is_dead_zone and not is_decoupled_bull:
+                self.log_rejection(symbol, "SETUP 6 mVAH Breakout", f"Makro Ölü Bölge: BTC+ETH Değer Alanı içinde; mVAH makro kırılımı için bağımsız Alfa ayrışması (RS: {coin_rs_score:+.2f}) teyidi yok")
+                return
+
             # 🛡️ ZIRH 3: Minimum %0.80 Hedef Barajı (Mikro hedefleri atla, kurumsal istasyona bağlan)
             candidates = [c for c in [above_npoc, above_nvah, r5, tepe_avwap] if c and c >= close_price * 1.008]
             target = min(candidates) if candidates else close_price * 1.018
@@ -1317,6 +1456,11 @@ class StrategyEngine:
             struct_ok, struct_reason = self.check_structural_invalidation(symbol, "SHORT", close_price, levels)
             if not struct_ok:
                 self.log_rejection(symbol, "SETUP 8 mVAL Breakdown", struct_reason)
+                return
+
+            # 🛡️ MAKRO ÖLÜ BÖLGE KALKANI: mVAL Dökülmesinde Bağımsız Alfa Kontrolü
+            if is_dead_zone and not is_decoupled_bear:
+                self.log_rejection(symbol, "SETUP 8 mVAL Breakdown", f"Makro Ölü Bölge: BTC+ETH Değer Alanı içinde; mVAL makro dökülme için bağımsız Alfa ayrışması (RS: {coin_rs_score:+.2f}) teyidi yok")
                 return
 
             # 🛡️ ZIRH 3: Minimum %0.80 Hedef Barajı (Mikro hedefleri atla, kurumsal istasyona bağlan)

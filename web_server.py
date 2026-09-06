@@ -1064,11 +1064,9 @@ HTML_PAGE = """
             box-shadow: 0 0 20px rgba(0, 242, 254, 0.25);
         }
         .tab-badge {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: #ffffff;
             font-size: 11px;
             font-weight: 800;
-            padding: 2px 7px;
+            padding: 2px 8px;
             border-radius: 12px;
             margin-left: 8px;
             display: inline-flex;
@@ -1076,10 +1074,22 @@ HTML_PAGE = """
             justify-content: center;
             min-width: 20px;
             height: 18px;
-            box-shadow: 0 0 10px rgba(239, 68, 68, 0.75);
-            animation: pulseBadge 1.2s infinite ease-in-out;
             font-family: 'JetBrains Mono', monospace;
             vertical-align: middle;
+            transition: all 0.3s ease;
+        }
+        .tab-badge.active-pulse {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: #ffffff;
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.85);
+            animation: pulseBadge 1.2s infinite ease-in-out;
+        }
+        .tab-badge.zero-idle {
+            background: rgba(148, 163, 184, 0.12);
+            color: #94a3b8;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            box-shadow: none;
+            animation: none;
         }
         @keyframes pulseBadge {
             0%, 100% {
@@ -1088,9 +1098,9 @@ HTML_PAGE = """
                 box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
             }
             50% {
-                opacity: 0.65;
+                opacity: 0.7;
                 transform: scale(1.18);
-                box-shadow: 0 0 16px rgba(239, 68, 68, 0.95);
+                box-shadow: 0 0 18px rgba(239, 68, 68, 1);
             }
         }
         .tab-badge-sub {
@@ -2036,7 +2046,7 @@ HTML_PAGE = """
         <button class="nav-tab-btn" id="tab-btn-positions" onclick="switchMainTab('positions')">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
             2. AÇIK POZİSYONLAR & RİSK MASASI
-            <span class="tab-badge" id="nav-pos-count-badge" style="display:none;">0</span>
+            <span class="tab-badge zero-idle" id="nav-pos-count-badge">0</span>
         </button>
         <button class="nav-tab-btn" id="tab-btn-radar" onclick="switchMainTab('radar')">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
@@ -2121,6 +2131,7 @@ HTML_PAGE = """
             <!-- 🧠 AI ZEKASI KATEGORİ FİLTRELERİ -->
             <div class="ai-thought-filters">
                 <button class="ai-filter-btn active" id="btn-filter-all" onclick="setAiThoughtFilter('all')">TÜMÜ (<span id="ai-cnt-all">0</span>)</button>
+                <button class="ai-filter-btn" id="btn-filter-macro" onclick="setAiThoughtFilter('macro')">🌐 Makro Şef (BTC+ETH) (<span id="ai-cnt-macro">1</span>)</button>
                 <button class="ai-filter-btn" id="btn-filter-near" onclick="setAiThoughtFilter('near')">🎯 Pusu & Temas Analizi (<span id="ai-cnt-near">0</span>)</button>
                 <button class="ai-filter-btn" id="btn-filter-rejected" onclick="setAiThoughtFilter('rejected')">⛔ Elenen Sinyaller (<span id="ai-cnt-rej">0</span>)</button>
                 <button class="ai-filter-btn" id="btn-filter-positions" onclick="setAiThoughtFilter('positions')">⚡ Aktif Pozisyonlar (<span id="ai-cnt-pos">0</span>)</button>
@@ -3338,6 +3349,68 @@ async function loadAdminMetrics() {
                 const thoughtItems = [];
                 const nowStr = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 
+                // 0. 🌐 MAKRO İKLİM & ŞEF ANALİZİ (BTC + ETH CONDUKTÖRÜ)
+                const macro = appState.macro_climate || {};
+                const mRegime = macro.regime || 'NEUTRAL';
+                const mStatus = macro.status || '⚪ NÖTR / DENGELİ PİYASA';
+                const btcR = macro.btc_range_1h !== undefined ? Number(macro.btc_range_1h) : 0.35;
+                const ethR = macro.eth_range_1h !== undefined ? Number(macro.eth_range_1h) : 0.45;
+                const ethLead = macro.eth_lead_pct !== undefined ? Number(macro.eth_lead_pct) : 0.0;
+                const isDead = macro.is_dead_zone === true;
+                const ethLeading = macro.eth_leading === true;
+                
+                let mColor = '#38bdf8';
+                let mIcon = '🌐';
+                let mTagClass = 'tag-macro';
+                if (mRegime === 'ETH_EXPANSION') {
+                    mColor = '#f59e0b';
+                    mIcon = '🟡';
+                    mTagClass = 'tag-vol';
+                } else if (mRegime === 'BULL_TREND') {
+                    mColor = '#10b981';
+                    mIcon = '🟢';
+                    mTagClass = 'tag-pos';
+                } else if (mRegime === 'BEAR_DUMP') {
+                    mColor = '#f43f5e';
+                    mIcon = '🔴';
+                    mTagClass = 'tag-autopsy-loss';
+                } else if (isDead) {
+                    mColor = '#a855f7';
+                    mIcon = '⚪';
+                    mTagClass = 'tag-autopsy-win';
+                }
+
+                thoughtItems.push({
+                    cat: 'macro',
+                    color: mColor,
+                    icon: mIcon,
+                    tag: mStatus.split(' ')[0] + ' ' + (mStatus.split(' ')[1] || 'MAKRO'),
+                    tagClass: mTagClass,
+                    title: `${mIcon} MAKRO ŞEF & İKLİM: BTC + ETH ORTAK MOTORU (${nowStr})`,
+                    text: `
+                        <div style="font-weight:700; color:${mColor}; margin-bottom:4px; font-size:13px;">${mStatus}</div>
+                        <div style="display:flex; gap:6px; margin:6px 0; flex-wrap:wrap; font-size:11px; font-family:'JetBrains Mono',monospace;">
+                            <span style="background:rgba(0,0,0,0.3); padding:2px 7px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); color:#f8fafc;">
+                                👑 BTC 1S Aralık: %${btcR.toFixed(2)} (${macro.btc_chg_1h !== undefined ? (macro.btc_chg_1h >= 0 ? '+' : '') + macro.btc_chg_1h.toFixed(2) + '%' : '0%'})
+                            </span>
+                            <span style="background:rgba(0,0,0,0.3); padding:2px 7px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); color:${ethLeading ? '#10b981' : '#38bdf8'}; font-weight:700;">
+                                ⚡ ETH 1S Aralık: %${ethR.toFixed(2)} (${macro.eth_chg_1h !== undefined ? (macro.eth_chg_1h >= 0 ? '+' : '') + macro.eth_chg_1h.toFixed(2) + '%' : '0%'})
+                            </span>
+                            <span style="background:rgba(0,0,0,0.3); padding:2px 7px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); color:${ethLead >= 0.7 ? '#10b981' : (ethLead <= -0.7 ? '#f43f5e' : '#e2e8f0')}; font-weight:700;">
+                                📊 ETH/BTC Liderlik Farkı: ${ethLead >= 0 ? '+' : ''}${ethLead.toFixed(2)}% [${ethLeading ? '✓ ETH Sürüklüyor' : 'Dengeli'}]
+                            </span>
+                        </div>
+                        <div style="margin-top:5px; padding:7px 10px; background:${isDead ? 'rgba(168,85,247,0.08)' : (ethLeading ? 'rgba(245,158,11,0.08)' : 'rgba(56,189,248,0.08)')}; border-left:3px solid ${mColor}; border-radius:4px; font-size:12px; line-height:1.45;">
+                            <b>🛡️ Valkyrie Taktik Direktifi:</b> ${macro.desc || (isDead 
+                                ? 'Piyasa Değer Alanı (S3-R3) içinde yatayda. Standart beta paritelerdeki kırılımlar %85 sahte tuzak riski nedeniyle kilitli; yalnızca nPOC/Camarilla Mean Reversion tepkileri ve bağımsız ALFA ayrışanlar (RS ≥ 1.2, Hacim ≥ 2.0x) işleme alınır.'
+                                : (ethLeading 
+                                    ? 'ETH, BTC\'ye fark atarak altcoinlere güçlü bir boğa rüzgarı sağlıyor. Hacimli kırılımlara ve trend devam kurulumlarına yeşil ışık yakıldı.'
+                                    : 'BTC ve ETH dengeli bantta. Seviye pusuları ve hacim teyitli sinyaller kesintisiz taranıyor.'))
+                            }
+                        </div>
+                    `
+                });
+
                 // 1. TEMASTA OLAN VE YAKLAŞAN COİNLERİN DERİN ANALİZİ (Pusu / Neden Girmedi / Ne Bekliyor?)
                 if (nearCandidates && nearCandidates.length > 0) {
                     nearCandidates.sort((a,b) => a.distPct - b.distPct);
@@ -3558,17 +3631,20 @@ async function loadAdminMetrics() {
 
                 // Update Counts on Filter Buttons
                 const allCnt = thoughtItems.length;
+                const macroCnt = thoughtItems.filter(t => t.cat === 'macro').length;
                 const nearCnt = thoughtItems.filter(t => t.cat === 'near').length;
                 const rejCnt = thoughtItems.filter(t => t.cat === 'rejected').length;
                 const posCnt = thoughtItems.filter(t => t.cat === 'positions').length;
                 const autCnt = thoughtItems.filter(t => t.cat === 'autopsy').length;
 
                 const elAll = document.getElementById('ai-cnt-all');
+                const elMacro = document.getElementById('ai-cnt-macro');
                 const elNear = document.getElementById('ai-cnt-near');
                 const elRej = document.getElementById('ai-cnt-rej');
                 const elPos = document.getElementById('ai-cnt-pos');
                 const elAut = document.getElementById('ai-cnt-autopsy');
                 if (elAll) elAll.innerText = allCnt;
+                if (elMacro) elMacro.innerText = macroCnt;
                 if (elNear) elNear.innerText = nearCnt;
                 if (elRej) elRej.innerText = rejCnt;
                 if (elPos) elPos.innerText = posCnt;
@@ -3782,11 +3858,12 @@ async function loadAdminMetrics() {
                 const openPos = (appState && appState.open_positions) || {};
                 const openCount = Object.keys(openPos).length;
                 if (navPosBadge) {
+                    navPosBadge.innerText = openCount;
+                    navPosBadge.style.display = 'inline-flex';
                     if (openCount > 0) {
-                        navPosBadge.innerText = openCount;
-                        navPosBadge.style.display = 'inline-flex';
+                        navPosBadge.className = 'tab-badge active-pulse';
                     } else {
-                        navPosBadge.style.display = 'none';
+                        navPosBadge.className = 'tab-badge zero-idle';
                     }
                 }
                 const navActiveBadge = document.getElementById('nav-active-coins-badge');
@@ -6059,7 +6136,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "all_coins": all_coins,
                 "recent_rejections": getattr(strategy, "recent_rejections", [])[-20:] if strategy else [],
                 "setup_attempts": getattr(strategy, "setup_attempts", {}) if strategy else {},
-                "system_health": sys_health
+                "system_health": sys_health,
+                "macro_climate": strategy.get_macro_climate() if strategy and hasattr(strategy, 'get_macro_climate') else {}
             })
         except Exception as e:
             hist_full = trader_manager.history
@@ -6072,7 +6150,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "history_summary": {"total_realized_pnl": 0, "total_fees": 0, "total_trades": len(hist_full), "wins": 0, "losses": 0, "win_pnl_sum": 0, "loss_pnl_sum": 0},
                 "symbols": {},
                 "all_coins": [],
-                "system_health": {"is_perfect": False, "status_text": f"Hata: {e}"}
+                "system_health": {"is_perfect": False, "status_text": f"Hata: {e}"},
+                "macro_climate": {}
             })
 
     async def api_toggle_symbol(request):

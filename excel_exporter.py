@@ -382,7 +382,7 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ws.write(r_idx, 14, trap_tag, cell_center)
         ws.write(r_idx, 15, lock_type, cell_center)
         ws.write(r_idx, 16, h.get('confluence_score', '3/4 Yıldız'), cell_center)
-        ws.write(r_idx, 17, h.get('macro_alignment', 'Bant İçi Nötr'), cell_center)
+        ws.write(r_idx, 17, h.get('macro_climate') or h.get('macro_alignment', 'Bant İçi Nötr'), cell_center)
         ws.write(r_idx, 18, "Evet" if (h.get('id', '').endswith('-TP1') or 'TP1' in c_reason or 'Dinamik' in c_reason) else "Hayır", cell_center)
         ws.write(r_idx, 19, h.get('trail_status', '-'), cell_left)
         ws.write(r_idx, 20, _safe_float(h.get('margin', 100.0)), cell_currency_2d)

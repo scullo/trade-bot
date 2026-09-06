@@ -112,7 +112,7 @@ class PaperTrader:
         try:
             tmp_file = HISTORY_FILE + ".tmp"
             with open(tmp_file, "w", encoding="utf-8") as f:
-                json.dump(state, f, ensure_ascii=False, separators=(',', ':'))
+                json.dump(state, f, ensure_ascii=False, separators=(',', ':'), default=str)
             os.replace(tmp_file, HISTORY_FILE)
         except Exception as e:
             print(f">> Lokal gecmis kaydedilirken hata: {e}")
@@ -134,7 +134,7 @@ class PaperTrader:
             import urllib.request
             for attempt in range(1, 6):
                 try:
-                    content_str = json.dumps(state, ensure_ascii=False, separators=(',', ':'))
+                    content_str = json.dumps(state, ensure_ascii=False, separators=(',', ':'), default=str)
                     content_b64 = base64.b64encode(content_str.encode("utf-8")).decode("utf-8")
 
                     # Her denemede guncel SHA'yi al (conflict olmamasi icin)
@@ -461,7 +461,9 @@ class PaperTrader:
                 "decoupling_status": pos.get("decoupling_status", "⚪ NÖTR_TAKİPÇİ"),
                 "max_mfe_roe": pos.get("max_mfe_roe", 0.0),
                 "max_mae_roe": pos.get("max_mae_roe", 0.0),
-                "snapshot_levels": pos.get("snapshot_levels", {})
+                "snapshot_levels": pos.get("snapshot_levels", {}),
+                "macro_climate": pos.get("macro_climate", "⚪ NÖTR"),
+                "dynamic_rs_score": pos.get("dynamic_rs_score", 0.0)
             }
             self.history.append(record)
             self.save_history(critical=True)
@@ -527,7 +529,9 @@ class PaperTrader:
                 "decoupling_status": pos.get("decoupling_status", "⚪ NÖTR_TAKİPÇİ"),
                 "max_mfe_roe": pos.get("max_mfe_roe", 0.0),
                 "max_mae_roe": pos.get("max_mae_roe", 0.0),
-                "snapshot_levels": pos.get("snapshot_levels", {})
+                "snapshot_levels": pos.get("snapshot_levels", {}),
+                "macro_climate": pos.get("macro_climate", "⚪ NÖTR"),
+                "dynamic_rs_score": pos.get("dynamic_rs_score", 0.0)
             }
             self.history.append(record)
             del self.open_positions[symbol]
