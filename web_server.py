@@ -5987,11 +5987,14 @@ function downloadExcelReport() {
                     chartBtn.title = `${cleanSym} Göstergeli Bot Strateji Grafiğini Aç`;
                 }
 
-                const isWin = item.net_pnl >= 0;
-                const rMult = item.realized_r !== undefined ? item.realized_r : (item.roe_pct >= 0 ? +(item.roe_pct / 2).toFixed(1) : -1.0);
-                const mfe = item.mfe_roe !== undefined ? item.mfe_roe : Math.max(0, item.roe_pct);
-                const mae = item.mae_roe !== undefined ? item.mae_roe : (item.roe_pct < 0 ? Math.abs(item.roe_pct) : 0.0);
-                const eff = item.exit_efficiency_pct !== undefined ? item.exit_efficiency_pct : (isWin ? 90.0 : 0.0);
+                const isWin = Number(item.net_pnl || 0.0) >= 0;
+                const netPnlVal = Number(item.net_pnl || 0.0);
+                const roePctVal = Number(item.roe_pct || 0.0);
+                const feesVal = Number(item.fees || 0.0);
+                const rMult = item.realized_r !== undefined ? item.realized_r : (roePctVal >= 0 ? +(roePctVal / 2).toFixed(1) : -1.0);
+                const mfeVal = Number(item.mfe_roe !== undefined ? item.mfe_roe : Math.max(0, roePctVal));
+                const maeVal = Number(item.mae_roe !== undefined ? item.mae_roe : (roePctVal < 0 ? Math.abs(roePctVal) : 0.0));
+                const effVal = Number(item.exit_efficiency_pct !== undefined ? item.exit_efficiency_pct : (isWin ? 90.0 : 0.0));
 
                 let snaps = item.snapshot_levels || {};
                 // Fallback to coin's current levels if snapshot was before this update
@@ -6023,7 +6026,7 @@ function downloadExcelReport() {
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-bottom:18px;">
                         <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:12px; text-align:center;">
                             <div style="font-size:11px; color:#94a3b8; margin-bottom:4px;">NET PNL & ROE</div>
-                            <div style="font-size:15px; font-weight:800; color:${isWin ? 'var(--green)' : 'var(--red)'}; font-family:'JetBrains Mono';">${isWin ? '+' : ''}${item.net_pnl.toFixed(2)}$ (${isWin ? '+' : ''}${item.roe_pct.toFixed(2)}%)</div>
+                            <div style="font-size:15px; font-weight:800; color:${isWin ? 'var(--green)' : 'var(--red)'}; font-family:'JetBrains Mono';">${isWin ? '+' : ''}${netPnlVal.toFixed(2)}$ (${isWin ? '+' : ''}${roePctVal.toFixed(2)}%)</div>
                         </div>
                         <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:12px; text-align:center;">
                             <div style="font-size:11px; color:#94a3b8; margin-bottom:4px;">R-MULTIPLE (1R)</div>
@@ -6031,11 +6034,11 @@ function downloadExcelReport() {
                         </div>
                         <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:12px; text-align:center;">
                             <div style="font-size:11px; color:#94a3b8; margin-bottom:4px;">ZİRVE KÂR (MFE)</div>
-                            <div style="font-size:15px; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono';">+${mfe.toFixed(2)}% ROE</div>
+                            <div style="font-size:15px; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono';">+${mfeVal.toFixed(2)}% ROE</div>
                         </div>
                         <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:12px; text-align:center;">
                             <div style="font-size:11px; color:#94a3b8; margin-bottom:4px;">MAKS ÇEKİLME (MAE)</div>
-                            <div style="font-size:15px; font-weight:800; color:#f43f5e; font-family:'JetBrains Mono';">-${mae.toFixed(2)}% ROE</div>
+                            <div style="font-size:15px; font-weight:800; color:#f43f5e; font-family:'JetBrains Mono';">-${maeVal.toFixed(2)}% ROE</div>
                         </div>
                     </div>
 
@@ -6056,8 +6059,8 @@ function downloadExcelReport() {
                             <b>• Giriş Anı Trend Rejimi:</b> <span style="color:#a5f3fc; font-weight:700;">${item.trend_regime || 'Belirleniyor'}</span> | <b>Volatilite (ATR):</b> <span style="color:#fde047; font-weight:700;">%${item.atr_pct !== undefined ? item.atr_pct : '1.2'}</span><br>
                             <b>• Hacim Patlama Katsayısı:</b> <span style="color:#38bdf8; font-weight:700;">${item.volume_surge || '1.0'}x Ort. Hacim</span> | <b>Confluence Güç Skoru:</b> <span style="color:#c084fc; font-weight:700;">${item.confluence_score || '2/4'}</span><br>
                             <b>• Makro Uyum (1H/4H):</b> <span style="color:#fcd34d; font-weight:700;">${item.htf_alignment || 'Nötr'}</span> | <b>Piyasa Seansı:</b> <span style="color:#e2e8f0;">${item.session || 'Küresel Seans'}</span><br>
-                            <b>• Kademeli TP1 Durumu:</b> <span style="color:#86efac; font-weight:700;">${item.tp1_hit || (item.id.includes('TP1') ? 'EVET (%50 Kilitlendi)' : 'HAYIR')}</span> | <b>Çıkış Verimliliği:</b> %${eff.toFixed(1)}<br>
-                            <b>• Giriş / Çıkış Fiyatı:</b> $${formatSmartPrice(item.entry_price)} ➔ $${formatSmartPrice(item.exit_price)} | <b>Komisyon:</b> $${item.fees.toFixed(4)}<br>
+                            <b>• Kademeli TP1 Durumu:</b> <span style="color:#86efac; font-weight:700;">${item.tp1_hit || (item.id && item.id.includes('TP1') ? 'EVET (%50 Kilitlendi)' : 'HAYIR')}</span> | <b>Çıkış Verimliliği:</b> %${effVal.toFixed(1)}<br>
+                            <b>• Giriş / Çıkış Fiyatı:</b> $${formatSmartPrice(item.entry_price)} ➔ $${formatSmartPrice(item.exit_price)} | <b>Komisyon:</b> $${feesVal.toFixed(4)}<br>
                             <b>• Planlanan Hedef (TP1):</b> ${item.tp1 ? '$' + formatSmartPrice(item.tp1) : 'Yok'} | <b>Planlanan Stop:</b> ${(item.hard_stop || item.soft_stop) ? '$' + formatSmartPrice(item.hard_stop || item.soft_stop) : 'Yok'}
                         </div>
                     </div>
