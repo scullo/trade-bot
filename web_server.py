@@ -2186,18 +2186,6 @@ HTML_PAGE = """
                 </div>
             </div>
         </div>
-
-        <!-- 🎯 YAKIN PUSU LİSTESİ (TOP 5) -->
-        <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-            <div class="section-title">🎯 YAKIN PUSU LİSTESİ (TOP 5)</div>
-            <div style="font-size:12px; color:var(--text-muted); font-family:'JetBrains Mono';">Kilit seviyelere mesafeye göre sıralıdır</div>
-        </div>
-        <div class="near-trigger-grid" id="near-trigger-container">
-            <div style="grid-column:1/-1; text-align:center; padding:30px; color:#64748b; font-size:13px;">
-                ⚡ 100 parite taranıyor, en yakın fırsatlar listeleniyor...
-            </div>
-        </div>
-
         <!-- ⚡ AÇIK POZİSYONLAR HIZLI KOKPİT ÖZETİ -->
         <div class="panel-box" style="margin-bottom:24px;">
             <div class="panel-head">
@@ -3804,119 +3792,6 @@ async function loadAdminMetrics() {
 
                 window.renderAiThoughts();
             }
-
-            // Update Near-Trigger Grid (Top 5)
-            const nearGrid = document.getElementById('near-trigger-container');
-            if (nearGrid) {
-                nearCandidates.sort((a,b) => a.distPct - b.distPct);
-                const top5 = nearCandidates.slice(0, 5);
-                if (top5.length === 0) {
-                    nearGrid.innerHTML = `
-                        <div style="grid-column:1/-1; text-align:center; padding:30px; color:#64748b; font-size:13px;">
-                            ⚡ 100 parite taranıyor, seviyelere en yakın fırsatlar oluştuğunda burada listelenecektir...
-                        </div>
-                    `;
-                } else {
-                    nearGrid.innerHTML = top5.map(c => {
-                        const cleanSym = c.symbol.replace('/USDT', '').replace('USDT', '').trim();
-                        const distText = c.distPct < 0.01 ? '🎯 Seviyede (Temasta)' : `%${c.distPct.toFixed(2)} Kaldı`;
-                        const badgeClass = c.distPct < 0.01 ? 'dist-super-close' : (c.distPct < 0.5 ? 'dist-super-close' : 'dist-close');
-                        const isContact = c.distPct < 0.25;
-                        const volSurge = c.volSurge !== undefined ? c.volSurge : 1.0;
-                        const minVolSurge = c.minVolSurge !== undefined ? c.minVolSurge : 1.5;
-                        const isVolOk = volSurge >= minVolSurge;
-                        const isTop80 = c.isTop80 !== false;
-                        const atrPct = c.atrPct !== undefined ? c.atrPct : 1.2;
-
-                        let volBadgeColor = '#ef4444';
-                        let volStatusText = '🔻 Düşük Hacim';
-                        if (isVolOk) {
-                            volBadgeColor = '#10b981';
-                            volStatusText = '✓ Hacim Onaylı';
-                        } else if (volSurge >= 1.0) {
-                            volBadgeColor = '#f59e0b';
-                            volStatusText = '⏳ İvme Bekleniyor';
-                        }
-
-                        const curVolStr = c.curVol >= 1e6 ? `$${(c.curVol/1e6).toFixed(1)}M` : (c.curVol >= 1e3 ? `$${(c.curVol/1e3).toFixed(0)}K` : '');
-                        const volExtra = curVolStr ? ` <span style="color:#64748b; font-size:10px;">(${curVolStr})</span>` : '';
-                        const rsScore = c.rsScore !== undefined ? c.rsScore : 0.0;
-                        const decouplingStatus = c.decouplingStatus || '⚪ Nötr';
-                        const rsColor = rsScore >= 1.0 ? '#10b981' : (rsScore <= -1.0 ? '#f43f5e' : '#38bdf8');
-
-                        const dynamicTelemetryBox = `
-                            <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.07); border-radius:8px; padding:7px 9px; margin:6px 0;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:11px;">
-                                    <span style="color:#94a3b8; font-weight:700;">⚡ 5M Hacim Patlaması:</span>
-                                    <span style="font-family:'JetBrains Mono',monospace; font-weight:800; color:${volBadgeColor}; display:flex; align-items:center; gap:4px;">
-                                        <span>${volSurge.toFixed(2)}x</span>${volExtra}
-                                        <span style="color:#64748b; font-size:10px;">/ Min ${minVolSurge.toFixed(1)}x</span>
-                                        <span style="font-size:10px; padding:1px 5px; border-radius:4px; background:${volBadgeColor}22; border:1px solid ${volBadgeColor}55;">${volStatusText}</span>
-                                    </span>
-                                </div>
-                                <div style="display:flex; justify-content:space-between; align-items:center; font-size:10.5px; margin-bottom:3px;">
-                                    <span style="color:#94a3b8;">
-                                        📊 24S Dilim: <b style="color:${isTop80 ? '#38bdf8' : '#cbd5e1'}; font-family:'JetBrains Mono',monospace;">${isTop80 ? '✓ Top %80 Hacimli' : '⚠️ Top %20 Altı (Sığ)'}</b>
-                                    </span>
-                                    <span style="color:#94a3b8;">
-                                        🌊 ATR: <b style="color:#c084fc; font-family:'JetBrains Mono',monospace;">%${atrPct.toFixed(2)}</b>
-                                    </span>
-                                </div>
-                                <div style="display:flex; justify-content:space-between; align-items:center; font-size:10.5px; padding-top:3px; border-top:1px dashed rgba(255,255,255,0.06);">
-                                    <span style="color:#94a3b8;">⚡ Göreceli Güç (RS vs BTC):</span>
-                                    <b style="color:${rsColor}; font-family:'JetBrains Mono',monospace; font-size:11px;">
-                                        ${rsScore >= 0 ? '+' : ''}${rsScore.toFixed(2)} <span style="font-size:10px; opacity:0.85;">(${decouplingStatus.split(' ')[0]})</span>
-                                    </b>
-                                </div>
-                            </div>
-                        `;
-
-                        const reasonBox = `
-                            <div style="background:rgba(0,0,0,0.35); border:1px dashed ${isContact ? (isVolOk ? 'rgba(16,185,129,0.5)' : 'rgba(245,158,11,0.5)') : 'rgba(56,189,248,0.25)'}; border-radius:6px; padding:7px 9px; font-size:11px; color:#cbd5e1; margin-bottom:8px; line-height:1.45;">
-                                <div style="font-weight:800; margin-bottom:2px; color:${isContact ? (isVolOk ? '#10b981' : '#f59e0b') : '#38bdf8'};">
-                                    ${isContact 
-                                        ? (isVolOk ? '🟢 SEVİYEDE & TÜM ŞARTLAR HAZIR:' : '⚠️ SEVİYEDE (HACİM TEYİDİ BEKLENİYOR):') 
-                                        : '🎯 PUSUDA (SEVİYEYE YAKLAŞIYOR):'}
-                                </div>
-                                ${isContact 
-                                    ? (isVolOk 
-                                        ? `5M hacim patlaması (${volSurge.toFixed(2)}x) kurumsal girişi onayladı! Fakeout olmaması için 5M mum kapanışı bekleniyor; gövde seviye yönünde kapandığı an pozisyon açılacak.` 
-                                        : `Fiyat kilit seviyeye temas etti fakat anlık 5M hacim (${volSurge.toFixed(2)}x), gereken min <b>${minVolSurge.toFixed(1)}x</b> seviyesinin altında. Sahte kırılıma (Fakeout) kurban gitmemek için kurumsal hacim desteği bekleniyor.`)
-                                    : `Kilit seviyeye <b>%${c.distPct.toFixed(2)}</b> kaldı. Seviyeye ulaşıldığında min <b>${minVolSurge.toFixed(1)}x</b> hacim patlaması ve 5M mum kapanış gövdesiyle tetiklenecek.`}
-                            </div>
-                        `;
-
-                        const curPStr = typeof formatSmartPrice === 'function' ? formatSmartPrice(c.price) : Number(c.price).toFixed(4);
-                        const tarPStr = typeof formatSmartPrice === 'function' ? formatSmartPrice(c.targetPrice) : Number(c.targetPrice).toFixed(4);
-
-                        return `
-                        <div class="near-card">
-                            <div class="near-card-head" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                                <div style="display:flex; align-items:center; gap:8px;">
-                                    <span class="near-sym" onclick="openTradingViewModal('${cleanSym}')" style="cursor:pointer;" title="${cleanSym} Grafiğini Aç">${c.symbol}</span>
-                                    <button class="btn-open-chart" onclick="openTradingViewModal('${cleanSym}')" title="${cleanSym} Canlı Göstergeli Grafiği Aç" style="padding:2px 8px; font-size:11px;">📈 Grafik</button>
-                                </div>
-                                <span class="near-dist-badge ${badgeClass}" title="Kilit seviyeye olan anlık mesafe">${distText}</span>
-                            </div>
-                            <div style="font-size:12px; color:#94a3b8; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
-                                <span>Anlık: <b style="color:#fff; font-family:'JetBrains Mono',monospace;">$${curPStr}</b></span>
-                                <span style="color:#64748b;">➔</span>
-                                <span>Hedef: <b style="color:var(--blue); font-family:'JetBrains Mono',monospace;">$${tarPStr}</b></span>
-                            </div>
-                            <div style="font-size:11.5px; font-weight:700; color:var(--yellow); margin-bottom:4px;">
-                                ${c.action}
-                            </div>
-                            ${dynamicTelemetryBox}
-                            ${reasonBox}
-                            <div style="font-size:11px; color:#64748b; display:flex; justify-content:space-between; align-items:center;">
-                                <span>${c.bias}</span>
-                                <span style="cursor:pointer; color:var(--blue); font-weight:800;" onclick="filterWatchlistDirect('${c.symbol}')">Seviyeyi İncele ➔</span>
-                            </div>
-                        </div>`;
-                    }).join('');
-                }
-            }
-
             // Update Mini Cockpit Positions with clean multi-column cards
             const miniPosContainer = document.getElementById('cockpit-mini-positions');
             if (miniPosContainer) {
