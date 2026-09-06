@@ -1599,7 +1599,7 @@ HTML_PAGE = """
         <div class="modal-card" style="max-width:540px; text-align:left;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                 <div class="modal-title" style="margin:0; font-size:18px; display:flex; align-items:center; gap:8px;">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg> BOT SAĞLIK & TEŞHİS RAPORU
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg> SİSTEM SAĞLIK RAPORU
                 </div>
                 <button onclick="closeHealthDiagnosticModal()" style="background:transparent; border:none; color:#94a3b8; font-size:20px; cursor:pointer;">✕</button>
             </div>
@@ -1636,8 +1636,8 @@ HTML_PAGE = """
                     <span style="font-size:20px;">📈</span>
                     <span id="tv-modal-title">BTC/USDT PERPETUAL</span>
                     <div class="chart-tab-group">
-                        <button id="tab-btn-native" class="chart-tab-btn tab-active" onclick="switchChartTab('native')">🎯 Bot Strateji Grafiği (AVWAP + VP + Camarilla)</button>
-                        <button id="tab-btn-tv" class="chart-tab-btn" onclick="switchChartTab('tv')">🌐 TradingView Widget</button>
+                        <button id="tab-btn-native" class="chart-tab-btn tab-active" onclick="switchChartTab('native')">🎯 Strateji Grafiği</button>
+                        <button id="tab-btn-tv" class="chart-tab-btn" onclick="switchChartTab('tv')">🌐 TradingView</button>
                     </div>
                 </div>
                 <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
@@ -1819,12 +1819,12 @@ HTML_PAGE = """
                     </div>
                     <div>
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="font-size:16px; font-weight:900; color:#fff; letter-spacing:0.3px;">BİNANCE VADELİ (FUTURES) HESAP & CANLI TİCARET MASASI</span>
+                            <span style="font-size:16px; font-weight:900; color:#fff; letter-spacing:0.3px;">BİNANCE VADELİ HESAP AYARLARI</span>
                         </div>
                         <div style="font-size:11.5px; color:#cbd5e1; margin-top:2px; display:flex; align-items:center; gap:8px;">
-                            <span style="color:#f3ba2f; font-weight:700;">🔒 AES-256 Kriptografik Kasa</span>
+                            <span style="color:#f3ba2f; font-weight:700;">🔒 AES-256 Korumalı</span>
                             <span>•</span>
-                            <span>Milisaniyelik Emir İletimi & Dinamik Risk Zırhı</span>
+                            <span>Otonom Emirler & Dinamik Risk Kalkanı</span>
                         </div>
                     </div>
                 </div>
@@ -1833,9 +1833,9 @@ HTML_PAGE = """
 
             <!-- MODAL TABS -->
             <div class="settings-tab-bar" style="background:rgba(0,0,0,0.3); padding:8px 24px; border-bottom:1px solid rgba(255,255,255,0.06); gap:10px;">
-                <button id="set-tab-api" class="settings-tab-btn tab-active" onclick="switchSettingsTab('api')" style="font-size:12.5px; font-weight:800; padding:8px 16px; border-radius:8px;">🔑 1. API & Canlı Bağlantı</button>
-                <button id="set-tab-risk" class="settings-tab-btn" onclick="switchSettingsTab('risk')" style="font-size:12.5px; font-weight:800; padding:8px 16px; border-radius:8px;">🛡️ 2. Risk & Marjin Kalkanı</button>
-                <button id="set-tab-status" class="settings-tab-btn" onclick="switchSettingsTab('status')" style="font-size:12.5px; font-weight:800; padding:8px 16px; border-radius:8px;">📊 3. Canlı Cüzdan & Durum</button>
+                <button id="set-tab-api" class="settings-tab-btn tab-active" onclick="switchSettingsTab('api')" style="font-size:12.5px; font-weight:800; padding:8px 16px; border-radius:8px;">🔑 1. API Bağlantısı</button>
+                <button id="set-tab-risk" class="settings-tab-btn" onclick="switchSettingsTab('risk')" style="font-size:12.5px; font-weight:800; padding:8px 16px; border-radius:8px;">🛡️ 2. Risk & Marjin</button>
+                <button id="set-tab-status" class="settings-tab-btn" onclick="switchSettingsTab('status')" style="font-size:12.5px; font-weight:800; padding:8px 16px; border-radius:8px;">📊 3. Cüzdan Durumu</button>
             </div>
 
             <div class="settings-body" style="padding:22px 24px; max-height:calc(85vh - 120px); overflow-y:auto;">
@@ -1875,7 +1875,7 @@ HTML_PAGE = """
                     <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px; margin-bottom:18px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
                             <div style="font-size:13px; font-weight:800; color:#fff; display:flex; align-items:center; gap:8px;">
-                                <span>🔑</span> BİNANCE FUTURES VADELİ API BİLGİLERİ
+                                <span>🔑</span> BİNANCE API BİLGİLERİ
                             </div>
                             <span style="font-size:10.5px; background:rgba(0,242,254,0.1); color:var(--cyan); border:1px solid rgba(0,242,254,0.3); padding:2px 8px; border-radius:6px; font-weight:700;">AES-256 Korumalı</span>
                         </div>
@@ -1918,7 +1918,7 @@ HTML_PAGE = """
                     <!-- INSTITUTIONAL SECURITY ADVISORY -->
                     <div style="background:rgba(251,197,49,0.05); border:1.5px solid rgba(251,197,49,0.3); border-radius:12px; padding:16px;">
                         <div style="font-weight:900; color:var(--yellow); margin-bottom:8px; font-size:12.5px; display:flex; align-items:center; gap:6px;">
-                            <span>🛡️</span> GÜVENLİK VE İZİN REHBERİ (PARANIZ %100 KORUMADA)
+                            <span>🛡️</span> GÜVENLİK REHBERİ
                         </div>
                         <ul style="margin-left:18px; line-height:1.6; font-size:11.5px; color:#cbd5e1;">
                             <li>🚫 <b style="color:var(--red);">PARA ÇEKME (WITHDRAWAL) İZNİ KESİNLİKLE KAPALI OLMALIDIR!</b> Robotun para çekme yetkisi yoktur, sadece al-sat yapar.</li>
@@ -1932,7 +1932,7 @@ HTML_PAGE = """
                 <div id="tab-content-risk" class="settings-tab-content" style="display:none;">
                     <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px; margin-bottom:16px;">
                         <div style="font-size:13px; font-weight:800; color:#fff; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
-                            <span>⚙️</span> CANLI İŞLEM PARAMETRELERİ
+                            <span>⚙️</span> İŞLEM PARAMETRELERİ
                         </div>
                         
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px;">
@@ -1971,7 +1971,7 @@ HTML_PAGE = """
                         <!-- KULLANICI TANIMLI GUCLU GUVENLIK ZIRHI KONTROLLERI -->
                         <div style="background:rgba(0,242,254,0.04); border:1.5px solid rgba(0,242,254,0.25); border-radius:12px; padding:16px; margin-bottom:16px;">
                             <div style="font-size:13px; font-weight:900; color:var(--cyan); margin-bottom:12px; display:flex; align-items:center; gap:6px;">
-                                <span>🛡️</span> ÖZEL RİSK & KASA GÜVENLİK ZIRHI
+                                <span>🛡️</span> RİSK & KASA KORUMASI
                             </div>
                             
                             <div style="margin-bottom:14px;">
@@ -2058,30 +2058,30 @@ HTML_PAGE = """
     <div class="nav-tab-strip">
         <button class="nav-tab-btn active" id="tab-btn-cockpit" onclick="switchMainTab('cockpit')">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-            1. KOKPİT & AI QUANT MERKEZİ
+            1. Kokpit
         </button>
         <button class="nav-tab-btn" id="tab-btn-positions" onclick="switchMainTab('positions')">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-            2. AÇIK POZİSYONLAR & RİSK MASASI
+            2. Pozisyonlar
             <span class="tab-badge zero-idle" id="nav-pos-count-badge">0</span>
         </button>
         <button class="nav-tab-btn" id="tab-btn-radar" onclick="switchMainTab('radar')">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
-            3. 100 PARİTE PUSU & SEVİYE RADARI
+            3. Pusu Radarı
             <span class="tab-badge-sub" id="nav-active-coins-badge">100/100</span>
         </button>
         <button class="nav-tab-btn" id="tab-btn-ledger" onclick="switchMainTab('ledger')">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-            4. TİCARET DEFTERİ & EXCEL RAPORLARI
+            4. İşlem Geçmişi
         </button>
         <button class="nav-tab-btn" id="tab-btn-admin" onclick="switchMainTab('admin'); loadAdminMetrics();" style="border-color:rgba(0,242,254,0.35); display:none;">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" style="margin-right:6px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-            5. MASTER ADMİN & FON MASASI
+            5. Yönetim
         </button>
     </div>
 
     <!-- =========================================================================
-         1. SEKME: KOKPİT & AI QUANT MERKEZİ (ANA SAYFA)
+         1. SEKME: KOKPİT (ANA SAYFA)
          ========================================================================= -->
     <div id="main-tab-content-cockpit" class="main-tab-content active-tab">
         <!-- 4 HERO FINANSAL KPI KARTI -->
@@ -2130,20 +2130,20 @@ HTML_PAGE = """
             </div>
         </div>
 
-        <!-- 🧠 VALKYRIE AI CANLI QUANT DÜŞÜNCE & YORUM ODASI -->
+        <!-- 🧠 AI PİYASA & PUSU AKIŞI -->
         <div class="ai-quant-room">
             <div class="ai-room-head">
                 <div class="ai-room-title">
                     <div class="ai-pulse-dot"></div>
-                    <span>🧠 VALKYRIE AI QUANT ZEKASI • CANLI PİYASA & PUSU DÜŞÜNCE AKIŞI</span>
+                    <span>🧠 AI PİYASA & PUSU AKIŞI</span>
                 </div>
                 <div style="font-size:12px; color:#cbd5e1; font-family:'JetBrains Mono', monospace;" id="ai-market-time-badge">
-                    ⚡ Canlı 5M Mum Senkronizasyonu
+                    ⚡ Canlı 5M Senkronizasyon
                 </div>
             </div>
 
             <div style="display:flex; justify-content:space-between; align-items:center; font-size:12.5px; font-weight:800; font-family:'JetBrains Mono', monospace; color:#cbd5e1; margin-bottom:4px;">
-                <span>📊 100 PARİTE 1H MAKRO TREND DAĞILIMI:</span>
+                <span>📊 1H MAKRO TREND DAĞILIMI:</span>
                 <span id="ai-regime-counts">🟢 0 Boğa | 🔴 0 Ayı | ⚪ 0 Yatay</span>
             </div>
             <div class="regime-progress-wrap">
@@ -2152,18 +2152,18 @@ HTML_PAGE = """
                 <div class="regime-bar-range" id="regime-bar-range" style="width: 20%;"></div>
             </div>
 
-            <!-- 🧠 AI ZEKASI KATEGORİ FİLTRELERİ & GÖRÜNÜM MODU -->
+            <!-- 🧠 AI KATEGORİ FİLTRELERİ & GÖRÜNÜM MODU -->
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
                 <div class="ai-thought-filters" style="margin-bottom:0;">
                     <button class="ai-filter-btn active" id="btn-filter-all" onclick="setAiThoughtFilter('all')">TÜMÜ (<span id="ai-cnt-all">0</span>)</button>
-                    <button class="ai-filter-btn" id="btn-filter-macro" onclick="setAiThoughtFilter('macro')">🌐 Makro Şef (BTC+ETH) (<span id="ai-cnt-macro">1</span>)</button>
-                    <button class="ai-filter-btn" id="btn-filter-near" onclick="setAiThoughtFilter('near')">🎯 Pusu & Temas Analizi (<span id="ai-cnt-near">0</span>)</button>
-                    <button class="ai-filter-btn" id="btn-filter-rejected" onclick="setAiThoughtFilter('rejected')">⛔ Elenen Sinyaller (<span id="ai-cnt-rej">0</span>)</button>
-                    <button class="ai-filter-btn" id="btn-filter-positions" onclick="setAiThoughtFilter('positions')">⚡ Aktif Pozisyonlar (<span id="ai-cnt-pos">0</span>)</button>
-                    <button class="ai-filter-btn" id="btn-filter-autopsy" onclick="setAiThoughtFilter('autopsy')">📋 İşlem Otopisi & Dersler (<span id="ai-cnt-autopsy">0</span>)</button>
+                    <button class="ai-filter-btn" id="btn-filter-macro" onclick="setAiThoughtFilter('macro')">🌐 Makro (<span id="ai-cnt-macro">1</span>)</button>
+                    <button class="ai-filter-btn" id="btn-filter-near" onclick="setAiThoughtFilter('near')">🎯 Pusu & Seviye (<span id="ai-cnt-near">0</span>)</button>
+                    <button class="ai-filter-btn" id="btn-filter-rejected" onclick="setAiThoughtFilter('rejected')">⛔ Elenenler (<span id="ai-cnt-rej">0</span>)</button>
+                    <button class="ai-filter-btn" id="btn-filter-positions" onclick="setAiThoughtFilter('positions')">⚡ Pozisyonlar (<span id="ai-cnt-pos">0</span>)</button>
+                    <button class="ai-filter-btn" id="btn-filter-autopsy" onclick="setAiThoughtFilter('autopsy')">📋 Otopi (<span id="ai-cnt-autopsy">0</span>)</button>
                 </div>
                 <div style="display:flex; gap:6px; align-items:center;">
-                    <button class="ai-filter-btn active" id="btn-layout-grid" onclick="setAiThoughtLayout('grid')" title="2 Sütunlu Kompakt / Kare Görünüm" style="padding:5px 11px; font-size:11.5px; border-color:rgba(0, 242, 254, 0.4); color:#00f2fe;">
+                    <button class="ai-filter-btn active" id="btn-layout-grid" onclick="setAiThoughtLayout('grid')" title="2 Sütunlu Kompakt Görünüm" style="padding:5px 11px; font-size:11.5px; border-color:rgba(0, 242, 254, 0.4); color:#00f2fe;">
                         ⊞ 2'li Izgara
                     </button>
                     <button class="ai-filter-btn" id="btn-layout-single" onclick="setAiThoughtLayout('single')" title="Tek Sütun Geniş Görünüm" style="padding:5px 11px; font-size:11.5px;">
@@ -2182,10 +2182,10 @@ HTML_PAGE = """
             </div>
         </div>
 
-        <!-- 🎯 TETİKLENMEYE EN YAKIN TOP 5 COİN PUSU RADARI -->
+        <!-- 🎯 YAKIN PUSU LİSTESİ (TOP 5) -->
         <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-            <div class="section-title">🎯 TETİKLENMEYE EN YAKIN PUSU LİSTESİ (TOP 5 RADAR)</div>
-            <div style="font-size:12px; color:var(--text-muted); font-family:'JetBrains Mono';">Kilit kırılım/destek seviyesine mesafeye göre sıralıdır</div>
+            <div class="section-title">🎯 YAKIN PUSU LİSTESİ (TOP 5)</div>
+            <div style="font-size:12px; color:var(--text-muted); font-family:'JetBrains Mono';">Kilit seviyelere mesafeye göre sıralıdır</div>
         </div>
         <div class="near-trigger-grid" id="near-trigger-container">
             <div style="grid-column:1/-1; text-align:center; padding:30px; color:#64748b; font-size:13px;">
@@ -2196,8 +2196,8 @@ HTML_PAGE = """
         <!-- ⚡ AÇIK POZİSYONLAR HIZLI KOKPİT ÖZETİ -->
         <div class="panel-box" style="margin-bottom:24px;">
             <div class="panel-head">
-                <div class="panel-title">⚡ Aktif Çalışan Pozisyonlar Özeti</div>
-                <button class="btn-preset" onclick="switchMainTab('positions')" style="font-size:12px; padding:4px 10px;">Tam Risk Masasına Git ➔</button>
+                <div class="panel-title">⚡ Açık Pozisyonlar Özeti</div>
+                <button class="btn-preset" onclick="switchMainTab('positions')" style="font-size:12px; padding:4px 10px;">Tümünü Gör ➔</button>
             </div>
             <div id="cockpit-mini-positions" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:12px;">
                 <div style="color:#94a3b8; text-align:center; padding:24px 20px; font-size:13.5px;">
@@ -2208,12 +2208,12 @@ HTML_PAGE = """
     </div>
 
     <!-- =========================================================================
-         2. SEKME: AÇIK POZİSYONLAR & RİSK MASASI
+         2. SEKME: AÇIK POZİSYONLAR
          ========================================================================= -->
     <div id="main-tab-content-positions" class="main-tab-content">
         <div class="section-header">
             <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
-                <div class="section-title">⚡ CANLI AÇIK POZİSYONLAR & RİSK KORUMA MASASI</div>
+                <div class="section-title">⚡ CANLI AÇIK POZİSYONLAR</div>
                 <span class="active-badge-pill" id="positions-active-count-badge">0 Açık Pozisyon</span>
             </div>
         </div>
@@ -2225,16 +2225,16 @@ HTML_PAGE = """
     </div>
 
     <!-- =========================================================================
-         3. SEKME: 100 PARİTE PUSU & SEVİYE RADARI
+         3. SEKME: PUSU RADARI
          ========================================================================= -->
     <div id="main-tab-content-radar" class="main-tab-content">
-        <!-- PARITE YONETIM HAVUZU (TOP 100 COIN & ARAMA & HIZLI AYAR BUTONLARI) -->
+        <!-- PARITE YONETIM HAVUZU -->
         <div class="manager-card">
             <div class="manager-head">
                 <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                    <div style="font-size:15px; font-weight:800; letter-spacing:0.3px; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="togglePoolCollapse()" title="100 Parite Havuzunu Aç / Gizle">
-                        ⚙️ PARİTE YÖNETİM HAVUZU
-                        <span id="pool-collapse-btn" style="font-size:11.5px; font-weight:800; color:var(--cyan); background:rgba(0,242,254,0.08); border:1px solid rgba(0,242,254,0.3); padding:4px 12px; border-radius:8px; transition:all 0.15s ease;">⚙️ 100 Parite Havuzunu Aç ▼</span>
+                    <div style="font-size:15px; font-weight:800; letter-spacing:0.3px; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="togglePoolCollapse()" title="Parite Havuzunu Aç / Gizle">
+                        ⚙️ PARİTE HAVUZU
+                        <span id="pool-collapse-btn" style="font-size:11.5px; font-weight:800; color:var(--cyan); background:rgba(0,242,254,0.08); border:1px solid rgba(0,242,254,0.3); padding:4px 12px; border-radius:8px; transition:all 0.15s ease;">⚙️ Pariteleri Yönet ▼</span>
                     </div>
                     <span class="active-badge-pill" id="active-coin-counter">100 Aktif / 100 Parite</span>
                 </div>
@@ -2261,7 +2261,7 @@ HTML_PAGE = """
 
         <div class="section-header">
             <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
-                <div class="section-title">📊 100 PARİTE PUSU & SEVİYE ANALİZ HAVUZU</div>
+                <div class="section-title">📊 PARİTE SEVİYE RADARI</div>
                 <div id="watchlist-search-count-badge" style="display:none; font-size:12px; font-weight:800; color:#58a6ff; background:rgba(56,139,253,0.15); border:1px solid rgba(56,139,253,0.3); padding:4px 12px; border-radius:12px;"></div>
             </div>
         </div>
@@ -2269,13 +2269,13 @@ HTML_PAGE = """
     </div>
 
     <!-- =========================================================================
-         4. SEKME: TİCARET DEFTERİ & EXCEL RAPORLARI
+         4. SEKME: İŞLEM GEÇMİŞİ
          ========================================================================= -->
     <div id="main-tab-content-ledger" class="main-tab-content">
         <div class="history-full-box">
             <div class="history-top-controls">
                 <div style="display:flex; align-items:center; gap:12px;">
-                    <div class="panel-title" style="margin:0;">📜 Ticaret Defteri & Geçmiş İşlem Kayıtları</div>
+                    <div class="panel-title" style="margin:0;">📜 İşlem Geçmişi</div>
                     <span style="font-size:13px; background:var(--card-bg); padding:4px 10px; border-radius:8px; font-family:'JetBrains Mono'" id="history-total-count">0 İşlem</span>
                 </div>
                 
@@ -2285,23 +2285,23 @@ HTML_PAGE = """
                     </select>
 
                     <select class="filter-select" id="filter-setup" onchange="onLedgerFilterChange()">
-                        <option value="ALL">🎯 Tüm Stratejiler / Setuplar</option>
-                        <option value="nPOC">🔵 nPOC Likidite İşlemleri</option>
-                        <option value="MACRO">🟣 mVAL / mVAH Makro Kırılımlar</option>
-                        <option value="CAM_BO">⚡ S4 / R4 Breakout İşlemleri</option>
+                        <option value="ALL">🎯 Tüm Stratejiler</option>
+                        <option value="nPOC">🔵 nPOC Likidite</option>
+                        <option value="MACRO">🟣 mVAL / mVAH Kırılım</option>
+                        <option value="CAM_BO">⚡ S4 / R4 Breakout</option>
                         <option value="CAM_BOUNCE">🛡️ S3 / R3 Destek & Direnç</option>
                     </select>
 
                     <select class="filter-select" id="filter-status" onchange="onLedgerFilterChange()">
                         <option value="ALL">Tüm Sonuçlar</option>
-                        <option value="WIN">🟢 Sadece Kârlı İşlemler</option>
-                        <option value="LOSS">🔴 Sadece Zararlı İşlemler</option>
+                        <option value="WIN">🟢 Kârlı İşlemler</option>
+                        <option value="LOSS">🔴 Zararlı İşlemler</option>
                     </select>
 
-                    <button class="btn-export" onclick="downloadExcelReport()" title="Pasta grafikleri, KPI kartları ve renklendirilmiş sekmeleriyle profesyonel Excel raporu indir">
-                        📊 Profesyonel Excel İndir (.xlsx)
+                    <button class="btn-export" onclick="downloadExcelReport()" title="Pasta grafikleri, KPI kartları ve renklendirilmiş sekmeleriyle Excel raporu indir">
+                        📊 Excel İndir (.xlsx)
                     </button>
-                    <button class="btn-export" onclick="downloadCSVReport()" style="background:rgba(255,255,255,0.08); border:1px solid var(--border-light); box-shadow:none;" title="Düz metin CSV tablosu indir">
+                    <button class="btn-export" onclick="downloadCSVReport()" style="background:rgba(255,255,255,0.08); border:1px solid var(--border-light); box-shadow:none;" title="CSV tablosu indir">
                         📄 CSV İndir
                     </button>
                 </div>
@@ -2343,7 +2343,7 @@ HTML_PAGE = """
     </div>
 
     <!-- =========================================================================
-         5. SEKME: 👑 MASTER ADMİN & FON YÖNETİM MASASI
+         5. SEKME: YÖNETİM MASASI
          ========================================================================= -->
     <div id="main-tab-content-admin" class="main-tab-content" style="display:none;">
         <!-- ADMIN 4 KPI HERO -->
@@ -2389,7 +2389,7 @@ HTML_PAGE = """
             <!-- ADMIN WALLET & PRICING CONFIGURATION BOX -->
             <div class="setting-group-box" style="margin-bottom:16px;">
                 <div style="font-size:14px; font-weight:800; color:var(--cyan); margin-bottom:10px; display:flex; align-items:center; gap:8px;">
-                    <span>💳</span> USDT ÖDEME CÜZDANLARI & PAKET FİYATLANDIRMA MASASI
+                    <span>💳</span> CÜZDAN & FİYAT AYARLARI
                 </div>
                 <div style="font-size:12px; color:#cbd5e1; margin-bottom:14px;">
                     Müşterilerin 24 saatlik denemeden sonra ödeme yapacağı cüzdan adreslerinizi ve aylık paket fiyatlarını buradan yönetebilirsiniz.
@@ -2424,10 +2424,10 @@ HTML_PAGE = """
         <div class="history-full-box">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
                 <div>
-                    <div class="panel-title" style="margin:0;">📋 Yatırımcı ve Abonelik Yönetim Masası</div>
+                    <div class="panel-title" style="margin:0;">📋 Yatırımcı Listesi</div>
                     <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Sistemde kayıtlı kullanıcıların lisans süreleri ve API bağlantı durumları</div>
                 </div>
-                <button class="btn-export" onclick="loadAdminMetrics()">🔄 Listeyi Yenile</button>
+                <button class="btn-export" onclick="loadAdminMetrics()">🔄 Yenile</button>
             </div>
 
             <div style="overflow-x:auto;">
