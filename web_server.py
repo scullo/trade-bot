@@ -4139,7 +4139,6 @@ async function loadAdminMetrics() {
                         const isWin = pnl >= 0;
                         const reason = tr.close_reason || '';
                         let autopsyTitle = `📋 ${cleanS} ${tr.side || ''} OTOPSİSİ (${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}$)`;
-                        let autopsyText = '';
                         let autopsyColor = isWin ? '#38bdf8' : '#f43f5e';
                         let autopsyTag = isWin ? 'KÂR OTOPSİSİ' : 'STOP OTOPSİSİ';
                         let autopsyTagClass = isWin ? 'tag-autopsy-win' : 'tag-autopsy-loss';
