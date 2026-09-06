@@ -964,6 +964,10 @@ class StrategyEngine:
         # ─────────────────────────────────────────────────────────────────
         if prev_close <= r4 and close_price > r4:
             if vol_surge < 1.25:
+                self.log_rejection(symbol, "SETUP 1 R4 Breakout", f"Hacim patlaması {vol_surge:.2f}x yetersiz (en az 1.25x patlama aranıyor)")
+                return
+            if tepe_avwap > 0 and close_price <= tepe_avwap:
+                self.log_rejection(symbol, "SETUP 1 R4 Breakout", f"Fiyat (${close_price:.4f}) Tepe AVWAP (${tepe_avwap:.4f}) altında kaldığı için boğa onayı verilmedi")
                 return
             if tepe_avwap == 0 or close_price > tepe_avwap:
                 tp1 = r5 if (r5 >= close_price * 1.008) else (mvah if (mvah >= close_price * 1.008) else close_price * 1.015)
@@ -992,6 +996,10 @@ class StrategyEngine:
         # ─────────────────────────────────────────────────────────────────
         if prev_close >= s4 and close_price < s4:
             if vol_surge < 1.25:
+                self.log_rejection(symbol, "SETUP 2 S4 Breakdown", f"Hacim patlaması {vol_surge:.2f}x yetersiz (en az 1.25x patlama aranıyor)")
+                return
+            if dip_avwap > 0 and close_price >= dip_avwap:
+                self.log_rejection(symbol, "SETUP 2 S4 Breakdown", f"Fiyat (${close_price:.4f}) Dip AVWAP (${dip_avwap:.4f}) üstünde kaldığı için ayı onayı verilmedi")
                 return
             if dip_avwap == 0 or close_price < dip_avwap:
                 tp1 = s5 if (s5 > 0 and s5 <= close_price * 0.992) else (mval if (mval > 0 and mval <= close_price * 0.992) else close_price * 0.985)

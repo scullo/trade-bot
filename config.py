@@ -110,7 +110,7 @@ ALL_AVAILABLE_SYMBOLS = [
     "LUNC/USDT",
     "XEC/USDT",
     "NEIRO/USDT",
-    "AMP/USDT",
+    "HYPE/USDT",
     "JST/USDT"
 ]
 

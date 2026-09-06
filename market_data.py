@@ -193,8 +193,9 @@ class MarketDataManager:
                                     t_1d = pd.DataFrame(d1, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'qav', 'num_trades', 'taker_base', 'taker_quote', 'ignore'])
                                     for col in ['open', 'high', 'low', 'close']:
                                         t_1d[col] = t_1d[col].astype(float) * mult
-                                    for col in ['timestamp', 'volume']:
-                                        t_1d[col] = t_1d[col].astype(float)
+                                    t_1d['timestamp'] = t_1d['timestamp'].astype(float)
+                                    t_1d['volume'] = t_1d['volume'].astype(float) / (mult if is_spot else 1.0)
+                                    t_1d['quote_volume'] = t_1d['qav'].astype(float)
                         
                         async with session.get(url_5m_v, timeout=aiohttp.ClientTimeout(total=4)) as r2:
                             if r2.status == 200:
@@ -203,8 +204,9 @@ class MarketDataManager:
                                     t_5m = pd.DataFrame(d2, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'qav', 'num_trades', 'taker_base', 'taker_quote', 'ignore'])
                                     for col in ['open', 'high', 'low', 'close']:
                                         t_5m[col] = t_5m[col].astype(float) * mult
-                                    for col in ['timestamp', 'volume']:
-                                        t_5m[col] = t_5m[col].astype(float)
+                                    t_5m['timestamp'] = t_5m['timestamp'].astype(float)
+                                    t_5m['volume'] = t_5m['volume'].astype(float) / (mult if is_spot else 1.0)
+                                    t_5m['quote_volume'] = t_5m['qav'].astype(float)
                         
                         if t_5m is not None and not t_5m.empty:
                             df_1d, df_5m = t_1d, t_5m
@@ -277,7 +279,10 @@ class MarketDataManager:
                 "atr_pct": 1.2,
                 "is_top_80": True,
                 "cur_vol": 0.0,
-                "avg_vol": 0.0
+                "avg_vol": 0.0,
+                "rs_vs_btc": 0.0,
+                "dynamic_rs_score": 0.0,
+                "decoupling_status": "⚪ NÖTR_TAKİPÇİ"
             }
             return
 
@@ -339,6 +344,9 @@ class MarketDataManager:
         is_top_80 = True
         cur_vol = 0.0
         avg_vol = 0.0
+        rs_vs_btc = 0.0
+        dynamic_rs_score = 0.0
+        decoupling_status = "⚪ NÖTR_TAKİPÇİ"
 
         if not df_5m.empty and len(df_5m) >= 14:
             try:
@@ -353,17 +361,58 @@ class MarketDataManager:
 
         if not df_5m.empty and len(df_5m) >= 20:
             try:
-                cur_vol = float(df_5m['volume'].iloc[-1])
-                avg_vol = float(df_5m['volume'].iloc[-21:-1].mean())
+                vol_col = 'quote_volume' if ('quote_volume' in df_5m.columns and df_5m['quote_volume'].iloc[-1] > 0) else 'volume'
+                cur_vol = float(df_5m[vol_col].iloc[-1])
+                avg_vol = float(df_5m[vol_col].iloc[-21:-1].mean())
                 vol_surge = round(cur_vol / avg_vol, 2) if avg_vol > 0 else 1.0
+                
+                # Madde 6: 24S Hacim Dilimi (Üst %80'lik dilim, dip %20 ölü piyasa koruması)
                 if len(df_5m) >= 288:
-                    vol_80th = float(df_5m['volume'].iloc[-288:-1].quantile(0.80))
+                    vol_20th = float(df_5m[vol_col].iloc[-288:-1].quantile(0.20))
                 else:
-                    vol_80th = float(df_5m['volume'].iloc[:-1].quantile(0.80)) if len(df_5m) > 1 else 0.0
-                is_top_80 = bool(cur_vol >= vol_80th)
+                    vol_20th = float(df_5m[vol_col].iloc[:-1].quantile(0.20)) if len(df_5m) > 1 else 0.0
+                is_top_80 = bool(cur_vol >= vol_20th)
             except Exception:
                 vol_surge = 1.0
                 is_top_80 = True
+
+        # === DİNAMİK RS (RELATIVE STRENGTH VS BTC - MADDE 9) ===
+        if symbol == "BTC/USDT":
+            decoupling_status = "👑 PİYASA LİDERİ (BTC)"
+            rs_vs_btc = 0.0
+            dynamic_rs_score = 0.0
+        else:
+            btc_df = self.candles_5m.get('BTC/USDT', pd.DataFrame())
+            if not btc_df.empty and not df_5m.empty:
+                try:
+                    min_len = min(len(df_5m), len(btc_df))
+                    if min_len >= 12:
+                        coin_chg_1h = ((df_5m['close'].iloc[-1] - df_5m['close'].iloc[-12]) / df_5m['close'].iloc[-12]) * 100.0
+                        btc_chg_1h = ((btc_df['close'].iloc[-1] - btc_df['close'].iloc[-12]) / btc_df['close'].iloc[-12]) * 100.0
+                        rs_1h = float(coin_chg_1h - btc_chg_1h)
+
+                        coin_chg_fast = ((df_5m['close'].iloc[-1] - df_5m['close'].iloc[-4]) / df_5m['close'].iloc[-4]) * 100.0
+                        btc_chg_fast = ((btc_df['close'].iloc[-1] - btc_df['close'].iloc[-4]) / btc_df['close'].iloc[-4]) * 100.0
+                        rs_fast = float(coin_chg_fast - btc_chg_fast)
+                        rs_vs_btc = round(rs_1h * 0.7 + rs_fast * 0.3, 2)
+                    elif min_len >= 4:
+                        coin_chg = ((df_5m['close'].iloc[-1] - df_5m['close'].iloc[-4]) / df_5m['close'].iloc[-4]) * 100.0
+                        btc_chg = ((btc_df['close'].iloc[-1] - btc_df['close'].iloc[-4]) / btc_df['close'].iloc[-4]) * 100.0
+                        rs_vs_btc = round(float(coin_chg - btc_chg), 2)
+
+                    safe_atr = max(0.2, atr_pct)
+                    dynamic_rs_score = round(rs_vs_btc / safe_atr, 2)
+
+                    if dynamic_rs_score >= 1.0:
+                        decoupling_status = "🚀 ALFA_AYRIŞAN (Güçlü Boğa)"
+                    elif dynamic_rs_score <= -1.0:
+                        decoupling_status = "🩸 AŞIRI_ZAYIF (Ezilen Ayı)"
+                    else:
+                        decoupling_status = "⚪ NÖTR_TAKİPÇİ"
+                except Exception:
+                    rs_vs_btc = 0.0
+                    dynamic_rs_score = 0.0
+                    decoupling_status = "⚪ NÖTR_TAKİPÇİ"
 
         if not hasattr(self, 'symbol_metrics'):
             self.symbol_metrics = {}
@@ -373,7 +422,10 @@ class MarketDataManager:
             "atr_pct": atr_pct,
             "is_top_80": is_top_80,
             "cur_vol": cur_vol,
-            "avg_vol": avg_vol
+            "avg_vol": avg_vol,
+            "rs_vs_btc": rs_vs_btc,
+            "dynamic_rs_score": dynamic_rs_score,
+            "decoupling_status": decoupling_status
         }
 
     def get_symbol_metrics(self, symbol: str) -> dict:
@@ -389,7 +441,10 @@ class MarketDataManager:
             "atr_pct": 1.2,
             "is_top_80": True,
             "cur_vol": 0.0,
-            "avg_vol": 0.0
+            "avg_vol": 0.0,
+            "rs_vs_btc": 0.0,
+            "dynamic_rs_score": 0.0,
+            "decoupling_status": "⚪ NÖTR_TAKİPÇİ"
         })
 
     async def poll_all_candles_once(self):
@@ -422,13 +477,15 @@ class MarketDataManager:
                                         if isinstance(kl, list) and len(kl) >= 2:
                                             closed_k = kl[-2]
                                             prev_k = kl[-3] if len(kl) >= 3 else closed_k
+                                            base_div = mult if is_spot else 1.0
                                             cur_candle = {
                                                 'timestamp': closed_k[0],
                                                 'open': float(closed_k[1]) * mult,
                                                 'high': float(closed_k[2]) * mult,
                                                 'low': float(closed_k[3]) * mult,
                                                 'close': float(closed_k[4]) * mult,
-                                                'volume': float(closed_k[5])
+                                                'volume': float(closed_k[5]) / base_div,
+                                                'quote_volume': float(closed_k[7])
                                             }
                                             prev_candle = {
                                                 'timestamp': prev_k[0],
@@ -436,7 +493,8 @@ class MarketDataManager:
                                                 'high': float(prev_k[2]) * mult,
                                                 'low': float(prev_k[3]) * mult,
                                                 'close': float(prev_k[4]) * mult,
-                                                'volume': float(prev_k[5])
+                                                'volume': float(prev_k[5]) / base_div,
+                                                'quote_volume': float(prev_k[7])
                                             }
                                             break
                             except Exception:
@@ -454,11 +512,18 @@ class MarketDataManager:
                             self.current_prices[s] = cur_candle['close']
                             if s in self.candles_5m and not self.candles_5m[s].empty:
                                 last_ts = self.candles_5m[s]['timestamp'].iloc[-1]
-                                if cur_candle['timestamp'] > last_ts:
+                                if cur_candle['timestamp'] == last_ts:
+                                    for k_col, v_val in cur_candle.items():
+                                        self.candles_5m[s].at[self.candles_5m[s].index[-1], k_col] = v_val
+                                elif cur_candle['timestamp'] > last_ts:
                                     self.candles_5m[s] = pd.concat([self.candles_5m[s], pd.DataFrame([cur_candle])], ignore_index=True)
-                                    if len(self.candles_5m[s]) > 300:
-                                        self.candles_5m[s] = self.candles_5m[s].iloc[-300:].reset_index(drop=True)
-                                    self.recalculate_levels(s)
+                                self.candles_5m[s] = self.candles_5m[s].drop_duplicates(subset=['timestamp'], keep='last').reset_index(drop=True)
+                                if len(self.candles_5m[s]) > 300:
+                                    self.candles_5m[s] = self.candles_5m[s].iloc[-300:].reset_index(drop=True)
+                                self.recalculate_levels(s)
+                            else:
+                                self.candles_5m[s] = pd.DataFrame([cur_candle])
+                                self.recalculate_levels(s)
                             if self.on_candle_close_callback and s in self.active_symbols:
                                 await self.on_candle_close_callback(s, cur_candle, prev_candle)
                     except Exception as e:
@@ -537,10 +602,20 @@ class MarketDataManager:
                                                 'high': float(kline.get('h')),
                                                 'low': float(kline.get('l')),
                                                 'close': float(kline.get('c')),
-                                                'volume': float(kline.get('v'))
+                                                'volume': float(kline.get('v')),
+                                                'quote_volume': float(kline.get('q', 0.0))
                                             }
                                             prev_candle = self.candles_5m[norm_s].iloc[-1].to_dict() if not self.candles_5m[norm_s].empty else new_candle
-                                            self.candles_5m[norm_s] = pd.concat([self.candles_5m[norm_s], pd.DataFrame([new_candle])], ignore_index=True)
+                                            if not self.candles_5m[norm_s].empty:
+                                                last_ts = self.candles_5m[norm_s]['timestamp'].iloc[-1]
+                                                if new_candle['timestamp'] == last_ts:
+                                                    for k_col, v_val in new_candle.items():
+                                                        self.candles_5m[norm_s].at[self.candles_5m[norm_s].index[-1], k_col] = v_val
+                                                elif new_candle['timestamp'] > last_ts:
+                                                    self.candles_5m[norm_s] = pd.concat([self.candles_5m[norm_s], pd.DataFrame([new_candle])], ignore_index=True)
+                                            else:
+                                                self.candles_5m[norm_s] = pd.DataFrame([new_candle])
+                                            self.candles_5m[norm_s] = self.candles_5m[norm_s].drop_duplicates(subset=['timestamp'], keep='last').reset_index(drop=True)
                                             if len(self.candles_5m[norm_s]) > 500:
                                                 self.candles_5m[norm_s] = self.candles_5m[norm_s].iloc[-500:].reset_index(drop=True)
                                             self.recalculate_levels(norm_s)

@@ -3259,7 +3259,11 @@ async function loadAdminMetrics() {
                                     minVolSurge: minVolSurge,
                                     isTop80: isTop80,
                                     atrPct: atrPct,
-                                    touches: touches
+                                    touches: touches,
+                                    curVol: Number(met.cur_vol || 0),
+                                    avgVol: Number(met.avg_vol || 0),
+                                    rsScore: Number(met.dynamic_rs_score !== undefined ? met.dynamic_rs_score : (met.rs_vs_btc || 0)),
+                                    decouplingStatus: met.decoupling_status || '⚪ Nötr'
                                 };
                             }
                         }
@@ -3329,13 +3333,21 @@ async function loadAdminMetrics() {
                         const isVolOk = volSurge >= minSurge;
                         const isTop80 = c.isTop80 !== false;
                         const atrPct = c.atrPct !== undefined ? c.atrPct : 1.2;
+                        const rsScore = c.rsScore !== undefined ? c.rsScore : 0.0;
+                        const decouplingStatus = c.decouplingStatus || '⚪ Nötr';
+                        const rsColor = rsScore >= 1.0 ? '#10b981' : (rsScore <= -1.0 ? '#f43f5e' : '#38bdf8');
+                        const curVolStr = c.curVol >= 1e6 ? `$${(c.curVol/1e6).toFixed(1)}M` : (c.curVol >= 1e3 ? `$${(c.curVol/1e3).toFixed(0)}K` : '');
+                        const volExtra = curVolStr ? ` (${curVolStr})` : '';
                         const pPrice = typeof formatSmartPrice === 'function' ? formatSmartPrice(c.price) : Number(c.price).toFixed(4);
                         const tPrice = typeof formatSmartPrice === 'function' ? formatSmartPrice(c.targetPrice) : Number(c.targetPrice).toFixed(4);
 
                         const telemetryBar = `
                             <div style="display:flex; gap:6px; margin:6px 0; flex-wrap:wrap; font-size:11px; font-family:'JetBrains Mono',monospace;">
                                 <span style="background:rgba(0,0,0,0.3); padding:2px 7px; border-radius:4px; border:1px solid ${isVolOk ? 'rgba(16,185,129,0.35)' : 'rgba(245,158,11,0.35)'}; color:${isVolOk ? '#10b981' : '#f59e0b'}; font-weight:700;">
-                                    ⚡ 5M Hacim: ${volSurge.toFixed(2)}x / Min ${minSurge.toFixed(1)}x [${isVolOk ? '✓ Onaylı' : '⏳ Eksik'}]
+                                    ⚡ 5M Hacim: ${volSurge.toFixed(2)}x${volExtra} / Min ${minSurge.toFixed(1)}x [${isVolOk ? '✓ Onaylı' : '⏳ Eksik'}]
+                                </span>
+                                <span style="background:rgba(0,0,0,0.3); padding:2px 7px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:${rsColor}; font-weight:700;">
+                                    ⚡ RS vs BTC: ${rsScore >= 0 ? '+' : ''}${rsScore.toFixed(2)} [${decouplingStatus.split(' ')[0]}]
                                 </span>
                                 <span style="background:rgba(0,0,0,0.3); padding:2px 7px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:${isTop80 ? '#38bdf8' : '#94a3b8'};">
                                     📊 ${isTop80 ? '✓ Top %80 Hacim' : '⚠️ Top %20 Altı (Sığ)'}
@@ -3610,23 +3622,35 @@ async function loadAdminMetrics() {
                             volStatusText = '⏳ İvme Bekleniyor';
                         }
 
+                        const curVolStr = c.curVol >= 1e6 ? `$${(c.curVol/1e6).toFixed(1)}M` : (c.curVol >= 1e3 ? `$${(c.curVol/1e3).toFixed(0)}K` : '');
+                        const volExtra = curVolStr ? ` <span style="color:#64748b; font-size:10px;">(${curVolStr})</span>` : '';
+                        const rsScore = c.rsScore !== undefined ? c.rsScore : 0.0;
+                        const decouplingStatus = c.decouplingStatus || '⚪ Nötr';
+                        const rsColor = rsScore >= 1.0 ? '#10b981' : (rsScore <= -1.0 ? '#f43f5e' : '#38bdf8');
+
                         const dynamicTelemetryBox = `
                             <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.07); border-radius:8px; padding:7px 9px; margin:6px 0;">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:11px;">
                                     <span style="color:#94a3b8; font-weight:700;">⚡ 5M Hacim Patlaması:</span>
                                     <span style="font-family:'JetBrains Mono',monospace; font-weight:800; color:${volBadgeColor}; display:flex; align-items:center; gap:4px;">
-                                        <span>${volSurge.toFixed(2)}x</span>
+                                        <span>${volSurge.toFixed(2)}x</span>${volExtra}
                                         <span style="color:#64748b; font-size:10px;">/ Min ${minVolSurge.toFixed(1)}x</span>
                                         <span style="font-size:10px; padding:1px 5px; border-radius:4px; background:${volBadgeColor}22; border:1px solid ${volBadgeColor}55;">${volStatusText}</span>
                                     </span>
                                 </div>
-                                <div style="display:flex; justify-content:space-between; align-items:center; font-size:10.5px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; font-size:10.5px; margin-bottom:3px;">
                                     <span style="color:#94a3b8;">
                                         📊 24S Dilim: <b style="color:${isTop80 ? '#38bdf8' : '#cbd5e1'}; font-family:'JetBrains Mono',monospace;">${isTop80 ? '✓ Top %80 Hacimli' : '⚠️ Top %20 Altı (Sığ)'}</b>
                                     </span>
                                     <span style="color:#94a3b8;">
                                         🌊 ATR: <b style="color:#c084fc; font-family:'JetBrains Mono',monospace;">%${atrPct.toFixed(2)}</b>
                                     </span>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; font-size:10.5px; padding-top:3px; border-top:1px dashed rgba(255,255,255,0.06);">
+                                    <span style="color:#94a3b8;">⚡ Göreceli Güç (RS vs BTC):</span>
+                                    <b style="color:${rsColor}; font-family:'JetBrains Mono',monospace; font-size:11px;">
+                                        ${rsScore >= 0 ? '+' : ''}${rsScore.toFixed(2)} <span style="font-size:10px; opacity:0.85;">(${decouplingStatus.split(' ')[0]})</span>
+                                    </b>
                                 </div>
                             </div>
                         `;
