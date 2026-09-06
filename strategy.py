@@ -1195,6 +1195,8 @@ class StrategyEngine:
         coin_rs_score = sym_met.get("dynamic_rs_score", 0.0)
         coin_is_top80 = sym_met.get("is_top_80", True)
         coin_vol_surge = sym_met.get("vol_surge", vol_surge)
+        majors_set = {"BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "ADA/USDT"}
+        min_vol_surge = sym_met.get("min_vol_surge", 1.2 if symbol in majors_set else 1.5)
         # Bağımsız Alfa Ayrışan Parite (Ölü Bölgede Kırılıma Giriş Onayı)
         is_decoupled_bull = (coin_rs_score >= 1.2 and coin_vol_surge >= 2.0 and coin_is_top80)
         is_decoupled_bear = (coin_rs_score <= -1.2 and coin_vol_surge >= 2.0 and coin_is_top80)
