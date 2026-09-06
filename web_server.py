@@ -1064,15 +1064,34 @@ HTML_PAGE = """
             box-shadow: 0 0 20px rgba(0, 242, 254, 0.25);
         }
         .tab-badge {
-            background: var(--red);
-            color: #fff;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: #ffffff;
             font-size: 11px;
-            font-weight: 900;
+            font-weight: 800;
             padding: 2px 7px;
-            border-radius: 10px;
-            margin-left: 4px;
-            box-shadow: 0 0 10px rgba(255, 71, 87, 0.5);
-            animation: pulse 1s infinite;
+            border-radius: 12px;
+            margin-left: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 20px;
+            height: 18px;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.75);
+            animation: pulseBadge 1.2s infinite ease-in-out;
+            font-family: 'JetBrains Mono', monospace;
+            vertical-align: middle;
+        }
+        @keyframes pulseBadge {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+                box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+            }
+            50% {
+                opacity: 0.65;
+                transform: scale(1.18);
+                box-shadow: 0 0 16px rgba(239, 68, 68, 0.95);
+            }
         }
         .tab-badge-sub {
             background: rgba(14, 203, 129, 0.15);
@@ -3754,19 +3773,29 @@ async function loadAdminMetrics() {
             }
 
             // Update Nav Tab Badges
-            const navPosBadge = document.getElementById('nav-pos-count-badge');
-            if (navPosBadge) {
-                if (openPosCount > 0) {
-                    navPosBadge.innerText = openPosCount;
-                    navPosBadge.style.display = 'inline-block';
-                } else {
-                    navPosBadge.style.display = 'none';
+            updateNavBadges();
+        }
+
+        function updateNavBadges() {
+            try {
+                const navPosBadge = document.getElementById('nav-pos-count-badge');
+                const openPos = (appState && appState.open_positions) || {};
+                const openCount = Object.keys(openPos).length;
+                if (navPosBadge) {
+                    if (openCount > 0) {
+                        navPosBadge.innerText = openCount;
+                        navPosBadge.style.display = 'inline-flex';
+                    } else {
+                        navPosBadge.style.display = 'none';
+                    }
                 }
-            }
-            const navActiveBadge = document.getElementById('nav-active-coins-badge');
-            if (navActiveBadge && appState.symbols) {
-                const totalC = Object.keys(appState.symbols).length;
-                navActiveBadge.innerText = `${totalC}/100`;
+                const navActiveBadge = document.getElementById('nav-active-coins-badge');
+                if (navActiveBadge && appState && appState.symbols) {
+                    const totalC = Object.keys(appState.symbols).length;
+                    navActiveBadge.innerText = `${totalC}/100`;
+                }
+            } catch (e) {
+                console.error("updateNavBadges error:", e);
             }
         }
 
@@ -4531,6 +4560,7 @@ async function loadAdminMetrics() {
             if (badge) badge.innerText = `${posKeys.length} Açık Pozisyon (${activeCount} Parite Takipte)`;
             const pCount = document.getElementById('pos-count');
             if (pCount) pCount.innerText = `${posKeys.length} / ${activeCount} AÇIK`;
+            updateNavBadges();
 
             if (posKeys.length === 0) {
                 cont.innerHTML = `<div style="color: #94a3b8; text-align:center; padding: 100px 20px; font-size:15px; line-height:1.6;">Şu an açık pozisyon bulunmuyor.<br><span style="color:var(--yellow)">● 5M Mum kapanışları, taze kırılımlar ve destek dönüşleri taranıyor...</span></div>`;
@@ -5497,6 +5527,7 @@ function downloadExcelReport() {
                     lastRenderedPositionsKey = currentPosKey;
                     renderPositions();
                 }
+                updateNavBadges();
 
                 // 5. Only re-render History Table if history length changed
                 const currentHistLen = (appState.history || []).length;
@@ -6067,10 +6098,20 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
 
     async def api_reset_trading_state(request):
         try:
-            trader_manager.paper_trader.balance = 100000.0
-            trader_manager.paper_trader.open_positions = {}
-            trader_manager.paper_trader.history = []
-            trader_manager.paper_trader.save_history()
+            if trader_manager and hasattr(trader_manager, 'paper_trader') and trader_manager.paper_trader:
+                trader_manager.paper_trader.balance = 100000.0
+                trader_manager.paper_trader.open_positions = {}
+                trader_manager.paper_trader.history = []
+                trader_manager.paper_trader.save_history(critical=True)
+            if strategy:
+                if hasattr(strategy, 'failed_levels'):
+                    strategy.failed_levels.clear()
+                if hasattr(strategy, 'setup_attempts'):
+                    strategy.setup_attempts.clear()
+                if hasattr(strategy, 'peak_prices'):
+                    strategy.peak_prices.clear()
+                if hasattr(strategy, 'recent_rejections'):
+                    strategy.recent_rejections.clear()
             return web.json_response({
                 "status": "ok",
                 "message": "Cüzdan $100,000 USDT seviyesine çekildi, tüm açık pozisyonlar ve defter sıfırlandı!",

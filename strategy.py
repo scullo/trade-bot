@@ -17,7 +17,8 @@ class StrategyEngine:
         self.notifier = notifier
         self.vault = SecurityVault()
         self.peak_prices = {}  # symbol -> trailing icin en iyi fiyat
-        self.last_trade_times = {}  # (symbol, side) -> timestamp (30dk Cooldown)
+        self.last_trade_times = {}  # (symbol, side) -> timestamp
+        self.failed_levels = {}  # symbol -> dict (Yapısal Seviye İptali & Whipsaw Kalkanı)
         self.boot_time = time.time()  # Sunucu baslangic zamani (Isinma Kalkanı)
         self.warmup_seconds = 45.0   # Ilk 45 saniye ani kapatmalari onle
         self.recent_rejections = []  # 🧠 Son elenen / girilmeyen sinyaller ve nedenleri (Canlı Dashboard Zekası)
@@ -35,6 +36,88 @@ class StrategyEngine:
         self.recent_rejections.append(entry)
         if len(self.recent_rejections) > 25:
             self.recent_rejections.pop(0)
+
+    def _record_structural_stop(self, record: dict):
+        """Stop olan veya zararla kapanan işlemin seviyesini kaydeder."""
+        if not record or not isinstance(record, dict):
+            return
+        symbol = record.get("symbol")
+        if not symbol:
+            return
+        net_pnl = float(record.get("net_pnl", 0.0))
+        close_reason = str(record.get("close_reason", ""))
+        if net_pnl < 0 or "Stop" in close_reason or "Zaman" in close_reason:
+            self.failed_levels[symbol] = {
+                "side": record.get("side"),
+                "setup_id": record.get("setup_id", ""),
+                "failed_entry": float(record.get("entry_price", 0.0)),
+                "exit_price": float(record.get("exit_price", 0.0)),
+                "timestamp": time.time(),
+                "reason": close_reason
+            }
+            print(f">> [YAPISAL TAKİP] {symbol} seviye kaybı kaydedildi (${record.get('entry_price')}). Fiyat yapısı tazelenene kadar aynı seviyeden giriş kilitlendi.")
+
+    def check_structural_invalidation(self, symbol: str, side: str, current_price: float, levels: dict) -> tuple[bool, str]:
+        """
+        Dinamik Yapısal Seviye Doğrulama (Zaman kronometresi DEĞİL, Fiyat Yapısı / Price Action temelli):
+        Bir coin o seviyede stop olduysa, aynı fiyata tekrar atlamasını engeller.
+        Yeniden giriş şartı:
+        - LONG için: Fiyatın Pivot P veya S3'e inip taze likidite toplamış olması VEYA başarısız tepenin üstüne çıkması (+%0.4)
+        - SHORT için: Fiyatın Pivot P veya R3'e çıkıp likidite toplamış olması VEYA başarısız dibin altına inmesi (-%0.4)
+        Bu şart 2 dakikada gerçekleşirse 2 dakikada girer! Kronometre beklemez, piyasa fırsatını kaçırmaz.
+        """
+        if not hasattr(self, 'failed_levels') or symbol not in self.failed_levels:
+            return True, ""
+
+        failed_info = self.failed_levels[symbol]
+        failed_side = failed_info.get("side")
+        failed_entry = failed_info.get("failed_entry", 0.0)
+
+        # Farklı yönde yeni bir setup oluştuysa engel yok
+        if side != failed_side:
+            self.failed_levels.pop(symbol, None)
+            return True, ""
+
+        cam = levels.get("camarilla", {})
+        p = cam.get("P", 0.0)
+        s3 = cam.get("S3", 0.0)
+        r3 = cam.get("R3", 0.0)
+
+        if side == "LONG":
+            # 1. Şart: Fiyat bir önceki başarısız girişin belirgin şekilde üstüne çıktıysa (Yeni Tepe / Higher High Breakout)
+            if failed_entry > 0 and current_price >= failed_entry * 1.004:
+                self.failed_levels.pop(symbol, None)
+                return True, "Yeni Yapısal Tepe Onayı"
+
+            # 2. Şart: Fiyat Pivot P veya S3 seviyesine geri çekilip oradan güç topladı mı?
+            if self.market_data and symbol in self.market_data.candles_5m:
+                df = self.market_data.candles_5m[symbol]
+                if isinstance(df, pd.DataFrame) and len(df) >= 3:
+                    recent_low = df['low'].iloc[-3:].min()
+                    if (p > 0 and recent_low <= p) or (s3 > 0 and recent_low <= s3):
+                        self.failed_levels.pop(symbol, None)
+                        return True, "Pivot / Destekten Taze Likidite Onayı"
+
+            return False, f"Yapısal Seviye İptali: Son stop seviyesinde (${failed_entry:.4f}) sıkışma; Pivot P veya S3'ten taze likidite almadan veya yeni tepe yapmadan aynı seviyeye tekrar girilemez"
+
+        elif side == "SHORT":
+            # 1. Şart: Fiyat bir önceki başarısız girişin belirgin altına indiyse (Yeni Dip / Lower Low)
+            if failed_entry > 0 and current_price <= failed_entry * 0.996:
+                self.failed_levels.pop(symbol, None)
+                return True, "Yeni Yapısal Dip Onayı"
+
+            # 2. Şart: Fiyat Pivot P veya R3 seviyesine yükselip reddedildi mi?
+            if self.market_data and symbol in self.market_data.candles_5m:
+                df = self.market_data.candles_5m[symbol]
+                if isinstance(df, pd.DataFrame) and len(df) >= 3:
+                    recent_high = df['high'].iloc[-3:].max()
+                    if (p > 0 and recent_high >= p) or (r3 > 0 and recent_high >= r3):
+                        self.failed_levels.pop(symbol, None)
+                        return True, "Pivot / Dirençten Taze Likidite Onayı"
+
+            return False, f"Yapısal Seviye İptali: Son stop seviyesinde (${failed_entry:.4f}) sıkışma; Pivot P veya R3'e çekilip güç toplamadan veya yeni dip yapmadan aynı seviyeye tekrar girilemez"
+
+        return True, ""
 
     def get_symbol_atr_pct(self, symbol: str) -> float:
         """Paritenin son 14 mumluk ATR yuzdesini hesaplayarak coine ozel dinamik esik uretir."""
@@ -78,17 +161,18 @@ class StrategyEngine:
             levels=levels
         )
 
-
     async def _safe_close_position(self, *args, **kwargs):
         res = self.paper_trader.close_position(*args, **kwargs)
         if hasattr(res, '__await__'):
-            return await res
+            res = await res
+        if isinstance(res, dict) and not kwargs.get("is_partial", False):
+            self._record_structural_stop(res)
         return res
 
     async def _safe_open_position(self, *args, **kwargs):
         res = self.paper_trader.open_position(*args, **kwargs)
         if hasattr(res, '__await__'):
-            return await res
+            res = await res
         return res
 
     # =========================================================================
@@ -611,23 +695,23 @@ class StrategyEngine:
             except Exception as e:
                 print(f">> [CVD/HIZ HATA] {symbol}: {e}")
 
-        # MADDE 4 & EKSİK 2: 1.5 ATR DİNAMİK STOP VE HEDEFLERİ
-        # _handle_open basinda atr_pct hesaplanmisti
+        # ── DİNAMİK STOP VE HEDEFLERİ (ADAPTIVE ATR & VOLATILITY FLOOR) ──
+        # Sığ/gece saatlerinde mikro fitillerde (%0.6) boğulmayı önleyen asgari %1.25 mesafe tabanı
         safe_atr_pct = max(0.5, min(5.0, atr_pct))
-        
-        # Sert Stop: 1.5 ATR (Dinamik risk mesafesi)
-        stop_dist = entry_price * (safe_atr_pct / 100.0) * 1.5
-        
-        # Hedef TP1: 1.5 ATR (R:R 1:1 Hızlı Kâr & Breakeven Kilidi), TP2: 3.0 ATR / Makro Seviye (R:R 1:2 Runner)
-        tp1_dist = entry_price * (safe_atr_pct / 100.0) * 1.5
-        tp2_dist = entry_price * (safe_atr_pct / 100.0) * 3.0
+        effective_stop_pct = max(1.25, min(5.0, safe_atr_pct * 2.0))
+        stop_dist = entry_price * (effective_stop_pct / 100.0)
+
+        # TP1: Dinamik 1.8 ATR (En az %1.25 mesafe, R:R >= 1:1 Hızlı Kâr & Breakeven Kilidi)
+        # TP2: Dinamik 3.6 ATR / Makro Seviye (En az %2.50 mesafe, R:R >= 1:2 Runner Trend Koşusu)
+        tp1_dist = entry_price * (max(1.25, safe_atr_pct * 1.8) / 100.0)
+        tp2_dist = entry_price * (max(2.50, safe_atr_pct * 3.6) / 100.0)
 
         caller_tp1 = tp1
         caller_tp2 = tp2
 
         if side == "LONG":
             hard_stop = round(entry_price - stop_dist, 6)
-            soft_stop = hard_stop  # 1.5 ATR Dinamik Stop: UI, telemetri ve risk motoru ile tam senkron
+            soft_stop = hard_stop  # Dinamik ATR Stop: UI, telemetri ve risk motoru ile tam senkron
             
             atr_tp1 = round(entry_price + tp1_dist, 6)
             atr_tp2 = round(entry_price + tp2_dist, 6)
@@ -640,7 +724,7 @@ class StrategyEngine:
                 tp2 = atr_tp2
         else:
             hard_stop = round(entry_price + stop_dist, 6)
-            soft_stop = hard_stop  # 1.5 ATR Dinamik Stop: UI, telemetri ve risk motoru ile tam senkron
+            soft_stop = hard_stop  # Dinamik ATR Stop: UI, telemetri ve risk motoru ile tam senkron
             
             atr_tp1 = round(entry_price - tp1_dist, 6)
             atr_tp2 = round(entry_price - tp2_dist, 6)
@@ -674,6 +758,8 @@ class StrategyEngine:
             )
             return
         elif res:
+            if hasattr(self, 'failed_levels'):
+                self.failed_levels.pop(symbol, None)
             levels = self.market_data.levels.get(symbol) if self.market_data else None
             await self._notify_open(res, levels=levels)
 
@@ -957,14 +1043,48 @@ class StrategyEngine:
         s3, s4, s5 = cam.get("S3", 0), cam.get("S4", 0), cam.get("S5", 0)
         p = cam.get("P", 0)
 
+        # ── PİYASA REJİMİ TESPİTİ (REGIME ADAPTIVE) ──
+        is_range_regime = False
+        if tepe_avwap > 0 and p > 0 and close_price > tepe_avwap and close_price > p:
+            regime_desc = "🟢 GÜÇLÜ BOĞA (Bullish)"
+        elif dip_avwap > 0 and p > 0 and close_price < dip_avwap and close_price < p:
+            regime_desc = "🔴 GÜÇLÜ AYI (Bearish)"
+        elif p > 0 and close_price > p:
+            regime_desc = "🟡 ILIMLI BOĞA (Moderate Bull)"
+        elif p > 0 and close_price < p:
+            regime_desc = "🟠 ILIMLI AYI (Moderate Bear)"
+        else:
+            regime_desc = "⚪ YATAY / SIKIŞMA (Ranging)"
+            is_range_regime = True
+
+        # BTC Rejimi Kontrolü (BTC 1 Saatlik Aralık Sıkışması)
+        if self.market_data and 'BTC/USDT' in self.market_data.candles_5m:
+            df_btc = self.market_data.candles_5m['BTC/USDT']
+            if isinstance(df_btc, pd.DataFrame) and len(df_btc) >= 12:
+                try:
+                    btc_high = df_btc['high'].iloc[-12:].max()
+                    btc_low = df_btc['low'].iloc[-12:].min()
+                    btc_close = df_btc['close'].iloc[-1]
+                    btc_1h_range_pct = ((btc_high - btc_low) / btc_close) * 100.0 if btc_close > 0 else 0
+                    if btc_1h_range_pct < 0.60:
+                        is_range_regime = True
+                except Exception:
+                    pass
+
         # ─────────────────────────────────────────────────────────────────
         # SETUP 1: TAZE R4 BREAKOUT LONG
         # Onceki mum R4 altinda, simdiki mum R4 ustunde kapanir
         # Tepe AVWAP filtresini gecer → Guclu boga teyidi
         # ─────────────────────────────────────────────────────────────────
         if prev_close <= r4 and close_price > r4:
-            if vol_surge < 1.25:
-                self.log_rejection(symbol, "SETUP 1 R4 Breakout", f"Hacim patlaması {vol_surge:.2f}x yetersiz (en az 1.25x patlama aranıyor)")
+            struct_ok, struct_reason = self.check_structural_invalidation(symbol, "LONG", close_price, levels)
+            if not struct_ok:
+                self.log_rejection(symbol, "SETUP 1 R4 Breakout", struct_reason)
+                return
+
+            min_breakout_vol = 1.8 if is_range_regime else 1.25
+            if vol_surge < min_breakout_vol:
+                self.log_rejection(symbol, "SETUP 1 R4 Breakout", f"{'Yatay piyasada sahte kırılım kalkanı: ' if is_range_regime else ''}Hacim patlaması {vol_surge:.2f}x yetersiz (en az {min_breakout_vol:.2f}x patlama aranıyor)")
                 return
             if tepe_avwap > 0 and close_price <= tepe_avwap:
                 self.log_rejection(symbol, "SETUP 1 R4 Breakout", f"Fiyat (${close_price:.4f}) Tepe AVWAP (${tepe_avwap:.4f}) altında kaldığı için boğa onayı verilmedi")
@@ -995,8 +1115,14 @@ class StrategyEngine:
         # Dip AVWAP filtresini gecer → Guclu ayi teyidi
         # ─────────────────────────────────────────────────────────────────
         if prev_close >= s4 and close_price < s4:
-            if vol_surge < 1.25:
-                self.log_rejection(symbol, "SETUP 2 S4 Breakdown", f"Hacim patlaması {vol_surge:.2f}x yetersiz (en az 1.25x patlama aranıyor)")
+            struct_ok, struct_reason = self.check_structural_invalidation(symbol, "SHORT", close_price, levels)
+            if not struct_ok:
+                self.log_rejection(symbol, "SETUP 2 S4 Breakdown", struct_reason)
+                return
+
+            min_breakout_vol = 1.8 if is_range_regime else 1.25
+            if vol_surge < min_breakout_vol:
+                self.log_rejection(symbol, "SETUP 2 S4 Breakdown", f"{'Yatay piyasada sahte kırılım kalkanı: ' if is_range_regime else ''}Hacim patlaması {vol_surge:.2f}x yetersiz (en az {min_breakout_vol:.2f}x patlama aranıyor)")
                 return
             if dip_avwap > 0 and close_price >= dip_avwap:
                 self.log_rejection(symbol, "SETUP 2 S4 Breakdown", f"Fiyat (${close_price:.4f}) Dip AVWAP (${dip_avwap:.4f}) üstünde kaldığı için ayı onayı verilmedi")
@@ -1026,6 +1152,11 @@ class StrategyEngine:
         # Mum S3'e dokunur ama ustunde kapatir, Pivot P altinda
         # ─────────────────────────────────────────────────────────────────
         if current_candle['low'] <= s3 and close_price > s3 and close_price < p:
+            struct_ok, struct_reason = self.check_structural_invalidation(symbol, "LONG", close_price, levels)
+            if not struct_ok:
+                self.log_rejection(symbol, "SETUP 3 S3 Destek", struct_reason)
+                return
+
             buffer = (s3 - s4) * BUFFER_RATIO
             soft_stop = s3 - buffer
             hard_stop = s4
@@ -1049,6 +1180,11 @@ class StrategyEngine:
         # Mum R3'e dokunur ama altinda kapatir, Pivot P ustunde
         # ─────────────────────────────────────────────────────────────────
         if current_candle['high'] >= r3 and close_price < r3 and close_price > p:
+            struct_ok, struct_reason = self.check_structural_invalidation(symbol, "SHORT", close_price, levels)
+            if not struct_ok:
+                self.log_rejection(symbol, "SETUP 4 R3 Direnç", struct_reason)
+                return
+
             buffer = (r4 - r3) * BUFFER_RATIO
             soft_stop = r3 + buffer
             hard_stop = r4
@@ -1072,6 +1208,27 @@ class StrategyEngine:
         # R4 ustunde olan fiyat R4'e geri cekilerek fitil birakir, ustunde kapanir
         # ─────────────────────────────────────────────────────────────────
         if prev_close > r4 and current_candle['low'] <= r4 and close_price > r4 and close_price < r5:
+            struct_ok, struct_reason = self.check_structural_invalidation(symbol, "LONG", close_price, levels)
+            if not struct_ok:
+                self.log_rejection(symbol, "SETUP 5 R4 Support Flip", struct_reason)
+                return
+
+            # Alıcı tepkisi & fitil şartı: Mum kırmızı kapanıyorsa ve belirgin alt iğnesi (%20) yoksa düşüş bıçağıdır
+            c_open = current_candle.get('open', close_price)
+            c_low = current_candle.get('low', close_price)
+            c_high = current_candle.get('high', close_price)
+            c_range = c_high - c_low
+            lower_wick = (min(c_open, close_price) - c_low) if c_range > 0 else 0
+            wick_ratio = (lower_wick / c_range) if c_range > 0 else 0
+            if close_price < c_open and wick_ratio < 0.20:
+                self.log_rejection(symbol, "SETUP 5 R4 Support Flip", "Destek retestinde alıcı tepkisi yok (Kırmızı gövde ve yetersiz alt fitil)")
+                return
+
+            min_retest_vol = 1.5 if is_range_regime else 1.20
+            if vol_surge < min_retest_vol:
+                self.log_rejection(symbol, "SETUP 5 R4 Support Flip", f"Retest hacmi {vol_surge:.2f}x yetersiz (en az {min_retest_vol:.2f}x aranıyor)")
+                return
+
             buffer = (r4 - r3) * BUFFER_RATIO
             soft_stop = r4 - buffer
             hard_stop = r3
@@ -1091,6 +1248,10 @@ class StrategyEngine:
         # Fiyat aylik VAH'i yukari kirar → Macro trend devami
         # ─────────────────────────────────────────────────────────────────
         if mvah > 0 and prev_close <= mvah and close_price > mvah:
+            struct_ok, struct_reason = self.check_structural_invalidation(symbol, "LONG", close_price, levels)
+            if not struct_ok:
+                self.log_rejection(symbol, "SETUP 6 mVAH Breakout", struct_reason)
+                return
             # 🛡️ ZIRH 3: Minimum %0.80 Hedef Barajı (Mikro hedefleri atla, kurumsal istasyona bağlan)
             candidates = [c for c in [above_npoc, above_nvah, r5, tepe_avwap] if c and c >= close_price * 1.008]
             target = min(candidates) if candidates else close_price * 1.018
@@ -1114,6 +1275,26 @@ class StrategyEngine:
         # S4 altinda olan fiyat S4'e yukselip reddedilir, altinda kapanir
         # ─────────────────────────────────────────────────────────────────
         if prev_close < s4 and current_candle['high'] >= s4 and close_price < s4 and close_price > s5:
+            struct_ok, struct_reason = self.check_structural_invalidation(symbol, "SHORT", close_price, levels)
+            if not struct_ok:
+                self.log_rejection(symbol, "SETUP 7 S4 Resistance Flip", struct_reason)
+                return
+
+            c_open = current_candle.get('open', close_price)
+            c_low = current_candle.get('low', close_price)
+            c_high = current_candle.get('high', close_price)
+            c_range = c_high - c_low
+            upper_wick = (c_high - max(c_open, close_price)) if c_range > 0 else 0
+            wick_ratio = (upper_wick / c_range) if c_range > 0 else 0
+            if close_price > c_open and wick_ratio < 0.20:
+                self.log_rejection(symbol, "SETUP 7 S4 Resistance Flip", "Direnç retestinde satıcı tepkisi yok (Yeşil gövde ve yetersiz üst fitil)")
+                return
+
+            min_retest_vol = 1.5 if is_range_regime else 1.20
+            if vol_surge < min_retest_vol:
+                self.log_rejection(symbol, "SETUP 7 S4 Resistance Flip", f"Retest hacmi {vol_surge:.2f}x yetersiz (en az {min_retest_vol:.2f}x aranıyor)")
+                return
+
             buffer = (s3 - s4) * BUFFER_RATIO
             soft_stop = s4 + buffer
             hard_stop = s3
@@ -1133,6 +1314,11 @@ class StrategyEngine:
         # Fiyat aylik VAL'i asagi kirar → Macro cokus baslar
         # ─────────────────────────────────────────────────────────────────
         if mval > 0 and prev_close >= mval and close_price < mval:
+            struct_ok, struct_reason = self.check_structural_invalidation(symbol, "SHORT", close_price, levels)
+            if not struct_ok:
+                self.log_rejection(symbol, "SETUP 8 mVAL Breakdown", struct_reason)
+                return
+
             # 🛡️ ZIRH 3: Minimum %0.80 Hedef Barajı (Mikro hedefleri atla, kurumsal istasyona bağlan)
             candidates = [c for c in [below_npoc, below_nval, s5, dip_avwap] if c and c <= close_price * 0.992]
             target = max(candidates) if candidates else close_price * 0.982
@@ -1157,6 +1343,11 @@ class StrategyEngine:
         # ─────────────────────────────────────────────────────────────────
         support_npoc = below_npoc if (below_npoc and below_npoc > 0) else below_nval
         if support_npoc and support_npoc > 0 and current_candle['low'] <= support_npoc and close_price > support_npoc and close_price < p:
+            struct_ok, struct_reason = self.check_structural_invalidation(symbol, "LONG", close_price, levels)
+            if not struct_ok:
+                self.log_rejection(symbol, "SETUP 9 nPOC Sekmesi", struct_reason)
+                return
+
             buffer = (p - support_npoc) * BUFFER_RATIO if (p > support_npoc) else (support_npoc * 0.004)
             soft_stop = support_npoc - buffer
             hard_stop = s4 if (s4 > 0 and s4 < support_npoc) else (support_npoc - buffer * 2)
@@ -1189,6 +1380,11 @@ class StrategyEngine:
         # ─────────────────────────────────────────────────────────────────
         resist_npoc = above_npoc if (above_npoc and above_npoc > 0) else above_nvah
         if resist_npoc and resist_npoc > 0 and current_candle['high'] >= resist_npoc and close_price < resist_npoc and close_price > p:
+            struct_ok, struct_reason = self.check_structural_invalidation(symbol, "SHORT", close_price, levels)
+            if not struct_ok:
+                self.log_rejection(symbol, "SETUP 10 nPOC Reddi", struct_reason)
+                return
+
             # 🛡️ YUKARI nPOC REJECTION KALKANI: Güçlü Boğa trendinde yukarı nPOC'ye kafa atılmaz
             if "GÜÇLÜ BOĞA" in trend_regime:
                 self.log_rejection(symbol, "Yukarı nPOC Reddi", "Piyasa Güçlü Boğa rejimindeyken Yukarı nPOC'den SHORT açılmadı (Short Squeeze Koruması)")
