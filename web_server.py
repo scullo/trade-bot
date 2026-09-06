@@ -5944,21 +5944,22 @@ function downloadExcelReport() {
         }
 
         async function init() {
-            restorePersistedSession();
-            if (false) {
-                const grid = document.getElementById('coin-chips-container');
-                const btn = document.getElementById('pool-collapse-btn');
-                if (grid) grid.style.display = 'none';
-                if (btn) btn.innerText = '🔽 Pariteleri Göster';
+            try {
+                restorePersistedSession();
+                await syncBackendState();
+                startBinanceGlobalFeed();
+                startSSEFallback();
+                setInterval(syncBackendState, 10000); // 10 Saniyede bir arka plan senkronizasyonu
+            } catch (e) {
+                console.error("Valkyrie Init Error:", e);
             }
-            await syncBackendState();
-            startBinanceGlobalFeed();
-            startSSEFallback();
-            setInterval(syncBackendState, 10000); // 10 Saniyede bir arka plan senkronizasyonu (Bellek dostu)
-            setInterval(updateUIPeriodically, 1000);
         }
 
-        init();
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
     </script>
 </body>
 </html>
