@@ -775,9 +775,8 @@ class StrategyEngine:
             print(f">> [DNA HATA] Madde 1 Karantina hatasi: {e}")
 
         safe_atr = max(0.5, atr_pct)
-        dyn_margin = min(100.0, max(20.0, round(3.5 / (safe_atr * 0.02 * 5.0) * 100.0 / 3.5, 2)))
-        dyn_margin = min(100.0, max(25.0, round(100.0 / (safe_atr / 1.0), 2)))
-        dyn_margin = round(dyn_margin * getattr(self, 'margin_multiplier', 1.0), 2)
+        dyn_margin = min(80.0, max(25.0, round(100.0 / (safe_atr / 1.0), 2)))
+        dyn_margin = min(80.0, max(15.0, round(dyn_margin * getattr(self, 'margin_multiplier', 1.0), 2)))
 
         # ── 1c. GERÇEK CVD (TAKER BUY RATIO) VE İVME (CANDLE VELOCITY) HESABI ──
         cvd_pct = 50.0
@@ -816,12 +815,19 @@ class StrategyEngine:
         tp1_dist = entry_price * (max(1.25, safe_atr_pct * 1.8) / 100.0)
         tp2_dist = entry_price * (max(2.50, safe_atr_pct * 3.6) / 100.0)
 
+        caller_hard_stop = hard_stop
+        caller_soft_stop = soft_stop
         caller_tp1 = tp1
         caller_tp2 = tp2
 
         if side == "LONG":
-            hard_stop = round(entry_price - stop_dist, 6)
-            soft_stop = hard_stop  # Dinamik ATR Stop: UI, telemetri ve risk motoru ile tam senkron
+            atr_hard_stop = round(entry_price - stop_dist, 6)
+            # Eğer çağıran setup daha sıkı bir yapısal stop belirlediyse koru, değilse ATR tavanını kullan
+            if caller_hard_stop and 0 < caller_hard_stop < entry_price and caller_hard_stop > atr_hard_stop:
+                hard_stop = round(caller_hard_stop, 6)
+            else:
+                hard_stop = atr_hard_stop
+            soft_stop = hard_stop  # Dinamik ATR / Yapısal Stop: UI, telemetri ve risk motoru ile tam senkron
             
             atr_tp1 = round(entry_price + tp1_dist, 6)
             atr_tp2 = round(entry_price + tp2_dist, 6)
@@ -833,8 +839,13 @@ class StrategyEngine:
             else:
                 tp2 = atr_tp2
         else:
-            hard_stop = round(entry_price + stop_dist, 6)
-            soft_stop = hard_stop  # Dinamik ATR Stop: UI, telemetri ve risk motoru ile tam senkron
+            atr_hard_stop = round(entry_price + stop_dist, 6)
+            # Eğer çağıran setup daha sıkı bir yapısal stop belirlediyse koru, değilse ATR tavanını kullan
+            if caller_hard_stop and caller_hard_stop > entry_price and caller_hard_stop < atr_hard_stop:
+                hard_stop = round(caller_hard_stop, 6)
+            else:
+                hard_stop = atr_hard_stop
+            soft_stop = hard_stop  # Dinamik ATR / Yapısal Stop: UI, telemetri ve risk motoru ile tam senkron
             
             atr_tp1 = round(entry_price - tp1_dist, 6)
             atr_tp2 = round(entry_price - tp2_dist, 6)
@@ -1187,6 +1198,8 @@ class StrategyEngine:
         # Bağımsız Alfa Ayrışan Parite (Ölü Bölgede Kırılıma Giriş Onayı)
         is_decoupled_bull = (coin_rs_score >= 1.2 and coin_vol_surge >= 2.0 and coin_is_top80)
         is_decoupled_bear = (coin_rs_score <= -1.2 and coin_vol_surge >= 2.0 and coin_is_top80)
+        coin_decoupling = sym_met.get("decoupling_status", "")
+        is_severely_weak = ("AŞIRI_ZAYIF" in coin_decoupling) or (coin_rs_score <= -1.0)
 
         # ─────────────────────────────────────────────────────────────────
         # SETUP 1: TAZE R4 BREAKOUT LONG
@@ -1290,6 +1303,19 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 3 S3 Destek", struct_reason)
                 return
 
+            # 🛡️ ALICI EMİLİM MUMU ŞARTI (Ezilen Parite Koruma Zırhı)
+            if is_severely_weak:
+                c_open = current_candle.get('open', close_price)
+                c_low = current_candle.get('low', close_price)
+                c_high = current_candle.get('high', close_price)
+                c_range = c_high - c_low
+                lower_wick = (min(c_open, close_price) - c_low) if c_range > 0 else 0
+                lower_wick_ratio = (lower_wick / c_range) if c_range > 0 else 0
+                is_absorption = (lower_wick_ratio >= 0.35) or (close_price >= c_open)
+                if not is_absorption:
+                    self.log_rejection(symbol, "SETUP 3 S3 Destek", f"Aşırı Zayıf Parite: S3 desteğinde alıcı emilimi (min %35 alt fitil veya yeşil kapanış) yok (Fitil: %{lower_wick_ratio*100:.1f})")
+                    return
+
             buffer = (s3 - s4) * BUFFER_RATIO
             soft_stop = s3 - buffer
             hard_stop = s4
@@ -1346,6 +1372,14 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 5 R4 Support Flip", struct_reason)
                 return
 
+            # 🛡️ TEPE AVWAP & AŞIRI ZAYIF KORUMASI: Fiyat Tepe AVWAP altında kaldıysa tepede arz birikmiştir (Bull Trap)
+            if tepe_avwap > 0 and close_price < tepe_avwap:
+                self.log_rejection(symbol, "SETUP 5 R4 Support Flip", f"Retest Tepe AVWAP (${tepe_avwap:.4f}) altında kaldı (Tepede sıkışan arz baskısı)")
+                return
+            if is_severely_weak:
+                self.log_rejection(symbol, "SETUP 5 R4 Support Flip", f"Parite Aşırı Zayıf (RS: {coin_rs_score:+.2f}); zayıf paritede R4 retest desteği tutunamaz")
+                return
+
             # Alıcı tepkisi & fitil şartı: Mum kırmızı kapanıyorsa ve belirgin alt iğnesi (%20) yoksa düşüş bıçağıdır
             c_open = current_candle.get('open', close_price)
             c_low = current_candle.get('low', close_price)
@@ -1362,9 +1396,11 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 5 R4 Support Flip", f"Retest hacmi {vol_surge:.2f}x yetersiz (en az {min_retest_vol:.2f}x aranıyor)")
                 return
 
-            buffer = (r4 - r3) * BUFFER_RATIO
+            coin_atr = self.get_symbol_atr_pct(symbol)
+            dyn_stop_pct = max(0.008, min(0.025, coin_atr * 1.0))
+            buffer = r4 * dyn_stop_pct
             soft_stop = r4 - buffer
-            hard_stop = r3
+            hard_stop = r4 - buffer * 1.5
             target_r5 = r5 if (r5 >= close_price * 1.008) else (mvah if (mvah >= close_price * 1.008) else close_price * 1.015)
             await self._handle_open(
                 symbol=symbol, side="LONG", entry_price=close_price,
@@ -1391,6 +1427,12 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 6 mVAH Breakout", f"Makro Ölü Bölge: BTC+ETH Değer Alanı içinde; mVAH makro kırılımı için bağımsız Alfa ayrışması (RS: {coin_rs_score:+.2f}) teyidi yok")
                 return
 
+            # 🛡️ HACİM TEYİDİ: Aylık mVAH kırılımı kurumsal hacim patlaması gerektirir (Sahte kırılım tuzağını önleme)
+            min_mvah_vol = min_vol_surge if min_vol_surge else 1.5
+            if vol_surge < min_mvah_vol:
+                self.log_rejection(symbol, "SETUP 6 mVAH Breakout", f"mVAH kırılım hacmi {vol_surge:.2f}x yetersiz (en az {min_mvah_vol:.2f}x aranıyor)")
+                return
+
             # 🛡️ ZIRH 3: Minimum %0.80 Hedef Barajı (Mikro hedefleri atla, kurumsal istasyona bağlan)
             candidates = [c for c in [above_npoc, above_nvah, r5, tepe_avwap] if c and c >= close_price * 1.008]
             target = min(candidates) if candidates else close_price * 1.018
@@ -1398,7 +1440,7 @@ class StrategyEngine:
             dyn_stop_pct = max(0.008, min(0.025, coin_atr * 1.0))
             buffer = mvah * dyn_stop_pct
             soft_stop = mvah - buffer
-            hard_stop = r3 if (r3 > 0 and r3 < mvah) else (mvah - buffer * 2.0)
+            hard_stop = mvah - buffer * 1.5
             await self._handle_open(
                 symbol=symbol, side="LONG", entry_price=close_price,
                 reason="mVAH Aylik Direnc Kirilimi (Macro Breakout)",
@@ -1463,6 +1505,12 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 8 mVAL Breakdown", f"Makro Ölü Bölge: BTC+ETH Değer Alanı içinde; mVAL makro dökülme için bağımsız Alfa ayrışması (RS: {coin_rs_score:+.2f}) teyidi yok")
                 return
 
+            # 🛡️ HACİM TEYİDİ: Aylık mVAL dökülmesi kurumsal hacim patlaması gerektirir
+            min_mval_vol = min_vol_surge if min_vol_surge else 1.5
+            if vol_surge < min_mval_vol:
+                self.log_rejection(symbol, "SETUP 8 mVAL Breakdown", f"mVAL kırılım hacmi {vol_surge:.2f}x yetersiz (en az {min_mval_vol:.2f}x aranıyor)")
+                return
+
             # 🛡️ ZIRH 3: Minimum %0.80 Hedef Barajı (Mikro hedefleri atla, kurumsal istasyona bağlan)
             candidates = [c for c in [below_npoc, below_nval, s5, dip_avwap] if c and c <= close_price * 0.992]
             target = max(candidates) if candidates else close_price * 0.982
@@ -1470,7 +1518,7 @@ class StrategyEngine:
             dyn_stop_pct = max(0.008, min(0.025, coin_atr * 1.0))
             buffer = mval * dyn_stop_pct
             soft_stop = mval + buffer
-            hard_stop = s3 if (s3 > 0 and s3 > mval) else (mval + buffer * 2.0)
+            hard_stop = mval + buffer * 1.5
             await self._handle_open(
                 symbol=symbol, side="SHORT", entry_price=close_price,
                 reason="mVAL Aylik Destek Kirilimi (Macro Breakdown)",
@@ -1491,6 +1539,19 @@ class StrategyEngine:
             if not struct_ok:
                 self.log_rejection(symbol, "SETUP 9 nPOC Sekmesi", struct_reason)
                 return
+
+            # 🛡️ ALICI EMİLİM MUMU ŞARTI (Ezilen Parite Koruma Zırhı)
+            if is_severely_weak:
+                c_open = current_candle.get('open', close_price)
+                c_low = current_candle.get('low', close_price)
+                c_high = current_candle.get('high', close_price)
+                c_range = c_high - c_low
+                lower_wick = (min(c_open, close_price) - c_low) if c_range > 0 else 0
+                lower_wick_ratio = (lower_wick / c_range) if c_range > 0 else 0
+                is_absorption = (lower_wick_ratio >= 0.35) or (close_price >= c_open)
+                if not is_absorption:
+                    self.log_rejection(symbol, "SETUP 9 nPOC Sekmesi", f"Aşırı Zayıf Parite: Aşağı nPOC desteğinde alıcı emilimi (min %35 alt fitil veya yeşil kapanış) yok (Fitil: %{lower_wick_ratio*100:.1f})")
+                    return
 
             buffer = (p - support_npoc) * BUFFER_RATIO if (p > support_npoc) else (support_npoc * 0.004)
             soft_stop = support_npoc - buffer
