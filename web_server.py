@@ -4214,6 +4214,8 @@ async function loadAdminMetrics() {
                 };
 
                 window.renderAiThoughts();
+            }
+
             // Update Nav Tab Badges
             updateNavBadges();
         }
