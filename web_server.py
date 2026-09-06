@@ -5971,13 +5971,19 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
     
     async def index(request):
         accept_encoding = request.headers.get('Accept-Encoding', '')
+        headers = {
+            'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        }
         if 'gzip' in accept_encoding:
+            headers['Content-Encoding'] = 'gzip'
             return web.Response(
                 body=GZIPPED_HTML_PAGE,
                 content_type='text/html',
-                headers={'Content-Encoding': 'gzip'}
+                headers=headers
             )
-        return web.Response(text=HTML_PAGE, content_type='text/html')
+        return web.Response(text=HTML_PAGE, content_type='text/html', headers=headers)
 
     async def health_check(request):
         return web.Response(text="OK", content_type="text/plain")
