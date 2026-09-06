@@ -3234,12 +3234,19 @@ async function loadAdminMetrics() {
 
                         let bestCandidate = null;
                         let minCoinDist = 999.0;
+                        const met = c.metrics || {};
+                        const volSurge = Number(met.vol_surge !== undefined ? met.vol_surge : 1.0);
+                        const majorsList = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "ADA/USDT"];
+                        const minVolSurge = Number(met.min_vol_surge !== undefined ? met.min_vol_surge : (majorsList.includes(sym) ? 1.2 : 1.5));
+                        const isTop80 = met.is_top_80 !== false;
+                        const atrPct = Number(met.atr_pct !== undefined ? met.atr_pct : 1.2);
 
                         function checkLvl(targetName, targetPrice, action, bias, isLong) {
                             if (!targetPrice || targetPrice <= 0) return;
                             const dist = Math.abs(price - targetPrice) / price * 100.0;
                             if (dist < minCoinDist && dist <= 4.0) {
                                 minCoinDist = dist;
+                                const touches = (appState.setup_attempts && appState.setup_attempts[`${sym}_${targetName}`]) || 0;
                                 bestCandidate = {
                                     symbol: sym,
                                     price: price,
@@ -3247,7 +3254,12 @@ async function loadAdminMetrics() {
                                     targetPrice: targetPrice,
                                     distPct: dist,
                                     action: action,
-                                    bias: bias
+                                    bias: bias,
+                                    volSurge: volSurge,
+                                    minVolSurge: minVolSurge,
+                                    isTop80: isTop80,
+                                    atrPct: atrPct,
+                                    touches: touches
                                 };
                             }
                         }
@@ -3309,35 +3321,62 @@ async function loadAdminMetrics() {
                     const topNear = nearCandidates.slice(0, 6);
                     
                     topNear.forEach(c => {
-                        const cleanS = c.symbol.replace('/USDT', '');
+                        const cleanS = c.symbol.replace('/USDT', '').replace('USDT', '').trim();
                         const dist = c.distPct;
                         const isContact = dist < 0.25;
+                        const volSurge = c.volSurge !== undefined ? c.volSurge : 1.0;
+                        const minSurge = c.minVolSurge !== undefined ? c.minVolSurge : 1.5;
+                        const isVolOk = volSurge >= minSurge;
+                        const isTop80 = c.isTop80 !== false;
+                        const atrPct = c.atrPct !== undefined ? c.atrPct : 1.2;
+                        const pPrice = typeof formatSmartPrice === 'function' ? formatSmartPrice(c.price) : Number(c.price).toFixed(4);
+                        const tPrice = typeof formatSmartPrice === 'function' ? formatSmartPrice(c.targetPrice) : Number(c.targetPrice).toFixed(4);
+
+                        const telemetryBar = `
+                            <div style="display:flex; gap:6px; margin:6px 0; flex-wrap:wrap; font-size:11px; font-family:'JetBrains Mono',monospace;">
+                                <span style="background:rgba(0,0,0,0.3); padding:2px 7px; border-radius:4px; border:1px solid ${isVolOk ? 'rgba(16,185,129,0.35)' : 'rgba(245,158,11,0.35)'}; color:${isVolOk ? '#10b981' : '#f59e0b'}; font-weight:700;">
+                                    ⚡ 5M Hacim: ${volSurge.toFixed(2)}x / Min ${minSurge.toFixed(1)}x [${isVolOk ? '✓ Onaylı' : '⏳ Eksik'}]
+                                </span>
+                                <span style="background:rgba(0,0,0,0.3); padding:2px 7px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:${isTop80 ? '#38bdf8' : '#94a3b8'};">
+                                    📊 ${isTop80 ? '✓ Top %80 Hacim' : '⚠️ Top %20 Altı (Sığ)'}
+                                </span>
+                                <span style="background:rgba(0,0,0,0.3); padding:2px 7px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:#c084fc;">
+                                    🌊 ATR: %${atrPct.toFixed(2)}
+                                </span>
+                            </div>
+                        `;
 
                         if (isContact) {
                             thoughtItems.push({
                                 cat: 'near',
-                                color: '#f59e0b',
-                                icon: '🔥',
-                                tag: 'TEMASTA (TEYİT BEKLENİYOR)',
-                                tagClass: 'tag-vol',
-                                title: `🔥 ${cleanS} • ${c.targetName} SEVİYESİNDE TAM TEMAS! (${nowStr})`,
-                                text: `Fiyat şu an <b>$${Number(c.price) >= 1 ? Number(c.price).toFixed(4) : Number(c.price).toFixed(6)}</b> ile <b>${c.targetName} ($${Number(c.targetPrice) >= 1 ? Number(c.targetPrice).toFixed(4) : Number(c.targetPrice).toFixed(6)})</b> seviyesine tam temas halinde.<br>
-                                <div style="margin-top:4px; padding:6px 10px; background:rgba(245,158,11,0.08); border-left:3px solid #f59e0b; border-radius:4px;">
-                                    <b>❓ Neden Pozisyona Hemen Girilmedi?</b> Robot seviyeye anlık fitil atılmalarına hemen atlamaz; seviyenin kırıldığını veya sekme aldığını doğrulamak için <b>5M mum kapanışı</b> şarttır. Anlık iğne atıp geri çekilirse bu bir <i>Likidite Tuzağı (Fakeout)</i> olur.<br>
-                                    <b>✅ Hangi Şart Sağlanırsa Girecek?</b> 5 dakikalık mum bu seviyenin üzerinde/altında net gövde kapatırsa VE hacim patlaması en az <b>1.5x</b> teyit verirse anında <b>${c.action}</b> tetiklenecektir.
+                                symbol: cleanS,
+                                color: isVolOk ? '#10b981' : '#f59e0b',
+                                icon: isVolOk ? '🚀' : '🔥',
+                                tag: isVolOk ? 'TEMASTA (HACİM ONAYLI)' : 'TEMASTA (HACİM BEKLENİYOR)',
+                                tagClass: isVolOk ? 'tag-macro' : 'tag-vol',
+                                title: `${isVolOk ? '🚀' : '🔥'} ${cleanS} • ${c.targetName} SEVİYESİNDE TAM TEMAS! (${nowStr})`,
+                                text: `Fiyat şu an <b>$${pPrice}</b> ile <b>${c.targetName} ($${tPrice})</b> seviyesine tam temas halinde.<br>
+                                ${telemetryBar}
+                                <div style="margin-top:4px; padding:6px 10px; background:${isVolOk ? 'rgba(16,185,129,0.08)' : 'rgba(245,158,11,0.08)'}; border-left:3px solid ${isVolOk ? '#10b981' : '#f59e0b'}; border-radius:4px; font-size:12px; line-height:1.45;">
+                                    <b>❓ Durum & Neden Bekliyor?</b> ${isVolOk 
+                                        ? `5M hacim patlaması (${volSurge.toFixed(2)}x) kurumsal girişi onayladı! Fakeout olmaması için <b>5M mum kapanışı</b> bekleniyor; gövde seviye yönünde kapandığı an pozisyon açılacak.` 
+                                        : `Fiyat kilit seviyeye temas etti fakat 5M hacim (${volSurge.toFixed(2)}x), gereken min <b>${minSurge.toFixed(1)}x</b> seviyesinin altında. Sahte kırılıma (Fakeout) kurban gitmemek için kurumsal hacim desteği bekleniyor.`}<br>
+                                    <b>✅ Tetiklenme Şartı:</b> 5M mum kapanışı ve en az <b>${minSurge.toFixed(1)}x</b> hacim sağlandığında anında <b>${c.action}</b> tetiklenecektir.
                                 </div>`
                             });
                         } else if (dist <= 0.85) {
                             thoughtItems.push({
                                 cat: 'near',
+                                symbol: cleanS,
                                 color: '#38bdf8',
                                 icon: '🎯',
                                 tag: 'PUSUDA (YAKLAŞIYOR)',
                                 tagClass: 'tag-autopsy-win',
                                 title: `🎯 ${cleanS} • ${c.targetName} PUSUSU (Kalan Mesafe: %${dist.toFixed(2)})`,
-                                text: `Fiyat ${c.targetName} ($${Number(c.targetPrice) >= 1 ? Number(c.targetPrice).toFixed(4) : Number(c.targetPrice).toFixed(6)}) seviyesine doğru süzülüyor.<br>
-                                <div style="margin-top:4px; padding:6px 10px; background:rgba(56,189,248,0.08); border-left:3px solid #38bdf8; border-radius:4px;">
-                                    <b>⚡ Beklenen Senaryo:</b> Seviyeye ulaşıldığında hacim ve fitil dinamikleri canlı taranacak. Hacim 1.5x ile 3.5x arasında kurumsal ivme yakalarsa pusu anında tetiklenecek. Hacimsiz sarkarsa tuzak sayılarak beklenmeye devam edilecek.
+                                text: `Fiyat ${c.targetName} ($${tPrice}) seviyesine doğru süzülüyor.<br>
+                                ${telemetryBar}
+                                <div style="margin-top:4px; padding:6px 10px; background:rgba(56,189,248,0.08); border-left:3px solid #38bdf8; border-radius:4px; font-size:12px; line-height:1.45;">
+                                    <b>⚡ Beklenen Senaryo:</b> Seviyeye ulaşıldığında hacim ve fitil dinamikleri canlı taranacak. Hacim min ${minSurge.toFixed(1)}x kurumsal ivme yakalarsa pusu anında tetiklenecek. Hacimsiz sarkarsa tuzak sayılarak beklenmeye devam edilecek.
                                 </div>`
                             });
                         }
@@ -3358,13 +3397,15 @@ async function loadAdminMetrics() {
                 const rejections = appState.recent_rejections || [];
                 if (rejections.length > 0) {
                     rejections.slice(-6).reverse().forEach(rej => {
+                        const cleanRej = (rej.symbol || '').replace('/USDT', '').replace('USDT', '').trim();
                         thoughtItems.push({
                             cat: 'rejected',
+                            symbol: cleanRej,
                             color: '#f43f5e',
                             icon: '🛡️',
                             tag: 'GİRECEKTİ AMA GİRMEDİ',
                             tagClass: 'tag-autopsy-loss',
-                            title: `⛔ ${rej.symbol} • ${rej.setup} SİNYALİ ELENDİ (${rej.time})`,
+                            title: `⛔ ${cleanRej} • ${rej.setup} SİNYALİ ELENDİ (${rej.time})`,
                             text: `Robot bu paritede <b>${rej.setup}</b> kurulumunu tespit etti ve işleme girmeyi değerlendirdi.<br>
                             <div style="margin-top:4px; padding:6px 10px; background:rgba(244,63,94,0.08); border-left:3px solid #f43f5e; border-radius:4px;">
                                 <b>🚫 Neden Poz Açılmadı?</b> <span style="color:#fda4af; font-weight:700;">${rej.reason}</span>.<br>
@@ -3391,15 +3432,15 @@ async function loadAdminMetrics() {
                 if (openPosKeys.length > 0) {
                     openPosKeys.forEach(sym => {
                         const pos = openPositions[sym];
-                        const cleanS = sym.replace('/USDT', '');
+                        const cleanS = sym.replace('/USDT', '').replace('USDT', '').trim();
                         const curP = appState.symbols && appState.symbols[sym] ? appState.symbols[sym].price : pos.entry_price;
                         const lev = pos.leverage || 5;
                         const priceDiff = pos.side === 'LONG' ? (curP - pos.entry_price) : (pos.entry_price - curP);
                         const roePct = (priceDiff / pos.entry_price) * lev * 100.0;
                         const isHalf = pos.is_half_closed || pos.tp1_hit;
-                        const tp1Val = pos.tp1 ? Number(pos.tp1).toFixed(4) : '-';
-                        const tp2Val = pos.tp2 ? Number(pos.tp2).toFixed(4) : '-';
-                        const stopVal = pos.hard_stop ? Number(pos.hard_stop).toFixed(4) : '-';
+                        const tp1Val = pos.tp1 ? (typeof formatSmartPrice === 'function' ? formatSmartPrice(pos.tp1) : Number(pos.tp1).toFixed(4)) : '-';
+                        const tp2Val = pos.tp2 ? (typeof formatSmartPrice === 'function' ? formatSmartPrice(pos.tp2) : Number(pos.tp2).toFixed(4)) : '-';
+                        const stopVal = pos.hard_stop ? (typeof formatSmartPrice === 'function' ? formatSmartPrice(pos.hard_stop) : Number(pos.hard_stop).toFixed(4)) : '-';
 
                         let tacticText = '';
                         let tacticTitle = `${cleanS} [${pos.side} ${lev}x] CANLI TAKTİK RAPORU`;
@@ -3414,11 +3455,12 @@ async function loadAdminMetrics() {
                             tacticText = `⚖️ <b>Direnç Test Ediliyor (%${roePct.toFixed(2)} ROE):</b> Fiyat konsolide oluyor. Sert Stop seviyemiz ($${stopVal}) 1.5 ATR dinamik tamponla pozisyonu koruyor. Panik satışı yok, planlanan stop seviyesi korunuyor.`;
                             tagColor = '#f43f5e';
                         } else {
-                            tacticText = `⏳ <b>Giriş Bölgesi Testi (%${roePct.toFixed(2)} ROE):</b> Pozisyon taze açıldı ($${pos.entry_price}). 1.5 ATR risk koruması aktif. 5M mum hacmi takip ediliyor.`;
+                            tacticText = `⏳ <b>Giriş Bölgesi Testi (%${roePct.toFixed(2)} ROE):</b> Pozisyon taze açıldı ($${typeof formatSmartPrice === 'function' ? formatSmartPrice(pos.entry_price) : pos.entry_price}). 1.5 ATR risk koruması aktif. 5M mum hacmi takip ediliyor.`;
                         }
 
                         thoughtItems.push({
                             cat: 'positions',
+                            symbol: cleanS,
                             color: tagColor,
                             icon: isHalf ? '🛡️' : '⚡',
                             tag: isHalf ? 'BREAKEVEN KOŞUSU' : 'AKTİF TAKTİK',
@@ -3444,7 +3486,7 @@ async function loadAdminMetrics() {
                 if (historyTrades.length > 0) {
                     const recentTrades = historyTrades.slice(-4).reverse();
                     recentTrades.forEach(tr => {
-                        const cleanS = tr.symbol.replace('/USDT', '');
+                        const cleanS = tr.symbol.replace('/USDT', '').replace('USDT', '').trim();
                         const pnl = Number(tr.net_pnl || 0);
                         const roe = Number(tr.roe_pct || 0);
                         const isWin = pnl >= 0;
@@ -3464,13 +3506,15 @@ async function loadAdminMetrics() {
                         } else if (reason.includes('Breakeven')) {
                             autopsyText = `🛡️ <b>Sıfır Kayıp Kalkanı:</b> Fiyat ilk kâr alımından sonra terse döndü; ancak Breakeven kalkanı devreye girerek kalan pozisyonu başabaş noktasında kapattı. Anapara kuruşu kuruşuna korundu.`;
                         } else if (reason.includes('Sert Stop')) {
-                            autopsyText = `🛑 <b>Disiplinli Risk Kontrolü:</b> Beklenen seviye tutunamadı ve Sert Stop (${tr.hard_stop ? '$' + Number(tr.hard_stop).toFixed(4) : ''}) devreye girerek zararı küçük bir dilimde kesti (-${Math.abs(pnl).toFixed(2)}$). Sermaye olası derin bir çöküşten korundu.`;
+                            const stopStr = tr.hard_stop ? '$' + (typeof formatSmartPrice === 'function' ? formatSmartPrice(tr.hard_stop) : Number(tr.hard_stop).toFixed(4)) : '';
+                            autopsyText = `🛑 <b>Disiplinli Risk Kontrolü:</b> Beklenen seviye tutunamadı ve Sert Stop (${stopStr}) devreye girerek zararı küçük bir dilimde kesti (-${Math.abs(pnl).toFixed(2)}$). Sermaye olası derin bir çöküşten korundu.`;
                         } else {
                             autopsyText = `ℹ️ <b>Kapanış Notu:</b> ${reason}. Net sonuç: ${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}$ (${roe >= 0 ? '+' : ''}${roe.toFixed(1)}% ROE).`;
                         }
 
                         thoughtItems.push({
                             cat: 'autopsy',
+                            symbol: cleanS,
                             color: autopsyColor,
                             icon: isWin ? '🎉' : '🛡️',
                             tag: autopsyTag,
@@ -3506,20 +3550,28 @@ async function loadAdminMetrics() {
                         feed.innerHTML = `<div style="text-align:center; padding:20px; color:#64748b; font-size:12.5px;">Bu kategoride henüz yeni bir akıl yürütme notu bulunmuyor.</div>`;
                         return;
                     }
-                    feed.innerHTML = filtered.map(t => `
+                    feed.innerHTML = filtered.map(t => {
+                        const cleanSym = t.symbol ? t.symbol.replace('/USDT', '').replace('USDT', '').trim() : '';
+                        const chartBtn = cleanSym ? `
+                            <button class="btn-open-chart" onclick="openTradingViewModal('${cleanSym}')" title="${cleanSym} Canlı Göstergeli Grafiği Aç" style="padding:2px 8px; font-size:11px; margin-left:auto; flex-shrink:0;">
+                                📈 Grafik
+                            </button>
+                        ` : '';
+                        return `
                         <div class="ai-thought-item" style="border-left-color: ${t.color};">
-                            <span style="font-size:20px;">${t.icon}</span>
-                            <div style="flex:1;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:6px;">
-                                    <div style="font-weight:800; color:${t.color}; font-size:13px; font-family:'JetBrains Mono', monospace;">
+                            <span style="font-size:20px; flex-shrink:0;">${t.icon}</span>
+                            <div style="flex:1; min-width:0;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
+                                    <div style="font-weight:800; color:${t.color}; font-size:13px; font-family:'JetBrains Mono', monospace; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                                         <span class="ai-thought-tag ${t.tagClass}">${t.tag}</span>
-                                        ${t.title}
+                                        <span>${t.title}</span>
                                     </div>
+                                    ${chartBtn}
                                 </div>
                                 <div style="font-size:12.5px; color:#cbd5e1; line-height:1.5;">${t.text}</div>
                             </div>
-                        </div>
-                    `).join('');
+                        </div>`;
+                    }).join('');
                 };
 
                 window.renderAiThoughts();
@@ -3538,31 +3590,83 @@ async function loadAdminMetrics() {
                     `;
                 } else {
                     nearGrid.innerHTML = top5.map(c => {
+                        const cleanSym = c.symbol.replace('/USDT', '').replace('USDT', '').trim();
                         const distText = c.distPct < 0.01 ? '🎯 Seviyede (Temasta)' : `%${c.distPct.toFixed(2)} Kaldı`;
                         const badgeClass = c.distPct < 0.01 ? 'dist-super-close' : (c.distPct < 0.5 ? 'dist-super-close' : 'dist-close');
                         const isContact = c.distPct < 0.25;
-                        const reasonBox = `
-                            <div style="background:rgba(0,0,0,0.35); border:1px dashed ${isContact ? 'rgba(245,158,11,0.35)' : 'rgba(255,255,255,0.08)'}; border-radius:6px; padding:6px 8px; font-size:11px; color:#cbd5e1; margin:6px 0 8px 0; line-height:1.45;">
-                                <span style="color:${isContact ? '#f59e0b' : '#38bdf8'}; font-weight:800;">
-                                    ${isContact ? '⚠️ SEVİYEDE (TEMASTA):' : '🎯 PUSUDA (YAKLAŞIYOR):'}
-                                </span> 
-                                ${isContact 
-                                    ? '5M mum kapanış gövdesi ve min 1.5x hacim bekleniyor. Sadece fitil atarsa Fakeout (tuzak) sayılıp girilmeyecek.' 
-                                    : 'Kilit seviyeye %' + c.distPct.toFixed(2) + ' kaldı. 1.5x hacim ivmesi oluşursa tetiklenecek.'}
+                        const volSurge = c.volSurge !== undefined ? c.volSurge : 1.0;
+                        const minVolSurge = c.minVolSurge !== undefined ? c.minVolSurge : 1.5;
+                        const isVolOk = volSurge >= minVolSurge;
+                        const isTop80 = c.isTop80 !== false;
+                        const atrPct = c.atrPct !== undefined ? c.atrPct : 1.2;
+
+                        let volBadgeColor = '#ef4444';
+                        let volStatusText = '🔻 Düşük Hacim';
+                        if (isVolOk) {
+                            volBadgeColor = '#10b981';
+                            volStatusText = '✓ Hacim Onaylı';
+                        } else if (volSurge >= 1.0) {
+                            volBadgeColor = '#f59e0b';
+                            volStatusText = '⏳ İvme Bekleniyor';
+                        }
+
+                        const dynamicTelemetryBox = `
+                            <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.07); border-radius:8px; padding:7px 9px; margin:6px 0;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:11px;">
+                                    <span style="color:#94a3b8; font-weight:700;">⚡ 5M Hacim Patlaması:</span>
+                                    <span style="font-family:'JetBrains Mono',monospace; font-weight:800; color:${volBadgeColor}; display:flex; align-items:center; gap:4px;">
+                                        <span>${volSurge.toFixed(2)}x</span>
+                                        <span style="color:#64748b; font-size:10px;">/ Min ${minVolSurge.toFixed(1)}x</span>
+                                        <span style="font-size:10px; padding:1px 5px; border-radius:4px; background:${volBadgeColor}22; border:1px solid ${volBadgeColor}55;">${volStatusText}</span>
+                                    </span>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; font-size:10.5px;">
+                                    <span style="color:#94a3b8;">
+                                        📊 24S Dilim: <b style="color:${isTop80 ? '#38bdf8' : '#cbd5e1'}; font-family:'JetBrains Mono',monospace;">${isTop80 ? '✓ Top %80 Hacimli' : '⚠️ Top %20 Altı (Sığ)'}</b>
+                                    </span>
+                                    <span style="color:#94a3b8;">
+                                        🌊 ATR: <b style="color:#c084fc; font-family:'JetBrains Mono',monospace;">%${atrPct.toFixed(2)}</b>
+                                    </span>
+                                </div>
                             </div>
                         `;
+
+                        const reasonBox = `
+                            <div style="background:rgba(0,0,0,0.35); border:1px dashed ${isContact ? (isVolOk ? 'rgba(16,185,129,0.5)' : 'rgba(245,158,11,0.5)') : 'rgba(56,189,248,0.25)'}; border-radius:6px; padding:7px 9px; font-size:11px; color:#cbd5e1; margin-bottom:8px; line-height:1.45;">
+                                <div style="font-weight:800; margin-bottom:2px; color:${isContact ? (isVolOk ? '#10b981' : '#f59e0b') : '#38bdf8'};">
+                                    ${isContact 
+                                        ? (isVolOk ? '🟢 SEVİYEDE & TÜM ŞARTLAR HAZIR:' : '⚠️ SEVİYEDE (HACİM TEYİDİ BEKLENİYOR):') 
+                                        : '🎯 PUSUDA (SEVİYEYE YAKLAŞIYOR):'}
+                                </div>
+                                ${isContact 
+                                    ? (isVolOk 
+                                        ? `5M hacim patlaması (${volSurge.toFixed(2)}x) kurumsal girişi onayladı! Fakeout olmaması için 5M mum kapanışı bekleniyor; gövde seviye yönünde kapandığı an pozisyon açılacak.` 
+                                        : `Fiyat kilit seviyeye temas etti fakat anlık 5M hacim (${volSurge.toFixed(2)}x), gereken min <b>${minVolSurge.toFixed(1)}x</b> seviyesinin altında. Sahte kırılıma (Fakeout) kurban gitmemek için kurumsal hacim desteği bekleniyor.`)
+                                    : `Kilit seviyeye <b>%${c.distPct.toFixed(2)}</b> kaldı. Seviyeye ulaşıldığında min <b>${minVolSurge.toFixed(1)}x</b> hacim patlaması ve 5M mum kapanış gövdesiyle tetiklenecek.`}
+                            </div>
+                        `;
+
+                        const curPStr = typeof formatSmartPrice === 'function' ? formatSmartPrice(c.price) : Number(c.price).toFixed(4);
+                        const tarPStr = typeof formatSmartPrice === 'function' ? formatSmartPrice(c.targetPrice) : Number(c.targetPrice).toFixed(4);
+
                         return `
                         <div class="near-card">
-                            <div class="near-card-head">
-                                <span class="near-sym">${c.symbol}</span>
-                                <span class="near-dist-badge ${badgeClass}" title="Fiyat şu an kilit seviyeye temas ediyor. 5M mum kapanış teyidi bekleniyor.">${distText}</span>
+                            <div class="near-card-head" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span class="near-sym" onclick="openTradingViewModal('${cleanSym}')" style="cursor:pointer;" title="${cleanSym} Grafiğini Aç">${c.symbol}</span>
+                                    <button class="btn-open-chart" onclick="openTradingViewModal('${cleanSym}')" title="${cleanSym} Canlı Göstergeli Grafiği Aç" style="padding:2px 8px; font-size:11px;">📈 Grafik</button>
+                                </div>
+                                <span class="near-dist-badge ${badgeClass}" title="Kilit seviyeye olan anlık mesafe">${distText}</span>
                             </div>
-                            <div style="font-size:12px; color:#94a3b8; margin-bottom:4px;">
-                                Anlık: <b style="color:#fff;">$${Number(c.price) >= 1 ? Number(c.price).toFixed(4) : Number(c.price).toFixed(6)}</b> ➔ Hedef: <b style="color:var(--blue);">$${Number(c.targetPrice) >= 1 ? Number(c.targetPrice).toFixed(4) : Number(c.targetPrice).toFixed(6)}</b>
+                            <div style="font-size:12px; color:#94a3b8; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+                                <span>Anlık: <b style="color:#fff; font-family:'JetBrains Mono',monospace;">$${curPStr}</b></span>
+                                <span style="color:#64748b;">➔</span>
+                                <span>Hedef: <b style="color:var(--blue); font-family:'JetBrains Mono',monospace;">$${tarPStr}</b></span>
                             </div>
                             <div style="font-size:11.5px; font-weight:700; color:var(--yellow); margin-bottom:4px;">
                                 ${c.action}
                             </div>
+                            ${dynamicTelemetryBox}
                             ${reasonBox}
                             <div style="font-size:11px; color:#64748b; display:flex; justify-content:space-between; align-items:center;">
                                 <span>${c.bias}</span>
@@ -4816,6 +4920,8 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
 
         function openTradingViewModal(cleanSym) {
             try {
+                if (!cleanSym) return;
+                cleanSym = cleanSym.replace('/USDT', '').replace('USDT', '').trim();
                 currentActiveChartSym = cleanSym;
                 const modal = document.getElementById('tv-modal-overlay');
                 if (!modal) return;
@@ -4824,9 +4930,17 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 const coinData = (appState.symbols && (appState.symbols[fullSym] || appState.symbols[cleanSym])) ? (appState.symbols[fullSym] || appState.symbols[cleanSym]) : {};
                 const levels = coinData.levels || {};
                 const cam = levels.camarilla || {};
-                const price = Number(livePrices[fullSym] || coinData.price || 0);
+                const price = Number((livePrices && (livePrices[fullSym] || livePrices[cleanSym])) || coinData.price || 0);
                 const hasPos = appState.open_positions && appState.open_positions[fullSym];
                 const intel = generateDetailedIntelligence(fullSym, price, cam, levels, hasPos);
+
+                const met = coinData.metrics || {};
+                const volSurge = Number(met.vol_surge !== undefined ? met.vol_surge : 1.0);
+                const majorsList = ["BTC", "ETH", "SOL", "BNB", "XRP", "ADA"];
+                const minVolSurge = Number(met.min_vol_surge !== undefined ? met.min_vol_surge : (majorsList.includes(cleanSym) ? 1.2 : 1.5));
+                const isVolOk = volSurge >= minVolSurge;
+                const isTop80 = met.is_top_80 !== false;
+                const atrPct = Number(met.atr_pct !== undefined ? met.atr_pct : 1.2);
 
                 document.getElementById('tv-modal-title').innerText = `${cleanSym}/USDT PERPETUAL`;
                 
@@ -4855,6 +4969,17 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                         <div style="font-size:11px; color:var(--text-muted); font-weight:800; text-transform:uppercase;">CANLI PİYASA FİYATI</div>
                         <div style="font-size:22px; font-weight:800; color:#fff; font-family:'JetBrains Mono', monospace; margin-top:2px;">
                             $${fmtLvl(price)}
+                        </div>
+                        <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; font-size:10.5px; font-family:'JetBrains Mono',monospace;">
+                            <span style="background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:4px; border:1px solid ${isVolOk ? 'rgba(16,185,129,0.35)' : 'rgba(245,158,11,0.35)'}; color:${isVolOk ? '#10b981' : '#f59e0b'}; font-weight:700;">
+                                ⚡ Hacim: ${volSurge.toFixed(2)}x (Min ${minVolSurge.toFixed(1)}x)
+                            </span>
+                            <span style="background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:${isTop80 ? '#38bdf8' : '#94a3b8'};">
+                                📊 ${isTop80 ? '✓ Top %80' : '⚠️ Top %20 Altı'}
+                            </span>
+                            <span style="background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:#c084fc;">
+                                🌊 ATR: %${atrPct.toFixed(2)}
+                            </span>
                         </div>
                     </div>
                     <div class="analysis-box" style="margin:0;">
@@ -5818,9 +5943,16 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 if not lev or not lev.get("camarilla"):
                     market_data.recalculate_levels(s)
                     lev = market_data.levels.get(s, {})
+                met = market_data.get_symbol_metrics(s) if hasattr(market_data, 'get_symbol_metrics') else {
+                    "vol_surge": 1.0,
+                    "min_vol_surge": 1.2 if s in ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "ADA/USDT"] else 1.5,
+                    "atr_pct": 1.2,
+                    "is_top_80": True
+                }
                 symbols_data[s] = {
                     "price": cur_p,
-                    "levels": lev
+                    "levels": lev,
+                    "metrics": met
                 }
             
             all_coins = []
@@ -5871,6 +6003,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "symbols": symbols_data,
                 "all_coins": all_coins,
                 "recent_rejections": getattr(strategy, "recent_rejections", [])[-20:] if strategy else [],
+                "setup_attempts": getattr(strategy, "setup_attempts", {}) if strategy else {},
                 "system_health": sys_health
             })
         except Exception as e:

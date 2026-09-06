@@ -5,6 +5,7 @@ from datetime import datetime, timezone, timedelta
 import aiohttp
 import ccxt.async_support as ccxt
 import pandas as pd
+import numpy as np
 from config import LOOKBACK_DAYS_AVWAP
 from indicators import calculate_camarilla_pivots, calculate_anchored_vwap, calculate_volume_profile, get_tradingview_naked_lines
 
@@ -20,6 +21,7 @@ class MarketDataManager:
         self.candles_5m = {s: pd.DataFrame() for s in all_symbols}
         self.candles_1d = {s: pd.DataFrame() for s in all_symbols}
         self.levels = {s: {} for s in all_symbols}
+        self.symbol_metrics = {s: {} for s in all_symbols}
         self.current_prices = {s: 0.0 for s in all_symbols}
         self.on_tick_callback = None
         self.on_candle_close_callback = None
@@ -266,6 +268,17 @@ class MarketDataManager:
                 "above_nval": current_p * 1.025,
                 "below_nval": current_p * 0.975
             }
+            majors = {"BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "ADA/USDT"}
+            if not hasattr(self, 'symbol_metrics'):
+                self.symbol_metrics = {}
+            self.symbol_metrics[symbol] = {
+                "vol_surge": 1.0,
+                "min_vol_surge": 1.2 if symbol in majors else 1.5,
+                "atr_pct": 1.2,
+                "is_top_80": True,
+                "cur_vol": 0.0,
+                "avg_vol": 0.0
+            }
             return
 
         # === CAMARILLA PIVOT (TradingView 1D UTC 00:00 Tam Uyumu) ===
@@ -317,6 +330,67 @@ class MarketDataManager:
             "above_nval": float(naked_lines.get("above_nval", current_p * 1.025)),
             "below_nval": float(naked_lines.get("below_nval", current_p * 0.975))
         }
+
+        # === DYNAMIC TELEMETRY & VOLUME METRICS ===
+        majors = {"BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "ADA/USDT"}
+        min_vol_surge = 1.2 if symbol in majors else 1.5
+        vol_surge = 1.0
+        atr_pct = 1.2
+        is_top_80 = True
+        cur_vol = 0.0
+        avg_vol = 0.0
+
+        if not df_5m.empty and len(df_5m) >= 14:
+            try:
+                sub_tr = df_5m.iloc[-15:]
+                h, l, cl = sub_tr['high'], sub_tr['low'], sub_tr['close']
+                tr = np.maximum(h - l, np.maximum((h - cl.shift()).abs(), (l - cl.shift()).abs()))
+                atr = float(tr.iloc[1:].mean())
+                if current_p > 0:
+                    atr_pct = round((atr / current_p) * 100.0, 2)
+            except Exception:
+                atr_pct = 1.2
+
+        if not df_5m.empty and len(df_5m) >= 20:
+            try:
+                cur_vol = float(df_5m['volume'].iloc[-1])
+                avg_vol = float(df_5m['volume'].iloc[-21:-1].mean())
+                vol_surge = round(cur_vol / avg_vol, 2) if avg_vol > 0 else 1.0
+                if len(df_5m) >= 288:
+                    vol_80th = float(df_5m['volume'].iloc[-288:-1].quantile(0.80))
+                else:
+                    vol_80th = float(df_5m['volume'].iloc[:-1].quantile(0.80)) if len(df_5m) > 1 else 0.0
+                is_top_80 = bool(cur_vol >= vol_80th)
+            except Exception:
+                vol_surge = 1.0
+                is_top_80 = True
+
+        if not hasattr(self, 'symbol_metrics'):
+            self.symbol_metrics = {}
+        self.symbol_metrics[symbol] = {
+            "vol_surge": vol_surge,
+            "min_vol_surge": min_vol_surge,
+            "atr_pct": atr_pct,
+            "is_top_80": is_top_80,
+            "cur_vol": cur_vol,
+            "avg_vol": avg_vol
+        }
+
+    def get_symbol_metrics(self, symbol: str) -> dict:
+        if not hasattr(self, 'symbol_metrics'):
+            self.symbol_metrics = {}
+        if symbol in self.symbol_metrics and self.symbol_metrics[symbol]:
+            return self.symbol_metrics[symbol]
+        self.recalculate_levels(symbol)
+        majors = {"BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "ADA/USDT"}
+        return self.symbol_metrics.get(symbol, {
+            "vol_surge": 1.0,
+            "min_vol_surge": 1.2 if symbol in majors else 1.5,
+            "atr_pct": 1.2,
+            "is_top_80": True,
+            "cur_vol": 0.0,
+            "avg_vol": 0.0
+        })
 
     async def poll_all_candles_once(self):
         """100 Paritenin son kapanmis 5M mumlarini aninda REST uzerinden paralel tara ve stratejiye ilet."""
