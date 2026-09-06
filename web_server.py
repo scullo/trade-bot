@@ -1185,14 +1185,162 @@ HTML_PAGE = """
             box-shadow: 0 0 12px #00f2fe;
             animation: pulse 0.8s infinite alternate;
         }
-        /* ⚔️ MAKRO LİKİDİTE GÜÇ DENGESİ & ÇARPIŞMA CEPHESİ */
+        /* ⚔️ VALKYRIE CANLI LİKİDİTE SAVAŞI: BOĞA VS AYI CEPHESİ ARENASI */
         .regime-battle-card {
-            background: rgba(15, 23, 42, 0.45);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.75), rgba(10, 15, 29, 0.85));
+            border: 1px solid rgba(0, 242, 254, 0.25);
+            border-radius: 16px;
+            padding: 14px 18px;
+            margin: 12px 0 16px 0;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            position: relative;
+            overflow: hidden;
+        }
+        .regime-battle-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #0ecb81, #00f2fe, #ff4757);
+        }
+        .regime-battle-top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .regime-battle-title {
+            font-size: 13px;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #ffffff;
+            letter-spacing: 0.3px;
+        }
+        .btn-battle-toggle {
+            background: rgba(0, 242, 254, 0.08);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            color: var(--cyan);
+            font-size: 11px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .btn-battle-toggle:hover {
+            background: rgba(0, 242, 254, 0.18);
+            border-color: var(--cyan);
+            box-shadow: 0 0 12px rgba(0, 242, 254, 0.3);
+        }
+        .regime-arena-canvas-wrap {
+            position: relative;
+            width: 100%;
+            height: 140px;
             border-radius: 12px;
-            padding: 12px 16px;
-            margin: 10px 0 16px 0;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+            background: radial-gradient(circle at 50% 50%, #0d1527 0%, #050811 100%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.9);
+            margin-bottom: 10px;
+        }
+        #regime-battle-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .regime-arena-hud-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: stretch;
+            padding: 10px 16px;
+        }
+        .hud-side-box {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 2;
+        }
+        .hud-side-box.bull { text-align: left; }
+        .hud-side-box.bear { text-align: right; }
+        .hud-army-name {
+            font-size: 11.5px;
+            font-weight: 900;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .hud-side-box.bull .hud-army-name {
+            color: #0ecb81;
+            text-shadow: 0 0 10px rgba(14, 203, 129, 0.6);
+        }
+        .hud-side-box.bear .hud-army-name {
+            color: #ff4757;
+            text-shadow: 0 0 10px rgba(255, 71, 87, 0.6);
+            justify-content: flex-end;
+        }
+        .hud-tag-taarruz {
+            font-size: 9px;
+            background: rgba(14, 203, 129, 0.15);
+            border: 1px solid #0ecb81;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .hud-tag-savunma {
+            font-size: 9px;
+            background: rgba(255, 71, 87, 0.15);
+            border: 1px solid #ff4757;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .hud-power-stat {
+            font-size: 26px;
+            font-weight: 900;
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1;
+        }
+        .hud-side-box.bull .hud-power-stat {
+            color: #ffffff;
+            text-shadow: 0 0 16px rgba(14, 203, 129, 0.8);
+        }
+        .hud-side-box.bear .hud-power-stat {
+            color: #ffffff;
+            text-shadow: 0 0 16px rgba(255, 71, 87, 0.8);
+        }
+        .hud-parite-count {
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            color: #94a3b8;
+            font-weight: 700;
+        }
+        .hud-center-neutral {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 10.5px;
+            font-family: 'JetBrains Mono', monospace;
+            color: #cbd5e1;
+            backdrop-filter: blur(4px);
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
         .regime-battle-header {
             display: flex;
@@ -2225,30 +2373,73 @@ HTML_PAGE = """
                 </div>
             </div>
 
-            <!-- ⚔️ MAKRO LİKİDİTE GÜÇ DENGESİ (CANLI BOĞA VS AYI MÜCADELESİ) -->
+            <!-- ⚔️ VALKYRIE CANLI LİKİDİTE SAVAŞI: BOĞA VS AYI CEPHESİ (CANLI ARENA) -->
             <div class="regime-battle-card">
-                <div class="regime-battle-header">
-                    <div class="regime-side-bull">
-                        <span>🐂 BOĞA HAKİMİYETİ:</span>
-                        <b id="regime-bull-text">%0 (0 Parite)</b>
+                <div class="regime-battle-top-bar">
+                    <div class="regime-battle-title">
+                        <span style="font-size:16px;">⚔️</span>
+                        <span>VALKYRIE LİKİDİTE SAVAŞI: BOĞA VS AYI CEPHESİ</span>
+                        <span style="font-size:11px; color:#94a3b8; font-weight:700;">(100 PARİTE 1H MAKRO)</span>
                     </div>
-                    <div class="regime-side-range">
-                        <span>⚪ YATAY KONSOLİDASYON:</span>
-                        <b id="regime-range-text">%0 (0 Parite)</b>
-                    </div>
-                    <div class="regime-side-bear">
-                        <span>🐻 AYI BASKISI:</span>
-                        <b id="regime-bear-text">%0 (0 Parite)</b>
+                    <button id="btn-toggle-battle-view" class="btn-battle-toggle" onclick="toggleBattleView()" title="Görünüm Modunu Değiştir">
+                        📊 Sade Çubuğa Geç
+                    </button>
+                </div>
+
+                <!-- 1. SİNEMATİK ARENA GÖRÜNÜMÜ -->
+                <div id="regime-arena-wrap" class="regime-arena-canvas-wrap">
+                    <canvas id="regime-battle-canvas"></canvas>
+                    <div class="regime-arena-hud-overlay">
+                        <div class="hud-side-box bull">
+                            <div class="hud-army-name">
+                                <span>🐂 BOĞA ORDUSU</span>
+                                <span class="hud-tag-taarruz">TAARRUZ</span>
+                            </div>
+                            <div class="hud-power-stat" id="hud-bull-pct">%0</div>
+                            <div class="hud-parite-count" id="hud-bull-count">0 Parite Kırılımda</div>
+                        </div>
+
+                        <div class="hud-center-neutral" id="hud-neutral-badge">
+                            <span>⚪ TAMPON BÖLGE: %0 YATAY</span>
+                        </div>
+
+                        <div class="hud-side-box bear">
+                            <div class="hud-army-name">
+                                <span class="hud-tag-savunma">SAVUNMA</span>
+                                <span>🐻 AYI ORDUSU</span>
+                            </div>
+                            <div class="hud-power-stat" id="hud-bear-pct">%0</div>
+                            <div class="hud-parite-count" id="hud-bear-count">0 Parite Baskıda</div>
+                        </div>
                     </div>
                 </div>
-                <div class="regime-battle-track">
-                    <div class="regime-bar-bull" id="regime-bar-bull" style="width: 33.3%;"></div>
-                    <div class="regime-bar-range" id="regime-bar-range" style="width: 33.4%;"></div>
-                    <div class="regime-bar-bear" id="regime-bar-bear" style="width: 33.3%;"></div>
-                    <div class="regime-clash-spark" id="regime-clash-spark" style="left: 33.3%;"></div>
+
+                <!-- 2. KOMPAKT ÇUBUK GÖRÜNÜMÜ -->
+                <div id="regime-simple-wrap" style="display:none;">
+                    <div class="regime-battle-header">
+                        <div class="regime-side-bull">
+                            <span>🐂 BOĞA HAKİMİYETİ:</span>
+                            <b id="regime-bull-text">%0 (0 Parite)</b>
+                        </div>
+                        <div class="regime-side-range">
+                            <span>⚪ YATAY KONSOLİDASYON:</span>
+                            <b id="regime-range-text">%0 (0 Parite)</b>
+                        </div>
+                        <div class="regime-side-bear">
+                            <span>🐻 AYI BASKISI:</span>
+                            <b id="regime-bear-text">%0 (0 Parite)</b>
+                        </div>
+                    </div>
+                    <div class="regime-battle-track">
+                        <div class="regime-bar-bull" id="regime-bar-bull" style="width: 33.3%;"></div>
+                        <div class="regime-bar-range" id="regime-bar-range" style="width: 33.4%;"></div>
+                        <div class="regime-bar-bear" id="regime-bar-bear" style="width: 33.3%;"></div>
+                        <div class="regime-clash-spark" id="regime-clash-spark" style="left: 33.3%;"></div>
+                    </div>
                 </div>
+
                 <div class="regime-battle-footer">
-                    <span style="color:#00f2fe; font-weight:800;">⚡ PİYASA OKUMASI:</span>
+                    <span style="color:#00f2fe; font-weight:800; flex-shrink:0;">⚡ CEBHE RAPORU:</span>
                     <span id="regime-commentary" style="color:#e2e8f0;">100 paritede 1H makro likidite dengesi hesaplanıyor...</span>
                 </div>
             </div>
@@ -3203,10 +3394,12 @@ async function loadAdminMetrics() {
         // VALKYRIE QUANT COCKPIT 3.0 - MAIN TAB SWITCHING & AI ENGINE
         // =========================================================================
         let currentActiveMainTab = 'cockpit';
+        window.currentActiveMainTab = currentActiveMainTab;
 
         function switchMainTab(tabName) {
             if (tabName === 'history') tabName = 'ledger';
             currentActiveMainTab = tabName;
+            window.currentActiveMainTab = tabName;
             
             const tabButtons = {
                 'cockpit': document.getElementById('tab-btn-cockpit'),
@@ -3247,6 +3440,7 @@ async function loadAdminMetrics() {
 
             if (tabName === 'cockpit') {
                 renderCockpitView();
+                if (window.ValkyrieBattleEngine) ValkyrieBattleEngine.resize();
             } else if (tabName === 'positions') {
                 renderPositions();
             } else if (tabName === 'radar') {
@@ -3268,6 +3462,390 @@ async function loadAdminMetrics() {
                 }
             }, 100);
         }
+
+        // =========================================================================
+        // ⚔️ VALKYRIE CANLI LİKİDİTE SAVAŞI (BATTLE ARENA) ENGINE 60 FPS
+        // =========================================================================
+        var currentBattleMode = 'arena'; // 'arena' or 'simple'
+        window.currentBattleMode = currentBattleMode;
+
+        function restoreBattleViewPreference() {
+            try {
+                const saved = localStorage.getItem('valkyrie_battle_mode');
+                if (saved === 'simple' || saved === 'arena') {
+                    setBattleViewMode(saved);
+                }
+            } catch (e) {}
+        }
+
+        function setBattleViewMode(mode) {
+            currentBattleMode = mode;
+            window.currentBattleMode = mode;
+            const arenaWrap = document.getElementById('regime-arena-wrap');
+            const simpleWrap = document.getElementById('regime-simple-wrap');
+            const btn = document.getElementById('btn-toggle-battle-view');
+            
+            if (currentBattleMode === 'simple') {
+                if (arenaWrap) arenaWrap.style.display = 'none';
+                if (simpleWrap) simpleWrap.style.display = 'block';
+                if (btn) btn.innerHTML = '⚔️ Sinematik Arenaya Geç';
+            } else {
+                if (arenaWrap) arenaWrap.style.display = 'block';
+                if (simpleWrap) simpleWrap.style.display = 'none';
+                if (btn) btn.innerHTML = '📊 Sade Çubuğa Geç';
+                if (window.ValkyrieBattleEngine) ValkyrieBattleEngine.resize();
+            }
+            try {
+                localStorage.setItem('valkyrie_battle_mode', currentBattleMode);
+            } catch (e) {}
+        }
+
+        function toggleBattleView() {
+            setBattleViewMode(currentBattleMode === 'arena' ? 'simple' : 'arena');
+        }
+
+        const ValkyrieBattleEngine = (function() {
+            let canvas, ctx;
+            let width = 0, height = 0;
+            let dpr = window.devicePixelRatio || 1;
+            let animId = null;
+
+            let bullPct = 40, bearPct = 10, rangePct = 50;
+            let lastRatio = 0.5;
+            let currentClashX = 0;
+            let targetClashX = 0;
+
+            const particles = [];
+            const MAX_PARTICLES = 60;
+            const sparks = [];
+
+            function init() {
+                canvas = document.getElementById('regime-battle-canvas');
+                if (!canvas) return;
+                ctx = canvas.getContext('2d');
+                resize();
+                window.addEventListener('resize', resize);
+
+                // Init particles
+                for (let i = 0; i < MAX_PARTICLES; i++) {
+                    resetParticle(i);
+                }
+
+                currentClashX = width * lastRatio;
+                targetClashX = currentClashX;
+
+                startLoop();
+            }
+
+            function resize() {
+                if (!canvas) return;
+                const rect = canvas.getBoundingClientRect();
+                width = rect.width || (canvas.parentElement ? canvas.parentElement.clientWidth : 0) || 800;
+                height = rect.height || (canvas.parentElement ? canvas.parentElement.clientHeight : 0) || 145;
+                if (width <= 0) width = 800;
+                if (height <= 0) height = 145;
+                dpr = window.devicePixelRatio || 1;
+                canvas.width = Math.floor(width * dpr);
+                canvas.height = Math.floor(height * dpr);
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+                targetClashX = width * lastRatio;
+                if (!currentClashX) currentClashX = targetClashX;
+            }
+
+            function resetParticle(idx) {
+                const isBull = idx % 2 === 0;
+                particles[idx] = {
+                    isBull: isBull,
+                    x: isBull ? Math.random() * (width * 0.35) : width - Math.random() * (width * 0.35),
+                    y: 18 + Math.random() * (height - 36),
+                    vx: isBull ? (1.5 + Math.random() * 2.5) : -(1.5 + Math.random() * 2.5),
+                    vy: (Math.random() - 0.5) * 0.8,
+                    size: 1.5 + Math.random() * 2.5,
+                    alpha: 0.3 + Math.random() * 0.7,
+                    life: Math.random() * 100
+                };
+            }
+
+            function addSparks(cx, cy, count) {
+                for (let i = 0; i < count; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const spd = 2 + Math.random() * 5;
+                    sparks.push({
+                        x: cx,
+                        y: cy,
+                        vx: Math.cos(angle) * spd,
+                        vy: Math.sin(angle) * spd,
+                        color: Math.random() > 0.5 ? '#00f2fe' : (Math.random() > 0.5 ? '#ffffff' : '#fbbf24'),
+                        alpha: 1.0,
+                        size: 1 + Math.random() * 2,
+                        decay: 0.03 + Math.random() * 0.04
+                    });
+                }
+            }
+
+            function setRegimeData(b, r, be) {
+                bullPct = b;
+                rangePct = r;
+                bearPct = be;
+                const total = (b + be) || 1;
+                // Ratio between 0.20 and 0.80 so clash point remains in view
+                lastRatio = Math.max(0.20, Math.min(0.80, 0.20 + (b / total) * 0.60));
+                targetClashX = width * lastRatio;
+            }
+
+            // Stylized cybernetic beast avatar
+            function drawBeast(isBull, x, y, size) {
+                ctx.save();
+                ctx.translate(x, y);
+                if (!isBull) ctx.scale(-1, 1);
+
+                ctx.shadowBlur = 18;
+                ctx.shadowColor = isBull ? 'rgba(14, 203, 129, 0.8)' : 'rgba(255, 71, 87, 0.8)';
+                ctx.strokeStyle = isBull ? '#0ecb81' : '#ff4757';
+                ctx.fillStyle = isBull ? 'rgba(14, 203, 129, 0.12)' : 'rgba(255, 71, 87, 0.12)';
+                ctx.lineWidth = 2.2;
+                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
+
+                if (isBull) {
+                    // Futuristic Bull Head & Horns
+                    ctx.beginPath();
+                    // Horns
+                    ctx.moveTo(size * 0.4, -size * 0.5);
+                    ctx.quadraticCurveTo(size * 0.2, -size * 0.9, size * 0.8, -size * 0.8);
+                    ctx.moveTo(size * 0.1, -size * 0.5);
+                    ctx.quadraticCurveTo(-size * 0.1, -size * 0.9, size * 0.5, -size * 0.8);
+                    // Brow & Snout
+                    ctx.moveTo(-size * 0.3, -size * 0.2);
+                    ctx.lineTo(size * 0.4, -size * 0.3);
+                    ctx.lineTo(size * 0.6, 0);
+                    ctx.lineTo(size * 0.4, size * 0.3);
+                    ctx.lineTo(0, size * 0.4);
+                    ctx.lineTo(-size * 0.3, size * 0.2);
+                    ctx.closePath();
+                    ctx.stroke();
+                    ctx.fill();
+
+                    // Glowing Eye
+                    ctx.fillStyle = '#ffffff';
+                    ctx.shadowColor = '#ffffff';
+                    ctx.shadowBlur = 10;
+                    ctx.beginPath();
+                    ctx.arc(size * 0.25, -size * 0.05, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // Futuristic Bear Head & Claws
+                    ctx.beginPath();
+                    // Ears
+                    ctx.moveTo(size * 0.2, -size * 0.6);
+                    ctx.arc(size * 0.1, -size * 0.7, size * 0.18, 0, Math.PI, true);
+                    // Skull & Jaw
+                    ctx.moveTo(-size * 0.3, -size * 0.4);
+                    ctx.lineTo(size * 0.3, -size * 0.4);
+                    ctx.lineTo(size * 0.6, -size * 0.1);
+                    ctx.lineTo(size * 0.5, size * 0.3);
+                    ctx.lineTo(size * 0.1, size * 0.5);
+                    ctx.lineTo(-size * 0.3, size * 0.2);
+                    ctx.closePath();
+                    ctx.stroke();
+                    ctx.fill();
+
+                    // Glowing Eye
+                    ctx.fillStyle = '#ffffff';
+                    ctx.shadowColor = '#ffffff';
+                    ctx.shadowBlur = 10;
+                    ctx.beginPath();
+                    ctx.arc(size * 0.25, -size * 0.1, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            }
+
+            function drawLightning(x, y1, y2) {
+                ctx.save();
+                ctx.strokeStyle = '#ffffff';
+                ctx.shadowColor = '#00f2fe';
+                ctx.shadowBlur = 14;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x, y1);
+                
+                let curY = y1;
+                let curX = x;
+                while (curY < y2) {
+                    curY += 8 + Math.random() * 12;
+                    curX = x + (Math.random() - 0.5) * 16;
+                    ctx.lineTo(curX, Math.min(y2, curY));
+                }
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            function render() {
+                // If not on cockpit tab or in simple mode, pause rendering to save 100% CPU
+                if ((window.currentActiveMainTab && window.currentActiveMainTab !== 'cockpit') || (window.currentBattleMode && window.currentBattleMode !== 'arena') || !ctx) {
+                    animId = requestAnimationFrame(render);
+                    return;
+                }
+
+                if (width <= 0 || canvas.width <= 0) {
+                    resize();
+                }
+
+                ctx.clearRect(0, 0, width, height);
+
+                // Smooth clash interpolation
+                currentClashX += (targetClashX - currentClashX) * 0.08;
+
+                // 1. Background Grid & Atmospheric Ground Light
+                ctx.save();
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.025)';
+                ctx.lineWidth = 1;
+                for (let x = 0; x < width; x += 40) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, height);
+                    ctx.stroke();
+                }
+                for (let y = 0; y < height; y += 30) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(width, y);
+                    ctx.stroke();
+                }
+
+                // 2. Bull Energy Zone (Green Gradient)
+                const bullGrad = ctx.createLinearGradient(0, 0, currentClashX, 0);
+                bullGrad.addColorStop(0, 'rgba(14, 203, 129, 0.22)');
+                bullGrad.addColorStop(0.7, 'rgba(14, 203, 129, 0.12)');
+                bullGrad.addColorStop(1, 'rgba(14, 203, 129, 0.35)');
+                ctx.fillStyle = bullGrad;
+                ctx.fillRect(0, 0, currentClashX, height);
+
+                // 3. Bear Energy Zone (Red Gradient)
+                const bearGrad = ctx.createLinearGradient(currentClashX, 0, width, 0);
+                bearGrad.addColorStop(0, 'rgba(255, 71, 87, 0.35)');
+                bearGrad.addColorStop(0.3, 'rgba(255, 71, 87, 0.12)');
+                bearGrad.addColorStop(1, 'rgba(255, 71, 87, 0.22)');
+                ctx.fillStyle = bearGrad;
+                ctx.fillRect(currentClashX, 0, width - currentClashX, height);
+
+                // 4. Ground Laser Beam
+                const beamGrad = ctx.createLinearGradient(0, height - 6, width, height - 6);
+                beamGrad.addColorStop(0, '#0ecb81');
+                beamGrad.addColorStop(currentClashX / (width || 1), '#00f2fe');
+                beamGrad.addColorStop(1, '#ff4757');
+                ctx.fillStyle = beamGrad;
+                ctx.fillRect(0, height - 5, width, 5);
+                ctx.restore();
+
+                // 5. Draw Beast Avatars
+                // Bull on Left
+                const bullX = Math.max(70, currentClashX * 0.45);
+                drawBeast(true, bullX, height * 0.58, 42);
+
+                // Bear on Right
+                const bearX = Math.min(width - 70, currentClashX + (width - currentClashX) * 0.55);
+                drawBeast(false, bearX, height * 0.58, 42);
+
+                // 6. Particles
+                for (let i = 0; i < MAX_PARTICLES; i++) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.life++;
+
+                    // If crossed clash line or died, trigger spark and reset
+                    if (p.isBull && p.x >= currentClashX) {
+                        addSparks(currentClashX, p.y, 2);
+                        resetParticle(i);
+                        continue;
+                    } else if (!p.isBull && p.x <= currentClashX) {
+                        addSparks(currentClashX, p.y, 2);
+                        resetParticle(i);
+                        continue;
+                    }
+
+                    if (p.life > 120 || p.x < 0 || p.x > width) {
+                        resetParticle(i);
+                        continue;
+                    }
+
+                    ctx.save();
+                    ctx.shadowBlur = 8;
+                    ctx.shadowColor = p.isBull ? '#0ecb81' : '#ff4757';
+                    ctx.fillStyle = p.isBull ? `rgba(14, 203, 129, ${p.alpha})` : `rgba(255, 71, 87, ${p.alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                // 7. Sparks at Clash Center
+                for (let i = sparks.length - 1; i >= 0; i--) {
+                    const s = sparks[i];
+                    s.x += s.vx;
+                    s.y += s.vy;
+                    s.alpha -= s.decay;
+                    if (s.alpha <= 0) {
+                        sparks.splice(i, 1);
+                        continue;
+                    }
+                    ctx.save();
+                    ctx.globalAlpha = s.alpha;
+                    ctx.shadowBlur = 6;
+                    ctx.shadowColor = s.color;
+                    ctx.fillStyle = s.color;
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                // 8. Dynamic Shockwave Collision Beam & Lightning
+                ctx.save();
+                // Vertical Seam Glow
+                const seamGrad = ctx.createLinearGradient(currentClashX - 15, 0, currentClashX + 15, 0);
+                seamGrad.addColorStop(0, 'rgba(14, 203, 129, 0)');
+                seamGrad.addColorStop(0.5, 'rgba(0, 242, 254, 0.6)');
+                seamGrad.addColorStop(1, 'rgba(255, 71, 87, 0)');
+                ctx.fillStyle = seamGrad;
+                ctx.fillRect(currentClashX - 15, 0, 30, height);
+
+                // Shockwave pulse
+                const pulseR = 10 + (Date.now() % 1000) * 0.03;
+                const pulseAlpha = Math.max(0, 1 - (pulseR / 40));
+                ctx.strokeStyle = `rgba(0, 242, 254, ${pulseAlpha})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(currentClashX, height * 0.5, pulseR, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Lightning Ark
+                if (Math.random() > 0.3) {
+                    drawLightning(currentClashX, 10, height - 10);
+                }
+                ctx.restore();
+
+                animId = requestAnimationFrame(render);
+            }
+
+            function startLoop() {
+                if (!animId) animId = requestAnimationFrame(render);
+            }
+
+            return {
+                init,
+                resize,
+                setRegimeData
+            };
+        })();
+        window.ValkyrieBattleEngine = ValkyrieBattleEngine;
+        window.toggleBattleView = toggleBattleView;
+        window.setBattleViewMode = setBattleViewMode;
+        window.restoreBattleViewPreference = restoreBattleViewPreference;
 
         // =========================================================================
         // 🏛️ VALKYRIE INSTITUTIONAL QUANT COMMENTARY ENGINE (15-20+ VARYASYON)
@@ -3824,6 +4402,23 @@ async function loadAdminMetrics() {
             if (bullText) bullText.innerText = `%${bullPct} (${bullCount} Parite)`;
             if (rangeText) rangeText.innerText = `%${rangePct} (${rangeCount} Parite)`;
             if (bearText) bearText.innerText = `%${bearPct} (${bearCount} Parite)`;
+
+            // Update Cinematic Battle Arena HUD elements
+            const hudBullPct = document.getElementById('hud-bull-pct');
+            const hudBullCount = document.getElementById('hud-bull-count');
+            const hudBearPct = document.getElementById('hud-bear-pct');
+            const hudBearCount = document.getElementById('hud-bear-count');
+            const hudNeutral = document.getElementById('hud-neutral-badge');
+
+            if (hudBullPct) hudBullPct.innerText = `%${bullPct}`;
+            if (hudBullCount) hudBullCount.innerText = `${bullCount} Parite Kırılımda`;
+            if (hudBearPct) hudBearPct.innerText = `%${bearPct}`;
+            if (hudBearCount) hudBearCount.innerText = `${bearCount} Parite Baskıda`;
+            if (hudNeutral) hudNeutral.innerHTML = `<span>⚪ TAMPON BÖLGE: %${rangePct} YATAY (${rangeCount} Parite)</span>`;
+
+            if (window.ValkyrieBattleEngine) {
+                ValkyrieBattleEngine.setRegimeData(bullPct, rangePct, bearPct);
+            }
 
             if (bBull) bBull.style.width = `${bullPct}%`;
             if (bRange) bRange.style.width = `${rangePct}%`;
@@ -6379,6 +6974,8 @@ function downloadExcelReport() {
         async function init() {
             try {
                 restorePersistedSession();
+                restoreBattleViewPreference();
+                if (window.ValkyrieBattleEngine) ValkyrieBattleEngine.init();
                 await syncBackendState();
                 startBinanceGlobalFeed();
                 startSSEFallback();
