@@ -1229,15 +1229,23 @@ HTML_PAGE = """
             box-shadow: 0 0 10px rgba(0, 242, 254, 0.15);
         }
         .ai-thought-feed {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+        @media (max-width: 1024px) {
+            .ai-thought-feed {
+                grid-template-columns: 1fr;
+            }
+        }
+        .ai-thought-feed.layout-single {
+            grid-template-columns: 1fr !important;
         }
         .ai-thought-item {
-            background: rgba(15, 23, 42, 0.65);
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.07);
             border-radius: 12px;
-            padding: 12px 16px;
+            padding: 14px 16px;
             font-size: 12.5px;
             line-height: 1.55;
             color: #f1f5f9;
@@ -1246,11 +1254,20 @@ HTML_PAGE = """
             gap: 12px;
             border-left: 4px solid var(--blue);
             transition: all 0.2s ease;
+            box-sizing: border-box;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            min-width: 0;
+        }
+        .ai-thought-item.macro-span {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 27, 75, 0.35) 100%);
+            border-color: rgba(168, 85, 247, 0.25);
         }
         .ai-thought-item:hover {
-            background: rgba(30, 41, 59, 0.7);
-            border-color: rgba(255, 255, 255, 0.12);
-            transform: translateX(2px);
+            background: rgba(30, 41, 59, 0.85);
+            border-color: rgba(255, 255, 255, 0.16);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
         }
         .ai-thought-tag {
             display: inline-block;
@@ -2128,14 +2145,24 @@ HTML_PAGE = """
                 <div class="regime-bar-range" id="regime-bar-range" style="width: 20%;"></div>
             </div>
 
-            <!-- 🧠 AI ZEKASI KATEGORİ FİLTRELERİ -->
-            <div class="ai-thought-filters">
-                <button class="ai-filter-btn active" id="btn-filter-all" onclick="setAiThoughtFilter('all')">TÜMÜ (<span id="ai-cnt-all">0</span>)</button>
-                <button class="ai-filter-btn" id="btn-filter-macro" onclick="setAiThoughtFilter('macro')">🌐 Makro Şef (BTC+ETH) (<span id="ai-cnt-macro">1</span>)</button>
-                <button class="ai-filter-btn" id="btn-filter-near" onclick="setAiThoughtFilter('near')">🎯 Pusu & Temas Analizi (<span id="ai-cnt-near">0</span>)</button>
-                <button class="ai-filter-btn" id="btn-filter-rejected" onclick="setAiThoughtFilter('rejected')">⛔ Elenen Sinyaller (<span id="ai-cnt-rej">0</span>)</button>
-                <button class="ai-filter-btn" id="btn-filter-positions" onclick="setAiThoughtFilter('positions')">⚡ Aktif Pozisyonlar (<span id="ai-cnt-pos">0</span>)</button>
-                <button class="ai-filter-btn" id="btn-filter-autopsy" onclick="setAiThoughtFilter('autopsy')">📋 İşlem Otopisi & Dersler (<span id="ai-cnt-autopsy">0</span>)</button>
+            <!-- 🧠 AI ZEKASI KATEGORİ FİLTRELERİ & GÖRÜNÜM MODU -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+                <div class="ai-thought-filters" style="margin-bottom:0;">
+                    <button class="ai-filter-btn active" id="btn-filter-all" onclick="setAiThoughtFilter('all')">TÜMÜ (<span id="ai-cnt-all">0</span>)</button>
+                    <button class="ai-filter-btn" id="btn-filter-macro" onclick="setAiThoughtFilter('macro')">🌐 Makro Şef (BTC+ETH) (<span id="ai-cnt-macro">1</span>)</button>
+                    <button class="ai-filter-btn" id="btn-filter-near" onclick="setAiThoughtFilter('near')">🎯 Pusu & Temas Analizi (<span id="ai-cnt-near">0</span>)</button>
+                    <button class="ai-filter-btn" id="btn-filter-rejected" onclick="setAiThoughtFilter('rejected')">⛔ Elenen Sinyaller (<span id="ai-cnt-rej">0</span>)</button>
+                    <button class="ai-filter-btn" id="btn-filter-positions" onclick="setAiThoughtFilter('positions')">⚡ Aktif Pozisyonlar (<span id="ai-cnt-pos">0</span>)</button>
+                    <button class="ai-filter-btn" id="btn-filter-autopsy" onclick="setAiThoughtFilter('autopsy')">📋 İşlem Otopisi & Dersler (<span id="ai-cnt-autopsy">0</span>)</button>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <button class="ai-filter-btn active" id="btn-layout-grid" onclick="setAiThoughtLayout('grid')" title="2 Sütunlu Kompakt / Kare Görünüm" style="padding:5px 11px; font-size:11.5px; border-color:rgba(0, 242, 254, 0.4); color:#00f2fe;">
+                        ⊞ 2'li Izgara
+                    </button>
+                    <button class="ai-filter-btn" id="btn-layout-single" onclick="setAiThoughtLayout('single')" title="Tek Sütun Geniş Görünüm" style="padding:5px 11px; font-size:11.5px;">
+                        ☰ Tek Sütun
+                    </button>
+                </div>
             </div>
 
             <div class="ai-thought-feed" id="ai-thought-feed">
@@ -3340,11 +3367,48 @@ async function loadAdminMetrics() {
                 if (!window.currentAiFilter) window.currentAiFilter = 'all';
                 window.setAiThoughtFilter = function(f) {
                     window.currentAiFilter = f;
-                    document.querySelectorAll('.ai-filter-btn').forEach(btn => btn.classList.remove('active'));
+                    document.querySelectorAll('.ai-thought-filters .ai-filter-btn').forEach(btn => btn.classList.remove('active'));
                     const activeBtn = document.getElementById('btn-filter-' + f);
                     if (activeBtn) activeBtn.classList.add('active');
                     if (typeof window.renderAiThoughts === 'function') window.renderAiThoughts();
                 };
+
+                window.setAiThoughtLayout = function(mode) {
+                    const fEl = document.getElementById('ai-thought-feed');
+                    const btnGrid = document.getElementById('btn-layout-grid');
+                    const btnSingle = document.getElementById('btn-layout-single');
+                    if (!fEl) return;
+                    if (mode === 'single') {
+                        fEl.classList.add('layout-single');
+                        if (btnSingle) {
+                            btnSingle.classList.add('active');
+                            btnSingle.style.borderColor = 'rgba(0, 242, 254, 0.4)';
+                            btnSingle.style.color = '#00f2fe';
+                        }
+                        if (btnGrid) {
+                            btnGrid.classList.remove('active');
+                            btnGrid.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                            btnGrid.style.color = '#94a3b8';
+                        }
+                        try { localStorage.setItem('valk_thought_layout', 'single'); } catch(e){}
+                    } else {
+                        fEl.classList.remove('layout-single');
+                        if (btnGrid) {
+                            btnGrid.classList.add('active');
+                            btnGrid.style.borderColor = 'rgba(0, 242, 254, 0.4)';
+                            btnGrid.style.color = '#00f2fe';
+                        }
+                        if (btnSingle) {
+                            btnSingle.classList.remove('active');
+                            btnSingle.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                            btnSingle.style.color = '#94a3b8';
+                        }
+                        try { localStorage.setItem('valk_thought_layout', 'grid'); } catch(e){}
+                    }
+                };
+
+                const savedLayout = (function(){ try { return localStorage.getItem('valk_thought_layout') || 'grid'; } catch(e){ return 'grid'; } })();
+                window.setAiThoughtLayout(savedLayout);
 
                 const thoughtItems = [];
                 const nowStr = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
@@ -3664,8 +3728,10 @@ async function loadAdminMetrics() {
                                 📈 Grafik
                             </button>
                         ` : '';
+                        const isMacro = t.cat === 'macro';
+                        const macroClass = isMacro ? ' macro-span' : '';
                         return `
-                        <div class="ai-thought-item" style="border-left-color: ${t.color};">
+                        <div class="ai-thought-item${macroClass}" style="border-left-color: ${t.color};">
                             <span style="font-size:20px; flex-shrink:0;">${t.icon}</span>
                             <div style="flex:1; min-width:0;">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
