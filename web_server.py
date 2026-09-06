@@ -6138,7 +6138,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "setup_attempts": getattr(strategy, "setup_attempts", {}) if strategy else {},
                 "system_health": sys_health,
                 "macro_climate": strategy.get_macro_climate() if strategy and hasattr(strategy, 'get_macro_climate') else {}
-            })
+            }, dumps=lambda obj: json.dumps(obj, default=str))
         except Exception as e:
             hist_full = trader_manager.history
             return web.json_response({
@@ -6152,7 +6152,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "all_coins": [],
                 "system_health": {"is_perfect": False, "status_text": f"Hata: {e}"},
                 "macro_climate": {}
-            })
+            }, dumps=lambda obj: json.dumps(obj, default=str))
 
     async def api_toggle_symbol(request):
         try:

@@ -237,18 +237,18 @@ class StrategyEngine:
             desc = f"BTC 1S: %{btc_range_1h:.2f}, ETH 1S: %{eth_range_1h:.2f}. Piyasa seviye arıyor."
 
         return {
-            "regime": regime,
-            "status": status,
-            "desc": desc,
-            "is_dead_zone": is_dead_zone,
-            "eth_leading": eth_leading,
-            "btc_range_1h": btc_range_1h,
-            "eth_range_1h": eth_range_1h,
-            "btc_chg_1h": btc_chg_1h,
-            "eth_chg_1h": eth_chg_1h,
-            "eth_lead_pct": eth_lead_pct,
-            "btc_price": btc_close,
-            "eth_price": eth_close
+            "regime": str(regime),
+            "status": str(status),
+            "desc": str(desc),
+            "is_dead_zone": bool(is_dead_zone),
+            "eth_leading": bool(eth_leading),
+            "btc_range_1h": float(btc_range_1h),
+            "eth_range_1h": float(eth_range_1h),
+            "btc_chg_1h": float(btc_chg_1h),
+            "eth_chg_1h": float(eth_chg_1h),
+            "eth_lead_pct": float(eth_lead_pct),
+            "btc_price": float(btc_close),
+            "eth_price": float(eth_close)
         }
 
     async def _notify_open(self, pos: dict, levels: dict = None):

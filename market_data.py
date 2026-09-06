@@ -458,15 +458,15 @@ class MarketDataManager:
         if not hasattr(self, 'symbol_metrics'):
             self.symbol_metrics = {}
         self.symbol_metrics[symbol] = {
-            "vol_surge": vol_surge,
-            "min_vol_surge": min_vol_surge,
-            "atr_pct": atr_pct,
-            "is_top_80": is_top_80,
-            "cur_vol": cur_vol,
-            "avg_vol": avg_vol,
-            "rs_vs_btc": rs_vs_btc,
-            "dynamic_rs_score": dynamic_rs_score,
-            "decoupling_status": decoupling_status
+            "vol_surge": float(vol_surge),
+            "min_vol_surge": float(min_vol_surge),
+            "atr_pct": float(atr_pct),
+            "is_top_80": bool(is_top_80),
+            "cur_vol": float(cur_vol),
+            "avg_vol": float(avg_vol),
+            "rs_vs_btc": float(rs_vs_btc),
+            "dynamic_rs_score": float(dynamic_rs_score),
+            "decoupling_status": str(decoupling_status)
         }
 
     def get_symbol_metrics(self, symbol: str) -> dict:
