@@ -2185,19 +2185,6 @@ HTML_PAGE = """
                     </div>
                 </div>
             </div>
-        </div>
-        <!-- ⚡ AÇIK POZİSYONLAR HIZLI KOKPİT ÖZETİ -->
-        <div class="panel-box" style="margin-bottom:24px;">
-            <div class="panel-head">
-                <div class="panel-title">⚡ Açık Pozisyonlar Özeti</div>
-                <button class="btn-preset" onclick="switchMainTab('positions')" style="font-size:12px; padding:4px 10px;">Tümünü Gör ➔</button>
-            </div>
-            <div id="cockpit-mini-positions" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:12px;">
-                <div style="color:#94a3b8; text-align:center; padding:24px 20px; font-size:13.5px;">
-                    Şu an açık pozisyon bulunmuyor. Robot 5M mum kapanışlarını pusuya yatarak takip ediyor.
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- =========================================================================
@@ -3791,59 +3778,6 @@ async function loadAdminMetrics() {
                 };
 
                 window.renderAiThoughts();
-            }
-            // Update Mini Cockpit Positions with clean multi-column cards
-            const miniPosContainer = document.getElementById('cockpit-mini-positions');
-            if (miniPosContainer) {
-                const openKeys = Object.keys(appState.open_positions || {});
-                if (openKeys.length === 0) {
-                    miniPosContainer.innerHTML = `
-                        <div style="grid-column:1/-1; color:#94a3b8; text-align:center; padding:30px 20px; font-size:13.5px;">
-                            Şu an açık pozisyon bulunmuyor. Robot 5M mum kapanışlarını pusuya yatarak takip ediyor.
-                        </div>
-                    `;
-                } else {
-                    const sortedMini = openKeys.map(sym => {
-                        const p = appState.open_positions[sym];
-                        const curPrice = Number((livePrices && livePrices[sym]) || (appState.symbols && appState.symbols[sym] ? appState.symbols[sym].price : 0) || p.entry_price);
-                        const metrics = computePositionPnL(p, curPrice);
-                        return { sym, p, curPrice: metrics.curP, isLong: metrics.isLong, roePct: metrics.roePct, pnlVal: metrics.pnlUsdt };
-                    }).sort((a, b) => b.roePct - a.roePct);
-
-                    miniPosContainer.innerHTML = sortedMini.map(item => {
-                        const sym = item.sym;
-                        const p = item.p;
-                        const roePct = item.roePct;
-                        const pnlVal = item.pnlVal;
-                        const isLong = item.isLong;
-                        const isWin = roePct >= 0;
-                        const cleanSym = sym.replace('/USDT','');
-
-                        return `
-                            <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:14px; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; transition:all 0.15s ease;">
-                                <div>
-                                    <div style="font-weight:800; font-family:'JetBrains Mono'; font-size:14.5px; display:flex; align-items:center; gap:8px;">
-                                        <span class="pos-badge ${isLong ? 'pos-long' : 'pos-short'}" style="padding:2px 8px; font-size:11px;">${p.leverage}x ${p.side}</span>
-                                        <span style="color:#ffffff;">${cleanSym}</span>
-                                    </div>
-                                    <div style="font-size:12px; color:#94a3b8; margin-top:4px; font-family:'JetBrains Mono';">
-                                        Giriş: <b style="color:#fff;">$${p.entry_price}</b> ➔ Hedef: <b style="color:var(--cyan);">$${p.tp1 ? Number(p.tp1).toFixed(4) : '-'}</b>
-                                    </div>
-                                </div>
-                                <div style="text-align:right;">
-                                    <div style="font-size:16px; font-weight:900; font-family:'JetBrains Mono'; color:${isWin ? 'var(--green)' : 'var(--red)'};">
-                                        ${isWin ? '+' : ''}${roePct.toFixed(2)}%
-                                    </div>
-                                    <div style="font-size:12px; font-weight:700; color:${isWin ? 'var(--green)' : 'var(--red)'}; font-family:'JetBrains Mono';">
-                                        ${isWin ? '+' : ''}$${pnlVal.toFixed(2)}
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-                }
-            }
-
             // Update Nav Tab Badges
             updateNavBadges();
         }
