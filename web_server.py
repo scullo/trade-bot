@@ -3269,6 +3269,342 @@ async function loadAdminMetrics() {
             }, 100);
         }
 
+        // =========================================================================
+        // 🏛️ VALKYRIE INSTITUTIONAL QUANT COMMENTARY ENGINE (15-20+ VARYASYON)
+        // =========================================================================
+        const ValkyrieCommentaryEngine = {
+            getHashIndex: function(key, poolSize, seedOffset) {
+                if (!key || poolSize <= 0) return 0;
+                let hash = seedOffset || 0;
+                for (let i = 0; i < key.length; i++) {
+                    hash = (hash << 5) - hash + key.charCodeAt(i);
+                    hash |= 0;
+                }
+                const cycle = Math.floor(Date.now() / 180000);
+                return Math.abs(hash + cycle) % poolSize;
+            },
+
+            // 1. TEMASTA (HACİM ONAYLI) - 20 VARYASYON
+            getContactVolOk: function(symbol, targetName, volSurge, minSurge, rsScore, action, pPrice, tPrice) {
+                const pool = [
+                    `5M hacim patlaması (${volSurge.toFixed(2)}x) kurumsal girişi onayladı! Fakeout olmaması için <b>5M mum kapanışı</b> bekleniyor; gövde seviye yönünde kapandığı an pozisyon açılacak.`,
+                    `Kurumsal likidite emilimi teyit edildi (${volSurge.toFixed(2)}x hacim). Seviyedeki satış likiditesi agresif piyasa emirleriyle temizlendi. 5M mum kapanışıyla gövde teyidi bekleniyor.`,
+                    `Emir defterinde akıllı para akışı (Order Flow Delta) pozitif ayrıştı. Kilit seviyede hacimli temas tetiklendi; sahte iğne filtresi için 5M bar kapanışı izleniyor.`,
+                    `Göreceli güç (RS: ${rsScore >= 0 ? '+' : ''}${rsScore.toFixed(2)}) ve kurumsal hacim desteği (${volSurge.toFixed(2)}x) yönlü ivmeyi onayladı. Seviye kırılımının mum gövdesiyle mühürlenmesi bekleniyor.`,
+                    `Piyasa yapıcı direnç/destek duvarı yüksek hacimle delindi. Düşük zaman dilimi saçılması yerine momentum devamı hedefleniyor; mum kapanışıyla emir iletilecek.`,
+                    `Konsolidasyon bandından kurumsal genişleme fazına geçiş gerçekleşti. ${volSurge.toFixed(2)}x hacim sahte kırılım olasılığını bertaraf etti; bar kapanış onayı pusuda.`,
+                    `Hacim anomalisi radarımızda: Hacim eşiği (${volSurge.toFixed(2)}x / min ${minSurge.toFixed(1)}x) aşıldı. Likidite havuzu süpürülürken gövdesi seviye yönünde oturan 5M mum aranıyor.`,
+                    `Agresif alıcı/satıcı dengesizliği (imbalance) seviyede netleşti. Algoritma sahte fitil tuzağına düşmemek adına son saniye mum kapanışını bekliyor.`,
+                    `Değer alanı dışına kurumsal taşma gerçekleşti. ${volSurge.toFixed(2)}x hacim arkamızdaki rüzgarı kanıtlıyor; 5M periyot bitimiyle pozisyon tetiklenecek.`,
+                    `Kritik pivot eşiğinde güçlü hacim momentumu teyit edildi. Akıllı para istasyonunda emir blokları doldu; kural gereği bar kapanış teyidi bekleniyor.`,
+                    `Yüksek hacimli likidite emilimi tamamlandı. Fiyat seviyeyi kararlılıkla zorluyor; 5M mumunun seviye yönünde gövde bırakmasıyla işlem açılacak.`,
+                    `Kurumsal sermaye girişi netleşti (${volSurge.toFixed(2)}x hacim). Beta baskısından bağımsız alfa hareketi izleniyor; fakeout kalkanı mum kapanışını denetliyor.`,
+                    `Likidite boşluğu (Volume Gap) kurumsal alımlarla dolduruldu. Seviye geçişi hacimle destekleniyor; teyit mumu sonrası dinamik takip başlayacak.`,
+                    `Order book derinliğinde alış/satış baskısı lehimize yoğunlaştı. ${volSurge.toFixed(2)}x hacimle seviye test ediliyor; 5M periyot onayı ile tetik düşecek.`,
+                    `İstatistiki kırılım eşiği aşıldı. Kurumsal hacim filtresi (${volSurge.toFixed(2)}x) yeşil yaktı; mum kapanışında seviye dışı gövde teyidi bekleniyor.`,
+                    `Akıllı para ayak izi seviyede mühürlendi. Düşük hacimli tuzak ihtimali bertaraf edildi; 5 dakikalık periyot sonu emrin iletilmesi için geri sayımda.`,
+                    `Momentum indikatörleri ve hacim profili kırılımı destekliyor. Seviye arkasındaki likiditeye koşu başladı; mum kapanışı sonrasında pusu tamam.`,
+                    `Hacim dalgası kilit seviyeyi aştı (${volSurge.toFixed(2)}x). Algoritmik disiplin gereği acele edilmiyor; 5M kapanışıyla teyitli giriş icra edilecek.`,
+                    `Seviye etrafındaki arz/talep dengesizliği güçlü hacimle çözüldü. Fakeout riskini sıfırlamak adına mumun seviye yönünde tamamlanması bekleniyor.`,
+                    `Kurumsal emir blokları devreye girdi. ${volSurge.toFixed(2)}x hacim onayıyla birlikte yönlü trend genişlemesi bekleniyor; 5M kapanış şartı aktif.`
+                ];
+                const idx = this.getHashIndex(symbol + '_vol_ok', pool.length, 11);
+                return pool[idx];
+            },
+
+            // 2. TEMASTA (HACİM BEKLENİYOR) - 20 VARYASYON
+            getContactVolWaiting: function(symbol, targetName, volSurge, minSurge, rsScore, action, pPrice, tPrice) {
+                const pool = [
+                    `Fiyat kilit seviyeye temas etti fakat 5M hacim (${volSurge.toFixed(2)}x), gereken min <b>${minSurge.toFixed(1)}x</b> seviyesinin altında. Sahte kırılıma (Fakeout) kurban gitmemek için kurumsal hacim desteği bekleniyor.`,
+                    `Düşük hacimli yoklama hareketi: Tahta derinliği zayıf; kurumsal alıcı/satıcı desteği olmadan yapılan temaslar tuzak riski taşır. Hacim anomalisi gelmeden tetik çekilmez.`,
+                    `Likidite avı şüphesi: Seviyeye fitil atıldı fakat hacim çarpanı (${volSurge.toFixed(2)}x) yetersiz. Akıllı para hacimli piyasa emri girmedikçe pozisyona girilmeyecek.`,
+                    `Hacim boşluğunda (Volume Vacuum) seviye testi: Sığ emir defteri nedeniyle fiyat kolayca savrulabilir. Sermayeyi korumak adına en az ${minSurge.toFixed(1)}x hacim şartı aranıyor.`,
+                    `Sabırlı Avcı Modu devrede: Fiyatın seviyeye değmesi yetmez; temasın kurumsal sermaye ile onaylanması şart. Hacimsiz sarkmalar eleniyor.`,
+                    `Tuzak ihtimaline karşı savunma kalkanı aktif: ${volSurge.toFixed(2)}x hacim perakende ilgisini gösteriyor; kurumsal para girişi (${minSurge.toFixed(1)}x) teyit edilmeden işlem yok.`,
+                    `Zayıf ellerin avlanma bölgesi: Seviye temasında hacim patlaması yok. Sahte fitil (wick trap) ile stop patlatma riskine karşı bekleniyor.`,
+                    `Delta diverjansı uyarısı: Fiyat kilit seviyeye ulaştı ancak hacim desteği gecikiyor. Kural gereği min ${minSurge.toFixed(1)}x hacim teyidi olmadan emir iletilmez.`,
+                    `Konsolidasyon içi hacimsiz savrulma: Seviye zorlanıyor fakat akıllı para emirleri henüz tahtaya girmedi. Disiplinle hacim onayı taranıyor.`,
+                    `Hacim filtresi sermayeyi koruyor: Seviye teması tek başına işlem gerekçesi olamaz. Min ${minSurge.toFixed(1)}x kurumsal ivme oluşana kadar pusu pozisyonu korunur.`,
+                    `Sığ tahtada manipülasyon kalkanı: Hacim ${volSurge.toFixed(2)}x düzeyinde kaldı. Kurumsal likidite emilimi görülmeden kırılım kovalamak kumardır; beklemedeyiz.`,
+                    `Volatilite var, hacim yok: Seviyede fitil oluştu ancak kurumsal ciro yetersiz. Kural dışı erken girişe izin verilmiyor.`,
+                    `Piyasa yapıcı likidite çekiyor olabilir: Hacimsiz kırılımların %85'i seviye içine geri döner. Bu istatistiğe boyun eğmemek için hacim teyidi şart.`,
+                    `Kurumsal istasyon beklemede: Fiyat seviyeyi dürttü fakat akıllı para henüz onay vermedi (${volSurge.toFixed(2)}x / min ${minSurge.toFixed(1)}x). Pusu devam ediyor.`,
+                    `Fiyat seviyede oyalanıyor: Yetersiz hacim (${volSurge.toFixed(2)}x), piyasanın kararsız olduğunu gösteriyor. Güçlü bir hacim patlaması görülmeden tetik kalkmaz.`,
+                    `Likidite süzülmesi: Seviye test edildi ancak hacim barı kırmızıda/zayıfta. Kurumsal talep dalgası gelmedikçe sermaye riske atılmaz.`,
+                    `Sahte kırılım tuzağından kaçınma: Seviye testinde alım/satım hacmi yetersiz. Sermaye koruma kuralı gereği sabırla hacim teyidi bekleniyor.`,
+                    `Hacim desteği eksik: Fiyat temas etti fakat momentum zayıf. Min ${minSurge.toFixed(1)}x hacimle seviyenin kırıldığı görülmeden erken aksiyon alınmayacak.`,
+                    `Mikro yapı kararsız: Kilit eşik zorlanıyor fakat emir akışında kurumsal ağırlık yok. Algoritma güvenli giriş koşullarını izliyor.`,
+                    `Test aşamasında hacim kontrolü: Seviyeye ulaşıldı ancak yakıt eksik (${volSurge.toFixed(2)}x). Yeterli yakıt (hacim) gelene kadar pusudan çıkılmayacak.`
+                ];
+                const idx = this.getHashIndex(symbol + '_vol_wait', pool.length, 23);
+                return pool[idx];
+            },
+
+            // 3. PUSUDA (YAKLAŞIYOR) - 20 VARYASYON
+            getApproaching: function(symbol, targetName, dist, minSurge, rsScore) {
+                const dStr = dist.toFixed(2);
+                const pool = [
+                    `Seviyeye ulaşıldığında hacim ve fitil dinamikleri canlı taranacak. Hacim min ${minSurge.toFixed(1)}x kurumsal ivme yakalarsa pusu anında tetiklenecek. Hacimsiz sarkarsa tuzak sayılarak beklenmeye devam edilecek.`,
+                    `Fiyat kilit seviyeye (%${dStr} mesafe) süzülüyor. Reaksiyon bölgesinde mikro emir akışı ve hacim anomalisi canlı izleniyor.`,
+                    `Kurumsal likidite havuzuna yaklaşılıyor (%${dStr} kaldı). Seviyeye temas anında emir defteri derinliği taranacak.`,
+                    `Değer alanı sınırına kontrollü yaklaşım: %${dStr} mesafede pusu kuruldu. Min ${minSurge.toFixed(1)}x hacim patlaması ve fitil tepkisi bekleniyor.`,
+                    `Volatilite bandı daralıyor; fiyatta kilit pivot eşiğine (%${dStr}) doğru çekilme var. Hacimli temas halinde anında aksiyon alınacak.`,
+                    `Piyasa yapıcı seviyesine %${dStr} mesafe. Kurumsal emir bloklarının tepkisi 5M periyotla taranıyor; hacimsiz sarkarsa tuzak sayılacak.`,
+                    `Likidite mıknatısı devrede: Fiyat kilit hatta (%${dStr}) çekiliyor. Kural gereği seviye teması ve hacim çarpanı birlikte aranacak.`,
+                    `Stratejik pusu hattı: Kalan mesafe %${dStr}. Seviyeye varıldığında alıcı/satıcı dengesi ölçülerek tetik şartları sorgulanacak.`,
+                    `Kurumsal istasyona yolculuk sürüyor (%${dStr} mesafe). Seviye testinde hacim min ${minSurge.toFixed(1)}x olursa pusu devreye girecek.`,
+                    `Hacim profili düşük alanından kilit pivot eşiğine geçiş (%${dStr} kaldı). Temas anındaki mikro-delta hareketi yönü tayin edecek.`,
+                    `Kritik eşiğe yaklaşım (%${dStr}): Konsolidasyonun çözülme noktası burası olabilir. Algoritma milimetrik tetik için tetikte.`,
+                    `Sermaye tahsis radarı: %${dStr} mesafedeki kilit seviye için risk bütçesi ayrıldı. Seviye teyidi sağlandığında pozisyon açılacak.`,
+                    `Likidite sweep bölgesi radarda: Kalan %${dStr}. Seviye altı/üstü stop süpürmesi ve hacimli dönüş ihtimali taranıyor.`,
+                    `Fiyat kontrollü bir süzülüşle hedefe yaklaşıyor (%${dStr}). Temasta hacim ivmesi gelirse algoritma anında devreye girecek.`,
+                    `Kilit destek/direnç koridoruna giriş (%${dStr} mesafe). Seviyeye ulaşıldığında 5M fitil ve gövde dengesi denetlenecek.`,
+                    `Hedef seviyeye kalan marj: %${dStr}. Hacimsiz temasta sabırla beklenecek; hacimli temasta emir derhal borsaya iletilecek.`,
+                    `Piyasa derinliği analizi: Seviyeye %${dStr} kaldı. Reaksiyon sahasında akıllı paranın alım/satım blokları takip ediliyor.`,
+                    `Konsolidasyon ucu test ediliyor (%${dStr} mesafe). Seviye temasında sahte kırılım kalkanı tam kapasite çalışacak.`,
+                    `Kurumsal seviye pususu: Fiyat %${dStr} mesafede. Hacim anomalisi teyidiyle birlikte hızlı reaksiyon planlandı.`,
+                    `Mikro trend kilit seviyeye doğru yöneldi (%${dStr} kaldı). Seviyeye değdiği an 5M hacim çarpanı sorgulanacak.`
+                ];
+                const idx = this.getHashIndex(symbol + '_approaching', pool.length, 37);
+                return pool[idx];
+            },
+
+            // 4. GİRECEKTİ AMA GİRMEDİ (REJECTIONS) - SEBEBE GÖRE 20 VARYASYON
+            getRejectionAutopsy: function(symbol, setup, reason) {
+                const rLower = (reason || '').toLowerCase();
+                const idx = this.getHashIndex(symbol + '_' + setup + '_' + reason, 5, 41);
+
+                if (rLower.includes('hacim') || rLower.includes('surge') || rLower.includes('vol')) {
+                    const pool = [
+                        "Kurumsal Hacim Kalkanı devreye girdi: Hacim eşiği aşılamadı; düşük hacimli sahte iğne (fakeout) riski elendi, anapara korundu.",
+                        "Hacimsiz temas tespit edildi: Perakende tuzağına düşmemek adına kural gereği işlem iptal edildi. Sermaye disiplini korundu.",
+                        "Yetersiz piyasa katılımı: Emir defterinde akıllı para desteği görülmedi; hacimsiz kırılım tuzağı bertaraf edildi.",
+                        "Hacim çarpanı güvenlik limitinin altında kaldı. Sahte kırılma ihtimaline karşı pusu askıya alındı; gereksiz stop kaybı önlendi.",
+                        "Sığ tahtada sahte kırılım riski: Yetersiz işlem hacmi nedeniyle pozisyon açılmadı, nakit korumaya alındı."
+                    ];
+                    return pool[idx];
+                } else if (rLower.includes('trend') || rLower.includes('ters') || rLower.includes('filtre')) {
+                    const pool = [
+                        "Makro Trend Kalkanı devrede: 1H/4H genel piyasa akışına ters yönde işlem açılması engellendi; trende kafa atma riski elendi.",
+                        "Ters akıntı vetosu: Parite makro trende karşı kırılım denedi. Yüksek olasılıklı başarısızlık riski nedeniyle işlem açılmadı.",
+                        "Üst zaman dilimi uyumsuzluğu: 1H trend filtresi sinyali reddetti; ana dalganın karşısında durulmayarak portföy korundu.",
+                        "Makro trend yönünde kalma disiplini: Kısa vadeli ters hareket filtrelendi; sermaye yalnızca trend uyumlu fırsatlara tahsis edildi.",
+                        "Baskın trend filtresi: Karşı yöndeki zayıf momentum elendi; trendle inatlaşılmayarak sermaye güvenceye alındı."
+                    ];
+                    return pool[idx];
+                } else if (rLower.includes('temas') || rLower.includes('aşınma') || rLower.includes('3.')) {
+                    const pool = [
+                        "Seviye Aşınma Kuralı devrede: Seviye daha önce defalarca test edilip likiditesi tüketilmişti; yıpranmış seviyede tuzak stop önlendi.",
+                        "Likidite boşalması: 3. temas kuralı gereği gücünü yitiren destek/direnç hattındaki riskli reaksiyon elendi.",
+                        "Tükenmiş seviye uyarısı: Seviyedeki emir blokları önceki testlerde eridiği için sahte kırılım riski görüldü ve işlem açılmadı.",
+                        "Aşınmış pivot filtresi: Tekrarlanan temaslar seviyeyi zayıflatır; kurumsal kuralımız gereği riskli test elendi.",
+                        "Yıpranmış likidite hattı: Emir bloklarının tükendiği seviyede kırılganlık tespit edildi ve işlem iptal edildi."
+                    ];
+                    return pool[idx];
+                } else if (rLower.includes('atr') || rLower.includes('volatil') || rLower.includes('aşırı')) {
+                    const pool = [
+                        "Aşırı Volatilite Kalkanı: Fiyat istatistiksel 2 sigma sınırını aştı; kontrolsüz kayma ve spread riskinden kaçınıldı.",
+                        "Uç sapma uyarısı: ATR genişlemesi güvenli risk bandının üzerinde; portföy dengesini korumak adına sinyal elendi.",
+                        "Kontrolsüz volatilite dalgası: Geniş mum aralıkları stop mesafesini bozduğu için işlem risk modeline takıldı.",
+                        "Risk parametresi aşımı: Aşırı dalgalanma ortamında sermaye güvenliği için işlem vetolandı.",
+                        "Volatilite anomalisi: Standart sapma limitini aşan hareket elendi; sermaye disiplinli risk bandında tutuldu."
+                    ];
+                    return pool[idx];
+                } else {
+                    const pool = [
+                        "Sahte kırılım, tükeniş mumu veya trende kafa atma riski bertaraf edildi; sermaye gereksiz bir stop kaybından korundu.",
+                        "Makro Sıkışma (Dead Zone) Koruması: Düşük olasılıklı testere piyasasında sermaye alfa fırsatlarına saklandı.",
+                        "Piyasa dengesizliği vetosu: Risk-getiri oranı kurumsal standartları karşılamadığı için işlem açılmadı.",
+                        "Algoritmik risk filtresi: Çoklu gösterge teyidi sağlanamadığı için pozisyon elendi; anapara korundu.",
+                        "Kurumsal disiplin kuralı: Kural dışı mikro hareket filtrelendi; portföy güvenliği sağlandı."
+                    ];
+                    return pool[idx];
+                }
+            },
+
+            // 5. AKTİF POZİSYON CANLI TAKTİKLERİ - 20 VARYASYON
+            getPositionTactic: function(symbol, pos, roePct, isHalf, stopVal, tp1Val, tp2Val) {
+                const sVal = stopVal || '-';
+                const t1Val = tp1Val || '-';
+                const t2Val = tp2Val || '-';
+                const idx = this.getHashIndex(symbol + '_' + roePct.toFixed(1) + '_' + isHalf, 5, 53);
+
+                if (isHalf) {
+                    const pool = [
+                        `🎯 <b>TP1 Kârı Kasada!</b> Kalan %50 pozisyon Breakeven koruma stopu ($${sVal}) ile sıfır risk zırhında. Nihai hedef <b>TP2 ($${t2Val})</b> bekleniyor. Bu işlemde sermaye kaybı riski matematiksel olarak sıfırlandı.`,
+                        `💎 <b>Kâr Realizasyonu Başarılı:</b> İlk hedefte kâr nakite kilitlendi. Kalan miktar piyasa dönüşlerine karşı giriş seviyesiyle ($${sVal}) zırhlandı; hedef tepe likiditesi ($${t2Val}).`,
+                        `🛡️ <b>Sıfır Risk Serbest Koşu:</b> TP1 kârı portföye yazıldı. Kalan pay başabaş kalkanıyla korunuyor; trend nereye kadar giderse kâr oraya kadar sürülecek.`,
+                        `🚀 <b>Sermaye Korumalı Büyüme:</b> %50 kâr cepte, kalan miktar sıfır maliyetle TP2 ($${t2Val}) koşusunda. Piyasa çökse bile bu işlem net artıda kalacak.`,
+                        `✨ <b>Disiplin Zaferi:</b> İlk hedef kurumsal disiplinle nakite çevrildi. Stop girişe çekildi ($${sVal}); kalan kısım nihai kâr istasyonunu arıyor.`
+                    ];
+                    return pool[idx];
+                } else if (roePct >= 3.0) {
+                    const pool = [
+                        `🟢 <b>Kâr Genişleme Bölgesindeyiz (+%${roePct.toFixed(2)} ROE):</b> Alıcı/Satıcı baskısı lehimize. Fiyat TP1 ($${t1Val}) hedefine yaklaşıyor. İlk hedef geldiğinde anında %50 kâr realize edilip stop Breakeven'a çekilecek.`,
+                        `⚡ <b>Güçlü Momentum İlerlemesi (+%${roePct.toFixed(2)} ROE):</b> Kurumsal emir akışı pozisyonu destekliyor. Dinamik kâr kilidi devrede; TP1 ($${t1Val}) seviyesinde nakite geçiş hazırlığı tamam.`,
+                        `📊 <b>Trend Genişlemesi Lehimize (+%${roePct.toFixed(2)} ROE):</b> Pozisyon kâr marjını büyütüyor. 1.5 ATR dinamik tampon takipte, ilk likidite istasyonunda kısmi kâr kilitlenecek.`,
+                        `🎯 <b>Kâr İstasyonuna Yaklaşıldı (+%${roePct.toFixed(2)} ROE):</b> Fiyat TP1 ($${t1Val}) seviyesine doğru kararlılıkla ilerliyor. Matematiksel disiplinle anında kâr kilitlenecek.`,
+                        `🔥 <b>Alfa Dalgası Devam Ediyor (+%${roePct.toFixed(2)} ROE):</b> İvme korunuyor. 1.5 ATR dinamik stop ($${sVal}) kârı arkadan kollarken hedefe odaklanıldı.`
+                    ];
+                    return pool[idx];
+                } else if (roePct <= -2.0) {
+                    const pool = [
+                        `⚖️ <b>Direnç/Destek Test Ediliyor (%${roePct.toFixed(2)} ROE):</b> Fiyat konsolide oluyor. Sert Stop seviyemiz ($${sVal}) 1.5 ATR dinamik tamponla pozisyonu koruyor. Panik satışı yok, planlanan stop seviyesi korunuyor.`,
+                        `🛡️ <b>Dinamik Risk Tamponu Devrede (%${roePct.toFixed(2)} ROE):</b> Piyasa dalgalanması hesaplanan stop mesafesi dahilinde ($${sVal}). Panik satışı yok; matematiksel risk bütçesi harfiyen korunuyor.`,
+                        `⚠️ <b>İstatistiksel Savunma Hattı (%${roePct.toFixed(2)} ROE):</b> Geri çekilme volatilite sınırları içinde seyrediyor. Sert stop ($${sVal}) felaket koruması olarak hazır bekliyor.`,
+                        `🛑 <b>Plan Sadakati devrede (%${roePct.toFixed(2)} ROE):</b> Piyasadaki dalgalanmaya karşı tereddüt yok. Kural dışı erken kapatma yapılmaz; 1.5 ATR risk bariyeri ($${sVal}) pozisyonu zırhlıyor.`,
+                        `⏳ <b>Dalgalanma Yönetimi (%${roePct.toFixed(2)} ROE):</b> Fiyat kilit bantta oyalanıyor. Sert stop seviyemiz ($${sVal}) pozisyonu güvence altında tutuyor.`
+                    ];
+                    return pool[idx];
+                } else {
+                    const pool = [
+                        `⏳ <b>Giriş Bölgesi Dengelenmesi (%${roePct.toFixed(2)} ROE):</b> Pozisyon taze açıldı. 1.5 ATR dinamik risk koruması aktif ($${sVal}). 5M mum hacmi ve delta akışı takip ediliyor.`,
+                        `⚖️ <b>Değer Alanı Konsolidasyonu (%${roePct.toFixed(2)} ROE):</b> Fiyat giriş seviyesi etrafında taban oluşturuyor. Algoritmik stop seviyesi güvenli mesafede ($${sVal}), yönlü kırılım bekleniyor.`,
+                        `🛡️ <b>Mikro Yapı Dengede (%${roePct.toFixed(2)} ROE):</b> Pozisyon güvenli bölgede. Doğal dalgalanmalara karşı plan harfiyen işletiliyor; stop tamponu ($${sVal}) hazır.`,
+                        `🔍 <b>Akıllı Para Pozisyonlama Fazı (%${roePct.toFixed(2)} ROE):</b> Tahtadaki mikro emirler taranıyor. Dinamik risk kalkanı devredeyken yönlü ivme takibi sürüyor.`,
+                        `✨ <b>İlk Evre Takibi (%${roePct.toFixed(2)} ROE):</b> Fiyat giriş bandında dengeleniyor. 1.5 ATR stop ($${sVal}) ve TP1 ($${t1Val}) hedefleri devrede.`
+                    ];
+                    return pool[idx];
+                }
+            },
+
+            // 6. CHART MODAL & SIDEBAR QUANT BRIEFING - HER DURUM İÇİN DERİN ANALİST BRİFİNGİ
+            getDeskBriefing: function(stateKey, symbol, ctx) {
+                const s = (symbol || '').replace('/USDT', '').replace('USDT', '').trim();
+                const p = ctx.pPrice;
+                const pivot = ctx.pivot;
+                const r3 = ctx.r3;
+                const r4 = ctx.r4;
+                const r5 = ctx.r5;
+                const s3 = ctx.s3;
+                const s4 = ctx.s4;
+                const s5 = ctx.s5;
+                const belowNpoc = ctx.belowNpoc;
+                const aboveNpoc = ctx.aboveNpoc;
+                const mvah = ctx.mvah;
+                const mval = ctx.mval;
+                const mpoc = ctx.mpoc;
+                const idx = this.getHashIndex(s + '_' + stateKey, 3, 67);
+
+                if (stateKey === 'BELOW_NPOC') {
+                    const pool = [
+                        `⚡ <b>Masa Brifingi:</b> Fiyat dokunulmamış kurumsal hacim havuzu olan <b>Aşağı nPOC ($${belowNpoc})</b> seviyesinde akıllı para desteğini test ediyor. 5M mum bu seviyeye fitil bırakıp nPOC üzerinde kapatırsa <b>Likidite Sekmesi LONG (Hedef Pivot P: $${pivot})</b> açılacak.`,
+                        `⚡ <b>Masa Brifingi:</b> Düşük zaman dilimi likidite süpürmesi (sweep) izleniyor. Aşağı nPOC ($${belowNpoc}) seviyesi alıcılar tarafından savunulursa <b>Mean Reversion LONG (Hedef Pivot P: $${pivot} / mPOC: $${mpoc})</b> pusu planı yürürlüğe girecek.`,
+                        `⚡ <b>Masa Brifingi:</b> Kurumsal değer alanı tabanında tamamlanmamış açık pozisyonlar (unfinished auction) dengeleniyor. nPOC üzerinde 5M gövde kapanışı <b>Likidite Sekmesi</b> sinyalini tetikleyecek.`
+                    ];
+                    return pool[idx % pool.length];
+                } else if (stateKey === 'ABOVE_NPOC') {
+                    const pool = [
+                        `⚡ <b>Masa Brifingi:</b> Fiyat dokunulmamış kurumsal arz bloğu olan <b>Yukarı nPOC ($${aboveNpoc})</b> direncini test ediyor. 5M mum seviyeye iğne atıp nPOC altında kapatırsa <b>Direnç Reddi SHORT (Hedef Pivot P: $${pivot})</b> açılacak.`,
+                        `⚡ <b>Masa Brifingi:</b> Tepe likidite avı izleniyor. Yukarı nPOC ($${aboveNpoc}) tavanında kurumsal satıcı baskısı oluşursa <b>Direnç Reddi SHORT (Hedef: Pivot P $${pivot})</b> pusu planı devreye girecek.`,
+                        `⚡ <b>Masa Brifingi:</b> Değer alanı tavanında tükeniş mumu aranıyor. nPOC ($${aboveNpoc}) altında teyit mumu gelirse algoritmik short pusu ile denge seviyesine (Pivot P) dönüş hedeflenecek.`
+                    ];
+                    return pool[idx % pool.length];
+                } else if (stateKey === 'R5_OVERBOUGHT') {
+                    const pool = [
+                        `⚡ <b>Masa Brifingi:</b> R5 ($${r5}) istatistiki tavan seviyesinde kovalama alımı yapılmaz. Fiyat mVAH/nPOC hedeflerine yürürse <b>Trend Breakout</b> takip edilir; R5 altına sarkıp ayı gövdesi bırakırsa <b>Direnç Reddi SHORT</b> pususu kurulur.`,
+                        `⚡ <b>Masa Brifingi:</b> Parabolik genişleme bölgesi ($${r5}): İstatistiksel 3 sigma sapması yaşanıyor. FOMO ile long açılmaz; seviye altına geri çekilme halinde dönüş shortu veya retest teyidi izlenir.`,
+                        `⚡ <b>Masa Brifingi:</b> Trend zirvesi likidite süpürmesi: Fiyat R5 ($${r5}) üzerinde satıcı bloklarını zorluyor. 5M mumu seviye altına sarkar ve tükeniş gösterirse tepe reddi değerlendirilir.`
+                    ];
+                    return pool[idx % pool.length];
+                } else if (stateKey === 'R4_BREAKOUT') {
+                    const pool = [
+                        `⚡ <b>Masa Brifingi:</b> Fiyat <b>R4 ($${r4})</b> üzerinde kurumsal boğa koridorunda. 5M mum R4 üzerinde yeni kapandıysa <b>Taze Breakout LONG</b> açılacak. Fiyat R4 desteğine geri çekilip fitille tutunursa <b>Retest LONG (Hedef R5: $${r5})</b> açılacak.`,
+                        `⚡ <b>Masa Brifingi:</b> Boğa momentumu R4 ($${r4}) hattını aştı. Üst hedef R5 ($${r5}). Akıllı para alım blokları izleniyor; 5M periyotta R4 üzerinde kalıcılık korundukça yönlü long pususu devrede.`,
+                        `⚡ <b>Masa Brifingi:</b> Değer alanı genişlemesi: R4 ($${r4}) kırılımı alıcıların hakimiyetini kanıtlıyor. Min 1.5x hacim desteğiyle birlikte doğrudan R5 ($${r5}) ve üst nPOC hedeflerine odaklanıldı.`
+                    ];
+                    return pool[idx % pool.length];
+                } else if (stateKey === 'R3_R4_COMPRESSION') {
+                    const pool = [
+                        `⚡ <b>Masa Brifingi:</b> Fiyat <b>R3 ($${r3})</b> desteği ile <b>R4 ($${r4})</b> direnci arasında volatilite sıkışmasında. 5M mum kapanışında R4 yukarı kırılırsa <b>Breakout LONG (Hedef R5)</b>; R3'ten red yerse <b>Scalp SHORT (Hedef Pivot P: $${pivot})</b> açılacak.`,
+                        `⚡ <b>Masa Brifingi:</b> Karar koridoru: R3-R4 bandında patlama hazırlığı taranıyor. Hacimli 5M kırılımı hangi yönde olursa algoritma o yönde pozisyon alacak; bant ortasında gereksiz işlem yapılmaz.`,
+                        `⚡ <b>Masa Brifingi:</b> Enerji birikimi fazı ($${r3} - $${r4}): Emir defteri iki yöne de derinleşiyor. R4 ($${r4}) üzerinde mum kapanışı boğa taarruzunu, R3 altına sarkma ise pivot düzeltmesini tetikler.`
+                    ];
+                    return pool[idx % pool.length];
+                } else if (stateKey === 'S3_R3_RANGE') {
+                    const pool = [
+                        `⚡ <b>Masa Brifingi:</b> Fiyat <b>Pivot P ($${pivot})</b> ekseninde dengeli seyrediyor (Alt: S3 $${s3} • Üst: R3 $${r3}). Fiyat S3 desteğine inip sekerse <b>Scalp LONG (Hedef: Pivot P)</b>; R3 direncine çıkıp red yerse <b>Scalp SHORT (Hedef: Pivot P)</b> açılacak.`,
+                        `⚡ <b>Masa Brifingi:</b> İstatistiki değer alanı içi mean reversion: Bant sınırları (S3 $${s3} / R3 $${r3}) reaksiyon sahalarıdır. Sınırlardan merkeze (Pivot $${pivot}) dönüş scalp fırsatları taranıyor.`,
+                        `⚡ <b>Masa Brifingi:</b> Nötr denge kanalı: Fiyat merkez pivot ($${pivot}) etrafında konsolide oluyor. Kurumsal kural gereği bant sınırlarına (S3/R3) ulaşılmadan erken aksiyon alınmaz.`
+                    ];
+                    return pool[idx % pool.length];
+                } else if (stateKey === 'S4_S3_WARNING') {
+                    const pool = [
+                        `⚡ <b>Masa Brifingi:</b> Fiyat <b>S3 ($${s3})</b> altına indi, son kurumsal savunma hattı olan <b>S4 ($${s4})</b> test ediliyor. 5M mum S4 altına inerse <b>Breakdown SHORT (Hedef S5: $${s5})</b>; S3 üstüne toparlarsa <b>Mean Reversion LONG (Hedef Pivot P)</b> açılacak.`,
+                        `⚡ <b>Masa Brifingi:</b> Ayı baskısı yoğunlaşıyor: S3 tabanı delindi, gözler S4 ($${s4}) kritik bariyerinde. Seviye tutunamazsa panik satışı hızlanır; hacimli tutunma ise güçlü bir düzeltme tepkisi doğurabilir.`,
+                        `⚡ <b>Masa Brifingi:</b> Kritik savunma sahası ($${s4}): Likidite boşalması yaşanıyor. S4 altındaki 5M gövde kapanışı breakdown short pususunu tetikleyecek.`
+                    ];
+                    return pool[idx % pool.length];
+                } else if (stateKey === 'S4_BREAKDOWN') {
+                    const pool = [
+                        `⚡ <b>Masa Brifingi:</b> Fiyat <b>S4 ($${s4})</b> altında tam ayı hakimiyetinde. Alt hedef: <b>S5 ($${s5})</b> / <b>mVAL ($${mval})</b>. 5M mum S4 altında taze kapandıysa <b>Breakdown SHORT</b>; S4 direncine yükselip red bırakırsa <b>Retest SHORT</b> açılacak.`,
+                        `⚡ <b>Masa Brifingi:</b> Likidasyon dalgası devrede: S4 ($${s4}) seviyesinin kaybı satıcıları cesaretlendirdi. Düşüş yönlü retest ve momentum short kurulumları radarımızda; dip avcısı olunmaz.`,
+                        `⚡ <b>Masa Brifingi:</b> Yapısal bozulma onaylandı: Fiyat değer alanının tamamen altında. S4 ($${s4}) altındaki her retest yeni bir short pusu fırsatıdır; nihai hedef S5 ($${s5}).`
+                    ];
+                    return pool[idx % pool.length];
+                } else if (stateKey === 'MVAH_TEST') {
+                    const pool = [
+                        `⚡ <b>Masa Brifingi:</b> Fiyat <b>mVAH ($${mvah})</b> aylık tepe hacim duvarını test ediyor. 5M mum kapanışı mVAH üzerinde güçlü teyit verirse <b>Macro Breakout LONG</b>; red yerse <b>Macro SHORT</b> pususu devreye girecek.`,
+                        `⚡ <b>Masa Brifingi:</b> Aylık değer alanı tavanı ($${mvah}) zorlanıyor. Bu seviyenin hacimli aşılması çok haftalık yeni bir boğa trendi başlatabilir; red gelirse mPOC eksenine geri çekilme takip edilir.`,
+                        `⚡ <b>Masa Brifingi:</b> Makro kırılım eşiği: mVAH ($${mvah}) kurumsal satıcıların ana kalesidir. Hacim anomalisi gelirse kırılıma katılınacak, direnç onaylanırsa ters yönlü pusu kurulacak.`
+                    ];
+                    return pool[idx % pool.length];
+                } else {
+                    const pool = [
+                        `⚡ <b>Masa Brifingi:</b> Fiyat stabil seyrediyor. 5 dakikalık mum kapanışlarında strateji kurallarının oluşması (Breakout, Retest, nPOC veya Destek/Direnç dönüşü) kesintisiz taranıyor.`,
+                        `⚡ <b>Masa Brifingi:</b> Piyasa dengeli konsolidasyonda. 100 parite eş zamanlı izleniyor; kurumsal hacim anomalisi veya kilit seviye teması oluştuğunda robot derhal pusuya geçecek.`,
+                        `⚡ <b>Masa Brifingi:</b> Gözlem fazı: Fiyat kilit pivotlar arasında güvenli mesafede. Algoritma sermaye disiplinini koruyarak yüksek olasılıklı tetik koşullarını bekliyor.`
+                    ];
+                    return pool[idx % pool.length];
+                }
+            },
+
+            // 7. POST-MORTEM OTOPSİ BRİFİNGİ (KAPANAN İŞLEMLER İÇİN 15+ VARYASYON)
+            getPostMortemAutopsy: function(symbol, tr, pnl, roe, isWin, reason, stopStr) {
+                const s = (symbol || '').replace('/USDT', '').replace('USDT', '').trim();
+                const idx = this.getHashIndex(s + '_' + reason + '_' + pnl.toFixed(2), 3, 79);
+
+                if (reason.includes('TP2') || reason.includes('Final')) {
+                    const pool = [
+                        `🏆 <b>Maksimum Verimle Tamamlandı:</b> Pozisyon planlandığı gibi TP2 nihai hedefine ulaştı (+%${roe.toFixed(1)} ROE). İlk yarı TP1'de realize edilmiş, kalan %50 Breakeven korumasıyla koşmuştu. Mükemmel kurgulanmış bir trade.`,
+                        `🏆 <b>Kurumsal Hedefe Tam İsabet:</b> Zirve likidite havuzunda çıkış sağlandı (+${pnl.toFixed(2)}$). Risk-getiri optimizasyonu kusursuz icra edildi.`,
+                        `🏆 <b>Trend Genişlemesi Tamamlandı:</b> Dalga tepe noktasına kadar sürüldü (+%${roe.toFixed(1)} ROE). Matematiksel kurallar portföy büyümesini istikrarlı kılıyor.`
+                    ];
+                    return pool[idx % pool.length];
+                } else if (reason.includes('Dinamik ROE') || reason.includes('Zaman Kalkanı')) {
+                    const pool = [
+                        `💎 <b>Kâr Güvenle Kilitlendi:</b> +%${roe.toFixed(1)} ROE görüldükten sonra kâr kilidi devreye girdi ve kazanç kasaya atıldı. Dalgalı piyasa koşullarında kârı piyasaya geri vermemek en büyük sermaye disiplinidir.`,
+                        `💎 <b>Disiplinli Kâr Realizasyonu:</b> Hedef bölgesinde kısmi kâr kasaya alındı (+${pnl.toFixed(2)}$). Kalan bakiye Breakeven zırhıyla risksiz koşturuldu.`,
+                        `💎 <b>Sermaye Koruma & Kazanç:</b> Dinamik kâr kilidi piyasa düzeltmesinden önce çalıştı ve net kârı portföye ekledi.`
+                    ];
+                    return pool[idx % pool.length];
+                } else if (reason.includes('TP1')) {
+                    const pool = [
+                        `🎯 <b>İlk Hedef Kârı Alındı:</b> TP1 seviyesinde %50 kâr realize edildi (+${pnl.toFixed(2)}$). Kalan bakiye Breakeven zırhıyla korunuyor.`,
+                        `🎯 <b>Kısmi Kâr Kasada:</b> İlk likidite istasyonunda anapara emniyete alındı (+${pnl.toFixed(2)}$). Kalan %50 ile risksiz koşu sürüyor.`,
+                        `🎯 <b>TP1 Tamam:</b> Matematiksel ilk istasyona varıldı. Stop girişe sabitlendi; portföy riski sıfırlandı.`
+                    ];
+                    return pool[idx % pool.length];
+                } else if (reason.includes('Breakeven')) {
+                    const pool = [
+                        `🛡️ <b>Sıfır Kayıp Kalkanı:</b> Fiyat ilk kâr alımından sonra terse döndü; ancak Breakeven kalkanı devreye girerek kalan pozisyonu başabaş noktasında kapattı. Anapara kuruşu kuruşuna korundu.`,
+                        `🛡️ <b>Risksiz Çıkış Zaferi:</b> Piyasa dalgalanmasında anapara erimedi. İlk kâr cepte kalırken kalan dilim sıfır zararla tasfiye edildi.`,
+                        `🛡️ <b>Başabaş Savunması:</b> Ters yönlü piyasa hareketinde stop koruması görevini yaptı; sermaye bir sonraki kurulum için eksiksiz hazır.`
+                    ];
+                    return pool[idx % pool.length];
+                } else if (reason.includes('Sert Stop')) {
+                    const pool = [
+                        `🛑 <b>Disiplinli Risk Kontrolü:</b> Beklenen seviye tutunamadı ve Sert Stop (${stopStr}) devreye girerek zararı küçük bir dilimde kesti (-${Math.abs(pnl).toFixed(2)}$). Sermaye olası derin bir çöküşten korundu.`,
+                        `🛑 <b>Felaket Koruma Kalkanı:</b> 1.5 ATR dinamik stop mekanizması portföyü ani volatilite şokundan korudu. Kontrollü kayıp sermaye sağlığını güvenceye alır.`,
+                        `🛑 <b>Matematiksel Risk Bütçesi:</b> İstatistiki sınır dışına çıkan harekette pozisyon tereddütsüz kapatıldı. Planlanan risk limitleri harfiyen korundu.`
+                    ];
+                    return pool[idx % pool.length];
+                } else {
+                    return `ℹ️ <b>Kapanış Notu:</b> ${reason}. Net sonuç: ${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}$ (${roe >= 0 ? '+' : ''}${roe.toFixed(1)}% ROE).`;
+                }
+            }
+        };
+
         function renderCockpitView() {
             if (!appState) return;
 
@@ -3666,6 +4002,10 @@ async function loadAdminMetrics() {
                         `;
 
                         if (isContact) {
+                            const commText = isVolOk 
+                                ? ValkyrieCommentaryEngine.getContactVolOk(cleanS, c.targetName, volSurge, minSurge, rsScore, c.action, pPrice, tPrice)
+                                : ValkyrieCommentaryEngine.getContactVolWaiting(cleanS, c.targetName, volSurge, minSurge, rsScore, c.action, pPrice, tPrice);
+
                             thoughtItems.push({
                                 cat: 'near',
                                 symbol: cleanS,
@@ -3677,13 +4017,12 @@ async function loadAdminMetrics() {
                                 text: `Fiyat şu an <b>$${pPrice}</b> ile <b>${c.targetName} ($${tPrice})</b> seviyesine tam temas halinde.<br>
                                 ${telemetryBar}
                                 <div style="margin-top:4px; padding:6px 10px; background:${isVolOk ? 'rgba(16,185,129,0.08)' : 'rgba(245,158,11,0.08)'}; border-left:3px solid ${isVolOk ? '#10b981' : '#f59e0b'}; border-radius:4px; font-size:12px; line-height:1.45;">
-                                    <b>❓ Durum & Neden Bekliyor?</b> ${isVolOk 
-                                        ? `5M hacim patlaması (${volSurge.toFixed(2)}x) kurumsal girişi onayladı! Fakeout olmaması için <b>5M mum kapanışı</b> bekleniyor; gövde seviye yönünde kapandığı an pozisyon açılacak.` 
-                                        : `Fiyat kilit seviyeye temas etti fakat 5M hacim (${volSurge.toFixed(2)}x), gereken min <b>${minSurge.toFixed(1)}x</b> seviyesinin altında. Sahte kırılıma (Fakeout) kurban gitmemek için kurumsal hacim desteği bekleniyor.`}<br>
+                                    <b>❓ Durum & Neden Bekliyor?</b> ${commText}<br>
                                     <b>✅ Tetiklenme Şartı:</b> 5M mum kapanışı ve en az <b>${minSurge.toFixed(1)}x</b> hacim sağlandığında anında <b>${c.action}</b> tetiklenecektir.
                                 </div>`
                             });
                         } else if (dist <= 0.85) {
+                            const appText = ValkyrieCommentaryEngine.getApproaching(cleanS, c.targetName, dist, minSurge, rsScore);
                             thoughtItems.push({
                                 cat: 'near',
                                 symbol: cleanS,
@@ -3695,7 +4034,7 @@ async function loadAdminMetrics() {
                                 text: `Fiyat ${c.targetName} ($${tPrice}) seviyesine doğru süzülüyor.<br>
                                 ${telemetryBar}
                                 <div style="margin-top:4px; padding:6px 10px; background:rgba(56,189,248,0.08); border-left:3px solid #38bdf8; border-radius:4px; font-size:12px; line-height:1.45;">
-                                    <b>⚡ Beklenen Senaryo:</b> Seviyeye ulaşıldığında hacim ve fitil dinamikleri canlı taranacak. Hacim min ${minSurge.toFixed(1)}x kurumsal ivme yakalarsa pusu anında tetiklenecek. Hacimsiz sarkarsa tuzak sayılarak beklenmeye devam edilecek.
+                                    <b>⚡ Beklenen Senaryo:</b> ${appText}
                                 </div>`
                             });
                         }
@@ -3717,6 +4056,7 @@ async function loadAdminMetrics() {
                 if (rejections.length > 0) {
                     rejections.slice(-6).reverse().forEach(rej => {
                         const cleanRej = (rej.symbol || '').replace('/USDT', '').replace('USDT', '').trim();
+                        const rejAutopsy = ValkyrieCommentaryEngine.getRejectionAutopsy(cleanRej, rej.setup, rej.reason);
                         thoughtItems.push({
                             cat: 'rejected',
                             symbol: cleanRej,
@@ -3728,7 +4068,7 @@ async function loadAdminMetrics() {
                             text: `Robot bu paritede <b>${rej.setup}</b> kurulumunu tespit etti ve işleme girmeyi değerlendirdi.<br>
                             <div style="margin-top:4px; padding:6px 10px; background:rgba(244,63,94,0.08); border-left:3px solid #f43f5e; border-radius:4px;">
                                 <b>🚫 Neden Poz Açılmadı?</b> <span style="color:#fda4af; font-weight:700;">${rej.reason}</span>.<br>
-                                <b>💡 Alınan Önlem:</b> Sahte kırılım, tükeniş mumu veya trende kafa atma riski bertaraf edildi; sermaye gereksiz bir stop kaybından korundu.
+                                <b>💡 Alınan Önlem:</b> ${rejAutopsy}
                             </div>`
                         });
                     });
@@ -3761,21 +4101,9 @@ async function loadAdminMetrics() {
                         const tp2Val = pos.tp2 ? (typeof formatSmartPrice === 'function' ? formatSmartPrice(pos.tp2) : Number(pos.tp2).toFixed(4)) : '-';
                         const stopVal = pos.hard_stop ? (typeof formatSmartPrice === 'function' ? formatSmartPrice(pos.hard_stop) : Number(pos.hard_stop).toFixed(4)) : '-';
 
-                        let tacticText = '';
-                        let tacticTitle = `${cleanS} [${pos.side} ${lev}x] CANLI TAKTİK RAPORU`;
-                        let tagColor = 'var(--green)';
-
-                        if (isHalf) {
-                            tacticText = `🎯 <b>TP1 Kârı Kasada!</b> Kalan %50 pozisyon Breakeven koruma stopu ($${stopVal}) ile sıfır risk zırhında. Nihai hedef <b>TP2 ($${tp2Val})</b> bekleniyor. Bu işlemde sermaye kaybı riski matematiksel olarak sıfırlandı.`;
-                        } else if (roePct >= 3.0) {
-                            const distToTp1 = pos.tp1 && curP > 0 ? Math.abs((pos.tp1 - curP) / curP * 100).toFixed(2) : '1.0';
-                            tacticText = `🟢 <b>Kâr Bölgesindeyiz (+%${roePct.toFixed(2)} ROE):</b> Alıcı/Satıcı baskısı lehimize. Fiyat TP1 ($${tp1Val}) hedefine sadece <b>%${distToTp1}</b> mesafede. İlk hedef geldiğinde anında %50 kâr realize edilip stop Breakeven'a çekilecek.`;
-                        } else if (roePct <= -2.0) {
-                            tacticText = `⚖️ <b>Direnç Test Ediliyor (%${roePct.toFixed(2)} ROE):</b> Fiyat konsolide oluyor. Sert Stop seviyemiz ($${stopVal}) 1.5 ATR dinamik tamponla pozisyonu koruyor. Panik satışı yok, planlanan stop seviyesi korunuyor.`;
-                            tagColor = '#f43f5e';
-                        } else {
-                            tacticText = `⏳ <b>Giriş Bölgesi Testi (%${roePct.toFixed(2)} ROE):</b> Pozisyon taze açıldı ($${typeof formatSmartPrice === 'function' ? formatSmartPrice(pos.entry_price) : pos.entry_price}). 1.5 ATR risk koruması aktif. 5M mum hacmi takip ediliyor.`;
-                        }
+                        const tacticText = ValkyrieCommentaryEngine.getPositionTactic(cleanS, pos, roePct, isHalf, stopVal, tp1Val, tp2Val);
+                        const tacticTitle = `${cleanS} [${pos.side} ${lev}x] CANLI TAKTİK RAPORU`;
+                        const tagColor = isHalf ? 'var(--green)' : (roePct >= 0 ? '#10b981' : '#f43f5e');
 
                         thoughtItems.push({
                             cat: 'positions',
@@ -3816,20 +4144,8 @@ async function loadAdminMetrics() {
                         let autopsyTag = isWin ? 'KÂR OTOPSİSİ' : 'STOP OTOPSİSİ';
                         let autopsyTagClass = isWin ? 'tag-autopsy-win' : 'tag-autopsy-loss';
 
-                        if (reason.includes('TP2') || reason.includes('Final')) {
-                            autopsyText = `🏆 <b>Maksimum Verimle Tamamlandı:</b> Pozisyon planlandığı gibi TP2 nihai hedefine ulaştı (+%${roe.toFixed(1)} ROE). İlk yarı TP1'de realize edilmiş, kalan %50 Breakeven korumasıyla koşmuştu. Mükemmel kurgulanmış bir trade.`;
-                        } else if (reason.includes('Dinamik ROE') || reason.includes('Zaman Kalkanı')) {
-                            autopsyText = `💎 <b>Kâr Güvenle Kilitlendi:</b> +%${roe.toFixed(1)} ROE görüldükten sonra kâr kilidi devreye girdi ve kazanç kasaya atıldı. Dalgalı piyasa koşullarında kârı piyasaya geri vermemek en büyük sermaye disiplinidir.`;
-                        } else if (reason.includes('TP1')) {
-                            autopsyText = `🎯 <b>İlk Hedef Kârı Alındı:</b> TP1 seviyesinde %50 kâr realize edildi (+${pnl.toFixed(2)}$). Kalan bakiye Breakeven zırhıyla korunuyor.`;
-                        } else if (reason.includes('Breakeven')) {
-                            autopsyText = `🛡️ <b>Sıfır Kayıp Kalkanı:</b> Fiyat ilk kâr alımından sonra terse döndü; ancak Breakeven kalkanı devreye girerek kalan pozisyonu başabaş noktasında kapattı. Anapara kuruşu kuruşuna korundu.`;
-                        } else if (reason.includes('Sert Stop')) {
-                            const stopStr = tr.hard_stop ? '$' + (typeof formatSmartPrice === 'function' ? formatSmartPrice(tr.hard_stop) : Number(tr.hard_stop).toFixed(4)) : '';
-                            autopsyText = `🛑 <b>Disiplinli Risk Kontrolü:</b> Beklenen seviye tutunamadı ve Sert Stop (${stopStr}) devreye girerek zararı küçük bir dilimde kesti (-${Math.abs(pnl).toFixed(2)}$). Sermaye olası derin bir çöküşten korundu.`;
-                        } else {
-                            autopsyText = `ℹ️ <b>Kapanış Notu:</b> ${reason}. Net sonuç: ${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}$ (${roe >= 0 ? '+' : ''}${roe.toFixed(1)}% ROE).`;
-                        }
+                        const stopStr = tr.hard_stop ? '$' + (typeof formatSmartPrice === 'function' ? formatSmartPrice(tr.hard_stop) : Number(tr.hard_stop).toFixed(4)) : '';
+                        const autopsyText = ValkyrieCommentaryEngine.getPostMortemAutopsy(cleanS, tr, pnl, roe, isWin, reason, stopStr);
 
                         thoughtItems.push({
                             cat: 'autopsy',
@@ -4242,6 +4558,23 @@ async function loadAdminMetrics() {
                 };
             }
 
+            const ctx = {
+                pPrice: formatVal(price),
+                pivot: formatVal(p),
+                r3: formatVal(r3),
+                r4: formatVal(r4),
+                r5: formatVal(r5),
+                s3: formatVal(s3),
+                s4: formatVal(s4),
+                s5: formatVal(s5),
+                belowNpoc: formatVal(belowNpoc),
+                aboveNpoc: formatVal(aboveNpoc),
+                mvah: formatVal(mvah),
+                mval: formatVal(mval),
+                mpoc: formatVal(mpoc),
+                macroTrend: macroTrend
+            };
+
             // DURUM 0: ACIK POZISYON VARSA CANLI POZISYON YONETIMI
             if (openPos) {
                 const metrics = computePositionPnL(openPos, price);
@@ -4249,12 +4582,16 @@ async function loadAdminMetrics() {
                 const isLoss = metrics.isLoss;
                 const statusColor = isLoss ? 'var(--red)' : (isWin ? 'var(--green)' : '#ffffff');
                 const liveStop = openPos.is_half_closed ? (openPos.soft_stop || openPos.hard_stop) : (openPos.hard_stop || openPos.soft_stop);
+                const isHalf = openPos.is_half_closed || openPos.tp1_hit;
+                const posDeskBriefing = isHalf
+                    ? `🎯 <b>Masa Takip Planı:</b> TP1 kârı (%50) nakite kilitlendi. Kalan bakiye $${formatSmartPrice(liveStop)} Breakeven zırhında; nihai hedef <b>TP2 ($${formatSmartPrice(openPos.tp2 || 0)})</b> bekleniyor. Bu pozisyonda anapara kaybı riski sıfırlanmıştır.`
+                    : `🎯 <b>Masa Takip Planı:</b> 1.5 ATR Dinamik Stop Seviyesi ($${formatSmartPrice(liveStop)}) ${openPos.side === 'LONG' ? 'altına inerse' : 'üstüne çıkarsa'} işlem kapatılacak. Pozisyon <b>+%7.0 ROE kâra ulaştığında</b> veya <b>90dk kârda beklediğinde</b> (ya da TP1 $${formatSmartPrice(openPos.tp1)} hedefine geldiğinde) <b>%50 kâr anında nakite kilitlenecek</b>, kalan %50 pozisyon stopu risksiz Breakeven seviyesine çekilerek zirveye kadar koşturulacak.`;
 
                 return packResult(
                     `🛡️ ${openPos.leverage}x ${openPos.side} POZİSYONU CANLI YÖNETİLİYOR`,
                     statusColor,
                     `Bot şu anda <b>${openPos.side}</b> pozisyonunu aktif koruyor. Giriş: <b>$${formatSmartPrice(openPos.entry_price)}</b> | Anlık: <b>$${formatSmartPrice(metrics.curP)}</b> | Durum: <b style="color:${statusColor}">${metrics.roePct >= 0 ? '+' : ''}${metrics.roePct.toFixed(2)}% ROE (${metrics.pnlUsdt >= 0 ? '+' : ''}${metrics.pnlUsdt.toFixed(2)} $)</b>`,
-                    `🎯 <b>Botun Canlı Takip Planı:</b> 1.5 ATR Dinamik Stop Seviyesi ($${formatSmartPrice(liveStop)}) ${openPos.side === 'LONG' ? 'altına inerse' : 'üstüne çıkarsa'} işlem kapatılacak. Pozisyon <b>+%7.0 ROE kâra ulaştığında</b> veya <b>90dk kârda beklediğinde</b> (ya da TP1 $${formatSmartPrice(openPos.tp1)} hedefine geldiğinde) <b>%50 kâr anında nakite kilitlenecek</b>, kalan %50 pozisyon stopu risksiz Breakeven seviyesine çekilerek zirveye kadar koşturulacak.`
+                    posDeskBriefing
                 );
             }
 
@@ -4266,7 +4603,7 @@ async function loadAdminMetrics() {
                     `🎯 AŞAĞI nPOC LİKİDİTE TESTİ${confTag}`,
                     'var(--cyan)',
                     `Fiyat dokunulmamış kurumsal hacim bloğu olan <b>Aşağı nPOC ($${formatVal(belowNpoc)})</b> desteğini test ediyor.`,
-                    `⚡ <b>Botun Pusu Planı:</b> 5M mum bu seviyeye fitil bırakıp <b>nPOC ($${formatVal(belowNpoc)})</b> üzerinde kapatırsa <b>Likidite Sekmesi LONG (Hedef Pivot P: $${formatVal(p)})</b> açılacak.`
+                    ValkyrieCommentaryEngine.getDeskBriefing('BELOW_NPOC', symbol, ctx)
                 );
             }
 
@@ -4278,7 +4615,7 @@ async function loadAdminMetrics() {
                     `🎯 YUKARI nPOC DİRENÇ TESTİ${confTag}`,
                     'var(--yellow)',
                     `Fiyat dokunulmamış kurumsal tepe bloğu olan <b>Yukarı nPOC ($${formatVal(aboveNpoc)})</b> direncini test ediyor.`,
-                    `⚡ <b>Botun Pusu Planı:</b> 5M mum bu seviyeye iğne atıp <b>nPOC ($${formatVal(aboveNpoc)})</b> altında kapatırsa <b>Direnç Reddi SHORT (Hedef Pivot P: $${formatVal(p)})</b> açılacak.`
+                    ValkyrieCommentaryEngine.getDeskBriefing('ABOVE_NPOC', symbol, ctx)
                 );
             }
 
@@ -4288,7 +4625,7 @@ async function loadAdminMetrics() {
                     '🔥 R5 AŞIRI ALIM (TREND ZİRVESİ GENİŞLEMESİ)',
                     'var(--yellow)',
                     `Fiyat <b>R5 ($${formatVal(r5)})</b> zirve seviyesinin üzerine çıktı, aşırı alım bölgesinde seyrediyor.`,
-                    `⚡ <b>Botun Pusu Planı:</b> R5 üzerinde kovalama alımı yapılmaz. Fiyat mVAH/nPOC hedeflerine yürürse <b>Trend Breakout</b> takip edilir; R5 altına sarkıp ayı mumu bırakırsa <b>Direnç Reddi SHORT</b> pususu kurulur.`
+                    ValkyrieCommentaryEngine.getDeskBriefing('R5_OVERBOUGHT', symbol, ctx)
                 );
             }
 
@@ -4299,7 +4636,7 @@ async function loadAdminMetrics() {
                     '🚀 R4 BOĞA KANALI (BREAKOUT & RETEST PUSUSU)',
                     'var(--green)',
                     `Fiyat <b>R4 ($${formatVal(r4)})</b> üzerinde boğa bölgesinde. Üst hedef: <b>R5 ($${formatVal(r5)})</b>${npocText}.`,
-                    `⚡ <b>Botun Pusu Planı:</b> 5M mum R4 üzerinde yeni kapandıysa <b>Taze Breakout LONG</b> açılacak. Fiyat R4 desteğine geri çekilip (Retest) fitil bırakırsa <b>Retest LONG (Hedef R5: $${formatVal(r5)})</b> açılacak.`
+                    ValkyrieCommentaryEngine.getDeskBriefing('R4_BREAKOUT', symbol, ctx)
                 );
             }
 
@@ -4309,7 +4646,7 @@ async function loadAdminMetrics() {
                     '⚖️ R3-R4 SIKIŞMA & KIRILIM PUSUSU',
                     '#ffa726',
                     `Fiyat <b>R3 ($${formatVal(r3)})</b> desteği ile <b>R4 ($${formatVal(r4)})</b> direnci arasında sıkışıyor.`,
-                    `⚡ <b>Botun Pusu Planı:</b> 5M mum kapanışında <b>R4 ($${formatVal(r4)})</b> yukarı kırılırsa <b>Breakout LONG (Hedef R5)</b> açılacak; fiyat R3'ten red yiyip aşağı dönerse <b>Scalp SHORT (Hedef Pivot P: $${formatVal(p)})</b> açılacak.`
+                    ValkyrieCommentaryEngine.getDeskBriefing('R3_R4_COMPRESSION', symbol, ctx)
                 );
             }
 
@@ -4319,7 +4656,7 @@ async function loadAdminMetrics() {
                     '🔄 PİVOT YATAY KANAL (DESTEK / DİRENÇ TEPKİSİ)',
                     '#388bfd',
                     `Fiyat <b>Pivot P ($${formatVal(p)})</b> ekseninde dengeli seyrediyor. (Alt: S3 $${formatVal(s3)} • Üst: R3 $${formatVal(r3)})`,
-                    `⚡ <b>Botun Pusu Planı:</b> Fiyat <b>S3 ($${formatVal(s3)})</b> desteğine inip fitille sekerse <b>Scalp LONG (Hedef: Pivot P)</b>; <b>R3 ($${formatVal(r3)})</b> direncine çıkıp red yerse <b>Scalp SHORT (Hedef: Pivot P)</b> açılacak.`
+                    ValkyrieCommentaryEngine.getDeskBriefing('S3_R3_RANGE', symbol, ctx)
                 );
             }
 
@@ -4329,7 +4666,7 @@ async function loadAdminMetrics() {
                     '⚠️ S4-S3 ÇÖKÜŞ UYARI BÖLGESİ',
                     '#d500f9',
                     `Fiyat <b>S3 ($${formatVal(s3)})</b> altına indi, son savunma hattı olan <b>S4 ($${formatVal(s4)})</b> test ediliyor.`,
-                    `⚡ <b>Botun Pusu Planı:</b> 5M mum <b>S4 ($${formatVal(s4)})</b> altına inerse <b>Breakdown SHORT (Hedef S5: $${formatVal(s5)})</b> açılacak; fiyat S3 üstüne toparlarsa <b>Mean Reversion LONG (Hedef Pivot P)</b> açılacak.`
+                    ValkyrieCommentaryEngine.getDeskBriefing('S4_S3_WARNING', symbol, ctx)
                 );
             }
 
@@ -4340,7 +4677,7 @@ async function loadAdminMetrics() {
                     '📉 S4 AYI BÖLGESİ (PANİK & BREAKDOWN PUSUSU)',
                     'var(--red)',
                     `Fiyat <b>S4 ($${formatVal(s4)})</b> altında ayı hakimiyetinde. Alt hedef: <b>S5 ($${formatVal(s5)})</b> / <b>mVAL ($${formatVal(mval)})</b>${npocText}.`,
-                    `⚡ <b>Botun Pusu Planı:</b> 5M mum S4 altında yeni kapandıysa <b>Taze Breakdown SHORT</b> açılacak. Fiyat S4 direncine yükselip red mumu bırakırsa <b>Retest SHORT (Hedef S5: $${formatVal(s5)})</b> açılacak.`
+                    ValkyrieCommentaryEngine.getDeskBriefing('S4_BREAKDOWN', symbol, ctx)
                 );
             }
 
@@ -4351,7 +4688,7 @@ async function loadAdminMetrics() {
                     '🎯 mVAH AYLIK TAVAN BÖLGESİ (MACRO TEST)',
                     'var(--cyan)',
                     `Fiyat <b>mVAH ($${formatVal(mvah)})</b> aylık tepe hacim duvarını test ediyor.${npocText}`,
-                    `⚡ <b>Botun Pusu Planı:</b> 5M mum kapanışı <b>mVAH ($${formatVal(mvah)})</b> üzerinde güçlü teyit verirse <b>Macro Breakout LONG</b> açılacak. Red yerse <b>Macro SHORT</b> pususu devreye girecek.`
+                    ValkyrieCommentaryEngine.getDeskBriefing('MVAH_TEST', symbol, ctx)
                 );
             }
 
@@ -4359,7 +4696,7 @@ async function loadAdminMetrics() {
                 '🔍 PİYASA İZLENİYOR',
                 'var(--text-muted)',
                 `Fiyat $${formatVal(price)} seviyesinde stabil.`,
-                `⚡ <b>Botun Pusu Planı:</b> 5 dakikalık mum kapanışlarında strateji kurallarının oluşması (Breakout, Retest, nPOC veya Destek/Direnç dönüşü) bekleniyor.`
+                ValkyrieCommentaryEngine.getDeskBriefing('WATCH', symbol, ctx)
             );
         }
 

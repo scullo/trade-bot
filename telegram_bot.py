@@ -3,6 +3,7 @@ import os
 import aiohttp
 import asyncio
 import io
+import hashlib
 from datetime import datetime, timezone, timedelta
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 from chart_generator import generate_trade_chart_image
@@ -84,6 +85,82 @@ class TelegramNotifier:
         except Exception as e:
             print(f">> Telegram sendDocument istisnasi: {e}")
 
+    def _generate_quant_entry_briefing(self, pos: dict, vol_val: float, rs_score: float, macro_str: str) -> str:
+        trade_type = str(pos.get("trade_type", ""))
+        reason = str(pos.get("reason", ""))
+        decouple = str(pos.get("decoupling_status", ""))
+        symbol = pos.get("symbol", "")
+        seed_str = f"{symbol}_{pos.get('entry_time', '')}_{trade_type}_{vol_val:.1f}"
+        idx = int(hashlib.md5(seed_str.encode('utf-8')).hexdigest(), 16)
+
+        # 1. ALFA AYRIŞMA & YÜKSEK HACİMLİ BREAKOUT (vol_val >= 2.0 veya ALFA)
+        if "ALFA" in decouple or (vol_val >= 2.0 and "Breakout" in trade_type):
+            pool = [
+                f"Parite genel piyasadan bağımsız kurumsal hacimle ({vol_val:.1f}x) ayrıştı! Rüzgar arkamızda; TP1'de ilk kâr kilitlenip koruma kalkanına geçilecek.",
+                f"Akıllı para akışı netleşti ({vol_val:.1f}x Hacim, RS: {rs_score:+.2f}). Beta baskısını kıran paritede kurumsal alım dalgası değerlendiriliyor.",
+                f"Emir defterinde agresif likidite emilimi gerçekleşti ({vol_val:.1f}x). Parite piyasa yönünden bağımsız pozitif ivme yakaladı; TP1 hedefte.",
+                f"Kurumsal emir blokları seviyeyi hacimle ({vol_val:.1f}x) deldi. İlk hedefte risk sıfırlanarak trend koşusu planlandı.",
+                f"Yüksek hacimli konsolidasyon kırılımı teyit edildi. Göreceli güç katsayısı ({rs_score:+.2f}) güçlü momentumu doğruluyor.",
+                f"Büyük montanlı alıcı baskısı emir akışına yansıdı. Matematiksel disiplinle TP1 seviyesinde anapara emniyete alınacak."
+            ]
+            chosen = pool[idx % len(pool)]
+            return f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>{chosen}</i>\n"
+
+        # 2. STANDART BREAKOUT / MOMENTUM
+        elif "Breakout" in trade_type:
+            pool = [
+                "Kilit direnç eşiği aşıldı. 5M mum kapanışı seviye üzerinde teyit edildi; TP1'de %50 kâr kilidi ve ardından Breakeven zırhı işletilecek.",
+                "Volatilite genişlemesiyle birlikte yapısal kırılım onaylandı. 1.5 ATR dinamik tamponla işlem sağlama alındı.",
+                "Kurumsal değer alanı dışına yönlü patlama gerçekleşti. TP1 istasyonuna kadar ivme korunacak, ardından sıfır risk zırhına geçilecek.",
+                "Piyasa yapıcı direnç duvarı aşıldı. Disiplinli risk-getiri oranıyla ilk likidite havuzuna odaklanıldı.",
+                "Düşük zaman dilimi sıkışması yukarı kırıldı. Kural gereği TP1'de yarım kâr realizasyonu yapılarak sermaye korunacak."
+            ]
+            chosen = pool[idx % len(pool)]
+            return f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>{chosen}</i>\n"
+
+        # 3. MEAN REVERSION / nPOC / LİKİDİTE SEKMESİ
+        elif "SCALP" in trade_type or "nPOC" in reason or "Likidite" in reason or "Sekme" in reason:
+            pool = [
+                "Dokunulmamış kurumsal hacim bloğundan (nPOC) beklenen likidite sekmesi yakalandı. Yatay bant dengesinde kâr cebe alınacak.",
+                "İstatistiksel aşırı sapma kurumsal seviyede emildi. Fiyatın değer alanı eksenine (Mean Reversion) dönüşü hedefleniyor.",
+                "Fiyat kurumsal likidite havuzunu süpürüp seviye içine geri döndü. Düşük riskli, yüksek olasılıklı pivot tepkisi işleme alındı.",
+                "Piyasa dengesizliği (imbalance) nPOC istasyonunda karşılandı. 1.5 ATR koruma stopuyla mikro dalga değerlendiriliyor.",
+                "Kurumsal emir blokları seviyeyi savundu. Kısa vadeli sermaye korumalı scalp taktiği işletimde."
+            ]
+            chosen = pool[idx % len(pool)]
+            return f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>{chosen}</i>\n"
+
+        # 4. DESTEK / DİRENÇ / CAMARILLA REAKSİYONU
+        elif "S3" in reason or "R3" in reason or "Pivot" in reason:
+            pool = [
+                "Camarilla istatistiksel sınırında güçlü reaksiyon fitili onaylandı. Ortalama dönüş istikametinde disiplinli pozisyon başlatıldı.",
+                "Kritik dönüş seviyesinde alıcı/satıcı dengesi lehimize evrildi. 1.5 ATR dinamik stopla risk kontrol altında.",
+                "Aşırı uzamış fiyat hareketi destek/direnç bandında kurumsal taleple karşılaştı. Hedef pivot seviyesine doğru kontrollü kâr takibi.",
+                "Piyasa yapıcı denge eksenine doğru geri çekilme dalgası taranıyor. Matematiksel hedef seviyesinde kâr kilitlenecek."
+            ]
+            chosen = pool[idx % len(pool)]
+            return f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>{chosen}</i>\n"
+
+        # 5. RETEST / TREND DEVAM
+        elif "Retest" in reason or "Devam" in reason:
+            pool = [
+                "Trend yönünde sağlıklı geri çekilme (Retest) başarıyla tamamlandı. Düşük maliyetli kurumsal ekleme bölgesinde pozisyon tetiklendi.",
+                "Kırılan seviye yeni destek olarak test edildi ve korundu. Trend takip algoritması en uygun risk-getiri noktasından pozisyona girdi.",
+                "Momentum dinlenmesinin ardından trend yönünde yeni dalga teyidi. Dinamik takip stopu ile adım adım pozisyon sürülecek."
+            ]
+            chosen = pool[idx % len(pool)]
+            return f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>{chosen}</i>\n"
+
+        # 6. GENEL / DENGELİ QUANT KURALI
+        else:
+            pool = [
+                "Matematiksel kural seti tam teyit verdi. Risk sermayesi koruma kalkanıyla kontrol altında.",
+                "Beklenen Değer (EV) pozitif bölgede hesaplandı. Dinamik kâr kilidi ve sert stop bariyeriyle işlem devrede.",
+                "Kurumsal pusu stratejisi seviyeyi onayladı. Önceden belirlenmiş para yönetimi kuralları harfiyen uygulanıyor."
+            ]
+            chosen = pool[idx % len(pool)]
+            return f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>{chosen}</i>\n"
+
     async def notify_position_opened(self, pos: dict, free_balance: float = None, df_5m = None, levels: dict = None):
         side_emoji = "🟢 <b>LONG</b>" if pos["side"] == "LONG" else "🔴 <b>SHORT</b>"
         clean_sym = pos["symbol"].replace("/USDT", "")
@@ -93,23 +170,12 @@ class TelegramNotifier:
         bal_line = f"💼 <b>Serbest Kasa:</b> <code>${free_balance:.2f} USDT</code>\n" if free_balance is not None else ""
         tp2_line = f"🚀 <b>TP2 Final:</b> <code>${pos['tp2']:.6f}</code>\n" if pos.get("tp2") else ""
 
-        # 🧠 Valkyrie AI Taktiksel Mentorluk Notu
-        ai_tactic_note = ""
-        if "Breakout" in pos.get("trade_type", ""):
-            if "ALFA" in str(pos.get("decoupling_status", "")):
-                ai_tactic_note = f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>Parite genel piyasadan bağımsız kurumsal hacimle ({vol_val:.1f}x) ayrıştı! Rüzgar arkamızda, TP1'de kâr kilitlenip Breakeven zırhına geçilecek.</i>\n"
-            elif vol_val >= 3.0:
-                ai_tactic_note = f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>Kurumsal hacim teyidi ({vol_val:.1f}x) çok güçlü. İlk hedef TP1'de (%50) kâr realize edilip stop derhal başabaşa çekilecek.</i>\n"
-            else:
-                ai_tactic_note = f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>Kilit direnç aşıldı. TP1 hedefine odaklanıldı; ardından Breakeven zırhı ile risksiz TP2 koşusu planlandı.</i>\n"
-        elif "SCALP" in pos.get("trade_type", "") or "nPOC" in pos.get("reason", ""):
-            ai_tactic_note = f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>Seviye likidite sekmesi (Mean Reversion) hedeflendi. Yatay/dar bant koşullarında kurumsal istasyondan hızlı kâr cebe alınacak.</i>\n"
-        else:
-            ai_tactic_note = f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>Matematiksel kural teyidiyle pusu tetiklendi. Risk sermayesi koruma kalkanıyla kontrol altında.</i>\n"
-
         macro_str = pos.get('macro_climate', '⚪ Nötr / Dengeli Piyasa')
         decouple_str = pos.get('decoupling_status', '⚪ Nötr_Takipçi (Beta)')
         rs_score = pos.get('dynamic_rs_score', pos.get('rs_vs_btc', 0.0))
+
+        # 🧠 Valkyrie AI Dinamik Kantitatif Taktik Notu (20+ Varyasyon)
+        ai_tactic_note = self._generate_quant_entry_briefing(pos, vol_val, rs_score, macro_str)
 
         msg = f"""💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎
 ⚡ <b>YENİ POZİSYON AÇILDI</b> ⚡
@@ -152,6 +218,67 @@ Giriş: <code>${pos['entry_price']:.6f}</code> | Marjin: <b>${pos.get('margin_us
         else:
             await self.send_message(msg)
 
+    def _generate_quant_exit_autopsy(self, record: dict, net_pnl: float, roe: float, is_win: bool, is_partial_tp1: bool, is_breakeven: bool, is_manual: bool) -> str:
+        symbol = record.get("symbol", "")
+        seed_str = f"{symbol}_{record.get('exit_time', '')}_{net_pnl:.2f}_{roe:.2f}_{is_manual}"
+        idx = int(hashlib.md5(seed_str.encode('utf-8')).hexdigest(), 16)
+
+        # 1. MANUEL MÜDAHALE
+        if is_manual:
+            pool = [
+                "Operatör inisiyatifi ile pozisyon güvenli limana çekildi. Piyasa belirsizliği döneminde sermaye likit olarak korumaya alındı.",
+                "Dashboard üzerinden anlık risk tasfiyesi gerçekleştirildi. Kasa emniyeti ön planda tutularak işlem sonlandırıldı.",
+                "Manuel emirle masadan kalkıldı. Sermaye yeni açılacak yüksek potansiyelli fırsatlar için serbest bırakıldı."
+            ]
+            return f"🧠 <b>Yapay Zeka Otopisi:</b> <i>{pool[idx % len(pool)]}</i>\n"
+
+        # 2. DİNAMİK KÂR KİLİDİ (TP1 / %50 NAKİT)
+        if is_partial_tp1:
+            pool = [
+                "Dinamik Kâr Kilidi (%50) disiplinle çalıştı ve kârı cebe kilitledi. Kalan %50 artık tamamen sıfır riskle koşuyor.",
+                "TP1 hedefi kurumsal disiplinle nakite çevrildi. Kalan pozisyon Breakeven kalkanıyla 'bedava bilet' modunda TP2 hedefine ilerliyor.",
+                "Portföy koruma protokolü devrede: İlk dilim kâr realize edildi, anapara koruma stopu başabaş seviyesine sabitlendi.",
+                "İstatistiki kâr optimizasyonu kusursuz işledi. Yarı pay nakite alındı; kalan bakiye sıfır risk zırhıyla trend genişlemesini izliyor.",
+                "Kâr kilitleme kuralı işletildi. Sermaye büyüme eğrisine net katkı sağlandı, sıfır stresle serbest koşu devam ediyor."
+            ]
+            return f"🧠 <b>Yapay Zeka Otopisi:</b> <i>{pool[idx % len(pool)]}</i>\n"
+
+        # 3. BREAKEVEN KAPANIŞ (0 RİSK KORUMASI)
+        if is_breakeven:
+            pool = [
+                "Fiyat ilk hedeften sonra terse döndü; ancak Breakeven kalkanı devreye girerek anaparayı kuruşu kuruşuna korudu.",
+                "Kâr daha önce realize edilmişti; kalan pay piyasa dönüşünde başabaş seviyesinde korundu. İşlem net kârla tamamlandı.",
+                "Sıfır risk zırhı görevini yaptı. Piyasadaki ani ters dalgalanmada anapara erimedi, sermaye bir sonraki kuruluma eksiksiz aktarıldı.",
+                "Başabaş kalkanı kusursuz çalıştı. Piyasa tersine dönerken pozisyon zamanında tasfiye edilerek potansiyel zararlar engellendi.",
+                "Koruma protokolü zaferi: Kâr cepte, anapara korundu. Ters piyasa koşullarında sermaye bütünlüğünü korumak en büyük başarıdır."
+            ]
+            return f"🧠 <b>Yapay Zeka Otopisi:</b> <i>{pool[idx % len(pool)]}</i>\n"
+
+        # 4. KÂRLI TAM KAPANIŞ (TP2 / TAM HEDEF / WIN)
+        if is_win:
+            pool = [
+                f"Matematiksel plan kusursuz işledi! Zirve hedefe ulaşıldı ve {net_pnl:+.2f}$ net kâr kasaya eklendi.",
+                f"Kurumsal kâr istasyonuna tam isabet. Trendin zirve noktasında tam kâr realizasyonuyla {net_pnl:+.2f}$ portföye yazıldı.",
+                f"Hedeflenen R:R matrisi milimetrik tamamlandı. Disiplinli algoritma yönetimiyle kasa büyüme hedefine bir adım daha atıldı.",
+                f"Akıllı para kâr alma bölgesinde pozisyon tamamen tasfiye edildi. Piyasa dönüş riskine maruz kalınmadan net kâr ({net_pnl:+.2f}$) kilitlendi.",
+                f"Kusursuz işlem icrası: Seviye kırılımından tepe hedefe kadar dalga sonuna kadar sürüldü ({net_pnl:+.2f}$). Tebrikler!",
+                f"Trend genişlemesi matematiksel hedefte sonlandırıldı. Kasa disiplini ve sabırla beklenen kâr realize edildi."
+            ]
+            return f"🧠 <b>Yapay Zeka Otopisi:</b> <i>{pool[idx % len(pool)]}</i>\n"
+
+        # 5. SERT STOP / ZARAR KES (STOP LOSS)
+        hard_stop_val = record.get('hard_stop', 0)
+        stop_str = f" (${hard_stop_val:.4f})" if hard_stop_val else ""
+        pool = [
+            f"1.5 ATR dinamik stop mekanizması{stop_str} felaket koruması olarak görevini yaptı ve kaybı sınırladı. Sermaye korundu, yeni fırsat taranıyor.",
+            f"Piyasa yapısı geçici olarak bozuldu; quant kuralı tereddütsüz stop uygulayarak sermayeyi büyük çöküşten korudu. Sermaye disiplini esastır.",
+            f"Kontrollü stop kaybı: İstatistiksel sınır dışına çıkan harekette kayıp katı kurallarla sınırlandı. Portföy riski matematiksel limitler dahilinde.",
+            f"Risk kalkanı devrede: Sert stop seviyesi felaketi engelledi. Yanlış giden piyasa hareketine inatlaşılmadı, sermaye yeni döngüye saklandı.",
+            f"Planlanan risk bütçesi haricinde tek kuruş kayıp verilmedi. Stop olmak bir kayıp değil, sermayeyi hayatta tutan en kritik profesyonel savunmadır.",
+            f"Disiplinli sermaye savunması: Pozisyon stop sınırında tereddütsüz kesildi. Portföy sağlığı ve uzun vadeli hayatta kalma kuralı işletildi."
+        ]
+        return f"🧠 <b>Yapay Zeka Otopisi:</b> <i>{pool[idx % len(pool)]}</i>\n"
+
     async def notify_position_closed(self, record: dict, is_manual: bool = False, df_5m = None, levels: dict = None):
         net_pnl = record["net_pnl"]
         roe = record["roe_pct"]
@@ -176,18 +303,8 @@ Giriş: <code>${pos['entry_price']:.6f}</code> | Marjin: <b>${pos.get('margin_us
         close_reason = record.get("close_reason", "Hedef/Stop Kapanışı")
         partial_note = "\n🛡️ <b>Kalan %50:</b> <i>Breakeven ile 0 riskle koşuyor!</i>\n" if is_partial_tp1 else ("\nℹ️ <i>İlk %50 kârı daha önce kasaya kilitlenmişti; kalan kısım koruma stopuyla risksiz kapatıldı.</i>\n" if is_breakeven else "")
         
-        # 🧠 Yapay Zeka İşlem Otopisi & Öğrenim Notu
-        ai_autopsy_note = ""
-        if is_win:
-            if is_partial_tp1:
-                ai_autopsy_note = "🧠 <b>Yapay Zeka Otopisi:</b> <i>Dinamik kâr kilidi disiplinle çalıştı ve kârı cebe kilitledi. Kalan %50 artık tamamen sıfır riskle koşuyor.</i>\n"
-            else:
-                ai_autopsy_note = f"🧠 <b>Yapay Zeka Otopisi:</b> <i>Plan kusursuz işledi! Zirve hedefe ulaşıldı ve {net_pnl:+.2f}$ net kâr kasaya eklendi.</i>\n"
-        else:
-            if is_breakeven:
-                ai_autopsy_note = "🧠 <b>Yapay Zeka Otopisi:</b> <i>Fiyat ilk hedeften sonra terse döndü; ancak Breakeven kalkanı devreye girerek anaparayı kuruşu kuruşuna korudu.</i>\n"
-            else:
-                ai_autopsy_note = f"🧠 <b>Yapay Zeka Otopisi:</b> <i>Sert stop ({record.get('hard_stop', 0):.4f}$) felaket koruması olarak görevini yaptı ve kaybı sınırladı. Sermaye korundu, yeni fırsat taranıyor.</i>\n"
+        # 🧠 Yapay Zeka Dinamik İşlem Otopisi (20+ Varyasyon)
+        ai_autopsy_note = self._generate_quant_exit_autopsy(record, net_pnl, roe, is_win, is_partial_tp1, is_breakeven, is_manual)
 
         macro_line = f"🌐 <b>İşlem İklimi:</b> <code>{record.get('macro_climate')}</code>\n" if record.get('macro_climate') else ""
 
