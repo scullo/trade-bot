@@ -1675,11 +1675,16 @@ HTML_PAGE = """
                         🔬
                     </div>
                     <div>
-                        <div style="font-size:15px; font-weight:800; color:#fff;" id="tel-title">İŞLEM ADLİ İNCELEME & QUANT TELEMETRİSİ</div>
+                        <div style="font-size:15px; font-weight:800; color:#fff;" id="tel-title">İŞLEM İNCELEME & TELEMETRİ</div>
                         <div style="font-size:11.5px; color:var(--text-muted);" id="tel-sub">Giriş Anı Seviye Snapshot'ı, MFE/MAE Derinliği ve R-Multiple Analizi</div>
                     </div>
                 </div>
-                <button class="tv-modal-close-btn" onclick="closeTelemetryModal()" title="Kapat (ESC)">✕</button>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button id="tel-chart-btn" class="btn-open-chart" style="background:linear-gradient(135deg, rgba(0,242,254,0.18), rgba(79,172,254,0.28)); border:1.5px solid var(--cyan); color:#fff; font-weight:800; font-size:12px; padding:6px 14px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 0 12px rgba(0,242,254,0.25);">
+                        📈 Göstergeli Grafik
+                    </button>
+                    <button class="tv-modal-close-btn" onclick="closeTelemetryModal()" title="Kapat (ESC)">✕</button>
+                </div>
             </div>
 
             <div class="settings-body" id="tel-content" style="max-height:75vh; overflow-y:auto; padding:20px;">
@@ -5461,7 +5466,7 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                         <td><b style="color:var(--yellow)">${h.id || '-'}</b></td>
                         <td style="color:#cbd5e1; font-size:12px; white-space:nowrap;">${exitTime}</td>
                         <td style="color:#94a3b8; font-size:12px; white-space:nowrap;">⏱️ ${duration}</td>
-                        <td><b style="color:#ffffff; font-size:13.5px;">${symClean}</b></td>
+                        <td><b style="color:#ffffff; font-size:13.5px; cursor:pointer;" onclick="openTradingViewModal('${symClean}')" title="${symClean} Göstergeli Grafiğini Aç">${symClean}</b></td>
                         <td><span class="pos-badge ${side === 'LONG' ? 'pos-long' : 'pos-short'}" style="font-size:11px; padding:2px 8px;">${lev}x ${side}</span></td>
                         <td>$${entryP}</td>
                         <td>$${exitP}</td>
@@ -5487,9 +5492,12 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                                 ${cr}
                             </span>
                         </td>
-                        <td>
-                            <button onclick="openTelemetryModal('${h.id}')" style="background:rgba(0,242,254,0.12); border:1px solid rgba(0,242,254,0.35); color:var(--cyan); padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.15s ease;" onmouseover="this.style.background='var(--cyan)'; this.style.color='#000';" onmouseout="this.style.background='rgba(0,242,254,0.12)'; this.style.color='var(--cyan)';">
+                        <td style="white-space:nowrap;">
+                            <button onclick="openTelemetryModal('${h.id}')" style="background:rgba(0,242,254,0.12); border:1px solid rgba(0,242,254,0.35); color:var(--cyan); padding:4px 9px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.15s ease;" onmouseover="this.style.background='var(--cyan)'; this.style.color='#000';" onmouseout="this.style.background='rgba(0,242,254,0.12)'; this.style.color='var(--cyan)';" title="İşlem Detayını İncele">
                                 🔬 İncele
+                            </button>
+                            <button onclick="openTradingViewModal('${symClean}')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#cbd5e1; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; margin-left:4px; transition:all 0.15s ease;" onmouseover="this.style.background='rgba(0,242,254,0.15)'; this.style.color='#00f2fe';" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.color='#cbd5e1';" title="${symClean} Göstergeli Grafiğini Aç">
+                                📈 Grafik
                             </button>
                         </td>
                     </tr>
@@ -5971,6 +5979,14 @@ function downloadExcelReport() {
                 title.innerHTML = `🔬 ${item.symbol} (${item.side} ${item.leverage}x) — ${item.id}`;
                 sub.innerHTML = `Giriş: ${item.entry_time} | Çıkış: ${item.exit_time} | Süre: ${item.duration || '5M Mum'}`;
 
+                const cleanSym = (item.symbol || '').replace('/USDT', '').replace('USDT', '').trim();
+                const chartBtn = document.getElementById('tel-chart-btn');
+                if (chartBtn) {
+                    chartBtn.onclick = () => openTradingViewModal(cleanSym);
+                    chartBtn.innerHTML = `📈 ${cleanSym} Grafiği`;
+                    chartBtn.title = `${cleanSym} Göstergeli Bot Strateji Grafiğini Aç`;
+                }
+
                 const isWin = item.net_pnl >= 0;
                 const rMult = item.realized_r !== undefined ? item.realized_r : (item.roe_pct >= 0 ? +(item.roe_pct / 2).toFixed(1) : -1.0);
                 const mfe = item.mfe_roe !== undefined ? item.mfe_roe : Math.max(0, item.roe_pct);
@@ -6021,6 +6037,13 @@ function downloadExcelReport() {
                             <div style="font-size:11px; color:#94a3b8; margin-bottom:4px;">MAKS ÇEKİLME (MAE)</div>
                             <div style="font-size:15px; font-weight:800; color:#f43f5e; font-family:'JetBrains Mono';">-${mae.toFixed(2)}% ROE</div>
                         </div>
+                    </div>
+
+                    <!-- 📈 GRAFİK AÇMA HERO BUTONU -->
+                    <div style="margin-bottom:18px;">
+                        <button onclick="openTradingViewModal('${cleanSym}')" style="width:100%; padding:12px 18px; background:linear-gradient(135deg, rgba(0,242,254,0.2), rgba(79,172,254,0.3)); border:1.5px solid var(--cyan); color:#00f2fe; font-weight:900; font-size:13.5px; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.15s ease; box-shadow:0 0 20px rgba(0,242,254,0.2);" onmouseover="this.style.background='var(--cyan)'; this.style.color='#000';" onmouseout="this.style.background='linear-gradient(135deg, rgba(0,242,254,0.2), rgba(79,172,254,0.3))'; this.style.color='#00f2fe';" title="${cleanSym} Canlı Göstergeli Strateji Grafiğini Aç">
+                            <span>📈</span> <b>${cleanSym} GÖSTERGELİ STRATEJİ GRAFİĞİNİ AÇ</b> (AVWAP + VP + Camarilla Seviyeleri) ➔
+                        </button>
                     </div>
 
                     <div style="background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:14px; margin-bottom:18px;">
