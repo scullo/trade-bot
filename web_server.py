@@ -3402,10 +3402,10 @@ async function loadAdminMetrics() {
                         </div>
                         <div style="margin-top:5px; padding:7px 10px; background:${isDead ? 'rgba(168,85,247,0.08)' : (ethLeading ? 'rgba(245,158,11,0.08)' : 'rgba(56,189,248,0.08)')}; border-left:3px solid ${mColor}; border-radius:4px; font-size:12px; line-height:1.45;">
                             <b>🛡️ Valkyrie Taktik Direktifi:</b> ${macro.desc || (isDead 
-                                ? 'Piyasa Değer Alanı (S3-R3) içinde yatayda. Standart beta paritelerdeki kırılımlar %85 sahte tuzak riski nedeniyle kilitli; yalnızca nPOC/Camarilla Mean Reversion tepkileri ve bağımsız ALFA ayrışanlar (RS ≥ 1.2, Hacim ≥ 2.0x) işleme alınır.'
+                                ? "Piyasa Değer Alanı (S3-R3) içinde yatayda. Standart beta paritelerdeki kırılımlar %85 sahte tuzak riski nedeniyle kilitli; yalnızca nPOC/Camarilla Mean Reversion tepkileri ve bağımsız ALFA ayrışanlar (RS ≥ 1.2, Hacim ≥ 2.0x) işleme alınır."
                                 : (ethLeading 
-                                    ? 'ETH, BTC\'ye fark atarak altcoinlere güçlü bir boğa rüzgarı sağlıyor. Hacimli kırılımlara ve trend devam kurulumlarına yeşil ışık yakıldı.'
-                                    : 'BTC ve ETH dengeli bantta. Seviye pusuları ve hacim teyitli sinyaller kesintisiz taranıyor.'))
+                                    ? "ETH, BTC'ye fark atarak altcoinlere güçlü bir boğa rüzgarı sağlıyor. Hacimli kırılımlara ve trend devam kurulumlarına yeşil ışık yakıldı."
+                                    : "BTC ve ETH dengeli bantta. Seviye pusuları ve hacim teyitli sinyaller kesintisiz taranıyor."))
                             }
                         </div>
                     `
