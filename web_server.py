@@ -1185,18 +1185,97 @@ HTML_PAGE = """
             box-shadow: 0 0 12px #00f2fe;
             animation: pulse 0.8s infinite alternate;
         }
-        .regime-progress-wrap {
-            display: flex;
-            height: 8px;
-            border-radius: 6px;
-            overflow: hidden;
-            background: rgba(255, 255, 255, 0.06);
-            margin: 12px 0 16px 0;
-            width: 100%;
+        /* ⚔️ MAKRO LİKİDİTE GÜÇ DENGESİ & ÇARPIŞMA CEPHESİ */
+        .regime-battle-card {
+            background: rgba(15, 23, 42, 0.45);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin: 10px 0 16px 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
         }
-        .regime-bar-bull { background: var(--green); transition: width 0.3s ease; }
-        .regime-bar-bear { background: var(--red); transition: width 0.3s ease; }
-        .regime-bar-range { background: var(--yellow); transition: width 0.3s ease; }
+        .regime-battle-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .regime-side-bull {
+            color: #0ecb81;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-shadow: 0 0 10px rgba(14, 203, 129, 0.4);
+        }
+        .regime-side-range {
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .regime-side-bear {
+            color: #ff4757;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-shadow: 0 0 10px rgba(255, 71, 87, 0.4);
+        }
+        .regime-battle-track {
+            position: relative;
+            display: flex;
+            height: 12px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+            margin-bottom: 8px;
+        }
+        .regime-bar-bull {
+            background: linear-gradient(90deg, rgba(14, 203, 129, 0.35), #0ecb81);
+            box-shadow: 0 0 14px rgba(14, 203, 129, 0.5);
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+        .regime-bar-range {
+            background: linear-gradient(90deg, #334155, #475569);
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .regime-bar-bear {
+            background: linear-gradient(90deg, #ff4757, rgba(255, 71, 87, 0.35));
+            box-shadow: 0 0 14px rgba(255, 71, 87, 0.5);
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .regime-clash-spark {
+            position: absolute;
+            top: -2px;
+            bottom: -2px;
+            width: 4px;
+            background: #ffffff;
+            box-shadow: 0 0 8px #00f2fe, 0 0 16px #00f2fe, 0 0 24px #fff;
+            border-radius: 2px;
+            z-index: 6;
+            transition: left 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: sparkFlicker 0.8s infinite alternate;
+        }
+        @keyframes sparkFlicker {
+            0% { opacity: 0.8; transform: scaleY(1); }
+            100% { opacity: 1; transform: scaleY(1.3); box-shadow: 0 0 12px #00f2fe, 0 0 24px #0ecb81; }
+        }
+        .regime-battle-footer {
+            font-size: 11.5px;
+            color: #cbd5e1;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            line-height: 1.4;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
 
         .ai-thought-filters {
             display: flex;
@@ -2147,14 +2226,32 @@ HTML_PAGE = """
                 </div>
             </div>
 
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:12.5px; font-weight:800; font-family:'JetBrains Mono', monospace; color:#cbd5e1; margin-bottom:4px;">
-                <span>📊 1H MAKRO TREND DAĞILIMI:</span>
-                <span id="ai-regime-counts">🟢 0 Boğa | 🔴 0 Ayı | ⚪ 0 Yatay</span>
-            </div>
-            <div class="regime-progress-wrap">
-                <div class="regime-bar-bull" id="regime-bar-bull" style="width: 20%;"></div>
-                <div class="regime-bar-bear" id="regime-bar-bear" style="width: 60%;"></div>
-                <div class="regime-bar-range" id="regime-bar-range" style="width: 20%;"></div>
+            <!-- ⚔️ MAKRO LİKİDİTE GÜÇ DENGESİ (CANLI BOĞA VS AYI MÜCADELESİ) -->
+            <div class="regime-battle-card">
+                <div class="regime-battle-header">
+                    <div class="regime-side-bull">
+                        <span>🐂 BOĞA HAKİMİYETİ:</span>
+                        <b id="regime-bull-text">%0 (0 Parite)</b>
+                    </div>
+                    <div class="regime-side-range">
+                        <span>⚪ YATAY KONSOLİDASYON:</span>
+                        <b id="regime-range-text">%0 (0 Parite)</b>
+                    </div>
+                    <div class="regime-side-bear">
+                        <span>🐻 AYI BASKISI:</span>
+                        <b id="regime-bear-text">%0 (0 Parite)</b>
+                    </div>
+                </div>
+                <div class="regime-battle-track">
+                    <div class="regime-bar-bull" id="regime-bar-bull" style="width: 33.3%;"></div>
+                    <div class="regime-bar-range" id="regime-bar-range" style="width: 33.4%;"></div>
+                    <div class="regime-bar-bear" id="regime-bar-bear" style="width: 33.3%;"></div>
+                    <div class="regime-clash-spark" id="regime-clash-spark" style="left: 33.3%;"></div>
+                </div>
+                <div class="regime-battle-footer">
+                    <span style="color:#00f2fe; font-weight:800;">⚡ PİYASA OKUMASI:</span>
+                    <span id="regime-commentary" style="color:#e2e8f0;">100 paritede 1H makro likidite dengesi hesaplanıyor...</span>
+                </div>
             </div>
 
             <!-- 🧠 AI KATEGORİ FİLTRELERİ & GÖRÜNÜM MODU -->
@@ -3379,15 +3476,39 @@ async function loadAdminMetrics() {
             const bearPct = Math.round((bearCount / totalClassified) * 100.0);
             const rangePct = Math.max(0, 100 - bullPct - bearPct);
 
-            const rCounts = document.getElementById('ai-regime-counts');
             const bBull = document.getElementById('regime-bar-bull');
             const bBear = document.getElementById('regime-bar-bear');
             const bRange = document.getElementById('regime-bar-range');
+            const spark = document.getElementById('regime-clash-spark');
+            const bullText = document.getElementById('regime-bull-text');
+            const rangeText = document.getElementById('regime-range-text');
+            const bearText = document.getElementById('regime-bear-text');
+            const commEl = document.getElementById('regime-commentary');
 
-            if (rCounts) rCounts.innerText = `🟢 ${bullCount} Boğa (%${bullPct}) | 🔴 ${bearCount} Ayı (%${bearPct}) | ⚪ ${rangeCount} Yatay (%${rangePct})`;
+            if (bullText) bullText.innerText = `%${bullPct} (${bullCount} Parite)`;
+            if (rangeText) rangeText.innerText = `%${rangePct} (${rangeCount} Parite)`;
+            if (bearText) bearText.innerText = `%${bearPct} (${bearCount} Parite)`;
+
             if (bBull) bBull.style.width = `${bullPct}%`;
-            if (bBear) bBear.style.width = `${bearPct}%`;
             if (bRange) bRange.style.width = `${rangePct}%`;
+            if (bBear) bBear.style.width = `${bearPct}%`;
+            if (spark) spark.style.left = `calc(${bullPct}% - 2px)`;
+
+            if (commEl) {
+                if (bullPct >= 55) {
+                    commEl.innerHTML = `Alıcılar piyasada net üstünlük kurdu (<b style="color:#0ecb81">%${bullPct}</b>). Yukarı yönlü momentum ve breakout alımları destekleniyor.`;
+                } else if (bullPct > bearPct && bullPct >= 35) {
+                    commEl.innerHTML = `Boğalar <b style="color:#0ecb81">%${bullPct}</b> ile piyasaya yön veriyor. <b style="color:#94a3b8">%${rangePct}</b> parite konsolide olurken ayı baskısı zayıf kalıyor.`;
+                } else if (bearPct >= 50) {
+                    commEl.innerHTML = `Satıcılar piyasada ağırlığı ele geçirdi (<b style="color:#ff4757">%${bearPct}</b>). Destek kırılımları ve short retest kurulumları ön planda.`;
+                } else if (bearPct > bullPct && bearPct >= 35) {
+                    commEl.innerHTML = `Ayı baskısı <b style="color:#ff4757">%${bearPct}</b> ile hissediliyor. Long fırsatlarında seçici olunmalı, hacim teyitleri aranmalı.`;
+                } else if (rangePct >= 45) {
+                    commEl.innerHTML = `100 paritenin <b style="color:#94a3b8">%${rangePct}</b>'si yatay dengede. Piyasa yön arayışında; nPOC ve Camarilla destek/direnç bantları likidite topluyor.`;
+                } else {
+                    commEl.innerHTML = `Piyasada dengeli güç dağılımı hakim (Boğa: <b style="color:#0ecb81">%${bullPct}</b> | Ayı: <b style="color:#ff4757">%${bearPct}</b>). Kilit seviyelerde teyit bekleniyor.`;
+                }
+            }
 
             // =========================================================================
             // 🧠 VALKYRIE AI QUANT ZEKASI 2.0 • CANLI PİYASA & PUSU DÜŞÜNCE AKIŞI
