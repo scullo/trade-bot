@@ -2093,6 +2093,7 @@ HTML_PAGE = """
                 </div>
                 <div class="kpi-card-val" id="cockpit-balance">100,000.00 $</div>
                 <div class="kpi-card-sub" id="cockpit-free-bal">Serbest: 100,000.00 USDT (5x)</div>
+                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">🛡️ Dinamik Sermaye Koruması Aktif</div>
             </div>
 
             <div class="cockpit-kpi-card">
@@ -2102,6 +2103,7 @@ HTML_PAGE = """
                 </div>
                 <div class="kpi-card-val" id="cockpit-pnl" style="color:var(--green);">+0.00 $</div>
                 <div class="kpi-card-sub" id="cockpit-growth">+0.00% Kasa Büyümesi</div>
+                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">Realize + Açık Pozisyonlar Toplamı</div>
             </div>
 
             <div class="cockpit-kpi-card">
@@ -2111,15 +2113,20 @@ HTML_PAGE = """
                 </div>
                 <div class="kpi-card-val" id="cockpit-winrate">%0.0</div>
                 <div class="kpi-card-sub" id="cockpit-win-loss-count">0 Kazanç / 0 Kayıp</div>
+                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">Sürdürülebilir Hedef: &gt; %50.0</div>
             </div>
 
-            <div class="cockpit-kpi-card">
+            <div class="cockpit-kpi-card" title="Profit Factor (Kâr Faktörü): Dünyadaki kurumsal fonların en temel sistem kalite göstergesidir. Kaybedilen her 1$'a karşılık kasaya kaç dolar kâr girdiğini ifade eder.">
                 <div class="kpi-card-head">
-                    <span class="kpi-card-title">Kâr / Kayıp Verimlilik Gücü</span>
-                    <span class="kpi-card-icon">💎</span>
+                    <span class="kpi-card-title" style="display:inline-flex; align-items:center; gap:6px;">
+                        KÂR FAKTÖRÜ (PROFIT FACTOR)
+                        <span class="kpi-info-icon" title="Profit Factor (Kâr Faktörü): Sistemin kurumsal getiri kalitesini gösterir. Kaybedilen her 1$'a karşılık kasaya kaç dolar kâr girdiğini ifade eder.&#10;&#10;Formül: Toplam Kâr ÷ Toplam Kayıp&#10;• < 1.00x: Negatif (Zarar Baskısı)&#10;• 1.00x: Başa-Baş&#10;• 1.20x - 1.50x: Kârlı Sistem&#10;• 1.50x - 2.00x: Çok Güçlü&#10;• 2.00x+: Kurumsal Elit Seviye" style="cursor:help; font-size:11px; color:#38bdf8; background:rgba(56, 189, 248, 0.15); border-radius:50%; width:16px; height:16px; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(56, 189, 248, 0.35);">ⓘ</span>
+                    </span>
+                    <span class="kpi-card-icon" title="Sistemin Kâr/Zarar Güç Çarpanı">💎</span>
                 </div>
-                <div class="kpi-card-val" id="cockpit-pf" style="color:var(--cyan);">0.00x</div>
+                <div class="kpi-card-val" id="cockpit-pf" style="color:#94a3b8;">— (İşlem Bekleniyor)</div>
                 <div class="kpi-card-sub" id="cockpit-fees">Brüt Kâr: +$0.00 | Kayıp: -$0.00</div>
+                <div id="cockpit-pf-note" style="font-size:11px; color:#38bdf8; font-family:'JetBrains Mono', monospace; margin-top:3px; font-weight:700;">Her 1$ Kayba: İlk işlem bekleniyor</div>
             </div>
         </div>
 
@@ -3236,6 +3243,7 @@ async function loadAdminMetrics() {
             const cWinLoss = document.getElementById('cockpit-win-loss-count');
             const cPf = document.getElementById('cockpit-pf');
             const cFees = document.getElementById('cockpit-fees');
+            const cPfNote = document.getElementById('cockpit-pf-note');
 
             if (cBal) cBal.innerText = `$${bal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
             if (cFree) cFree.innerText = `Kullanılabilir Kasa: $${bal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})} USDT (5x)`;
@@ -3246,18 +3254,60 @@ async function loadAdminMetrics() {
             if (cGrowth) cGrowth.innerText = `${growthPct >= 0 ? '+' : ''}${growthPct.toFixed(2)}% Büyüme`;
             if (cWinrate) cWinrate.innerText = `%${winRate}`;
             if (cWinLoss) cWinLoss.innerText = `${wins} Kazanç / ${losses} Kayıp (${totalTrades} İşlem)`;
-            if (cPf) {
-                const pfNum = parseFloat(pf);
-                let qualityText = 'Dengeleniyor';
-                if (pfNum >= 2.0) qualityText = 'Mükemmel';
-                else if (pfNum >= 1.2) qualityText = 'Yüksek';
-                else if (pfNum > 0.0) qualityText = 'Pozitif';
 
-                cPf.innerText = `${pf}x (${qualityText})`;
-                cPf.style.color = pfNum >= 1.0 ? 'var(--cyan)' : 'var(--yellow)';
-            }
-            if (cFees) {
-                cFees.innerText = `Brüt Kâr: +$${winPnlSum.toFixed(2)} | Kayıp: -$${lossPnlSum.toFixed(2)}`;
+            if (cPf) {
+                if (totalTrades === 0) {
+                    cPf.innerText = '— (İşlem Bekleniyor)';
+                    cPf.style.color = '#94a3b8';
+                    if (cFees) cFees.innerText = 'Brüt Kâr: +$0.00 | Kayıp: -$0.00';
+                    if (cPfNote) {
+                        cPfNote.innerText = 'Her 1$ Kayba: İlk işlem bekleniyor';
+                        cPfNote.style.color = '#64748b';
+                    }
+                } else if (lossPnlSum === 0 && winPnlSum > 0) {
+                    cPf.innerText = '∞ (Sıfır Kayıp / %100 Kâr)';
+                    cPf.style.color = 'var(--green)';
+                    if (cFees) cFees.innerText = `Brüt Kâr: +$${winPnlSum.toFixed(2)} | Kayıp: $0.00`;
+                    if (cPfNote) {
+                        cPfNote.innerText = 'Kayıpsız Serüven: Tüm işlemler kârda!';
+                        cPfNote.style.color = 'var(--green)';
+                    }
+                } else {
+                    const pfVal = lossPnlSum > 0 ? (winPnlSum / lossPnlSum) : 0.0;
+                    const pfStr = pfVal.toFixed(2);
+                    let qualityText = 'Zarar Baskısı';
+                    let qualityColor = 'var(--red)';
+                    let noteColor = 'var(--red)';
+
+                    if (pfVal >= 2.0) {
+                        qualityText = 'Kurumsal Elit 🏆';
+                        qualityColor = 'var(--cyan)';
+                        noteColor = '#38bdf8';
+                    } else if (pfVal >= 1.5) {
+                        qualityText = 'Çok Güçlü 🟢';
+                        qualityColor = 'var(--green)';
+                        noteColor = '#34d399';
+                    } else if (pfVal >= 1.2) {
+                        qualityText = 'Kârlı Sistem 🟡';
+                        qualityColor = 'var(--yellow)';
+                        noteColor = '#fbbf24';
+                    } else if (pfVal >= 1.0) {
+                        qualityText = 'Başa-Baş Sınırı ⚪';
+                        qualityColor = '#cbd5e1';
+                        noteColor = '#94a3b8';
+                    }
+
+                    cPf.innerText = `${pfStr}x (${qualityText})`;
+                    cPf.style.color = qualityColor;
+
+                    if (cFees) {
+                        cFees.innerText = `Brüt Kâr: +$${winPnlSum.toFixed(2)} | Kayıp: -$${lossPnlSum.toFixed(2)}`;
+                    }
+                    if (cPfNote) {
+                        cPfNote.innerText = `Her $1 Kayba Karşılık: +$${pfStr} Kâr (Hedef > 1.5x)`;
+                        cPfNote.style.color = noteColor;
+                    }
+                }
             }
 
             // 2. AI Quant Intelligence Stream & 1H Macro Trend Breakdown
@@ -5262,7 +5312,7 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
             const totalPortfolioEquity = bal + totalUnrealizedPnl;
             const totalNetPnl = totalRealizedNetPnl + totalUnrealizedPnl;
 
-            const feesEl = document.getElementById('kpi-fees') || document.getElementById('cockpit-fees');
+            const feesEl = document.getElementById('kpi-fees');
             const pnlEl = document.getElementById('kpi-pnl') || document.getElementById('cockpit-pnl');
             const growthEl = document.getElementById('kpi-growth') || document.getElementById('cockpit-growth');
             const balEl = document.getElementById('kpi-balance') || document.getElementById('cockpit-balance');
