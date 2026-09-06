@@ -2113,7 +2113,6 @@ HTML_PAGE = """
 </svg>
             </div>
             <div class="logo-title">VALKYRIE <span style="background: linear-gradient(135deg, #00f2fe, #4facfe); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">QUANT DESK</span></div>
-            </div>
         </div>
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
             <button onclick="openUpgradeModal()" style="background:linear-gradient(135deg, rgba(0,242,254,0.15), rgba(79,172,254,0.25)); border:1.5px solid var(--cyan); color:#fff; font-weight:800; font-size:12px; padding:6px 12px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px;">
@@ -2282,6 +2281,7 @@ HTML_PAGE = """
                     </div>
                 </div>
             </div>
+        </div>
     </div>
 
     <!-- =========================================================================
