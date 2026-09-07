@@ -2307,17 +2307,17 @@ HTML_PAGE = """
         </button>
         <button class="nav-tab-btn" id="tab-btn-persona" onclick="switchMainTab('persona')">
             <span style="font-size:14px; margin-right:6px;">🧬</span>
-            5. Coin DNA & Persona
+            5. DNA
             <span class="tab-badge-sub" id="nav-persona-badge" style="background:rgba(0,242,254,0.12); color:var(--cyan); border:1px solid rgba(0,242,254,0.3);">100 Parite</span>
         </button>
         <button class="nav-tab-btn" id="tab-btn-funding" onclick="switchMainTab('funding')">
             <span style="font-size:14px; margin-right:6px;">⚡</span>
-            6. Mikro Piyasa: Fonlama & Likidasyon
+            6. Fonlama
             <span class="tab-badge-sub" id="nav-funding-badge" style="background:rgba(255,107,107,0.15); color:var(--red); border:1px solid rgba(255,107,107,0.3);">0 Squeeze</span>
         </button>
         <button class="nav-tab-btn" id="tab-btn-cvd" onclick="switchMainTab('cvd')">
             <span style="font-size:14px; margin-right:6px;">🔬</span>
-            7. Mikro-CVD & Agresyon
+            7. CVD
             <span class="tab-badge-sub" id="nav-cvd-badge" style="background:rgba(34,197,94,0.15); color:#22c55e; border:1px solid rgba(34,197,94,0.3);">Canlı</span>
         </button>
         <button class="nav-tab-btn" id="tab-btn-admin" onclick="switchMainTab('admin'); loadAdminMetrics();" style="border-color:rgba(0,242,254,0.35); display:none;">
