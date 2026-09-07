@@ -1,6 +1,7 @@
 import asyncio
 import json
 import time
+from collections import deque
 from datetime import datetime, timezone, timedelta
 import aiohttp
 import ccxt.async_support as ccxt
@@ -41,6 +42,17 @@ class MarketDataManager:
             'short_squeeze_symbols': [],
             'long_overheated_symbols': [],
             'last_update_str': 'Başlatılıyor...'
+        }
+        # Global Likidasyon Radarı (!forceOrder) Veri Yapıları
+        self.recent_liquidations = deque(maxlen=60)
+        self.symbol_liquidations_15m = {}
+        self.global_liquidation_stats = {
+            'total_usd_24h': 0.0,
+            'long_usd_24h': 0.0,
+            'short_usd_24h': 0.0,
+            'top_symbol': '-',
+            'top_symbol_usd': 0.0,
+            'last_event_time': '-'
         }
         self.on_tick_callback = None
         self.on_candle_close_callback = None
@@ -342,6 +354,54 @@ class MarketDataManager:
         return {
             'summary': getattr(self, 'funding_summary', {}),
             'rates': getattr(self, 'funding_rates', {})
+        }
+
+    def get_recent_liquidations(self, limit: int = 20) -> list:
+        return list(getattr(self, 'recent_liquidations', []))[-limit:]
+
+    def get_symbol_liquidation_stats(self, symbol: str) -> dict:
+        data = getattr(self, 'symbol_liquidations_15m', {}).get(symbol, {'long_usd': 0.0, 'short_usd': 0.0, 'last_update': 0})
+        long_usd = float(data.get('long_usd', 0.0))
+        short_usd = float(data.get('short_usd', 0.0))
+        total = long_usd + short_usd
+        dom = 'NEUTRAL'
+        if long_usd > short_usd * 1.4 and long_usd >= 10000:
+            dom = 'LONG_SWEEP'
+        elif short_usd > long_usd * 1.4 and short_usd >= 1000:
+            dom = 'SHORT_SWEEP'
+        return {
+            'symbol': symbol,
+            'long_usd': round(long_usd, 2),
+            'short_usd': round(short_usd, 2),
+            'total_usd': round(total, 2),
+            'dominant_bias': dom,
+            'dominant_side': 'LONG' if long_usd >= short_usd else 'SHORT',
+            'is_hot': total >= 25000
+        }
+
+    def get_global_liquidation_summary(self) -> dict:
+        stats = getattr(self, 'global_liquidation_stats', {})
+        tot = stats.get('total_usd_24h', 0.0)
+        l_usd = stats.get('long_usd_24h', 0.0)
+        s_usd = stats.get('short_usd_24h', 0.0)
+        long_ratio = round((l_usd / tot * 100.0), 1) if tot > 0 else 50.0
+        short_ratio = round((s_usd / tot * 100.0), 1) if tot > 0 else 50.0
+        return {
+            'total_usd_24h': round(tot, 2),
+            'total_liq_usd': round(tot, 2),
+            'long_usd_24h': round(l_usd, 2),
+            'short_usd_24h': round(s_usd, 2),
+            'long_ratio': long_ratio,
+            'long_ratio_pct': long_ratio,
+            'short_ratio': short_ratio,
+            'short_ratio_pct': short_ratio,
+            'top_symbol': stats.get('top_symbol', '-'),
+            'top_symbol_15m': stats.get('top_symbol', '-'),
+            'top_symbol_usd': round(stats.get('top_symbol_usd', 0.0), 2),
+            'top_symbol_vol_usd': round(stats.get('top_symbol_usd', 0.0), 2),
+            'dominant_side': 'LONG' if l_usd >= s_usd else 'SHORT',
+            'last_event_time': stats.get('last_event_time', '-'),
+            'recent_events_count': len(getattr(self, 'recent_liquidations', []))
         }
 
     async def sync_top_100_symbols(self):
@@ -959,7 +1019,85 @@ class MarketDataManager:
                     print(f">> [FONLAMA İŞÇİSİ UYARI]: {e}")
                 await asyncio.sleep(60)
 
-        tasks = [bookticker_worker(), candle_poller_worker(), hourly_futures_watchdog_worker(), funding_worker()] + [kline_worker(c) for c in kline_chunks]
+        # Worker 6: Global Likidasyon Radarı (!forceOrder@arr Tek Soket Dinleyicisi)
+        async def forceorder_worker():
+            url = "wss://fstream.binance.com/market/ws/!forceOrder@arr"
+            print(">> [LİKİDASYON RADARI] Global !forceOrder@arr Soketi Başlatılıyor...")
+            while True:
+                try:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.ws_connect(url, heartbeat=15) as ws:
+                            print(">> [LİKİDASYON RADARI AKTİF] Tüm borsa tasfiye emirleri dinleniyor.")
+                            async for msg in ws:
+                                if msg.type == aiohttp.WSMsgType.TEXT:
+                                    try:
+                                        payload = json.loads(msg.data)
+                                        o = payload.get('o', {})
+                                        raw_s = o.get('s', '').upper()
+                                        if not raw_s:
+                                            continue
+                                        side = o.get('S', '') # SELL = Long Liq, BUY = Short Liq
+                                        price = float(o.get('p', 0.0))
+                                        qty = float(o.get('q', 0.0))
+                                        usd_size = price * qty
+                                        if usd_size < 500.0:
+                                            continue
+
+                                        now_ts = time.time()
+                                        time_str = datetime.now(timezone(timedelta(hours=3))).strftime('%H:%M:%S')
+                                        norm_s = symbol_map.get(raw_s, raw_s.replace('USDT', '/USDT'))
+                                        is_long_liq = (side == 'SELL')
+
+                                        event = {
+                                            'symbol': norm_s,
+                                            'raw_symbol': raw_s,
+                                            'side': 'LONG' if is_long_liq else 'SHORT',
+                                            'forced_action': side,
+                                            'price': price,
+                                            'qty': qty,
+                                            'usd_size': round(usd_size, 2),
+                                            'timestamp': now_ts,
+                                            'time_str': time_str,
+                                            'is_long_liq': is_long_liq
+                                        }
+                                        self.recent_liquidations.append(event)
+
+                                        # 15 Dakikalık Parite Bazlı Kümülatif Takip
+                                        if norm_s not in self.symbol_liquidations_15m:
+                                            self.symbol_liquidations_15m[norm_s] = {'long_usd': 0.0, 'short_usd': 0.0, 'last_update': now_ts}
+                                        if is_long_liq:
+                                            self.symbol_liquidations_15m[norm_s]['long_usd'] += usd_size
+                                        else:
+                                            self.symbol_liquidations_15m[norm_s]['short_usd'] += usd_size
+                                        self.symbol_liquidations_15m[norm_s]['last_update'] = now_ts
+
+                                        # Global İstatistik Güncelleme
+                                        self.global_liquidation_stats['total_usd_24h'] += usd_size
+                                        if is_long_liq:
+                                            self.global_liquidation_stats['long_usd_24h'] += usd_size
+                                        else:
+                                            self.global_liquidation_stats['short_usd_24h'] += usd_size
+                                        self.global_liquidation_stats['last_event_time'] = time_str
+
+                                        # En çok tasfiye olan coini güncelle
+                                        top_sym = '-'
+                                        top_val = 0.0
+                                        for sym_k, v_data in self.symbol_liquidations_15m.items():
+                                            tot_s = v_data['long_usd'] + v_data['short_usd']
+                                            if tot_s > top_val:
+                                                top_val = tot_s
+                                                top_sym = sym_k
+                                        self.global_liquidation_stats['top_symbol'] = top_sym
+                                        self.global_liquidation_stats['top_symbol_usd'] = top_val
+                                    except Exception:
+                                        pass
+                                elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
+                                    break
+                except Exception as e:
+                    print(f">> [LİKİDASYON RADARI UYARI] Yeniden bağlanılıyor: {e}")
+                    await asyncio.sleep(3)
+
+        tasks = [bookticker_worker(), candle_poller_worker(), hourly_futures_watchdog_worker(), funding_worker(), forceorder_worker()] + [kline_worker(c) for c in kline_chunks]
         await asyncio.gather(*tasks)
 
     async def close(self):

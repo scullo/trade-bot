@@ -465,7 +465,9 @@ class PaperTrader:
                 "macro_climate": pos.get("macro_climate", "⚪ NÖTR"),
                 "dynamic_rs_score": pos.get("dynamic_rs_score", 0.0),
                 "entry_funding_rate": pos.get("entry_funding_rate", 0.0100),
-                "funding_status": pos.get("funding_status", "BALANCED")
+                "funding_status": pos.get("funding_status", "BALANCED"),
+                "entry_liq_volume_usd": pos.get("entry_liq_volume_usd", 0.0),
+                "liq_confirmed": pos.get("liq_confirmed", False)
             }
             self.history.append(record)
             self.save_history(critical=True)
@@ -535,7 +537,9 @@ class PaperTrader:
                 "macro_climate": pos.get("macro_climate", "⚪ NÖTR"),
                 "dynamic_rs_score": pos.get("dynamic_rs_score", 0.0),
                 "entry_funding_rate": pos.get("entry_funding_rate", 0.0100),
-                "funding_status": pos.get("funding_status", "BALANCED")
+                "funding_status": pos.get("funding_status", "BALANCED"),
+                "entry_liq_volume_usd": pos.get("entry_liq_volume_usd", 0.0),
+                "liq_confirmed": pos.get("liq_confirmed", False)
             }
             self.history.append(record)
             del self.open_positions[symbol]

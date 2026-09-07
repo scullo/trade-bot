@@ -318,7 +318,9 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ('Göreceli Güç (RS vs BTC %)', 22),
         ('Ayrışma (Decoupling) Durumu', 26),
         ('Giriş Fonlama Oranı (%)', 20),
-        ('Fonlama Squeeze Durumu', 24)
+        ('Fonlama Squeeze Durumu', 24),
+        ('Giriş Öncesi Tasfiye Hacmi ($)', 24),
+        ('Tasfiye Teyit Durumu', 26)
     ]
 
     def _get_coin_persona(sym, st):
@@ -453,6 +455,13 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         f_lbl = "Dengeli" if f_stat == "BALANCED" else ("⚠️ Short Squeeze Korumalı" if f_stat == "SHORT_SQUEEZE_RISK" else "🔥 Aşırı Long")
         ws.write(r_idx, 59, f"%{f_rate:+.4f}", cell_roe_green if f_rate >= 0 else cell_roe_red)
         ws.write(r_idx, 60, f_lbl, cell_left)
+
+        # Tasfiye Hacmi & Tasfiye Teyit Durumu
+        l_vol = _safe_float(h.get('entry_liq_volume_usd', 0.0))
+        l_conf = bool(h.get('liq_confirmed', False))
+        l_lbl = "💥 YÜKSEK TASFİYE SÜPÜRMESİ (Teyitli)" if (l_conf and l_vol >= 10000) else ("🎯 TASFİYE TEYİTLİ" if l_conf else "STANDART / NÖTR")
+        ws.write(r_idx, 61, f"${l_vol:,.2f}" if l_vol > 0 else "-", cell_currency if l_vol > 0 else cell_center)
+        ws.write(r_idx, 62, l_lbl, cell_left)
 
     def render_table_sheet(ws_obj, t_list):
         for col_idx, (h_name, width) in enumerate(headers_granular):

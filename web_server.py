@@ -2312,7 +2312,7 @@ HTML_PAGE = """
         </button>
         <button class="nav-tab-btn" id="tab-btn-funding" onclick="switchMainTab('funding')">
             <span style="font-size:14px; margin-right:6px;">⚡</span>
-            6. Mikro Piyasa & Fonlama
+            6. Mikro Piyasa: Fonlama & Likidasyon
             <span class="tab-badge-sub" id="nav-funding-badge" style="background:rgba(255,107,107,0.15); color:var(--red); border:1px solid rgba(255,107,107,0.3);">0 Squeeze</span>
         </button>
         <button class="nav-tab-btn" id="tab-btn-admin" onclick="switchMainTab('admin'); loadAdminMetrics();" style="border-color:rgba(0,242,254,0.35); display:none;">
@@ -2834,6 +2834,93 @@ HTML_PAGE = """
             <div id="funding-table-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding:12px 18px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; font-family:'JetBrains Mono'; font-size:12px; color:#94a3b8;">
                 <div>Toplam <b id="funding-footer-count" style="color:#fff;">0</b> parite analiz edildi. <span id="funding-last-update-str" style="color:var(--cyan); margin-left:12px;"></span></div>
                 <div style="color:var(--red);">🛡️ Squeeze Kuralı: Aşırı negatif fonlamalı coinlerde Short emirleri engellenir, kasanın yapay fitillerde erimesi önlenir.</div>
+            </div>
+        </div>
+
+        <!-- =========================================================================
+             B. GLOBAL LİKİDASYON RADARI & TASFİYE SÜPÜRME PANELİ (!forceOrder)
+             ========================================================================= -->
+        <div style="margin-top:28px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:18px;">💥</span>
+                <span style="font-size:16px; font-weight:800; color:#fff; font-family:'JetBrains Mono';">CANLI LİKİDASYON AKIŞI & TASFİYE SÜPÜRME RADARI (!forceOrder)</span>
+            </div>
+            <div style="font-size:12px; color:#94a3b8; font-family:'JetBrains Mono'; display:flex; align-items:center; gap:8px;">
+                <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e; box-shadow:0 0 8px #22c55e;"></span>
+                <span>Canlı Binance WebSocket Hattı Aktif (0ms Gecikme)</span>
+            </div>
+        </div>
+
+        <!-- LİKİDASYON 3 KPI HERO -->
+        <div class="cockpit-kpi-grid" style="margin-bottom:18px;">
+            <div class="cockpit-kpi-card" style="border-top:3px solid #ef4444;">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">Son 24h Toplam Tasfiye Hacmi</span>
+                    <span class="kpi-card-icon">🌊</span>
+                </div>
+                <div class="kpi-card-val" id="liq-total-24h" style="color:#ef4444;">$0</div>
+                <div class="kpi-card-sub">Piyasa Genelinde Zorunlu Tasfiyeler</div>
+                <div style="font-size:11px; color:#fca5a5; font-family:'JetBrains Mono'; margin-top:3px;">Balinaların yakıt olarak kullandığı stop hacmi</div>
+            </div>
+
+            <div class="cockpit-kpi-card" style="border-top:3px solid #38bdf8;">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">Tasfiye Baskısı (Long vs Short)</span>
+                    <span class="kpi-card-icon">⚖️</span>
+                </div>
+                <div class="kpi-card-val" id="liq-ratio-text" style="color:#38bdf8; font-size:18px;">Long %50 / Short %50</div>
+                <div style="margin-top:8px; width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; display:flex; overflow:hidden;">
+                    <div id="liq-bar-long" style="width:50%; height:100%; background:#ef4444; transition:width 0.4s ease;"></div>
+                    <div id="liq-bar-short" style="width:50%; height:100%; background:#22c55e; transition:width 0.4s ease;"></div>
+                </div>
+                <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono'; margin-top:6px;">Kırmızı: Long Tasfiyesi | Yeşil: Short Tasfiyesi</div>
+            </div>
+
+            <div class="cockpit-kpi-card" style="border-top:3px solid #fbc531;">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">Son 15dk En Sıcak Tasfiye Paritesi</span>
+                    <span class="kpi-card-icon">🔥</span>
+                </div>
+                <div class="kpi-card-val" id="liq-top-sym" style="color:#fbc531; font-size:20px;">-</div>
+                <div class="kpi-card-sub">En Çok Stop / Likidasyon Süpürülen Coin</div>
+                <div style="font-size:11px; color:#fde047; font-family:'JetBrains Mono'; margin-top:3px;">S3/R3 destek-direnç sekmeleri için birincil aday</div>
+            </div>
+        </div>
+
+        <!-- CANLI TASFİYE AKIŞ ŞERİDİ TABLOSU -->
+        <div class="history-full-box">
+            <div style="padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-weight:800; font-size:13.5px; color:#fff; font-family:'JetBrains Mono';">
+                    ⚡ Son Gerçekleşen Büyük Tasfiye Emirleri (Tape Stream)
+                </div>
+                <div style="font-size:11.5px; color:#64748b; font-family:'JetBrains Mono';">
+                    Sadece &gt; $500 kurumsal ve perakende tasfiyeleri listelenir
+                </div>
+            </div>
+            <div class="history-table-container" style="max-height:360px; overflow-y:auto;">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th style="width:90px;">Zaman</th>
+                            <th>Parite</th>
+                            <th>Tasfiye Yönü</th>
+                            <th>Zorunlu İşlem</th>
+                            <th>Hacim ($)</th>
+                            <th>İşlem Fiyatı</th>
+                            <th>Strateji Yorumu & Kurumsal Anlamı</th>
+                        </tr>
+                    </thead>
+                    <tbody id="liquidation-tape-body">
+                        <tr>
+                            <td colspan="7" style="text-align:center; padding:30px; color:#94a3b8;">
+                                Canlı !forceOrder akışı bekleniyor...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="padding:10px 18px; background:rgba(255,255,255,0.015); border-top:1px solid rgba(255,255,255,0.06); font-family:'JetBrains Mono'; font-size:11.5px; color:#94a3b8;">
+                🎯 <b>Strateji Kuralı:</b> Destek seviyelerinde (S3 / Aşağı nPOC) Long tasfiyeleri süpürüldüğünde, akıllı para piyasa satışlarını emerek dip dönüş fitili üretir. Bu teyit sekme (Bounce) girişlerini en dipten yakalamamızı sağlar.
             </div>
         </div>
     </div>
@@ -3997,6 +4084,96 @@ async function loadAdminMetrics() {
             }
         }
 
+        function renderLiquidationView() {
+            try {
+                if (!appState) return;
+                const liqSummary = appState.liquidation_summary || {};
+                const recentLiqs = appState.recent_liquidations || [];
+
+                // 1. KPI Cards
+                const totalEl = document.getElementById('liq-total-24h');
+                if (totalEl) {
+                    const totalVal = Number(liqSummary.total_liq_usd || 0);
+                    totalEl.innerText = '$' + Math.round(totalVal).toLocaleString('en-US');
+                }
+
+                const ratioEl = document.getElementById('liq-ratio-text');
+                const barLong = document.getElementById('liq-bar-long');
+                const barShort = document.getElementById('liq-bar-short');
+                if (ratioEl && barLong && barShort) {
+                    const longPct = Number(liqSummary.long_ratio_pct != null ? liqSummary.long_ratio_pct : 50).toFixed(1);
+                    const shortPct = Number(liqSummary.short_ratio_pct != null ? liqSummary.short_ratio_pct : 50).toFixed(1);
+                    ratioEl.innerHTML = `<span style="color:#ef4444;">Long %${longPct}</span> / <span style="color:#22c55e;">Short %${shortPct}</span>`;
+                    barLong.style.width = `${longPct}%`;
+                    barShort.style.width = `${shortPct}%`;
+                }
+
+                const topSymEl = document.getElementById('liq-top-sym');
+                if (topSymEl) {
+                    const topSym = liqSummary.top_symbol_15m;
+                    const topVol = Number(liqSummary.top_symbol_vol_usd || 0);
+                    if (topSym && topVol > 0) {
+                        const cleanSym = topSym.replace('/USDT', '');
+                        topSymEl.innerHTML = `${cleanSym} <span style="font-size:13px; color:#fff; font-weight:600;">($${Math.round(topVol).toLocaleString('en-US')})</span>`;
+                    } else {
+                        topSymEl.innerText = '-';
+                    }
+                }
+
+                // 2. Liquidation Tape Table
+                const tbody = document.getElementById('liquidation-tape-body');
+                if (!tbody) return;
+
+                if (!recentLiqs || recentLiqs.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" style="text-align:center; padding:30px; color:#94a3b8; font-family:'JetBrains Mono';">
+                                Canlı !forceOrder akışı bekleniyor (Büyük tasfiye emirleri geldikçe akacak)...
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                recentLiqs.forEach(item => {
+                    const symClean = (item.symbol || '').replace('/USDT', '');
+                    const isLongLiq = item.side === 'LONG';
+                    const sideBadge = isLongLiq 
+                        ? `<span style="background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:3px 8px; border-radius:6px; font-weight:800; font-size:11px;">🔴 LONG Tasfiyesi</span>`
+                        : `<span style="background:rgba(34,197,94,0.18); border:1px solid rgba(34,197,94,0.4); color:#22c55e; padding:3px 8px; border-radius:6px; font-weight:800; font-size:11px;">🟢 SHORT Tasfiyesi</span>`;
+
+                    const forceOrderBadge = isLongLiq 
+                        ? `<span style="color:#f87171; font-weight:700;">SELL (Satış)</span>`
+                        : `<span style="color:#4ade80; font-weight:700;">BUY (Alış)</span>`;
+
+                    const usdSize = Number(item.usd_size || 0);
+                    const price = Number(item.price || 0);
+                    const timeStr = item.time ? (item.time.indexOf(' ') > -1 ? item.time.split(' ')[1] : item.time) : '--:--:--';
+
+                    const interp = isLongLiq
+                        ? `<span style="color:#38bdf8;">🔻 Destekte Satış Emildi → Sekme (Bounce Long) Teyidi</span>`
+                        : `<span style="color:#fbbf24;">🔺 Dirençte Alış Emildi → Tepe Reddi (Reject Short) Teyidi</span>`;
+
+                    html += `
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.04); font-family:'JetBrains Mono'; font-size:12px;">
+                        <td style="color:#94a3b8;">${timeStr}</td>
+                        <td style="font-weight:800; color:#fff;">${symClean}</td>
+                        <td>${sideBadge}</td>
+                        <td>${forceOrderBadge}</td>
+                        <td style="font-weight:800; color:#fbbf24;">$${Math.round(usdSize).toLocaleString('en-US')}</td>
+                        <td style="color:#e2e8f0;">$${price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 6})}</td>
+                        <td>${interp}</td>
+                    </tr>
+                    `;
+                });
+
+                tbody.innerHTML = html;
+            } catch (err) {
+                console.error("renderLiquidationView error:", err);
+            }
+        }
+
         function switchMainTab(tabName) {
             if (tabName === 'history') tabName = 'ledger';
             currentActiveMainTab = tabName;
@@ -4056,6 +4233,7 @@ async function loadAdminMetrics() {
                 renderPersonaMatrixView();
             } else if (tabName === 'funding') {
                 renderFundingMatrixView();
+                renderLiquidationView();
             } else if (tabName === 'admin') {
                 loadAdminMetrics();
             }
@@ -6079,6 +6257,16 @@ async function loadAdminMetrics() {
                             }
                         }
 
+                        // Canlı Tasfiye / Likidasyon Rozeti (Son 15dk)
+                        let liqBadge = '';
+                        const sLiqs = appState.symbol_liquidations || {};
+                        const sLiqItem = sLiqs[symbol];
+                        if (sLiqItem && sLiqItem.total_usd >= 5000) {
+                            const liqK = (sLiqItem.total_usd / 1000).toFixed(0);
+                            const liqDom = sLiqItem.dominant_side === 'LONG' ? '🔴' : '🟢';
+                            liqBadge = `<span style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#fca5a5; font-size:10.5px; font-weight:800; padding:2px 6px; border-radius:6px; font-family:'JetBrains Mono';" title="💥 Son 15dk Tasfiye: $${Math.round(sLiqItem.total_usd).toLocaleString()} (${sLiqItem.dominant_side} Tasfiyesi Ağırlıklı)">💥 ${liqDom} $${liqK}K</span>`;
+                        }
+
                         html += `
                         <div class="coin-card ${posClass}" id="card-${safeId}">
                             <!-- CLEAN CARD HEAD: SYMBOL + GRAFIK BUTTON -->
@@ -6087,6 +6275,7 @@ async function loadAdminMetrics() {
                                     <div style="display:flex; align-items:center; gap:8px;">
                                         <span class="card-symbol" onclick="openTradingViewModal('${cleanSym}')" style="cursor:pointer;" title="${cleanSym} Grafiğini Aç">${cleanSym}</span>
                                         ${fBadge}
+                                        ${liqBadge}
                                     </div>
                                     <button class="btn-open-chart" onclick="openTradingViewModal('${cleanSym}')" title="${cleanSym} Canlı Grafiği Aç">📈 Grafik</button>
                                 </div>
@@ -7257,24 +7446,33 @@ function downloadExcelReport() {
                     updatePersonaBadge();
                 }
 
-                // 5c. Update Funding Matrix if active tab, otherwise update badge
+                // 5c. Update Funding & Liquidation Matrix if active tab, otherwise update badge
                 if (currentActiveMainTab === 'funding') {
                     renderFundingMatrixView();
+                    renderLiquidationView();
                 } else {
                     updateFundingBadge();
                 }
 
-                // 5d. Update Cockpit Funding Commentary
+                // 5d. Update Cockpit Funding & Liquidation Commentary
                 const cFundingEl = document.getElementById('cockpit-funding-commentary');
                 if (cFundingEl && appState.funding_summary) {
                     const fSumm = appState.funding_summary.summary || {};
                     const fMedian = fSumm.median_rate_pct != null ? fSumm.median_rate_pct : 0.01;
                     const sqSyms = fSumm.short_squeeze_symbols || [];
+
+                    let liqSnippet = '';
+                    if (appState.liquidation_summary && appState.liquidation_summary.total_liq_usd > 0) {
+                        const lTotal = (appState.liquidation_summary.total_liq_usd / 1000).toFixed(0);
+                        const lDom = appState.liquidation_summary.dominant_side === 'LONG' ? '🔴 Long' : '🟢 Short';
+                        liqSnippet = ` | 💥 <b>$${lTotal}K</b> Tasfiye (${lDom} Baskılı)`;
+                    }
+
                     if (sqSyms.length > 0) {
                         const cleanList = sqSyms.map(s => s.replace('/USDT', '')).slice(0, 4).join(', ');
-                        cFundingEl.innerHTML = `<b style="color:var(--cyan);">${fMedian >= 0 ? '+' : ''}${fMedian.toFixed(4)}%</b> Medyan | <span style="color:var(--red); font-weight:800;">⚠️ ${sqSyms.length} Paritede Short Squeeze Riski (${cleanList})</span> — <b style="color:var(--green);">Kalkan Aktif (Short Kilitli 🔒)</b>`;
+                        cFundingEl.innerHTML = `<b style="color:var(--cyan);">${fMedian >= 0 ? '+' : ''}${fMedian.toFixed(4)}%</b> Medyan | <span style="color:var(--red); font-weight:800;">⚠️ ${sqSyms.length} Paritede Short Squeeze Riski (${cleanList})</span> — <b style="color:var(--green);">Kalkan Aktif 🔒</b>${liqSnippet}`;
                     } else {
-                        cFundingEl.innerHTML = `<b style="color:var(--cyan);">${fMedian >= 0 ? '+' : ''}${fMedian.toFixed(4)}%</b> Medyan | <span style="color:var(--green); font-weight:700;">🟢 Tüm 100 Paritede Fonlama Dengeli & Güvenli</span>`;
+                        cFundingEl.innerHTML = `<b style="color:var(--cyan);">${fMedian >= 0 ? '+' : ''}${fMedian.toFixed(4)}%</b> Medyan | <span style="color:var(--green); font-weight:700;">🟢 Fonlama Dengeli</span>${liqSnippet}`;
                     }
                 }
 
@@ -7832,6 +8030,22 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 except Exception as fe:
                     print(f">> [FONLAMA API HATA] {fe}")
 
+            liq_summary = {}
+            recent_liqs = []
+            symbol_liqs = {}
+            if market_data:
+                if hasattr(market_data, 'get_global_liquidation_summary'):
+                    try:
+                        liq_summary = market_data.get_global_liquidation_summary()
+                    except Exception:
+                        pass
+                if hasattr(market_data, 'get_recent_liquidations'):
+                    try:
+                        recent_liqs = market_data.get_recent_liquidations(25)
+                    except Exception:
+                        pass
+                symbol_liqs = getattr(market_data, 'symbol_liquidations_15m', {})
+
             return web.json_response({
                 "balance": trader_manager.balance,
                 "initial_balance": 100000.0,
@@ -7843,6 +8057,9 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "all_coins": all_coins,
                 "coin_personas": coin_personas,
                 "funding_summary": funding_summary,
+                "liquidation_summary": liq_summary,
+                "recent_liquidations": recent_liqs,
+                "symbol_liquidations": symbol_liqs,
                 "recent_rejections": getattr(strategy, "recent_rejections", [])[-20:] if strategy else [],
                 "setup_attempts": getattr(strategy, "setup_attempts", {}) if strategy else {},
                 "system_health": sys_health,

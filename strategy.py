@@ -748,6 +748,35 @@ class StrategyEngine:
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "FUNDING_LONG_OVERHEATED_BLOCKED"}
 
+        # 1c. GLOBAL LİKİDASYON RADARI & TASFİYE SÜPÜRME TEYİDİ (!forceOrder Confluence)
+        liq_stats = {}
+        if self.market_data and hasattr(self.market_data, 'get_symbol_liquidation_stats'):
+            liq_stats = self.market_data.get_symbol_liquidation_stats(symbol) or {}
+
+        long_liq_usd = float(liq_stats.get('long_usd', 0.0))
+        short_liq_usd = float(liq_stats.get('short_usd', 0.0))
+        liq_confirmed = False
+        liq_volume_usd = 0.0
+        liq_tag = ""
+
+        # Alış (LONG) yönlü sekme işlemlerinde: Destekte Long'lar tasfiye edildiyse (Retail Stop Avı) kurumsal alıcı absorbe etmiştir!
+        if side == "LONG" and not is_breakout:
+            if long_liq_usd >= 10000.0 or (long_liq_usd >= 5000.0 and long_liq_usd > short_liq_usd * 1.4):
+                liq_confirmed = True
+                liq_volume_usd = round(long_liq_usd, 2)
+                liq_tag = f" [💥 ${liq_volume_usd:,.0f} Long Tasfiye Süpürmesi Teyitli]"
+        # Satış (SHORT) yönlü sekme işlemlerinde: Dirençte Short'lar patlatıldıysa (Retail Short Avı) kurumsal satıcı absorbe etmiştir!
+        elif side == "SHORT" and not is_breakout:
+            if short_liq_usd >= 10000.0 or (short_liq_usd >= 5000.0 and short_liq_usd > long_liq_usd * 1.4):
+                liq_confirmed = True
+                liq_volume_usd = round(short_liq_usd, 2)
+                liq_tag = f" [💥 ${liq_volume_usd:,.0f} Short Tasfiye Süpürmesi Teyitli]"
+
+        if liq_confirmed and liq_tag:
+            reason += liq_tag
+            if confluence_list is not None and isinstance(confluence_list, list):
+                confluence_list.append("Likidasyon_Süpürmesi_Teyidi")
+
         # MADDE 5: TEMAS (TOUCH) TAKIBI VE FAKEOUT KORUMASI
         from datetime import datetime
         current_date = datetime.now().date()
@@ -1021,7 +1050,9 @@ class StrategyEngine:
             margin_multiplier=getattr(self, 'margin_multiplier', 1.0),
             touch_count=current_touch if 'current_touch' in locals() else 1,
             entry_funding_rate=f_rate_pct,
-            funding_status=squeeze_status
+            funding_status=squeeze_status,
+            entry_liq_volume_usd=liq_volume_usd,
+            liq_confirmed=liq_confirmed
         )
         if isinstance(res, dict) and res.get("error") == "INSUFFICIENT_BALANCE":
             await self.notifier.notify_insufficient_balance(
