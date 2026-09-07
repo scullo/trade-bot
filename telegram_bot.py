@@ -174,8 +174,10 @@ class TelegramNotifier:
         decouple_str = pos.get('decoupling_status', '⚪ Nötr_Takipçi (Beta)')
         rs_score = pos.get('dynamic_rs_score', pos.get('rs_vs_btc', 0.0))
 
-        # 🧠 Valkyrie AI Dinamik Kantitatif Taktik Notu (20+ Varyasyon)
-        ai_tactic_note = self._generate_quant_entry_briefing(pos, vol_val, rs_score, macro_str)
+        f_rate = pos.get('entry_funding_rate', 0.0100)
+        f_status = pos.get('funding_status', 'BALANCED')
+        f_status_label = "🟢 Dengeli" if f_status == "BALANCED" else ("⚠️ Short Squeeze Korumalı" if f_status == "SHORT_SQUEEZE_RISK" else "🔥 Aşırı Long")
+        funding_line = f"⚡ <b>Fonlama Oranı:</b> <code>%{f_rate:+.4f} ({f_status_label})</code>\n"
 
         msg = f"""💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎
 ⚡ <b>YENİ POZİSYON AÇILDI</b> ⚡
@@ -189,7 +191,7 @@ Giriş: <code>${pos['entry_price']:.6f}</code> | Marjin: <b>${pos.get('margin_us
 📊 <b>ATR / Hacim:</b> <code>%{atr_val:.2f} | {vol_val:.2f}x</code>
 🌐 <b>Makro İklim:</b> <code>{macro_str}</code>
 ⚡ <b>Alfa/Beta Gücü:</b> <code>{decouple_str} (RS: {rs_score:+.2f})</code>
-{bal_line}━━━━━━━━━━━━━━━━━━━━━━━━
+{funding_line}{bal_line}━━━━━━━━━━━━━━━━━━━━━━━━
 📌 <b>Setup:</b> <i>{pos['reason']}</i>
 {ai_tactic_note}⏰ <b>Zaman:</b> <code>{pos['entry_time']}</code>
 💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎"""

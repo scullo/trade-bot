@@ -23,6 +23,25 @@ class MarketDataManager:
         self.levels = {s: {} for s in all_symbols}
         self.symbol_metrics = {s: {} for s in all_symbols}
         self.current_prices = {s: 0.0 for s in all_symbols}
+        self.funding_rates = {s: {
+            'symbol': s,
+            'rate': 0.0001,
+            'rate_pct': 0.0100,
+            'mark_price': 0.0,
+            'next_funding_time': 0,
+            'next_funding_countdown': '--:--',
+            'squeeze_status': 'BALANCED',
+            'direction_allowed': 'ALL'
+        } for s in all_symbols}
+        self.funding_summary = {
+            'median_rate_pct': 0.0100,
+            'short_squeeze_count': 0,
+            'long_overheated_count': 0,
+            'balanced_count': len(all_symbols),
+            'short_squeeze_symbols': [],
+            'long_overheated_symbols': [],
+            'last_update_str': 'Başlatılıyor...'
+        }
         self.on_tick_callback = None
         self.on_candle_close_callback = None
 
@@ -107,6 +126,137 @@ class MarketDataManager:
                 "error_detail": str(e)
             }
 
+    async def fetch_funding_rates(self):
+        """Binance Vadeli fapi/v1/premiumIndex uzerinden 100 paritenin anlik fonlama oranlarini ceker ve squeeze durumlarini belirler."""
+        url = "https://fapi.binance.com/fapi/v1/premiumIndex"
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        if not isinstance(data, list):
+                            return
+                        fmap = {}
+                        for item in data:
+                            sym = item.get('symbol', '')
+                            try:
+                                fmap[sym] = {
+                                    'rate': float(item.get('lastFundingRate', 0.0)),
+                                    'mark_price': float(item.get('markPrice', 0.0)),
+                                    'next_time': int(item.get('nextFundingTime', 0))
+                                }
+                            except (ValueError, TypeError):
+                                pass
+
+                        raw_rates = []
+                        now_ms = int(time.time() * 1000)
+
+                        for s in self.all_symbols:
+                            clean = self._clean_symbol(s).replace('/', '').replace(':USDT', '').upper()
+                            candidates = [clean, clean + 'USDT']
+                            if clean.startswith('PEPE'): candidates.insert(0, '1000PEPEUSDT')
+                            if clean.startswith('SHIB'): candidates.insert(0, '1000SHIBUSDT')
+                            if clean.startswith('BONK'): candidates.insert(0, '1000BONKUSDT')
+                            if clean.startswith('FLOKI'): candidates.insert(0, '1000FLOKIUSDT')
+                            if clean.startswith('LUNC'): candidates.insert(0, '1000LUNCUSDT')
+                            if clean.startswith('XEC'): candidates.insert(0, '1000XECUSDT')
+
+                            found = None
+                            for c in candidates:
+                                if c in fmap:
+                                    found = fmap[c]
+                                    break
+
+                            if found:
+                                r_pct = round(found['rate'] * 100.0, 4)
+                                raw_rates.append(r_pct)
+
+                        median_pct = float(np.median(raw_rates)) if raw_rates else 0.0100
+                        short_squeeze_syms = []
+                        long_overheat_syms = []
+                        balanced_cnt = 0
+
+                        for s in self.all_symbols:
+                            clean = self._clean_symbol(s).replace('/', '').replace(':USDT', '').upper()
+                            candidates = [clean, clean + 'USDT']
+                            if clean.startswith('PEPE'): candidates.insert(0, '1000PEPEUSDT')
+                            if clean.startswith('SHIB'): candidates.insert(0, '1000SHIBUSDT')
+                            if clean.startswith('BONK'): candidates.insert(0, '1000BONKUSDT')
+                            if clean.startswith('FLOKI'): candidates.insert(0, '1000FLOKIUSDT')
+                            if clean.startswith('LUNC'): candidates.insert(0, '1000LUNCUSDT')
+                            if clean.startswith('XEC'): candidates.insert(0, '1000XECUSDT')
+
+                            found = None
+                            for c in candidates:
+                                if c in fmap:
+                                    found = fmap[c]
+                                    break
+
+                            if found:
+                                r_pct = round(found['rate'] * 100.0, 4)
+                                rem_ms = max(0, found['next_time'] - now_ms)
+                                rem_hrs = rem_ms // (1000 * 3600)
+                                rem_mins = (rem_ms % (1000 * 3600)) // (1000 * 60)
+                                cd_str = f"{rem_hrs:02d}sa {rem_mins:02d}dk"
+
+                                # Squeeze Eşik Kuralı:
+                                # Negatif Squeeze: rate <= -0.0300% veya (rate < 0 ve median - 0.0250%)
+                                if r_pct <= -0.0300 or (r_pct < 0 and r_pct <= (median_pct - 0.0250)):
+                                    status = 'SHORT_SQUEEZE_RISK'
+                                    dir_allowed = 'LONG_ONLY'
+                                    short_squeeze_syms.append(s)
+                                # Pozitif Şişkinlik: rate >= +0.0600% veya rate >= (median + 0.0500%)
+                                elif r_pct >= 0.0600 or r_pct >= (median_pct + 0.0500):
+                                    status = 'LONG_OVERHEATED'
+                                    dir_allowed = 'SHORT_ONLY'
+                                    long_overheat_syms.append(s)
+                                else:
+                                    status = 'BALANCED'
+                                    dir_allowed = 'ALL'
+                                    balanced_cnt += 1
+
+                                self.funding_rates[s] = {
+                                    'symbol': s,
+                                    'rate': found['rate'],
+                                    'rate_pct': r_pct,
+                                    'mark_price': found['mark_price'],
+                                    'next_funding_time': found['next_time'],
+                                    'next_funding_countdown': cd_str,
+                                    'squeeze_status': status,
+                                    'direction_allowed': dir_allowed
+                                }
+
+                        now_str = datetime.now(timezone(timedelta(hours=3))).strftime('%H:%M:%S')
+                        self.funding_summary = {
+                            'median_rate_pct': round(median_pct, 4),
+                            'short_squeeze_count': len(short_squeeze_syms),
+                            'long_overheated_count': len(long_overheat_syms),
+                            'balanced_count': balanced_cnt,
+                            'short_squeeze_symbols': short_squeeze_syms,
+                            'long_overheated_symbols': long_overheat_syms,
+                            'last_update_str': now_str
+                        }
+        except Exception as e:
+            print(f">> [FONLAMA TARAMA HATA]: {e}")
+
+    def get_funding_info(self, symbol: str) -> dict:
+        return self.funding_rates.get(symbol, {
+            'symbol': symbol,
+            'rate': 0.0001,
+            'rate_pct': 0.0100,
+            'mark_price': self.current_prices.get(symbol, 0.0),
+            'next_funding_time': 0,
+            'next_funding_countdown': '--:--',
+            'squeeze_status': 'BALANCED',
+            'direction_allowed': 'ALL'
+        })
+
+    def get_all_funding_summary(self) -> dict:
+        return {
+            'summary': getattr(self, 'funding_summary', {}),
+            'rates': getattr(self, 'funding_rates', {})
+        }
+
     async def sync_top_100_symbols(self):
         """Binance Vadeli (USDT-M) 24h hacim siralamasini kontrol eder, delist olan veya veri vermeyen pariteleri otomatik degistirir."""
         try:
@@ -159,7 +309,8 @@ class MarketDataManager:
         print(f"   Takip Edilen Toplam Parite: {len(self.all_symbols)}")
         tasks = [self.fetch_single_symbol(s) for s in self.all_symbols]
         await asyncio.gather(*tasks)
-        print(f">> [TAMAMLANDI] {len(self.all_symbols)} paritenin gosterge ve pivot seviyeleri hesaplandi.")
+        await self.fetch_funding_rates()
+        print(f">> [TAMAMLANDI] {len(self.all_symbols)} paritenin gosterge, pivot seviyeleri ve fonlama oranlari hesaplandi.")
 
     async def fetch_single_symbol(self, symbol: str):
         async with self.semaphore:
@@ -712,7 +863,16 @@ class MarketDataManager:
                     print(f">> [SAATLİK DENETÇİ UYARI]: {e}")
                     await asyncio.sleep(60)
 
-        tasks = [bookticker_worker(), candle_poller_worker(), hourly_futures_watchdog_worker()] + [kline_worker(c) for c in kline_chunks]
+        # Worker 5: Dinamik Fonlama Oranı ve Squeeze Kalkanı Taraması (60 Saniyede bir REST)
+        async def funding_worker():
+            while True:
+                try:
+                    await self.fetch_funding_rates()
+                except Exception as e:
+                    print(f">> [FONLAMA İŞÇİSİ UYARI]: {e}")
+                await asyncio.sleep(60)
+
+        tasks = [bookticker_worker(), candle_poller_worker(), hourly_futures_watchdog_worker(), funding_worker()] + [kline_worker(c) for c in kline_chunks]
         await asyncio.gather(*tasks)
 
     async def close(self):

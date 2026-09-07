@@ -463,7 +463,9 @@ class PaperTrader:
                 "max_mae_roe": pos.get("max_mae_roe", 0.0),
                 "snapshot_levels": pos.get("snapshot_levels", {}),
                 "macro_climate": pos.get("macro_climate", "⚪ NÖTR"),
-                "dynamic_rs_score": pos.get("dynamic_rs_score", 0.0)
+                "dynamic_rs_score": pos.get("dynamic_rs_score", 0.0),
+                "entry_funding_rate": pos.get("entry_funding_rate", 0.0100),
+                "funding_status": pos.get("funding_status", "BALANCED")
             }
             self.history.append(record)
             self.save_history(critical=True)
@@ -531,7 +533,9 @@ class PaperTrader:
                 "max_mae_roe": pos.get("max_mae_roe", 0.0),
                 "snapshot_levels": pos.get("snapshot_levels", {}),
                 "macro_climate": pos.get("macro_climate", "⚪ NÖTR"),
-                "dynamic_rs_score": pos.get("dynamic_rs_score", 0.0)
+                "dynamic_rs_score": pos.get("dynamic_rs_score", 0.0),
+                "entry_funding_rate": pos.get("entry_funding_rate", 0.0100),
+                "funding_status": pos.get("funding_status", "BALANCED")
             }
             self.history.append(record)
             del self.open_positions[symbol]

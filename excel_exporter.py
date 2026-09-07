@@ -316,7 +316,9 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ('CVD Taker Alım (%)', 18),
         ('Breakout İvmesi (Hız xATR)', 22),
         ('Göreceli Güç (RS vs BTC %)', 22),
-        ('Ayrışma (Decoupling) Durumu', 26)
+        ('Ayrışma (Decoupling) Durumu', 26),
+        ('Giriş Fonlama Oranı (%)', 20),
+        ('Fonlama Squeeze Durumu', 24)
     ]
 
     def _get_coin_persona(sym, st):
@@ -444,6 +446,13 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         rs_val = _safe_float(h.get('rs_vs_btc', 0.0))
         ws.write(r_idx, 57, f"%{rs_val:+.2f}", cell_roe_green if rs_val >= 0 else cell_roe_red)
         ws.write(r_idx, 58, str(h.get('decoupling_status', '⚪ NÖTR_TAKİPÇİ')), cell_left)
+
+        # Dinamik Fonlama Oranı & Squeeze Durumu
+        f_rate = _safe_float(h.get('entry_funding_rate', 0.0100))
+        f_stat = str(h.get('funding_status', 'BALANCED'))
+        f_lbl = "Dengeli" if f_stat == "BALANCED" else ("⚠️ Short Squeeze Korumalı" if f_stat == "SHORT_SQUEEZE_RISK" else "🔥 Aşırı Long")
+        ws.write(r_idx, 59, f"%{f_rate:+.4f}", cell_roe_green if f_rate >= 0 else cell_roe_red)
+        ws.write(r_idx, 60, f_lbl, cell_left)
 
     def render_table_sheet(ws_obj, t_list):
         for col_idx, (h_name, width) in enumerate(headers_granular):

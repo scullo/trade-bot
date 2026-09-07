@@ -726,6 +726,28 @@ class StrategyEngine:
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "WHIPSAW_BREAKOUT_BLOCKED"}
 
+        # ── 1c. DİNAMİK FONLAMA ORANI (FUNDING RATE) VE SQUEEZE KALKANI (ERKEN VETO) ──
+        funding_info = {}
+        if self.market_data and hasattr(self.market_data, 'get_funding_info'):
+            funding_info = self.market_data.get_funding_info(symbol) or {}
+
+        f_rate_pct = funding_info.get('rate_pct', 0.0100)
+        squeeze_status = funding_info.get('squeeze_status', 'BALANCED')
+
+        # Veto 1: Short Squeeze Kalkanı — Negatif fonlamada SHORT açmak intihardır (Piyasa Yapıcı yukarı sıkıştırır!)
+        if side == "SHORT" and squeeze_status == "SHORT_SQUEEZE_RISK":
+            rej_msg = f"🛡️ Squeeze Kalkanı: Fonlama oranı aşırı negatif (%{f_rate_pct:+.4f}). Short Squeeze riski sebebiyle SHORT işlem engellendi."
+            print(f">> [RED - SQUEEZE KALKANI] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "FUNDING_SHORT_SQUEEZE_BLOCKED"}
+
+        # Veto 2: Long Overheating Kalkanı — Aşırı pozitif fonlamada tepe LONG kırılımı açmak intihardır (Düşüş kapıdadır!)
+        if side == "LONG" and is_breakout and squeeze_status == "LONG_OVERHEATED":
+            rej_msg = f"🛡️ Aşırı Şişkinlik Kalkanı: Fonlama oranı aşırı pozitif (%{f_rate_pct:+.4f}). Long Squeeze / Tepe tuzağı sebebiyle LONG kırılımı engellendi."
+            print(f">> [RED - AŞIRI LONG KALKANI] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "FUNDING_LONG_OVERHEATED_BLOCKED"}
+
         # MADDE 5: TEMAS (TOUCH) TAKIBI VE FAKEOUT KORUMASI
         from datetime import datetime
         current_date = datetime.now().date()
@@ -997,7 +1019,9 @@ class StrategyEngine:
             eth_leading=macro_clim.get('eth_leading', False),
             cvd_pct=cvd_pct, candle_velocity=candle_velocity,
             margin_multiplier=getattr(self, 'margin_multiplier', 1.0),
-            touch_count=current_touch if 'current_touch' in locals() else 1
+            touch_count=current_touch if 'current_touch' in locals() else 1,
+            entry_funding_rate=f_rate_pct,
+            funding_status=squeeze_status
         )
         if isinstance(res, dict) and res.get("error") == "INSUFFICIENT_BALANCE":
             await self.notifier.notify_insufficient_balance(
