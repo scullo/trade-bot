@@ -2613,10 +2613,12 @@ HTML_PAGE = """
             <!-- LEDGER 20-ITEM PAGINATION STRIP -->
             <div id="ledger-pagination-container" style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding:12px 18px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; flex-wrap:wrap; gap:12px;"></div>
         </div>
+    </div>
+
     <!-- =========================================================================
          5. SEKME: 🧬 CANLI COIN DNA & PERSONA MATRİSİ (100 PARİTE)
          ========================================================================= -->
-    <div id="main-tab-content-persona" class="main-tab-content" style="display:none;">
+    <div id="main-tab-content-persona" class="main-tab-content">
         <!-- 4 KPI PERSONA ÖZET KARTLARI -->
         <div class="cockpit-kpi-grid">
             <div class="cockpit-kpi-card" style="border-top:3px solid #fbc531;">
