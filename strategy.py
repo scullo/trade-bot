@@ -22,6 +22,16 @@ class StrategyEngine:
         self.boot_time = time.time()  # Sunucu baslangic zamani (Isinma Kalkanı)
         self.warmup_seconds = 45.0   # Ilk 45 saniye ani kapatmalari onle
         self.recent_rejections = []  # 🧠 Son elenen / girilmeyen sinyaller ve nedenleri (Canlı Dashboard Zekası)
+        self.dna_baseline = {}       # 🧬 3,615 Gerçek İşlem Analizinden Türetilen Parite DNA Hafızası
+        try:
+            import json, os
+            baseline_path = os.path.join(os.path.dirname(__file__), 'coin_dna_baseline.json')
+            if os.path.exists(baseline_path):
+                with open(baseline_path, 'r', encoding='utf-8') as f:
+                    self.dna_baseline = json.load(f)
+                print(f">> [COIN DNA] {len(self.dna_baseline)} parite için geçmiş baz DNA hafızaya yüklendi.")
+        except Exception as e:
+            print(f">> [COIN DNA HATA] Baz DNA yüklenemedi: {e}")
 
     def log_rejection(self, symbol: str, setup_name: str, reason: str):
         now_str = datetime.now().strftime("%H:%M:%S")
@@ -285,6 +295,10 @@ class StrategyEngine:
         total_t = len(recent)
 
         if total_t < 3:
+            if hasattr(self, 'dna_baseline') and clean_sym in self.dna_baseline:
+                base_data = dict(self.dna_baseline[clean_sym])
+                base_data["symbol"] = symbol
+                return base_data
             return {
                 "symbol": symbol,
                 "persona_class": "STANDARD",
@@ -787,6 +801,7 @@ class StrategyEngine:
         cvd_confirmed = False
         cvd_status = "DENGELİ"
         cvd_tag = ""
+        cvd_margin_mult = 1.0
 
         if is_breakout:
             # Breakout Long: Taker Buy baskısı aranır (>= 62%)
@@ -795,7 +810,7 @@ class StrategyEngine:
                     cvd_confirmed = True
                     cvd_status = "⚡ GÜÇLÜ TAKER ALIŞ PATLAMASI"
                     cvd_tag = f" [⚡ Mikro-CVD %{cvd_ratio_60s:.0f} Alıcı Patlaması Teyitli]"
-                    margin_ratio *= 1.15
+                    cvd_margin_mult = 1.15
                 elif cvd_ratio_60s < 38.0 and cvd_delta_60s < -5000:
                     # Fakeout Shield: Yukarı kırılım görünüyor ama tahtada agresif satış var!
                     rej_msg = f"🛡️ Mikro-CVD Sahte Kırılım (Fakeout) Kalkanı: Fiyat direnç üstünde fakat Taker Satıcı baskısı hakim (%{100-cvd_ratio_60s:.0f} Satıcı, Delta: -${abs(cvd_delta_60s):,.0f}). Tuzak engellendi."
@@ -807,7 +822,7 @@ class StrategyEngine:
                     cvd_confirmed = True
                     cvd_status = "⚡ GÜÇLÜ TAKER SATIŞ PATLAMASI"
                     cvd_tag = f" [⚡ Mikro-CVD %{100-cvd_ratio_60s:.0f} Satıcı Patlaması Teyitli]"
-                    margin_ratio *= 1.15
+                    cvd_margin_mult = 1.15
                 elif cvd_ratio_60s > 62.0 and cvd_delta_60s > 5000:
                     # Fakeout Shield: Aşağı kırılım görünüyor ama tahtada agresif alış var!
                     rej_msg = f"🛡️ Mikro-CVD Sahte Kırılım (Fakeout) Kalkanı: Fiyat destek altında fakat Taker Alıcı baskısı hakim (%{cvd_ratio_60s:.0f} Alıcı). Tuzak engellendi."
@@ -821,13 +836,13 @@ class StrategyEngine:
                     cvd_confirmed = True
                     cvd_status = "🛡️ KURUMSAL ALICI EMİLİMİ (Teyitli)"
                     cvd_tag = f" [🛡️ Mikro-CVD Destek Emilimi Teyitli (%{cvd_ratio_60s:.0f})]"
-                    margin_ratio *= 1.10
+                    cvd_margin_mult = 1.10
             elif side == "SHORT":
                 if cvd_ratio_60s <= 45.0 or (cvd_delta_60s < 0 and cvd_ratio_60s <= 50.0):
                     cvd_confirmed = True
                     cvd_status = "🛡️ KURUMSAL SATICI EMİLİMİ (Teyitli)"
                     cvd_tag = f" [🛡️ Mikro-CVD Direnç Emilimi Teyitli (%{100-cvd_ratio_60s:.0f})]"
-                    margin_ratio *= 1.10
+                    cvd_margin_mult = 1.10
 
         if cvd_confirmed and cvd_tag:
             reason += cvd_tag
@@ -855,6 +870,8 @@ class StrategyEngine:
         self.setup_attempts[setup_key] = current_touch
 
         self.margin_multiplier = 1.0
+        if cvd_margin_mult != 1.0:
+            self.margin_multiplier *= cvd_margin_mult
         
         # Madde 5 Kurali
         if current_touch == 2:
