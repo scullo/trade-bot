@@ -2936,16 +2936,16 @@ HTML_PAGE = """
     <div id="main-tab-content-cvd" class="main-tab-content" style="display:none;">
         <!-- CVD BAŞLIK & CANLI DURUM -->
         <div style="margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-            <div style="display:flex; align-items:center; gap:10px;">
-                <span style="font-size:22px;">🔬</span>
+            <div style="display:flex; align-items:center; gap:12px;">
+                <span style="font-size:26px;">🔬</span>
                 <div>
-                    <div style="font-size:16px; font-weight:800; color:#fff; font-family:'JetBrains Mono';">CANLI MİKRO-CVD & TAKER AGRESYON RADARI</div>
-                    <div style="font-size:11.5px; color:#94a3b8; margin-top:2px;">Mum içi anlık piyasa alışları (Taker Buy) ve satışları (Taker Sell) — Milisaniyelik Delta Akışı</div>
+                    <div style="font-size:17px; font-weight:800; color:#fff; font-family:'JetBrains Mono';">CANLI MİKRO-CVD & TAKER AGRESYON RADARI (Piyasanın Kalp Atışı)</div>
+                    <div style="font-size:12px; color:#94a3b8; margin-top:2px;">Mum içi anlık piyasa alışları (Taker Buy) ve satışları (Taker Sell) — Milisaniyelik Net Para Akışı (Delta)</div>
                 </div>
             </div>
-            <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:#94a3b8; font-family:'JetBrains Mono';">
+            <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:#94a3b8; font-family:'JetBrains Mono'; background:rgba(34,197,94,0.08); padding:6px 14px; border-radius:20px; border:1px solid rgba(34,197,94,0.25);">
                 <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e; box-shadow:0 0 8px #22c55e;"></span>
-                <span>Binance 100/100 K-Line Stream (0ms Gecikme)</span>
+                <span style="color:#86efac; font-weight:700;">Binance 100/100 K-Line Stream (0ms Gecikme)</span>
             </div>
         </div>
 
@@ -2953,57 +2953,79 @@ HTML_PAGE = """
         <div class="cockpit-kpi-grid" style="margin-bottom:20px;">
             <div class="cockpit-kpi-card" style="border-top:3px solid #38bdf8;">
                 <div class="kpi-card-head">
-                    <span class="kpi-card-title">Piyasa Geneli Taker Oranı (Kayan 60s)</span>
+                    <span class="kpi-card-title">📊 Piyasa Geneli Taker Güç Dengesi (Son 60s)</span>
                     <span class="kpi-card-icon">⚖️</span>
                 </div>
                 <div class="kpi-card-val" id="cvd-market-ratio-text" style="color:#38bdf8; font-size:18px;">Alıcı %50.0 / Satıcı %50.0</div>
-                <div style="margin-top:8px; width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; display:flex; overflow:hidden;">
+                <div style="margin-top:8px; width:100%; height:7px; background:rgba(255,255,255,0.08); border-radius:4px; display:flex; overflow:hidden;">
                     <div id="cvd-market-bar-long" style="width:50%; height:100%; background:#22c55e; transition:width 0.4s ease;"></div>
                     <div id="cvd-market-bar-short" style="width:50%; height:100%; background:#ef4444; transition:width 0.4s ease;"></div>
                 </div>
-                <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono'; margin-top:6px;">Yeşil: Market Alıcıları (Taker Buy) | Kırmızı: Market Satıcıları</div>
+                <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono'; margin-top:7px; line-height:1.4;">
+                    🟢 <b>Yeşil (% Alıcı):</b> Tahtayı yukarı süpüren piyasa alışları | 🔴 <b>Kırmızı (% Satıcı):</b> Aşağı vuran satışlar
+                </div>
             </div>
 
             <div class="cockpit-kpi-card" style="border-top:3px solid #22c55e;">
                 <div class="kpi-card-head">
-                    <span class="kpi-card-title">En Güçlü Boğa Agresyonu (60s Lideri)</span>
-                    <span class="kpi-card-icon">🚀</span>
+                    <span class="kpi-card-title">🚀 60 Saniyenin Boğa Lideri (En Hızlı Para Girişi)</span>
+                    <span class="kpi-card-icon">🔥</span>
                 </div>
                 <div class="kpi-card-val" id="cvd-top-buyer-sym" style="color:#22c55e; font-size:19px;">-</div>
-                <div class="kpi-card-sub" id="cvd-top-buyer-delta">Net Delta: $0</div>
-                <div style="font-size:11px; color:#86efac; font-family:'JetBrains Mono'; margin-top:3px;">Direnç kırılımı (Breakout) için en güçlü aday</div>
+                <div class="kpi-card-sub" id="cvd-top-buyer-delta" style="font-weight:700;">Net Para Girişi: +$0</div>
+                <div style="font-size:11px; color:#86efac; font-family:'JetBrains Mono'; margin-top:5px;">
+                    🎯 <b>Strateji:</b> Direnç kırılımı (Breakout) için en güçlü aday. Mum beklemeden marjin 1.15x artırılır.
+                </div>
             </div>
 
             <div class="cockpit-kpi-card" style="border-top:3px solid #ef4444;">
                 <div class="kpi-card-head">
-                    <span class="kpi-card-title">En Güçlü Ayı Agresyonu (60s Lideri)</span>
-                    <span class="kpi-card-icon">🔻</span>
+                    <span class="kpi-card-title">🔻 60 Saniyenin Ayı Lideri (En Ağır Satış Baskısı)</span>
+                    <span class="kpi-card-icon">⚠️</span>
                 </div>
                 <div class="kpi-card-val" id="cvd-top-seller-sym" style="color:#ef4444; font-size:19px;">-</div>
-                <div class="kpi-card-sub" id="cvd-top-seller-delta">Net Delta: -$0</div>
-                <div style="font-size:11px; color:#fca5a5; font-family:'JetBrains Mono'; margin-top:3px;">Destek kırılımı veya dip emilim adayı</div>
+                <div class="kpi-card-sub" id="cvd-top-seller-delta" style="font-weight:700;">Net Para Çıkışı: -$0</div>
+                <div style="font-size:11px; color:#fca5a5; font-family:'JetBrains Mono'; margin-top:5px;">
+                    🛡️ <b>Strateji:</b> Dirençteyse 'Boğa Tuzağı' engellenir. Destekteyse fitilden 'Dip Emilim (Bounce)' aranır.
+                </div>
+            </div>
+        </div>
+
+        <!-- COIN SEÇİM & FİLTRE ÇUBUĞU -->
+        <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div style="font-size:13px; font-weight:800; color:#e2e8f0; font-family:'JetBrains Mono'; display:flex; align-items:center; gap:8px;">
+                <span>⚡</span> CANLI PİYASA EMİR AKIŞI ISI TABLOLARI (Alıcılar vs Satıcılar)
+            </div>
+            <div class="quick-preset-bar" style="display:flex; align-items:center; gap:6px;">
+                <span style="font-size:11.5px; color:#94a3b8; font-family:'JetBrains Mono'; margin-right:4px;">Görünüm:</span>
+                <button class="btn-preset" id="cvd-btn-top5" onclick="setCvdLimit(5)" style="padding:4px 10px; font-size:11px;">İlk 5</button>
+                <button class="btn-preset active" id="cvd-btn-top10" onclick="setCvdLimit(10)" style="padding:4px 10px; font-size:11px; border-color:var(--cyan); color:var(--cyan);">İlk 10 (Önerilen)</button>
+                <button class="btn-preset" id="cvd-btn-top15" onclick="setCvdLimit(15)" style="padding:4px 10px; font-size:11px;">Tüm 15 Parite</button>
             </div>
         </div>
 
         <!-- 2 SÜTUNLU CANLI AGRESYON ISI TABLOSU -->
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(420px, 1fr)); gap:18px; margin-bottom:20px;">
-            <!-- SOL: EN ÇOK ALICI BASKISI OLAN İLK 5 COIN -->
+            <!-- SOL: EN ÇOK ALICI BASKISI OLAN COINLER -->
             <div class="history-full-box">
-                <div style="padding:12px 16px; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center; background:rgba(34,197,94,0.03);">
-                    <div style="font-weight:800; font-size:13px; color:#22c55e; font-family:'JetBrains Mono'; display:flex; align-items:center; gap:8px;">
-                        <span>🟢</span> EN YÜKSEK ALICI BASKISI (Taker Buy Dominance)
+                <div style="padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center; background:rgba(34,197,94,0.04);">
+                    <div>
+                        <div style="font-weight:800; font-size:13px; color:#22c55e; font-family:'JetBrains Mono'; display:flex; align-items:center; gap:8px;">
+                            <span>🟢</span> DİRENÇ PATLATMAYA HAZIR COINLER (Taker Buy Dominance)
+                        </div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Piyasa emriyle tahtası yukarı süpürülenler — Kırılım ve Boğa İvmesi</div>
                     </div>
-                    <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">Son 60 Saniye</div>
+                    <div style="font-size:11px; color:#86efac; font-family:'JetBrains Mono'; background:rgba(34,197,94,0.1); padding:3px 8px; border-radius:6px;">Son 60 Saniye</div>
                 </div>
                 <div class="history-table-container">
                     <table class="history-table">
                         <thead>
                             <tr>
-                                <th>Parite</th>
-                                <th>Alıcı Oranı</th>
-                                <th>60s Net Delta</th>
-                                <th>Canlı Fiyat</th>
-                                <th>Strateji Kararı</th>
+                                <th>Parite (Coin)</th>
+                                <th>Alıcı Gücü</th>
+                                <th>60s Net Para Akışı ($)</th>
+                                <th>Anlık Fiyat</th>
+                                <th>Botun Stratejik Kararı & Aksiyonu</th>
                             </tr>
                         </thead>
                         <tbody id="cvd-top-buyers-body">
@@ -3013,23 +3035,26 @@ HTML_PAGE = """
                 </div>
             </div>
 
-            <!-- SAĞ: EN ÇOK SATICI BASKISI OLAN İLK 5 COIN -->
+            <!-- SAĞ: EN ÇOK SATICI BASKISI OLAN COINLER -->
             <div class="history-full-box">
-                <div style="padding:12px 16px; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center; background:rgba(239,68,68,0.03);">
-                    <div style="font-weight:800; font-size:13px; color:#ef4444; font-family:'JetBrains Mono'; display:flex; align-items:center; gap:8px;">
-                        <span>🔴</span> EN YÜKSEK SATICI BASKISI (Taker Sell Dominance)
+                <div style="padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center; background:rgba(239,68,68,0.04);">
+                    <div>
+                        <div style="font-weight:800; font-size:13px; color:#ef4444; font-family:'JetBrains Mono'; display:flex; align-items:center; gap:8px;">
+                            <span>🔴</span> TUZAK & BOŞALTMA UYARISI (Taker Sell Dominance)
+                        </div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Piyasa satışı yığılanlar — Sahte Kırılım (Tuzak) ve Dip Emilim Adayları</div>
                     </div>
-                    <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">Son 60 Saniye</div>
+                    <div style="font-size:11px; color:#fca5a5; font-family:'JetBrains Mono'; background:rgba(239,68,68,0.1); padding:3px 8px; border-radius:6px;">Son 60 Saniye</div>
                 </div>
                 <div class="history-table-container">
                     <table class="history-table">
                         <thead>
                             <tr>
-                                <th>Parite</th>
-                                <th>Alıcı Oranı</th>
-                                <th>60s Net Delta</th>
-                                <th>Canlı Fiyat</th>
-                                <th>Strateji Kararı</th>
+                                <th>Parite (Coin)</th>
+                                <th>Satıcı Gücü</th>
+                                <th>60s Net Para Çıkışı ($)</th>
+                                <th>Anlık Fiyat</th>
+                                <th>Botun Stratejik Kararı & Aksiyonu</th>
                             </tr>
                         </thead>
                         <tbody id="cvd-top-sellers-body">
@@ -3040,9 +3065,22 @@ HTML_PAGE = """
             </div>
         </div>
 
-        <!-- KURUMSAL BİLGİ NOTU -->
-        <div style="padding:14px 20px; background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid rgba(255,255,255,0.06); font-family:'JetBrains Mono'; font-size:12px; color:#94a3b8; line-height:1.6;">
-            💡 <b>Kurumsal Mikro-CVD Mantığı:</b> Mumlar geçmişin özetidir, CVD ise geleceğin yakıtıdır. Fiyat Camarilla R4 direncinin üstüne çıktığında Alıcı Oranı %62'nin üzerindeyse bot mum kapanışını beklemeden kırılımı yakalar ve marjin 1.15x artırılır. Eğer fiyat dirençteyken satıcı baskısı varsa sahte kırılım (fakeout) kalkanı devreye girer ve işlem engellenir.
+        <!-- 3 SÜTUNLU ÖĞRETİCİ STRATEJİ REHBERİ -->
+        <div style="margin-top:22px; display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:14px;">
+            <div style="padding:16px 18px; background:rgba(0,242,254,0.03); border:1px solid rgba(0,242,254,0.15); border-radius:10px; font-family:'JetBrains Mono';">
+                <div style="color:var(--cyan); font-weight:800; font-size:13px; margin-bottom:6px;">⚡ 1. Mum Kapanışı Beklemiyoruz (0ms Gecikme)</div>
+                <div style="color:#94a3b8; font-size:11.5px; line-height:1.5;">Geleneksel botlar 5 dakikalık mumun kapanmasını beklerken tren kaçar. Mikro-CVD motorumuz son 60 saniyedeki piyasa emirlerini milisaniyesinde sayar ve direnç kırıldığı an gecikmesiz işleme girer.</div>
+            </div>
+
+            <div style="padding:16px 18px; background:rgba(239,68,68,0.03); border:1px solid rgba(239,68,68,0.15); border-radius:10px; font-family:'JetBrains Mono';">
+                <div style="color:#ef4444; font-weight:800; font-size:13px; margin-bottom:6px;">🛡️ 2. Boğa Tuzağı Kalkanı (Fakeout Shield)</div>
+                <div style="color:#94a3b8; font-size:11.5px; line-height:1.5;">Fiyat Camarilla R4 direncini yukarı geçse bile, tahtada alıcı yoksa (kırmızı tablodaki gibi satıcı baskısı varsa) bot 'Bu balinaların mal boşaltma tuzağıdır' der ve işlemi anında engelleyerek kasayı korur.</div>
+            </div>
+
+            <div style="padding:16px 18px; background:rgba(34,197,94,0.03); border:1px solid rgba(34,197,94,0.15); border-radius:10px; font-family:'JetBrains Mono';">
+                <div style="color:#22c55e; font-weight:800; font-size:13px; margin-bottom:6px;">🎯 3. Marjin Güçlendirmesi (1.15x Boost)</div>
+                <div style="color:#94a3b8; font-size:11.5px; line-height:1.5;">Yeşil tablodaki gibi alıcı oranı %62'nin üzerindeyse kırılımın arkasında gerçek hacim var demektir; bot işlem marjinini 1.15x katına çıkarır. Destekte emilim varsa 1.10x marjinle fitilin ucunu yakalar.</div>
+            </div>
         </div>
     </div>
 
@@ -4295,6 +4333,27 @@ async function loadAdminMetrics() {
             }
         }
 
+        let cvdDisplayLimit = 10;
+        function setCvdLimit(limit) {
+            cvdDisplayLimit = limit;
+            [5, 10, 15].forEach(l => {
+                const btn = document.getElementById('cvd-btn-top' + l);
+                if (btn) {
+                    if (l === limit) {
+                        btn.classList.add('active');
+                        btn.style.borderColor = 'var(--cyan)';
+                        btn.style.color = 'var(--cyan)';
+                    } else {
+                        btn.classList.remove('active');
+                        btn.style.borderColor = '';
+                        btn.style.color = '';
+                    }
+                }
+            });
+            renderCvdView();
+        }
+        window.setCvdLimit = setCvdLimit;
+
         function renderCvdView() {
             try {
                 if (!appState) return;
@@ -4321,10 +4380,10 @@ async function loadAdminMetrics() {
                     if (topB && topB !== '-') {
                         const cleanB = topB.replace('/USDT', '');
                         topBuyerSymEl.innerHTML = `${cleanB} <span style="font-size:13px; color:#fff; font-weight:600;">(%${topBRatio})</span>`;
-                        topBuyerDeltaEl.innerText = `Net Delta: +$${Math.round(topBDelta).toLocaleString('en-US')}`;
+                        topBuyerDeltaEl.innerText = `Net Para Girişi: +$${Math.round(topBDelta).toLocaleString('en-US')}`;
                     } else {
                         topBuyerSymEl.innerText = '-';
-                        topBuyerDeltaEl.innerText = 'Net Delta: $0';
+                        topBuyerDeltaEl.innerText = 'Net Para Girişi: +$0';
                     }
                 }
 
@@ -4337,17 +4396,18 @@ async function loadAdminMetrics() {
                     if (topS && topS !== '-') {
                         const cleanS = topS.replace('/USDT', '');
                         topSellerSymEl.innerHTML = `${cleanS} <span style="font-size:13px; color:#fff; font-weight:600;">(%${topSRatio})</span>`;
-                        topSellerDeltaEl.innerText = `Net Delta: -$${Math.abs(Math.round(topSDelta)).toLocaleString('en-US')}`;
+                        topSellerDeltaEl.innerText = `Net Para Çıkışı: -$${Math.abs(Math.round(topSDelta)).toLocaleString('en-US')}`;
                     } else {
                         topSellerSymEl.innerText = '-';
-                        topSellerDeltaEl.innerText = 'Net Delta: -$0';
+                        topSellerDeltaEl.innerText = 'Net Para Çıkışı: -$0';
                     }
                 }
 
                 // 2. Dual-Column Aggression Heat Tables
                 const buyersTbody = document.getElementById('cvd-top-buyers-body');
                 if (buyersTbody) {
-                    const topBuyers = cvdSummary.top_buyers || [];
+                    const rawBuyers = cvdSummary.top_buyers || [];
+                    const topBuyers = rawBuyers.slice(0, cvdDisplayLimit);
                     if (topBuyers.length === 0) {
                         buyersTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:#94a3b8;">K-Line Taker Buy verisi toplanıyor...</td></tr>`;
                     } else {
@@ -4355,20 +4415,26 @@ async function loadAdminMetrics() {
                         topBuyers.forEach(item => {
                             const symClean = (item.symbol || '').replace('/USDT', '');
                             const ratio = Number(item.ratio_60s || 50).toFixed(1);
+                            const sellRatio = (100 - Number(ratio)).toFixed(1);
                             const delta = Number(item.delta_60s || 0);
                             const price = Number(item.last_price || 0);
                             
-                            let stratBadge = `<span style="color:#94a3b8;">Nötr</span>`;
+                            let stratBadge = `<span title="Alıcı/Satıcı dengede. Standart pusu kuralları bekleniyor." style="color:#94a3b8; font-size:11px;">⚪ Nötr Akış</span>`;
                             if (ratio >= 62) {
-                                stratBadge = `<span style="background:rgba(34,197,94,0.18); border:1px solid rgba(34,197,94,0.4); color:#22c55e; padding:3px 8px; border-radius:6px; font-weight:800; font-size:11px;">🚀 Kırılım Teyitli (1.15x Marjin)</span>`;
+                                stratBadge = `<span title="Son 60s alıcı agresyonu %${ratio}. Camarilla R4 direnci kırılırsa mum kapanışı beklenmeden 1.15x marjinle LONG açılır." style="background:rgba(34,197,94,0.18); border:1px solid rgba(34,197,94,0.4); color:#22c55e; padding:3px 8px; border-radius:6px; font-weight:800; font-size:11px; cursor:help;">🚀 Kırılım Teyitli (1.15x Marjin)</span>`;
                             } else if (ratio >= 55) {
-                                stratBadge = `<span style="background:rgba(56,189,248,0.18); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:3px 8px; border-radius:6px; font-weight:800; font-size:11px;">⚡ Destek Emilim (1.10x Marjin)</span>`;
+                                stratBadge = `<span title="Destek seviyesinde alıcılar piyasa satışlarını emiyor (%${ratio}). Sekme halinde 1.10x marjinle fitilden yakalanır." style="background:rgba(56,189,248,0.18); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:3px 8px; border-radius:6px; font-weight:800; font-size:11px; cursor:help;">⚡ Dip Emilim (1.10x Marjin)</span>`;
+                            } else if (ratio >= 50) {
+                                stratBadge = `<span title="Alıcılar hafif önde ancak teyit eşiğinin altında." style="background:rgba(148,163,184,0.1); border:1px solid rgba(148,163,184,0.3); color:#94a3b8; padding:3px 8px; border-radius:6px; font-weight:700; font-size:11px; cursor:help;">⚪ Hafif Boğa (Beklemede)</span>`;
                             }
 
                             bHtml += `
                             <tr style="border-bottom:1px solid rgba(255,255,255,0.04); font-family:'JetBrains Mono'; font-size:12px;">
                                 <td style="font-weight:800; color:#fff;">${symClean}</td>
-                                <td style="font-weight:800; color:#22c55e;">%${ratio}</td>
+                                <td>
+                                    <span style="font-weight:800; color:#22c55e;">%${ratio} Alıcı</span> 
+                                    <span style="font-size:10px; color:#64748b;">(%${sellRatio} Satıcı)</span>
+                                </td>
                                 <td style="color:#4ade80; font-weight:700;">+$${Math.round(delta).toLocaleString('en-US')}</td>
                                 <td style="color:#e2e8f0;">$${price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 6})}</td>
                                 <td>${stratBadge}</td>
@@ -4381,7 +4447,8 @@ async function loadAdminMetrics() {
 
                 const sellersTbody = document.getElementById('cvd-top-sellers-body');
                 if (sellersTbody) {
-                    const topSellers = cvdSummary.top_sellers || [];
+                    const rawSellers = cvdSummary.top_sellers || [];
+                    const topSellers = rawSellers.slice(0, cvdDisplayLimit);
                     if (topSellers.length === 0) {
                         sellersTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:#94a3b8;">K-Line Taker Sell verisi toplanıyor...</td></tr>`;
                     } else {
@@ -4393,17 +4460,22 @@ async function loadAdminMetrics() {
                             const delta = Number(item.delta_60s || 0);
                             const price = Number(item.last_price || 0);
                             
-                            let stratBadge = `<span style="color:#94a3b8;">Nötr</span>`;
+                            let stratBadge = `<span title="Alıcı/Satıcı dengede. Standart pusu kuralları bekleniyor." style="color:#94a3b8; font-size:11px;">⚪ Nötr Akış</span>`;
                             if (ratio <= 38) {
-                                stratBadge = `<span style="background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:3px 8px; border-radius:6px; font-weight:800; font-size:11px;">🛡️ Sahte Kırılım (Tuzak Engellendi)</span>`;
+                                stratBadge = `<span title="Satıcılar son 60s tahtayı boşaltıyor (%${sellRatio} satıcı). Direnç aşılsa bile tuzaktır, işlem engellenir (Fakeout Shield)." style="background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:3px 8px; border-radius:6px; font-weight:800; font-size:11px; cursor:help;">🛡️ Boğa Tuzağı (İşlem Engellendi)</span>`;
                             } else if (ratio <= 45) {
-                                stratBadge = `<span style="background:rgba(251,191,36,0.18); border:1px solid rgba(251,191,36,0.4); color:#fbbf24; padding:3px 8px; border-radius:6px; font-weight:800; font-size:11px;">🔻 Satıcı Baskısı</span>`;
+                                stratBadge = `<span title="Piyasa satıcıları baskın (%${sellRatio}). Destek seviyesine fitil atarken tasfiye ve emilim bekleniyor." style="background:rgba(251,191,36,0.18); border:1px solid rgba(251,191,36,0.4); color:#fbbf24; padding:3px 8px; border-radius:6px; font-weight:800; font-size:11px; cursor:help;">🔻 Satıcı Baskısı (Dip Aranıyor)</span>`;
+                            } else if (ratio <= 50) {
+                                stratBadge = `<span title="Satıcılar hafif önde. Destek seviyesi test edilene kadar bekleniyor." style="background:rgba(148,163,184,0.1); border:1px solid rgba(148,163,184,0.3); color:#94a3b8; padding:3px 8px; border-radius:6px; font-weight:700; font-size:11px; cursor:help;">⚪ Hafif Ayı (Beklemede)</span>`;
                             }
 
                             sHtml += `
                             <tr style="border-bottom:1px solid rgba(255,255,255,0.04); font-family:'JetBrains Mono'; font-size:12px;">
                                 <td style="font-weight:800; color:#fff;">${symClean}</td>
-                                <td style="font-weight:800; color:#ef4444;">%${sellRatio} Satıcı (%${ratio} Alıcı)</td>
+                                <td>
+                                    <span style="font-weight:800; color:#ef4444;">%${sellRatio} Satıcı</span> 
+                                    <span style="font-size:10px; color:#64748b;">(%${ratio} Alıcı)</span>
+                                </td>
                                 <td style="color:#f87171; font-weight:700;">-$${Math.abs(Math.round(delta)).toLocaleString('en-US')}</td>
                                 <td style="color:#e2e8f0;">$${price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 6})}</td>
                                 <td>${stratBadge}</td>

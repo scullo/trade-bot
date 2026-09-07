@@ -458,8 +458,8 @@ class MarketDataManager:
         avg_sell = round(100.0 - avg_buy, 1)
 
         sorted_by_ratio = sorted(active_items, key=lambda x: x.get('ratio_60s', 50.0), reverse=True)
-        top_buyers = sorted_by_ratio[:5]
-        top_sellers = sorted_by_ratio[-5:][::-1] if len(sorted_by_ratio) >= 5 else []
+        top_buyers = sorted_by_ratio[:15]
+        top_sellers = sorted_by_ratio[-15:][::-1] if len(sorted_by_ratio) >= 15 else sorted_by_ratio[::-1]
 
         top_buy = top_buyers[0] if top_buyers else {}
         top_sell = top_sellers[0] if top_sellers else {}
