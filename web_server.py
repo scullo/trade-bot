@@ -2775,7 +2775,7 @@ HTML_PAGE = """
                     <span class="kpi-card-icon">🛡️</span>
                 </div>
                 <div class="kpi-card-val" id="funding-shield-status" style="color:var(--green); font-size:20px;">Otomatik Veto Aktif</div>
-                <div class="kpi-card-sub">Canlı Binance fapi REST Senkronizasyonu</div>
+                <div class="kpi-card-sub" id="funding-source-sub">Canlı Çoklu-Borsa Vadeli Senkronizasyonu</div>
                 <div style="font-size:11px; color:#4ade80; font-family:'JetBrains Mono'; margin-top:3px;">Ters yönlü tasfiye tuzakları sıfırlandı</div>
             </div>
         </div>
@@ -2832,7 +2832,7 @@ HTML_PAGE = """
             </div>
 
             <div id="funding-table-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding:12px 18px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; font-family:'JetBrains Mono'; font-size:12px; color:#94a3b8;">
-                <div>Toplam <b id="funding-footer-count" style="color:#fff;">0</b> parite analiz edildi.</div>
+                <div>Toplam <b id="funding-footer-count" style="color:#fff;">0</b> parite analiz edildi. <span id="funding-last-update-str" style="color:var(--cyan); margin-left:12px;"></span></div>
                 <div style="color:var(--red);">🛡️ Squeeze Kuralı: Aşırı negatif fonlamalı coinlerde Short emirleri engellenir, kasanın yapay fitillerde erimesi önlenir.</div>
             </div>
         </div>
@@ -3884,6 +3884,16 @@ async function loadAdminMetrics() {
 
                 const footerCount = document.getElementById('funding-footer-count');
                 if (footerCount) footerCount.innerText = symbols.length;
+
+                const elSrc = document.getElementById('funding-source-sub');
+                if (elSrc && summary.source) {
+                    elSrc.innerText = `Canlı ${summary.source} Senkronizasyonu`;
+                }
+
+                const elUpd = document.getElementById('funding-last-update-str');
+                if (elUpd && summary.last_update_str) {
+                    elUpd.innerText = `• Son Senkronizasyon: ${summary.last_update_str} (${summary.source || 'Canlı'})`;
+                }
 
                 updateFundingBadge();
 
