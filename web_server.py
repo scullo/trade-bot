@@ -4149,7 +4149,7 @@ async function loadAdminMetrics() {
 
                     const usdSize = Number(item.usd_size || 0);
                     const price = Number(item.price || 0);
-                    const timeStr = item.time ? (item.time.indexOf(' ') > -1 ? item.time.split(' ')[1] : item.time) : '--:--:--';
+                    const timeStr = item.time_str || (item.time ? (item.time.indexOf(' ') > -1 ? item.time.split(' ')[1] : item.time) : '--:--:--');
 
                     const interp = isLongLiq
                         ? `<span style="color:#38bdf8;">🔻 Destekte Satış Emildi → Sekme (Bounce Long) Teyidi</span>`
