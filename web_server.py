@@ -2305,9 +2305,14 @@ HTML_PAGE = """
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
             4. İşlem Geçmişi
         </button>
+        <button class="nav-tab-btn" id="tab-btn-persona" onclick="switchMainTab('persona')">
+            <span style="font-size:14px; margin-right:6px;">🧬</span>
+            5. Coin DNA & Persona
+            <span class="tab-badge-sub" id="nav-persona-badge" style="background:rgba(0,242,254,0.12); color:var(--cyan); border:1px solid rgba(0,242,254,0.3);">100 Parite</span>
+        </button>
         <button class="nav-tab-btn" id="tab-btn-admin" onclick="switchMainTab('admin'); loadAdminMetrics();" style="border-color:rgba(0,242,254,0.35); display:none;">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" style="margin-right:6px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-            5. Yönetim
+            6. Yönetim
         </button>
     </div>
 
@@ -2608,10 +2613,117 @@ HTML_PAGE = """
             <!-- LEDGER 20-ITEM PAGINATION STRIP -->
             <div id="ledger-pagination-container" style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding:12px 18px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; flex-wrap:wrap; gap:12px;"></div>
         </div>
+    <!-- =========================================================================
+         5. SEKME: 🧬 CANLI COIN DNA & PERSONA MATRİSİ (100 PARİTE)
+         ========================================================================= -->
+    <div id="main-tab-content-persona" class="main-tab-content" style="display:none;">
+        <!-- 4 KPI PERSONA ÖZET KARTLARI -->
+        <div class="cockpit-kpi-grid">
+            <div class="cockpit-kpi-card" style="border-top:3px solid #fbc531;">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">👑 Altın Lig (Pusu Ustaları)</span>
+                    <span class="kpi-card-icon">👑</span>
+                </div>
+                <div class="kpi-card-val" id="persona-gold-count" style="color:#fbc531;">0 Parite</div>
+                <div class="kpi-card-sub">Marjin: <b>x1.3</b> | WR &ge; %60 | Tuzak &le; %25</div>
+                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">Kırılım + Pusu yetkisi tam açık elit pariteler</div>
+            </div>
+
+            <div class="cockpit-kpi-card" style="border-top:3px solid #38bdf8;">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">⚪ Standart / Dengeli Lig</span>
+                    <span class="kpi-card-icon">⚖️</span>
+                </div>
+                <div class="kpi-card-val" id="persona-standard-count" style="color:#38bdf8;">0 Parite</div>
+                <div class="kpi-card-sub">Marjin: <b>x1.0</b> | Dengeli Parametreler</div>
+                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">Tüm kurumsal likidite seviyeleri standart izlenir</div>
+            </div>
+
+            <div class="cockpit-kpi-card" style="border-top:3px solid var(--red);">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">⚠️ Whipsaw / Tuzakçı Ligi</span>
+                    <span class="kpi-card-icon">🛡️</span>
+                </div>
+                <div class="kpi-card-val" id="persona-whipsaw-count" style="color:var(--red);">0 Parite</div>
+                <div class="kpi-card-sub">Kırılım: <b style="color:var(--red);">KİLİTLİ 🔒</b> | Sekme: <b>x0.5</b> Marjin</div>
+                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">Fitil tuzaklarına karşı kırılım yasak, yalnız dip/tepe pusu</div>
+            </div>
+
+            <div class="cockpit-kpi-card" style="border-top:3px solid var(--cyan);">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">🔄 Otonom Terfi & Tenzil</span>
+                    <span class="kpi-card-icon">🧬</span>
+                </div>
+                <div class="kpi-card-val" id="persona-healing-status" style="color:var(--cyan); font-size:20px;">Dinamik Self-Healing</div>
+                <div class="kpi-card-sub">Son 15 İşlem Kayan Pencere (Rolling)</div>
+                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">Performansı düzelen pariteler anında terfi eder</div>
+            </div>
+        </div>
+
+        <!-- PERSONA FİLTRE VE ARAMA KARTI -->
+        <div class="table-container" style="margin-top:18px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:14px;">
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <div style="display:flex; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:10px; padding:3px; gap:4px;">
+                        <button id="pfilter-btn-ALL" class="chart-tab-btn tab-active" onclick="setPersonaFilter('ALL')">
+                            Tümü (<span id="pfilter-count-ALL">0</span>)
+                        </button>
+                        <button id="pfilter-btn-GOLD" class="chart-tab-btn" onclick="setPersonaFilter('GOLD')" style="color:#fbc531;">
+                            👑 Altın Lig (<span id="pfilter-count-GOLD">0</span>)
+                        </button>
+                        <button id="pfilter-btn-STANDARD" class="chart-tab-btn" onclick="setPersonaFilter('STANDARD')" style="color:#cbd5e1;">
+                            ⚪ Standart (<span id="pfilter-count-STANDARD">0</span>)
+                        </button>
+                        <button id="pfilter-btn-WHIPSAW" class="chart-tab-btn" onclick="setPersonaFilter('WHIPSAW')" style="color:var(--red);">
+                            ⚠️ Whipsaw Kalkanı Aktif (<span id="pfilter-count-WHIPSAW">0</span>)
+                        </button>
+                    </div>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <div style="position:relative; width:260px;">
+                        <input type="text" id="persona-search-input" placeholder="🔍 Parite Ara (Örn: CRV, SOL)..." oninput="onPersonaSearchInput(this.value)" class="settings-input" style="padding:8px 12px; font-size:12.5px; border-radius:8px;" />
+                    </div>
+                    <button class="btn-export" onclick="downloadExcelReport()" style="padding:8px 16px; font-size:12px;">
+                        📊 Excel DNA Raporunu İndir (.xlsx)
+                    </button>
+                </div>
+            </div>
+
+            <div style="overflow-x:auto;">
+                <table class="trade-table">
+                    <thead>
+                        <tr>
+                            <th>Parite</th>
+                            <th>Mevcut Lig / Persona</th>
+                            <th>Son Havuz</th>
+                            <th>Kazanma Oranı (WR %)</th>
+                            <th>Tuzak Fitil (Fakeout %)</th>
+                            <th>Net Kâr ($)</th>
+                            <th>🎯 İzin Verilen Stratejiler</th>
+                            <th>🛡️ Risk & Marjin Katsayısı</th>
+                            <th>Aksiyon</th>
+                        </tr>
+                    </thead>
+                    <tbody id="persona-table-body">
+                        <tr>
+                            <td colspan="9" style="text-align:center; padding: 40px; color:#94a3b8;">
+                                Canlı coin persona verileri yükleniyor...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div id="persona-table-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding:12px 18px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; font-family:'JetBrains Mono'; font-size:12px; color:#94a3b8;">
+                <div>Toplam <b id="persona-footer-count" style="color:#fff;">0</b> parite analiz edildi.</div>
+                <div style="color:var(--cyan);">🛡️ Kalkan Kuralı: %45+ Sahte Fitil üreten paritelerde Breakout otomatik engellenir, dip-tepe sekmeleri yarım marjinle korunur.</div>
+            </div>
+        </div>
     </div>
 
     <!-- =========================================================================
-         5. SEKME: YÖNETİM MASASI
+         6. SEKME: YÖNETİM MASASI
          ========================================================================= -->
     <div id="main-tab-content-admin" class="main-tab-content" style="display:none;">
         <!-- ADMIN 4 KPI HERO -->
@@ -3396,6 +3508,196 @@ async function loadAdminMetrics() {
         let currentActiveMainTab = 'cockpit';
         window.currentActiveMainTab = currentActiveMainTab;
 
+        let personaFilter = 'ALL';
+        let personaSearchQuery = '';
+
+        function setPersonaFilter(filter) {
+            personaFilter = filter;
+            ['ALL', 'GOLD', 'STANDARD', 'WHIPSAW'].forEach(f => {
+                const btn = document.getElementById('pfilter-btn-' + f);
+                if (btn) {
+                    if (f === filter) btn.classList.add('tab-active');
+                    else btn.classList.remove('tab-active');
+                }
+            });
+            renderPersonaMatrixView();
+        }
+
+        function onPersonaSearchInput(val) {
+            personaSearchQuery = (val || '').trim().toUpperCase();
+            renderPersonaMatrixView();
+        }
+
+        function updatePersonaBadge() {
+            const badge = document.getElementById('nav-persona-badge');
+            if (!badge || !appState.coin_personas) return;
+            const matrix = appState.coin_personas || {};
+            let w = 0, g = 0;
+            for (const s in matrix) {
+                const p = matrix[s].persona_class;
+                if (p === 'WHIPSAW') w++;
+                else if (p === 'GOLD') g++;
+            }
+            badge.innerText = `${w} ⚠️ | ${g} 👑`;
+        }
+
+        function renderPersonaMatrixView() {
+            try {
+                const matrix = appState.coin_personas || {};
+                const symbols = Object.keys(matrix);
+
+                let goldCount = 0;
+                let standardCount = 0;
+                let whipsawCount = 0;
+
+                symbols.forEach(s => {
+                    const p = matrix[s].persona_class;
+                    if (p === 'GOLD') goldCount++;
+                    else if (p === 'WHIPSAW') whipsawCount++;
+                    else standardCount++;
+                });
+
+                // Update KPI Cards
+                const elGold = document.getElementById('persona-gold-count');
+                const elStd = document.getElementById('persona-standard-count');
+                const elWhip = document.getElementById('persona-whipsaw-count');
+                if (elGold) elGold.innerText = `${goldCount} Parite`;
+                if (elStd) elStd.innerText = `${standardCount} Parite`;
+                if (elWhip) elWhip.innerText = `${whipsawCount} Parite`;
+
+                // Update Filter Counts
+                const fAll = document.getElementById('pfilter-count-ALL');
+                const fGold = document.getElementById('pfilter-count-GOLD');
+                const fStd = document.getElementById('pfilter-count-STANDARD');
+                const fWhip = document.getElementById('pfilter-count-WHIPSAW');
+                if (fAll) fAll.innerText = symbols.length;
+                if (fGold) fGold.innerText = goldCount;
+                if (fStd) fStd.innerText = standardCount;
+                if (fWhip) fWhip.innerText = whipsawCount;
+
+                const footerCount = document.getElementById('persona-footer-count');
+                if (footerCount) footerCount.innerText = symbols.length;
+
+                updatePersonaBadge();
+
+                const tbody = document.getElementById('persona-table-body');
+                if (!tbody) return;
+
+                if (symbols.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 40px; color:#94a3b8;">Henüz analiz edilen parite verisi bulunmuyor.</td></tr>`;
+                    return;
+                }
+
+                // Filter items
+                let filtered = symbols.filter(s => {
+                    const item = matrix[s];
+                    if (personaFilter !== 'ALL' && item.persona_class !== personaFilter) return false;
+                    if (personaSearchQuery) {
+                        const clean = s.replace('/USDT', '').replace('USDT', '').toUpperCase();
+                        return clean.includes(personaSearchQuery) || s.toUpperCase().includes(personaSearchQuery);
+                    }
+                    return true;
+                });
+
+                // Sort items: Whipsaw & Gold first, then by net_pnl descending
+                filtered.sort((a, b) => {
+                    const pA = matrix[a];
+                    const pB = matrix[b];
+                    const rankOrder = { 'WHIPSAW': 1, 'GOLD': 2, 'STANDARD': 3 };
+                    const rankA = rankOrder[pA.persona_class] || 4;
+                    const rankB = rankOrder[pB.persona_class] || 4;
+                    if (rankA !== rankB) return rankA - rankB;
+                    return pB.net_pnl - pA.net_pnl;
+                });
+
+                if (filtered.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 40px; color:#94a3b8;">Arama veya filtre kriterlerine uygun coin bulunamadı.</td></tr>`;
+                    return;
+                }
+
+                let html = '';
+                filtered.forEach(s => {
+                    const item = matrix[s];
+                    const symClean = s.replace('/USDT', '').replace('USDT', '');
+                    const isGold = item.persona_class === 'GOLD';
+                    const isWhipsaw = item.persona_class === 'WHIPSAW';
+
+                    // Lig Badge
+                    let badgeHtml = '';
+                    if (isGold) {
+                        badgeHtml = `<span style="background:rgba(251,197,49,0.15); color:#fbc531; border:1px solid #fbc531; padding:4px 10px; border-radius:6px; font-weight:800; font-size:11.5px; font-family:'JetBrains Mono';">👑 Altın Lig (Pusu Ustası)</span>`;
+                    } else if (isWhipsaw) {
+                        badgeHtml = `<span style="background:rgba(244,63,94,0.15); color:#f43f5e; border:1px solid #f43f5e; padding:4px 10px; border-radius:6px; font-weight:800; font-size:11.5px; font-family:'JetBrains Mono';">⚠️ Whipsaw (Tuzakçı)</span>`;
+                    } else {
+                        badgeHtml = `<span style="background:rgba(255,255,255,0.06); color:#cbd5e1; border:1px solid rgba(255,255,255,0.14); padding:4px 10px; border-radius:6px; font-weight:700; font-size:11.5px; font-family:'JetBrains Mono';">⚪ Standart / Dengeli</span>`;
+                    }
+
+                    // Win rate color
+                    const wrColor = item.win_rate >= 60 ? 'var(--green)' : (item.win_rate < 45 ? 'var(--red)' : '#fbc531');
+
+                    // Fakeout color
+                    const fakeColor = item.fakeout_rate >= 45 ? 'var(--red)' : (item.fakeout_rate <= 20 ? 'var(--green)' : '#cbd5e1');
+
+                    // Net PnL color
+                    const pnlColor = item.net_pnl > 0 ? 'var(--green)' : (item.net_pnl < 0 ? 'var(--red)' : '#94a3b8');
+
+                    // Strategy permissions
+                    let stratHtml = '';
+                    if (isWhipsaw) {
+                        stratHtml = `<span style="color:#fbc531; font-weight:800; font-size:11.5px;">🟡 Yalnızca Sekme Pususu <span style="color:var(--red); font-weight:900;">(Kırılım Kilitli 🔒)</span></span>`;
+                    } else if (isGold) {
+                        stratHtml = `<span style="color:var(--green); font-weight:800; font-size:11.5px;">🟢 Kırılım + Pusu (Öncelikli x1.3)</span>`;
+                    } else {
+                        stratHtml = `<span style="color:#38bdf8; font-weight:700; font-size:11.5px;">🟢 Kırılım + Sekme Açık</span>`;
+                    }
+
+                    // Margin & Stop Setting
+                    let riskHtml = '';
+                    if (isWhipsaw) {
+                        riskHtml = `<span style="color:#cbd5e1; font-family:'JetBrains Mono'; font-size:11.5px;">x0.5 ($8 taban) | 1.5x ATR Stop</span>`;
+                    } else if (isGold) {
+                        riskHtml = `<span style="color:#fbc531; font-family:'JetBrains Mono'; font-size:11.5px; font-weight:700;">x1.3 Marjin | 1.0x ATR Stop</span>`;
+                    } else {
+                        riskHtml = `<span style="color:#94a3b8; font-family:'JetBrains Mono'; font-size:11.5px;">x1.0 Marjin | 1.0x ATR Stop</span>`;
+                    }
+
+                    html += `
+                    <tr>
+                        <td>
+                            <b style="color:#ffffff; font-size:14px; font-family:'JetBrains Mono';">${symClean}</b>
+                            <span style="color:#64748b; font-size:11px;">/USDT</span>
+                        </td>
+                        <td>${badgeHtml}</td>
+                        <td style="color:#cbd5e1; font-family:'JetBrains Mono'; font-size:12px;">${item.trades_count} İşlem</td>
+                        <td style="color:${wrColor}; font-weight:800; font-family:'JetBrains Mono';">
+                            %${item.win_rate.toFixed(1)}
+                        </td>
+                        <td style="color:${fakeColor}; font-weight:800; font-family:'JetBrains Mono';">
+                            %${item.fakeout_rate.toFixed(1)}
+                        </td>
+                        <td style="color:${pnlColor}; font-weight:800; font-family:'JetBrains Mono';">
+                            ${item.net_pnl >= 0 ? '+' : ''}$${item.net_pnl.toFixed(2)}
+                        </td>
+                        <td>${stratHtml}</td>
+                        <td>${riskHtml}</td>
+                        <td style="white-space:nowrap;">
+                            <button onclick="openTradingViewModal('${symClean}')" style="background:rgba(0,242,254,0.12); border:1px solid rgba(0,242,254,0.35); color:var(--cyan); padding:4px 9px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;" title="${symClean} Grafiğini Aç">
+                                📈 Grafik
+                            </button>
+                            <button onclick="filterWatchlistDirect('${symClean}')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#cbd5e1; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; margin-left:4px;" title="Pusu Radarında Gör">
+                                🎯 Radar
+                            </button>
+                        </td>
+                    </tr>
+                    `;
+                });
+
+                tbody.innerHTML = html;
+            } catch (err) {
+                console.error("renderPersonaMatrixView error:", err);
+            }
+        }
+
         function switchMainTab(tabName) {
             if (tabName === 'history') tabName = 'ledger';
             currentActiveMainTab = tabName;
@@ -3406,6 +3708,7 @@ async function loadAdminMetrics() {
                 'positions': document.getElementById('tab-btn-positions'),
                 'radar': document.getElementById('tab-btn-radar'),
                 'ledger': document.getElementById('tab-btn-ledger'),
+                'persona': document.getElementById('tab-btn-persona'),
                 'admin': document.getElementById('tab-btn-admin')
             };
             const tabContents = {
@@ -3413,6 +3716,7 @@ async function loadAdminMetrics() {
                 'positions': document.getElementById('main-tab-content-positions'),
                 'radar': document.getElementById('main-tab-content-radar'),
                 'ledger': document.getElementById('main-tab-content-ledger'),
+                'persona': document.getElementById('main-tab-content-persona'),
                 'admin': document.getElementById('main-tab-content-admin')
             };
 
@@ -3447,6 +3751,8 @@ async function loadAdminMetrics() {
                 renderCards();
             } else if (tabName === 'ledger') {
                 renderHistoryTable();
+            } else if (tabName === 'persona') {
+                renderPersonaMatrixView();
             } else if (tabName === 'admin') {
                 loadAdminMetrics();
             }
@@ -6623,6 +6929,13 @@ function downloadExcelReport() {
                     renderHistoryTable();
                 }
 
+                // 5b. Update Persona Matrix if active tab, otherwise update badge
+                if (currentActiveMainTab === 'persona') {
+                    renderPersonaMatrixView();
+                } else {
+                    updatePersonaBadge();
+                }
+
                 // 6. Smooth in-place updates (Zero DOM destruction, Zero scroll jumping!)
                 updateFinancialSummary();
                 for (const s in appState.open_positions) {
@@ -7162,6 +7475,14 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "loss_pnl_sum": sum([abs(float(h.get('net_pnl', 0))) for h in hist_full if float(h.get('net_pnl', 0)) < 0])
             }
 
+            coin_personas = {}
+            if strategy and hasattr(strategy, 'get_all_coin_personas'):
+                try:
+                    all_syms = [c.get('symbol') for c in all_coins] if all_coins else None
+                    coin_personas = strategy.get_all_coin_personas(all_syms)
+                except Exception as ex:
+                    print(f">> [PERSONA API HATA] {ex}")
+
             return web.json_response({
                 "balance": trader_manager.balance,
                 "initial_balance": 100000.0,
@@ -7171,6 +7492,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "history_summary": history_summary,
                 "symbols": symbols_data,
                 "all_coins": all_coins,
+                "coin_personas": coin_personas,
                 "recent_rejections": getattr(strategy, "recent_rejections", [])[-20:] if strategy else [],
                 "setup_attempts": getattr(strategy, "setup_attempts", {}) if strategy else {},
                 "system_health": sys_health,

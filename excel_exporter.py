@@ -320,17 +320,17 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
     ]
 
     def _get_coin_persona(sym, st):
+        if st['trades'] < 3:
+            return "⚪ Standart / Dengeli"
         wr = (st['wins'] / st['trades'] * 100) if st['trades'] > 0 else 0
         net = st['net_pnl']
         fake_rate = (st['fakeouts'] / st['trades'] * 100) if st['trades'] > 0 else 0
-        if net > 10.0 and wr >= 60.0:
+        if net > 3.0 and wr >= 60.0 and fake_rate <= 25.0:
             return "👑 Altın Karakter (Pusu Ustası)"
-        elif net > 5.0 and st['mfe_sum'] / st['trades'] > 3.0:
-            return "🚀 Trend & Runner Boğası"
-        elif fake_rate >= 50.0 or net < -15.0:
+        elif fake_rate >= 45.0 or (net < -5.0 and wr < 45.0):
             return "⚠️ Volatil & Tuzakçı (Whipsaw)"
         else:
-            return "⚪ Standart / Yatay Karakter"
+            return "⚪ Standart / Dengeli"
 
     def write_trade_row(ws, r_idx, h):
         ws.set_row(r_idx, 20)
@@ -640,13 +640,11 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
 
         # Önerilen Mod
         if "Altın" in persona_tag:
-            rec_mod = "🎯 Pusu Yetkisi Genişlet (nPOC & S3/R3)"
-        elif "Runner" in persona_tag:
-            rec_mod = "🚀 İzsüren Kilit ile Koştur (Runner Mod)"
+            rec_mod = "👑 Kırılım + Pusu Öncelikli (x1.3 Marjin)"
         elif "Tuzakçı" in persona_tag:
-            rec_mod = "🛡️ Kırılımları Kapat / Reclaim Aç"
+            rec_mod = "🛡️ Kırılım Kilitli 🔒 | Yalnızca S3/R3/nPOC Sekmesi (x0.5 Marjin)"
         else:
-            rec_mod = "⚪ Standart Confluence Modu"
+            rec_mod = "⚪ Dengeli Kırılım + Pusu (x1.0 Marjin)"
 
         ws7.write(dna_row, 1, sym, cell_left)
         ws7.write(dna_row, 2, persona_tag, cell_left)

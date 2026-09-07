@@ -251,6 +251,134 @@ class StrategyEngine:
             "eth_price": float(eth_close)
         }
 
+    def get_coin_dynamic_persona(self, symbol: str) -> dict:
+        """
+        Otonom Kripto DNA ve Dinamik Persona Motoru (Rolling 15-20 İşlem Penceresi):
+        - Son 15-20 işlemi adli olarak tarar.
+        - Fakeout (tuzak) fitil oranı, win rate ve net kâr analizine göre pariteyi
+          👑 Altın Karakter, ⚪ Standart / Dengeli veya ⚠️ Volatil & Tuzakçı (Whipsaw) ligine atar.
+        - İyileşme gösteren pariteleri otomatik terfi ettirir (Self-Healing).
+        """
+        clean_sym = symbol.replace('/', '').upper()
+        history = getattr(self.paper_trader, 'history', []) if self.paper_trader else []
+        
+        coin_trades = []
+        for h in history:
+            h_sym = (h.get('symbol') or h.get('Parite') or '').replace('/', '').upper()
+            if h_sym == clean_sym:
+                pnl = float(h.get('net_pnl', h.get('Net Kâr ($)', h.get('pnl', 0.0))))
+                mfe_raw = str(h.get('max_mfe_roe', h.get('Zirve MFE (%)', 0.0))).replace('%', '').replace('+', '')
+                try:
+                    mfe_val = float(mfe_raw)
+                except Exception:
+                    mfe_val = 0.0
+                c_reason = str(h.get('close_reason', h.get('Kapanış Nedeni / Tetikleyici', '')))
+                t_type = str(h.get('trade_type', ''))
+                coin_trades.append({
+                    'pnl': pnl,
+                    'mfe': mfe_val,
+                    'reason': c_reason,
+                    'trade_type': t_type
+                })
+
+        recent = coin_trades[-15:] if len(coin_trades) >= 15 else coin_trades
+        total_t = len(recent)
+
+        if total_t < 3:
+            return {
+                "symbol": symbol,
+                "persona_class": "STANDARD",
+                "persona_name": "⚪ Standart / Dengeli",
+                "trades_count": total_t,
+                "win_rate": 0.0 if total_t == 0 else round(sum(1 for t in recent if t['pnl'] > 0) / total_t * 100, 1),
+                "fakeout_rate": 0.0,
+                "net_pnl": round(sum(t['pnl'] for t in recent), 2),
+                "allow_breakout": True,
+                "allow_bounce": True,
+                "margin_scale": 1.0,
+                "stop_loss_atr_mult": 1.0,
+                "status_badge": "🟢 Kırılım + Sekme Açık",
+                "strategy_permission": "Tüm Stratejiler Açık (Kırılım + Pusu)"
+            }
+
+        wins = sum(1 for t in recent if t['pnl'] > 0)
+        net_pnl = sum(t['pnl'] for t in recent)
+        wr = (wins / total_t) * 100.0
+
+        # Fakeout tespiti: Zararla kapanan, zirve kârı %0.8'i bile göremeyen ve stoplanan işlemler
+        fakeouts = sum(1 for t in recent if t['pnl'] < 0 and t['mfe'] < 0.8 and ('Stop' in t['reason'] or 'stop' in t['reason']))
+        fakeout_rate = (fakeouts / total_t) * 100.0
+
+        # Sınıflandırma
+        if net_pnl > 3.0 and wr >= 60.0 and fakeout_rate <= 25.0:
+            return {
+                "symbol": symbol,
+                "persona_class": "GOLD",
+                "persona_name": "👑 Altın Karakter (Pusu Ustası)",
+                "trades_count": total_t,
+                "win_rate": round(wr, 1),
+                "fakeout_rate": round(fakeout_rate, 1),
+                "net_pnl": round(net_pnl, 2),
+                "allow_breakout": True,
+                "allow_bounce": True,
+                "margin_scale": 1.3,
+                "stop_loss_atr_mult": 1.0,
+                "status_badge": "👑 Altın Lig (Marjin x1.3)",
+                "strategy_permission": "Öncelikli Kırılım + Pusu (Marjin x1.3)"
+            }
+        elif fakeout_rate >= 45.0 or (net_pnl < -5.0 and wr < 45.0):
+            return {
+                "symbol": symbol,
+                "persona_class": "WHIPSAW",
+                "persona_name": "⚠️ Volatil & Tuzakçı (Whipsaw)",
+                "trades_count": total_t,
+                "win_rate": round(wr, 1),
+                "fakeout_rate": round(fakeout_rate, 1),
+                "net_pnl": round(net_pnl, 2),
+                "allow_breakout": False,
+                "allow_bounce": True,
+                "margin_scale": 0.5,
+                "stop_loss_atr_mult": 1.5,
+                "status_badge": "⚠️ Whipsaw (Kırılım Kilitli 🔒)",
+                "strategy_permission": "Yalnızca S3/R3/nPOC Dip-Tepe Sekmesi (Kırılım Kilitli 🔒)"
+            }
+        else:
+            return {
+                "symbol": symbol,
+                "persona_class": "STANDARD",
+                "persona_name": "⚪ Standart / Dengeli",
+                "trades_count": total_t,
+                "win_rate": round(wr, 1),
+                "fakeout_rate": round(fakeout_rate, 1),
+                "net_pnl": round(net_pnl, 2),
+                "allow_breakout": True,
+                "allow_bounce": True,
+                "margin_scale": 1.0,
+                "stop_loss_atr_mult": 1.0,
+                "status_badge": "🟢 Kırılım + Sekme Açık",
+                "strategy_permission": "Dengeli Kırılım + Pusu"
+            }
+
+    def get_all_coin_personas(self, all_symbols: list = None) -> dict:
+        """Tüm pariteler için canlı dinamik persona matrisini döndürür."""
+        if all_symbols is None:
+            if self.market_data and hasattr(self.market_data, 'all_symbols') and self.market_data.all_symbols:
+                all_symbols = list(self.market_data.all_symbols)
+            else:
+                all_symbols = []
+        
+        # Eğer history'de pariteler varsa onları da ekle
+        if self.paper_trader and hasattr(self.paper_trader, 'history'):
+            for h in self.paper_trader.history:
+                sym = h.get('symbol') or h.get('Parite')
+                if sym and sym not in all_symbols:
+                    all_symbols.append(sym)
+
+        matrix = {}
+        for s in all_symbols:
+            matrix[s] = self.get_coin_dynamic_persona(s)
+        return matrix
+
     async def _notify_open(self, pos: dict, levels: dict = None):
         if not self.notifier:
             return
@@ -545,6 +673,8 @@ class StrategyEngine:
         # ── 1. ATR / VOLATILITE HESABI ──
         atr_pct = 1.2
         vol_surge = 1.0
+        is_top_80 = True
+        min_vol_surge = 1.2
         if self.market_data and symbol in self.market_data.candles_5m:
             df = self.market_data.candles_5m[symbol]
             if isinstance(df, pd.DataFrame) and not df.empty and len(df) >= 14:
@@ -585,7 +715,16 @@ class StrategyEngine:
             if met:
                 vol_surge = met.get("vol_surge", vol_surge)
                 is_top_80 = met.get("is_top_80", is_top_80)
-                min_vol_surge = met.get("min_vol_surge", min_vol_surge)
+        # ── 1b. OTONOM COIN DNA VE DİNAMİK PERSONA KALKANI (ERKEN ELEME) ──
+        persona = self.get_coin_dynamic_persona(symbol)
+        is_breakout = (trade_type == "BREAKOUT" or "Breakout" in reason or "Breakdown" in reason or "Kırılım" in reason)
+        
+        # 1. Tuzakçı (Whipsaw) Kırılım Kilidi: Sahte fitil üreten coinlerin breakout'larını anında engelle
+        if is_breakout and not persona.get("allow_breakout", True):
+            rej_msg = f"🛡️ Whipsaw Kalkanı: Son {persona.get('trades_count')} işlemde %{persona.get('fakeout_rate', 0):.0f} tuzak fitil üretti. Kırılım kilitli (Yalnızca S3/R3/nPOC dip-tepe sekmeleri pusuda)."
+            print(f">> [RED - WHIPSAW KALKANI] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "WHIPSAW_BREAKOUT_BLOCKED"}
 
         # MADDE 5: TEMAS (TOUCH) TAKIBI VE FAKEOUT KORUMASI
         from datetime import datetime
@@ -753,30 +892,18 @@ class StrategyEngine:
             if side == "SHORT":
                 self.margin_multiplier *= 0.8
 
-        # MADDE 1: OTONOM COIN DNA LIGLERI (Gecmis Win Rate Tababli Marjin)
-        try:
-            if self.paper_trader and hasattr(self.paper_trader, 'history'):
-                history = self.paper_trader.history
-                coin_trades = [h for h in history if h.get('symbol') == symbol]
-                recent_trades = coin_trades[-20:]
-                total_t = len(recent_trades)
-                
-                if total_t >= 3:
-                    wins = sum(1 for t in recent_trades if t.get('net_pnl', t.get('pnl', 0)) > 0)
-                    wr = (wins / total_t) * 100.0
-                    
-                    if wr > 60.0:
-                        print(f">> [ODUL - MADDE 1] {symbol}: Altin Lig (WR %{wr:.1f}). Marjin x1.5")
-                        self.margin_multiplier *= 1.5
-                    elif wr < 45.0:
-                        print(f">> [CEZA - MADDE 1] {symbol}: Karantina Ligi (WR %{wr:.1f}). Marjin x0.2")
-                        self.margin_multiplier *= 0.2
-        except Exception as e:
-            print(f">> [DNA HATA] Madde 1 Karantina hatasi: {e}")
+        # MADDE 1: OTONOM COIN DNA LİGİ MARJİN VE RİSK ÖLÇEKLEMESİ
+        persona_margin_mult = persona.get("margin_scale", 1.0)
+        self.margin_multiplier *= persona_margin_mult
+        if persona.get("persona_class") == "GOLD":
+            print(f">> [ÖDÜL - ALTIN LİG] {symbol}: {persona.get('persona_name')} (WR %{persona.get('win_rate')}). Marjin x{persona_margin_mult}")
+        elif persona.get("persona_class") == "WHIPSAW":
+            print(f">> [KORUMA - WHIPSAW SEKME] {symbol}: {persona.get('persona_name')} Sekme Pususu. Marjin x{persona_margin_mult} korumalı.")
 
         safe_atr = max(0.5, atr_pct)
         dyn_margin = min(80.0, max(25.0, round(100.0 / (safe_atr / 1.0), 2)))
-        dyn_margin = min(80.0, max(15.0, round(dyn_margin * getattr(self, 'margin_multiplier', 1.0), 2)))
+        min_floor = 8.0 if persona.get("persona_class") == "WHIPSAW" else 15.0
+        dyn_margin = min(80.0, max(min_floor, round(dyn_margin * getattr(self, 'margin_multiplier', 1.0), 2)))
 
         # ── 1c. GERÇEK CVD (TAKER BUY RATIO) VE İVME (CANDLE VELOCITY) HESABI ──
         cvd_pct = 50.0
@@ -795,8 +922,6 @@ class StrategyEngine:
                     # 2. Breakout İvmesi (Hız) Hesaplama
                     if 'open' in df.columns and 'close' in df.columns:
                         body_size = abs(df['close'].iloc[-1] - df['open'].iloc[-1])
-                        # ATR usd cinsinden yukarıda tr listesinden hesaplanmıştı, try-except icindeydi
-                        # Eğer atr varsa onu kullanacağız. Biz atr_pct üzerinden usd cinsine dönelim.
                         current_close = df['close'].iloc[-1]
                         atr_usd = (atr_pct / 100.0) * current_close
                         if atr_usd > 0:
@@ -807,7 +932,8 @@ class StrategyEngine:
         # ── DİNAMİK STOP VE HEDEFLERİ (ADAPTIVE ATR & VOLATILITY FLOOR) ──
         # Sığ/gece saatlerinde mikro fitillerde (%0.6) boğulmayı önleyen asgari %1.25 mesafe tabanı
         safe_atr_pct = max(0.5, min(5.0, atr_pct))
-        effective_stop_pct = max(1.25, min(5.0, safe_atr_pct * 2.0))
+        stop_mult = persona.get("stop_loss_atr_mult", 1.0)
+        effective_stop_pct = max(1.25, min(6.0, safe_atr_pct * 2.0 * stop_mult))
         stop_dist = entry_price * (effective_stop_pct / 100.0)
 
         # TP1: Dinamik 1.8 ATR (En az %1.25 mesafe, R:R >= 1:1 Hızlı Kâr & Breakeven Kilidi)
@@ -885,7 +1011,7 @@ class StrategyEngine:
         elif res:
             if hasattr(self, 'failed_levels'):
                 self.failed_levels.pop(symbol, None)
-            levels = self.market_data.levels.get(symbol) if self.market_data else None
+            levels = getattr(self.market_data, 'levels', {}).get(symbol) if self.market_data else None
             await self._notify_open(res, levels=levels)
 
     # =========================================================================
