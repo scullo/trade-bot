@@ -467,7 +467,10 @@ class PaperTrader:
                 "entry_funding_rate": pos.get("entry_funding_rate", 0.0100),
                 "funding_status": pos.get("funding_status", "BALANCED"),
                 "entry_liq_volume_usd": pos.get("entry_liq_volume_usd", 0.0),
-                "liq_confirmed": pos.get("liq_confirmed", False)
+                "liq_confirmed": pos.get("liq_confirmed", False),
+                "entry_cvd_pct": pos.get("entry_cvd_pct", 50.0),
+                "cvd_status": pos.get("cvd_status", "DENGELİ"),
+                "entry_cvd_delta": pos.get("entry_cvd_delta", 0.0)
             }
             self.history.append(record)
             self.save_history(critical=True)
@@ -539,7 +542,10 @@ class PaperTrader:
                 "entry_funding_rate": pos.get("entry_funding_rate", 0.0100),
                 "funding_status": pos.get("funding_status", "BALANCED"),
                 "entry_liq_volume_usd": pos.get("entry_liq_volume_usd", 0.0),
-                "liq_confirmed": pos.get("liq_confirmed", False)
+                "liq_confirmed": pos.get("liq_confirmed", False),
+                "entry_cvd_pct": pos.get("entry_cvd_pct", 50.0),
+                "cvd_status": pos.get("cvd_status", "DENGELİ"),
+                "entry_cvd_delta": pos.get("entry_cvd_delta", 0.0)
             }
             self.history.append(record)
             del self.open_positions[symbol]

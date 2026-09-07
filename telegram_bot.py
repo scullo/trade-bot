@@ -183,6 +183,14 @@ class TelegramNotifier:
         liq_conf = pos.get('liq_confirmed', False)
         liq_line = f"💥 <b>Tasfiye Teyidi:</b> <code>${liq_vol:,.0f} Perakende Tasfiyesi Süpürüldü 🎯</code>\n" if (liq_conf and liq_vol > 0) else ""
 
+        cvd_val = float(pos.get('entry_cvd_pct', 50.0))
+        cvd_stat = pos.get('cvd_status', 'DENGELİ')
+        cvd_d = float(pos.get('entry_cvd_delta', 0.0))
+        cvd_line = ""
+        if cvd_val != 50.0 or cvd_stat != "DENGELİ":
+            d_str = f"{cvd_d/1000:+.0f}K" if abs(cvd_d) >= 1000 else f"{cvd_d:+.0f}"
+            cvd_line = f"🔬 <b>Mikro-CVD:</b> <code>%{cvd_val:.1f} Alıcı (Delta: ${d_str}) — {cvd_stat}</code>\n"
+
         msg = f"""💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎
 ⚡ <b>YENİ POZİSYON AÇILDI</b> ⚡
 ━━━━━━━━━━━━━━━━━━━━━━━━
@@ -195,7 +203,7 @@ Giriş: <code>${pos['entry_price']:.6f}</code> | Marjin: <b>${pos.get('margin_us
 📊 <b>ATR / Hacim:</b> <code>%{atr_val:.2f} | {vol_val:.2f}x</code>
 🌐 <b>Makro İklim:</b> <code>{macro_str}</code>
 ⚡ <b>Alfa/Beta Gücü:</b> <code>{decouple_str} (RS: {rs_score:+.2f})</code>
-{funding_line}{liq_line}{bal_line}━━━━━━━━━━━━━━━━━━━━━━━━
+{funding_line}{liq_line}{cvd_line}{bal_line}━━━━━━━━━━━━━━━━━━━━━━━━
 📌 <b>Setup:</b> <i>{pos['reason']}</i>
 {ai_tactic_note}⏰ <b>Zaman:</b> <code>{pos['entry_time']}</code>
 💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎"""

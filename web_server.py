@@ -2315,9 +2315,14 @@ HTML_PAGE = """
             6. Mikro Piyasa: Fonlama & Likidasyon
             <span class="tab-badge-sub" id="nav-funding-badge" style="background:rgba(255,107,107,0.15); color:var(--red); border:1px solid rgba(255,107,107,0.3);">0 Squeeze</span>
         </button>
+        <button class="nav-tab-btn" id="tab-btn-cvd" onclick="switchMainTab('cvd')">
+            <span style="font-size:14px; margin-right:6px;">🔬</span>
+            7. Mikro-CVD & Agresyon
+            <span class="tab-badge-sub" id="nav-cvd-badge" style="background:rgba(34,197,94,0.15); color:#22c55e; border:1px solid rgba(34,197,94,0.3);">Canlı</span>
+        </button>
         <button class="nav-tab-btn" id="tab-btn-admin" onclick="switchMainTab('admin'); loadAdminMetrics();" style="border-color:rgba(0,242,254,0.35); display:none;">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" style="margin-right:6px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-            7. Yönetim
+            8. Yönetim
         </button>
     </div>
 
@@ -2926,7 +2931,123 @@ HTML_PAGE = """
     </div>
 
     <!-- =========================================================================
-         7. SEKME: YÖNETİM MASASI
+         7. SEKME: 🔬 CANLI MİKRO-CVD & TAKER AGRESYON RADARI (100 PARİTE)
+         ========================================================================= -->
+    <div id="main-tab-content-cvd" class="main-tab-content" style="display:none;">
+        <!-- CVD BAŞLIK & CANLI DURUM -->
+        <div style="margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:22px;">🔬</span>
+                <div>
+                    <div style="font-size:16px; font-weight:800; color:#fff; font-family:'JetBrains Mono';">CANLI MİKRO-CVD & TAKER AGRESYON RADARI</div>
+                    <div style="font-size:11.5px; color:#94a3b8; margin-top:2px;">Mum içi anlık piyasa alışları (Taker Buy) ve satışları (Taker Sell) — Milisaniyelik Delta Akışı</div>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:#94a3b8; font-family:'JetBrains Mono';">
+                <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e; box-shadow:0 0 8px #22c55e;"></span>
+                <span>Binance 100/100 K-Line Stream (0ms Gecikme)</span>
+            </div>
+        </div>
+
+        <!-- 3 MİKRO KPI KARTI -->
+        <div class="cockpit-kpi-grid" style="margin-bottom:20px;">
+            <div class="cockpit-kpi-card" style="border-top:3px solid #38bdf8;">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">Piyasa Geneli Taker Oranı (Kayan 60s)</span>
+                    <span class="kpi-card-icon">⚖️</span>
+                </div>
+                <div class="kpi-card-val" id="cvd-market-ratio-text" style="color:#38bdf8; font-size:18px;">Alıcı %50.0 / Satıcı %50.0</div>
+                <div style="margin-top:8px; width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; display:flex; overflow:hidden;">
+                    <div id="cvd-market-bar-long" style="width:50%; height:100%; background:#22c55e; transition:width 0.4s ease;"></div>
+                    <div id="cvd-market-bar-short" style="width:50%; height:100%; background:#ef4444; transition:width 0.4s ease;"></div>
+                </div>
+                <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono'; margin-top:6px;">Yeşil: Market Alıcıları (Taker Buy) | Kırmızı: Market Satıcıları</div>
+            </div>
+
+            <div class="cockpit-kpi-card" style="border-top:3px solid #22c55e;">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">En Güçlü Boğa Agresyonu (60s Lideri)</span>
+                    <span class="kpi-card-icon">🚀</span>
+                </div>
+                <div class="kpi-card-val" id="cvd-top-buyer-sym" style="color:#22c55e; font-size:19px;">-</div>
+                <div class="kpi-card-sub" id="cvd-top-buyer-delta">Net Delta: $0</div>
+                <div style="font-size:11px; color:#86efac; font-family:'JetBrains Mono'; margin-top:3px;">Direnç kırılımı (Breakout) için en güçlü aday</div>
+            </div>
+
+            <div class="cockpit-kpi-card" style="border-top:3px solid #ef4444;">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">En Güçlü Ayı Agresyonu (60s Lideri)</span>
+                    <span class="kpi-card-icon">🔻</span>
+                </div>
+                <div class="kpi-card-val" id="cvd-top-seller-sym" style="color:#ef4444; font-size:19px;">-</div>
+                <div class="kpi-card-sub" id="cvd-top-seller-delta">Net Delta: -$0</div>
+                <div style="font-size:11px; color:#fca5a5; font-family:'JetBrains Mono'; margin-top:3px;">Destek kırılımı veya dip emilim adayı</div>
+            </div>
+        </div>
+
+        <!-- 2 SÜTUNLU CANLI AGRESYON ISI TABLOSU -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(420px, 1fr)); gap:18px; margin-bottom:20px;">
+            <!-- SOL: EN ÇOK ALICI BASKISI OLAN İLK 5 COIN -->
+            <div class="history-full-box">
+                <div style="padding:12px 16px; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center; background:rgba(34,197,94,0.03);">
+                    <div style="font-weight:800; font-size:13px; color:#22c55e; font-family:'JetBrains Mono'; display:flex; align-items:center; gap:8px;">
+                        <span>🟢</span> EN YÜKSEK ALICI BASKISI (Taker Buy Dominance)
+                    </div>
+                    <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">Son 60 Saniye</div>
+                </div>
+                <div class="history-table-container">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Parite</th>
+                                <th>Alıcı Oranı</th>
+                                <th>60s Net Delta</th>
+                                <th>Canlı Fiyat</th>
+                                <th>Strateji Kararı</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cvd-top-buyers-body">
+                            <tr><td colspan="5" style="text-align:center; padding:20px; color:#94a3b8;">Canlı K-Line verileri taranıyor...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SAĞ: EN ÇOK SATICI BASKISI OLAN İLK 5 COIN -->
+            <div class="history-full-box">
+                <div style="padding:12px 16px; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center; background:rgba(239,68,68,0.03);">
+                    <div style="font-weight:800; font-size:13px; color:#ef4444; font-family:'JetBrains Mono'; display:flex; align-items:center; gap:8px;">
+                        <span>🔴</span> EN YÜKSEK SATICI BASKISI (Taker Sell Dominance)
+                    </div>
+                    <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">Son 60 Saniye</div>
+                </div>
+                <div class="history-table-container">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Parite</th>
+                                <th>Alıcı Oranı</th>
+                                <th>60s Net Delta</th>
+                                <th>Canlı Fiyat</th>
+                                <th>Strateji Kararı</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cvd-top-sellers-body">
+                            <tr><td colspan="5" style="text-align:center; padding:20px; color:#94a3b8;">Canlı K-Line verileri taranıyor...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- KURUMSAL BİLGİ NOTU -->
+        <div style="padding:14px 20px; background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid rgba(255,255,255,0.06); font-family:'JetBrains Mono'; font-size:12px; color:#94a3b8; line-height:1.6;">
+            💡 <b>Kurumsal Mikro-CVD Mantığı:</b> Mumlar geçmişin özetidir, CVD ise geleceğin yakıtıdır. Fiyat Camarilla R4 direncinin üstüne çıktığında Alıcı Oranı %62'nin üzerindeyse bot mum kapanışını beklemeden kırılımı yakalar ve marjin 1.15x artırılır. Eğer fiyat dirençteyken satıcı baskısı varsa sahte kırılım (fakeout) kalkanı devreye girer ve işlem engellenir.
+        </div>
+    </div>
+
+    <!-- =========================================================================
+         8. SEKME: YÖNETİM MASASI
          ========================================================================= -->
     <div id="main-tab-content-admin" class="main-tab-content" style="display:none;">
         <!-- ADMIN 4 KPI HERO -->
@@ -4174,6 +4295,129 @@ async function loadAdminMetrics() {
             }
         }
 
+        function renderCvdView() {
+            try {
+                if (!appState) return;
+                const cvdSummary = appState.cvd_summary || {};
+
+                // 1. KPI Cards
+                const ratioTextEl = document.getElementById('cvd-market-ratio-text');
+                const barLong = document.getElementById('cvd-market-bar-long');
+                const barShort = document.getElementById('cvd-market-bar-short');
+                if (ratioTextEl && barLong && barShort) {
+                    const buyPct = Number(cvdSummary.avg_buy_ratio != null ? cvdSummary.avg_buy_ratio : 50).toFixed(1);
+                    const sellPct = Number(cvdSummary.avg_sell_ratio != null ? cvdSummary.avg_sell_ratio : 50).toFixed(1);
+                    ratioTextEl.innerHTML = `<span style="color:#22c55e;">Alıcı %${buyPct}</span> / <span style="color:#ef4444;">Satıcı %${sellPct}</span>`;
+                    barLong.style.width = `${buyPct}%`;
+                    barShort.style.width = `${sellPct}%`;
+                }
+
+                const topBuyerSymEl = document.getElementById('cvd-top-buyer-sym');
+                const topBuyerDeltaEl = document.getElementById('cvd-top-buyer-delta');
+                if (topBuyerSymEl && topBuyerDeltaEl) {
+                    const topB = cvdSummary.top_buy_sym;
+                    const topBDelta = Number(cvdSummary.top_buy_delta || 0);
+                    const topBRatio = Number(cvdSummary.top_buy_ratio || 50).toFixed(1);
+                    if (topB && topB !== '-') {
+                        const cleanB = topB.replace('/USDT', '');
+                        topBuyerSymEl.innerHTML = `${cleanB} <span style="font-size:13px; color:#fff; font-weight:600;">(%${topBRatio})</span>`;
+                        topBuyerDeltaEl.innerText = `Net Delta: +$${Math.round(topBDelta).toLocaleString('en-US')}`;
+                    } else {
+                        topBuyerSymEl.innerText = '-';
+                        topBuyerDeltaEl.innerText = 'Net Delta: $0';
+                    }
+                }
+
+                const topSellerSymEl = document.getElementById('cvd-top-seller-sym');
+                const topSellerDeltaEl = document.getElementById('cvd-top-seller-delta');
+                if (topSellerSymEl && topSellerDeltaEl) {
+                    const topS = cvdSummary.top_sell_sym;
+                    const topSDelta = Number(cvdSummary.top_sell_delta || 0);
+                    const topSRatio = Number(cvdSummary.top_sell_ratio || 50).toFixed(1);
+                    if (topS && topS !== '-') {
+                        const cleanS = topS.replace('/USDT', '');
+                        topSellerSymEl.innerHTML = `${cleanS} <span style="font-size:13px; color:#fff; font-weight:600;">(%${topSRatio})</span>`;
+                        topSellerDeltaEl.innerText = `Net Delta: -$${Math.abs(Math.round(topSDelta)).toLocaleString('en-US')}`;
+                    } else {
+                        topSellerSymEl.innerText = '-';
+                        topSellerDeltaEl.innerText = 'Net Delta: -$0';
+                    }
+                }
+
+                // 2. Dual-Column Aggression Heat Tables
+                const buyersTbody = document.getElementById('cvd-top-buyers-body');
+                if (buyersTbody) {
+                    const topBuyers = cvdSummary.top_buyers || [];
+                    if (topBuyers.length === 0) {
+                        buyersTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:#94a3b8;">K-Line Taker Buy verisi toplanıyor...</td></tr>`;
+                    } else {
+                        let bHtml = '';
+                        topBuyers.forEach(item => {
+                            const symClean = (item.symbol || '').replace('/USDT', '');
+                            const ratio = Number(item.ratio_60s || 50).toFixed(1);
+                            const delta = Number(item.delta_60s || 0);
+                            const price = Number(item.last_price || 0);
+                            
+                            let stratBadge = `<span style="color:#94a3b8;">Nötr</span>`;
+                            if (ratio >= 62) {
+                                stratBadge = `<span style="background:rgba(34,197,94,0.18); border:1px solid rgba(34,197,94,0.4); color:#22c55e; padding:3px 8px; border-radius:6px; font-weight:800; font-size:11px;">🚀 Kırılım Teyitli (1.15x Marjin)</span>`;
+                            } else if (ratio >= 55) {
+                                stratBadge = `<span style="background:rgba(56,189,248,0.18); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:3px 8px; border-radius:6px; font-weight:800; font-size:11px;">⚡ Destek Emilim (1.10x Marjin)</span>`;
+                            }
+
+                            bHtml += `
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04); font-family:'JetBrains Mono'; font-size:12px;">
+                                <td style="font-weight:800; color:#fff;">${symClean}</td>
+                                <td style="font-weight:800; color:#22c55e;">%${ratio}</td>
+                                <td style="color:#4ade80; font-weight:700;">+$${Math.round(delta).toLocaleString('en-US')}</td>
+                                <td style="color:#e2e8f0;">$${price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 6})}</td>
+                                <td>${stratBadge}</td>
+                            </tr>
+                            `;
+                        });
+                        buyersTbody.innerHTML = bHtml;
+                    }
+                }
+
+                const sellersTbody = document.getElementById('cvd-top-sellers-body');
+                if (sellersTbody) {
+                    const topSellers = cvdSummary.top_sellers || [];
+                    if (topSellers.length === 0) {
+                        sellersTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:#94a3b8;">K-Line Taker Sell verisi toplanıyor...</td></tr>`;
+                    } else {
+                        let sHtml = '';
+                        topSellers.forEach(item => {
+                            const symClean = (item.symbol || '').replace('/USDT', '');
+                            const ratio = Number(item.ratio_60s || 50).toFixed(1);
+                            const sellRatio = (100 - Number(ratio)).toFixed(1);
+                            const delta = Number(item.delta_60s || 0);
+                            const price = Number(item.last_price || 0);
+                            
+                            let stratBadge = `<span style="color:#94a3b8;">Nötr</span>`;
+                            if (ratio <= 38) {
+                                stratBadge = `<span style="background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:3px 8px; border-radius:6px; font-weight:800; font-size:11px;">🛡️ Sahte Kırılım (Tuzak Engellendi)</span>`;
+                            } else if (ratio <= 45) {
+                                stratBadge = `<span style="background:rgba(251,191,36,0.18); border:1px solid rgba(251,191,36,0.4); color:#fbbf24; padding:3px 8px; border-radius:6px; font-weight:800; font-size:11px;">🔻 Satıcı Baskısı</span>`;
+                            }
+
+                            sHtml += `
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04); font-family:'JetBrains Mono'; font-size:12px;">
+                                <td style="font-weight:800; color:#fff;">${symClean}</td>
+                                <td style="font-weight:800; color:#ef4444;">%${sellRatio} Satıcı (%${ratio} Alıcı)</td>
+                                <td style="color:#f87171; font-weight:700;">-$${Math.abs(Math.round(delta)).toLocaleString('en-US')}</td>
+                                <td style="color:#e2e8f0;">$${price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 6})}</td>
+                                <td>${stratBadge}</td>
+                            </tr>
+                            `;
+                        });
+                        sellersTbody.innerHTML = sHtml;
+                    }
+                }
+            } catch (err) {
+                console.error("renderCvdView error:", err);
+            }
+        }
+
         function switchMainTab(tabName) {
             if (tabName === 'history') tabName = 'ledger';
             currentActiveMainTab = tabName;
@@ -4186,6 +4430,7 @@ async function loadAdminMetrics() {
                 'ledger': document.getElementById('tab-btn-ledger'),
                 'persona': document.getElementById('tab-btn-persona'),
                 'funding': document.getElementById('tab-btn-funding'),
+                'cvd': document.getElementById('tab-btn-cvd'),
                 'admin': document.getElementById('tab-btn-admin')
             };
             const tabContents = {
@@ -4195,6 +4440,7 @@ async function loadAdminMetrics() {
                 'ledger': document.getElementById('main-tab-content-ledger'),
                 'persona': document.getElementById('main-tab-content-persona'),
                 'funding': document.getElementById('main-tab-content-funding'),
+                'cvd': document.getElementById('main-tab-content-cvd'),
                 'admin': document.getElementById('main-tab-content-admin')
             };
 
@@ -4234,6 +4480,8 @@ async function loadAdminMetrics() {
             } else if (tabName === 'funding') {
                 renderFundingMatrixView();
                 renderLiquidationView();
+            } else if (tabName === 'cvd') {
+                renderCvdView();
             } else if (tabName === 'admin') {
                 loadAdminMetrics();
             }
@@ -6267,6 +6515,20 @@ async function loadAdminMetrics() {
                             liqBadge = `<span style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#fca5a5; font-size:10.5px; font-weight:800; padding:2px 6px; border-radius:6px; font-family:'JetBrains Mono';" title="💥 Son 15dk Tasfiye: $${Math.round(sLiqItem.total_usd).toLocaleString()} (${sLiqItem.dominant_side} Tasfiyesi Ağırlıklı)">💥 ${liqDom} $${liqK}K</span>`;
                         }
 
+                        // Anlık Mikro-CVD Rozeti (Kayan 60s)
+                        let cvdBadge = '';
+                        const sCvds = appState.symbol_cvd || {};
+                        const sCvdItem = sCvds[symbol];
+                        if (sCvdItem && sCvdItem.ratio_60s != null) {
+                            const cRatio = Number(sCvdItem.ratio_60s).toFixed(0);
+                            const cDelta = Number(sCvdItem.delta_60s || 0);
+                            if (cRatio >= 62) {
+                                cvdBadge = `<span style="background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.4); color:#4ade80; font-size:10.5px; font-weight:800; padding:2px 6px; border-radius:6px; font-family:'JetBrains Mono';" title="🔬 Mikro-CVD: %${cRatio} Alıcı (+$${Math.round(cDelta).toLocaleString()}) — Boğa Agresyonu">🔬 %${cRatio} Alıcı</span>`;
+                            } else if (cRatio <= 38) {
+                                cvdBadge = `<span style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#f87171; font-size:10.5px; font-weight:800; padding:2px 6px; border-radius:6px; font-family:'JetBrains Mono';" title="🔬 Mikro-CVD: %${cRatio} Alıcı (-$${Math.abs(Math.round(cDelta)).toLocaleString()}) — Ayı Agresyonu">🔬 %${100 - cRatio} Satıcı</span>`;
+                            }
+                        }
+
                         html += `
                         <div class="coin-card ${posClass}" id="card-${safeId}">
                             <!-- CLEAN CARD HEAD: SYMBOL + GRAFIK BUTTON -->
@@ -6276,6 +6538,7 @@ async function loadAdminMetrics() {
                                         <span class="card-symbol" onclick="openTradingViewModal('${cleanSym}')" style="cursor:pointer;" title="${cleanSym} Grafiğini Aç">${cleanSym}</span>
                                         ${fBadge}
                                         ${liqBadge}
+                                        ${cvdBadge}
                                     </div>
                                     <button class="btn-open-chart" onclick="openTradingViewModal('${cleanSym}')" title="${cleanSym} Canlı Grafiği Aç">📈 Grafik</button>
                                 </div>
@@ -7454,7 +7717,12 @@ function downloadExcelReport() {
                     updateFundingBadge();
                 }
 
-                // 5d. Update Cockpit Funding & Liquidation Commentary
+                // 5c2. Update Micro-CVD Matrix if active tab
+                if (currentActiveMainTab === 'cvd') {
+                    renderCvdView();
+                }
+
+                // 5d. Update Cockpit Funding, Liquidation & Micro-CVD Commentary
                 const cFundingEl = document.getElementById('cockpit-funding-commentary');
                 if (cFundingEl && appState.funding_summary) {
                     const fSumm = appState.funding_summary.summary || {};
@@ -7468,11 +7736,17 @@ function downloadExcelReport() {
                         liqSnippet = ` | 💥 <b>$${lTotal}K</b> Tasfiye (${lDom} Baskılı)`;
                     }
 
+                    let cvdSnippet = '';
+                    if (appState.cvd_summary && appState.cvd_summary.avg_buy_ratio != null) {
+                        const cBuy = Number(appState.cvd_summary.avg_buy_ratio).toFixed(1);
+                        cvdSnippet = ` | 🔬 Mikro-CVD: <b style="color:${cBuy >= 50 ? '#22c55e' : '#ef4444'};">%${cBuy} Alıcı</b>`;
+                    }
+
                     if (sqSyms.length > 0) {
                         const cleanList = sqSyms.map(s => s.replace('/USDT', '')).slice(0, 4).join(', ');
-                        cFundingEl.innerHTML = `<b style="color:var(--cyan);">${fMedian >= 0 ? '+' : ''}${fMedian.toFixed(4)}%</b> Medyan | <span style="color:var(--red); font-weight:800;">⚠️ ${sqSyms.length} Paritede Short Squeeze Riski (${cleanList})</span> — <b style="color:var(--green);">Kalkan Aktif 🔒</b>${liqSnippet}`;
+                        cFundingEl.innerHTML = `<b style="color:var(--cyan);">${fMedian >= 0 ? '+' : ''}${fMedian.toFixed(4)}%</b> Medyan | <span style="color:var(--red); font-weight:800;">⚠️ ${sqSyms.length} Paritede Short Squeeze Riski (${cleanList})</span> — <b style="color:var(--green);">Kalkan Aktif 🔒</b>${liqSnippet}${cvdSnippet}`;
                     } else {
-                        cFundingEl.innerHTML = `<b style="color:var(--cyan);">${fMedian >= 0 ? '+' : ''}${fMedian.toFixed(4)}%</b> Medyan | <span style="color:var(--green); font-weight:700;">🟢 Fonlama Dengeli</span>${liqSnippet}`;
+                        cFundingEl.innerHTML = `<b style="color:var(--cyan);">${fMedian >= 0 ? '+' : ''}${fMedian.toFixed(4)}%</b> Medyan | <span style="color:var(--green); font-weight:700;">🟢 Fonlama Dengeli</span>${liqSnippet}${cvdSnippet}`;
                     }
                 }
 
@@ -8046,6 +8320,16 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                         pass
                 symbol_liqs = getattr(market_data, 'symbol_liquidations_15m', {})
 
+            cvd_summary = {}
+            symbol_cvd = {}
+            if market_data:
+                if hasattr(market_data, 'get_market_cvd_summary'):
+                    try:
+                        cvd_summary = market_data.get_market_cvd_summary()
+                    except Exception:
+                        pass
+                symbol_cvd = getattr(market_data, 'symbol_cvd', {})
+
             return web.json_response({
                 "balance": trader_manager.balance,
                 "initial_balance": 100000.0,
@@ -8060,6 +8344,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "liquidation_summary": liq_summary,
                 "recent_liquidations": recent_liqs,
                 "symbol_liquidations": symbol_liqs,
+                "cvd_summary": cvd_summary,
+                "symbol_cvd": symbol_cvd,
                 "recent_rejections": getattr(strategy, "recent_rejections", [])[-20:] if strategy else [],
                 "setup_attempts": getattr(strategy, "setup_attempts", {}) if strategy else {},
                 "system_health": sys_health,

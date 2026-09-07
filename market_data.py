@@ -54,6 +54,9 @@ class MarketDataManager:
             'top_symbol_usd': 0.0,
             'last_event_time': '-'
         }
+        # Anlık Mikro-CVD (Cumulative Volume Delta) & Agresyon Veri Yapıları
+        self.symbol_cvd = {}          # norm_s -> {taker_buy_usd, taker_sell_usd, delta_usd, cvd_pct, delta_60s, ratio_60s, bias, last_update}
+        self.symbol_cvd_history = {}  # norm_s -> deque(maxlen=60) of (timestamp, taker_buy_usd, taker_sell_usd)
         self.on_tick_callback = None
         self.on_candle_close_callback = None
 
@@ -402,6 +405,80 @@ class MarketDataManager:
             'dominant_side': 'LONG' if l_usd >= s_usd else 'SHORT',
             'last_event_time': stats.get('last_event_time', '-'),
             'recent_events_count': len(getattr(self, 'recent_liquidations', []))
+        }
+
+    def get_symbol_cvd(self, symbol: str) -> dict:
+        data = getattr(self, 'symbol_cvd', {}).get(symbol, None)
+        if data:
+            return data
+        return {
+            'symbol': symbol,
+            'taker_buy_usd': 0.0,
+            'taker_sell_usd': 0.0,
+            'delta_usd': 0.0,
+            'cvd_pct': 50.0,
+            'delta_60s': 0.0,
+            'ratio_60s': 50.0,
+            'bias': 'NEUTRAL',
+            'last_price': 0.0,
+            'last_update': 0
+        }
+
+    def get_market_cvd_summary(self) -> dict:
+        cvds = getattr(self, 'symbol_cvd', {})
+        if not cvds:
+            return {
+                'avg_buy_ratio': 50.0,
+                'avg_sell_ratio': 50.0,
+                'total_buy_usd': 0.0,
+                'total_sell_usd': 0.0,
+                'net_market_delta': 0.0,
+                'top_buy_sym': '-',
+                'top_buy_ratio': 50.0,
+                'top_buy_delta': 0.0,
+                'top_sell_sym': '-',
+                'top_sell_ratio': 50.0,
+                'top_sell_delta': 0.0,
+                'top_buyers': [],
+                'top_sellers': [],
+                'last_update_str': '-'
+            }
+
+        ratios = []
+        tot_buy = 0.0
+        tot_sell = 0.0
+        active_items = []
+        for s, item in cvds.items():
+            ratios.append(item.get('ratio_60s', 50.0))
+            tot_buy += item.get('taker_buy_usd', 0.0)
+            tot_sell += item.get('taker_sell_usd', 0.0)
+            active_items.append(item)
+
+        avg_buy = round(sum(ratios) / len(ratios), 1) if ratios else 50.0
+        avg_sell = round(100.0 - avg_buy, 1)
+
+        sorted_by_ratio = sorted(active_items, key=lambda x: x.get('ratio_60s', 50.0), reverse=True)
+        top_buyers = sorted_by_ratio[:5]
+        top_sellers = sorted_by_ratio[-5:][::-1] if len(sorted_by_ratio) >= 5 else []
+
+        top_buy = top_buyers[0] if top_buyers else {}
+        top_sell = top_sellers[0] if top_sellers else {}
+
+        return {
+            'avg_buy_ratio': avg_buy,
+            'avg_sell_ratio': avg_sell,
+            'total_buy_usd': round(tot_buy, 2),
+            'total_sell_usd': round(tot_sell, 2),
+            'net_market_delta': round(tot_buy - tot_sell, 2),
+            'top_buy_sym': top_buy.get('symbol', '-'),
+            'top_buy_ratio': top_buy.get('ratio_60s', 50.0),
+            'top_buy_delta': top_buy.get('delta_60s', 0.0),
+            'top_sell_sym': top_sell.get('symbol', '-'),
+            'top_sell_ratio': top_sell.get('ratio_60s', 50.0),
+            'top_sell_delta': top_sell.get('delta_60s', 0.0),
+            'top_buyers': top_buyers,
+            'top_sellers': top_sellers,
+            'last_update_str': datetime.now().strftime('%H:%M:%S')
         }
 
     async def sync_top_100_symbols(self):
@@ -931,10 +1008,70 @@ class MarketDataManager:
                                     data = json.loads(msg.data)
                                     payload = data.get('data', {})
                                     kline = payload.get('k', {})
-                                    if kline.get('x', False):
-                                        raw_s = payload.get('s', '').upper()
-                                        if raw_s in symbol_map:
-                                            norm_s = symbol_map[raw_s]
+                                    raw_s = payload.get('s', '').upper()
+                                    if raw_s in symbol_map and kline:
+                                        norm_s = symbol_map[raw_s]
+
+                                        # Anlık Mikro-CVD (Taker Buy vs Taker Sell) Hesaplama (<0.001ms)
+                                        try:
+                                            cur_q = float(kline.get('q', 0.0))
+                                            cur_Q = float(kline.get('Q', 0.0))
+                                            if cur_q > 0:
+                                                now_ts = time.time()
+                                                t_buy = cur_Q
+                                                t_sell = max(0.0, cur_q - cur_Q)
+                                                delta = t_buy - t_sell
+                                                ratio = (t_buy / cur_q * 100.0)
+
+                                                if norm_s not in self.symbol_cvd_history:
+                                                    self.symbol_cvd_history[norm_s] = deque(maxlen=60)
+
+                                                h_deque = self.symbol_cvd_history[norm_s]
+                                                if not h_deque or (now_ts - h_deque[-1][0] >= 1.0):
+                                                    h_deque.append((now_ts, t_buy, t_sell))
+
+                                                delta_60s = delta
+                                                ratio_60s = ratio
+                                                if len(h_deque) >= 2:
+                                                    t_cutoff = now_ts - 60.0
+                                                    old_sample = h_deque[0]
+                                                    for s_item in h_deque:
+                                                        if s_item[0] >= t_cutoff:
+                                                            old_sample = s_item
+                                                            break
+                                                    diff_buy = max(0.0, t_buy - old_sample[1])
+                                                    diff_sell = max(0.0, t_sell - old_sample[2])
+                                                    tot_diff = diff_buy + diff_sell
+                                                    if tot_diff > 0:
+                                                        delta_60s = diff_buy - diff_sell
+                                                        ratio_60s = (diff_buy / tot_diff * 100.0)
+
+                                                bias = "NEUTRAL"
+                                                if ratio_60s >= 65.0:
+                                                    bias = "STRONG_BUY_SURGE"
+                                                elif ratio_60s <= 35.0:
+                                                    bias = "STRONG_SELL_PRESSURE"
+                                                elif ratio_60s >= 55.0:
+                                                    bias = "MODERATE_BUY"
+                                                elif ratio_60s <= 45.0:
+                                                    bias = "MODERATE_SELL"
+
+                                                self.symbol_cvd[norm_s] = {
+                                                    'symbol': norm_s,
+                                                    'taker_buy_usd': round(t_buy, 2),
+                                                    'taker_sell_usd': round(t_sell, 2),
+                                                    'delta_usd': round(delta, 2),
+                                                    'cvd_pct': round(ratio, 1),
+                                                    'delta_60s': round(delta_60s, 2),
+                                                    'ratio_60s': round(ratio_60s, 1),
+                                                    'bias': bias,
+                                                    'last_price': float(kline.get('c', 0.0)),
+                                                    'last_update': now_ts
+                                                }
+                                        except Exception:
+                                            pass
+
+                                        if kline.get('x', False):
                                             new_candle = {
                                                 'timestamp': kline.get('t'),
                                                 'open': float(kline.get('o')),

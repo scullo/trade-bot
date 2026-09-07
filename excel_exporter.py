@@ -320,7 +320,10 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ('Giriş Fonlama Oranı (%)', 20),
         ('Fonlama Squeeze Durumu', 24),
         ('Giriş Öncesi Tasfiye Hacmi ($)', 24),
-        ('Tasfiye Teyit Durumu', 26)
+        ('Tasfiye Teyit Durumu', 26),
+        ('Giriş Mikro-CVD Alıcı Oranı (%)', 24),
+        ('Mikro Agresyon & Emilim Teyidi', 28),
+        ('Kayan 60s Net Delta ($)', 22)
     ]
 
     def _get_coin_persona(sym, st):
@@ -462,6 +465,14 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         l_lbl = "💥 YÜKSEK TASFİYE SÜPÜRMESİ (Teyitli)" if (l_conf and l_vol >= 10000) else ("🎯 TASFİYE TEYİTLİ" if l_conf else "STANDART / NÖTR")
         ws.write(r_idx, 61, f"${l_vol:,.2f}" if l_vol > 0 else "-", cell_currency if l_vol > 0 else cell_center)
         ws.write(r_idx, 62, l_lbl, cell_left)
+
+        # Mikro-CVD (Kayan 60s) & Agresyon Durumu (Sütun 64, 65, 66)
+        c_pct = _safe_float(h.get('entry_cvd_pct', 50.0))
+        c_stat = str(h.get('cvd_status', 'DENGELİ'))
+        c_delta = _safe_float(h.get('entry_cvd_delta', 0.0))
+        ws.write(r_idx, 63, f"%{c_pct:.1f}", cell_roe_green if c_pct >= 50 else cell_roe_red)
+        ws.write(r_idx, 64, c_stat, cell_left)
+        ws.write(r_idx, 65, f"${c_delta:+,.2f}", cell_roe_green if c_delta >= 0 else cell_roe_red)
 
     def render_table_sheet(ws_obj, t_list):
         for col_idx, (h_name, width) in enumerate(headers_granular):

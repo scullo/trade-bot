@@ -777,6 +777,63 @@ class StrategyEngine:
             if confluence_list is not None and isinstance(confluence_list, list):
                 confluence_list.append("Likidasyon_Süpürmesi_Teyidi")
 
+        # 1d. ANLIK MİKRO-CVD & TAKER AGRESYON TEYİDİ (Micro-CVD Confluence & Fakeout Shield)
+        cvd_data = {}
+        if self.market_data and hasattr(self.market_data, 'get_symbol_cvd'):
+            cvd_data = self.market_data.get_symbol_cvd(symbol) or {}
+
+        cvd_ratio_60s = float(cvd_data.get('ratio_60s', 50.0))
+        cvd_delta_60s = float(cvd_data.get('delta_60s', 0.0))
+        cvd_confirmed = False
+        cvd_status = "DENGELİ"
+        cvd_tag = ""
+
+        if is_breakout:
+            # Breakout Long: Taker Buy baskısı aranır (>= 62%)
+            if side == "LONG":
+                if cvd_ratio_60s >= 62.0 and cvd_delta_60s > 0:
+                    cvd_confirmed = True
+                    cvd_status = "⚡ GÜÇLÜ TAKER ALIŞ PATLAMASI"
+                    cvd_tag = f" [⚡ Mikro-CVD %{cvd_ratio_60s:.0f} Alıcı Patlaması Teyitli]"
+                    margin_ratio *= 1.15
+                elif cvd_ratio_60s < 38.0 and cvd_delta_60s < -5000:
+                    # Fakeout Shield: Yukarı kırılım görünüyor ama tahtada agresif satış var!
+                    rej_msg = f"🛡️ Mikro-CVD Sahte Kırılım (Fakeout) Kalkanı: Fiyat direnç üstünde fakat Taker Satıcı baskısı hakim (%{100-cvd_ratio_60s:.0f} Satıcı, Delta: -${abs(cvd_delta_60s):,.0f}). Tuzak engellendi."
+                    print(f">> [RED - CVD FAKEOUT KALKANI] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg)
+                    return {"error": "CVD_FAKEOUT_BLOCKED"}
+            elif side == "SHORT":
+                if cvd_ratio_60s <= 38.0 and cvd_delta_60s < 0:
+                    cvd_confirmed = True
+                    cvd_status = "⚡ GÜÇLÜ TAKER SATIŞ PATLAMASI"
+                    cvd_tag = f" [⚡ Mikro-CVD %{100-cvd_ratio_60s:.0f} Satıcı Patlaması Teyitli]"
+                    margin_ratio *= 1.15
+                elif cvd_ratio_60s > 62.0 and cvd_delta_60s > 5000:
+                    # Fakeout Shield: Aşağı kırılım görünüyor ama tahtada agresif alış var!
+                    rej_msg = f"🛡️ Mikro-CVD Sahte Kırılım (Fakeout) Kalkanı: Fiyat destek altında fakat Taker Alıcı baskısı hakim (%{cvd_ratio_60s:.0f} Alıcı). Tuzak engellendi."
+                    print(f">> [RED - CVD FAKEOUT KALKANI] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg)
+                    return {"error": "CVD_FAKEOUT_BLOCKED"}
+        else:
+            # Sekme (Bounce): Destekten dönüşte alıcı devreye girdi mi veya limit emilimi var mı?
+            if side == "LONG":
+                if cvd_ratio_60s >= 55.0 or (cvd_delta_60s > 0 and cvd_ratio_60s >= 50.0):
+                    cvd_confirmed = True
+                    cvd_status = "🛡️ KURUMSAL ALICI EMİLİMİ (Teyitli)"
+                    cvd_tag = f" [🛡️ Mikro-CVD Destek Emilimi Teyitli (%{cvd_ratio_60s:.0f})]"
+                    margin_ratio *= 1.10
+            elif side == "SHORT":
+                if cvd_ratio_60s <= 45.0 or (cvd_delta_60s < 0 and cvd_ratio_60s <= 50.0):
+                    cvd_confirmed = True
+                    cvd_status = "🛡️ KURUMSAL SATICI EMİLİMİ (Teyitli)"
+                    cvd_tag = f" [🛡️ Mikro-CVD Direnç Emilimi Teyitli (%{100-cvd_ratio_60s:.0f})]"
+                    margin_ratio *= 1.10
+
+        if cvd_confirmed and cvd_tag:
+            reason += cvd_tag
+            if confluence_list is not None and isinstance(confluence_list, list):
+                confluence_list.append("Mikro_CVD_Agresyon_Teyidi")
+
         # MADDE 5: TEMAS (TOUCH) TAKIBI VE FAKEOUT KORUMASI
         from datetime import datetime
         current_date = datetime.now().date()
@@ -1052,7 +1109,10 @@ class StrategyEngine:
             entry_funding_rate=f_rate_pct,
             funding_status=squeeze_status,
             entry_liq_volume_usd=liq_volume_usd,
-            liq_confirmed=liq_confirmed
+            liq_confirmed=liq_confirmed,
+            entry_cvd_pct=cvd_ratio_60s,
+            cvd_status=cvd_status,
+            entry_cvd_delta=cvd_delta_60s
         )
         if isinstance(res, dict) and res.get("error") == "INSUFFICIENT_BALANCE":
             await self.notifier.notify_insufficient_balance(
