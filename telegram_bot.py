@@ -1,3 +1,5 @@
+import html
+import re
 from aegis_sentinel import ValkyrieAegisSentinel
 import os
 import aiohttp
@@ -29,7 +31,16 @@ class TelegramNotifier:
             async with aiohttp.ClientSession() as session:
                 async with session.post(self.api_url, json=payload, timeout=8) as resp:
                     if resp.status != 200:
-                        print(f">> Telegram Bildirim Hatasi (HTTP {resp.status})")
+                        err_text = await resp.text()
+                        print(f">> Telegram Bildirim Hatasi (HTTP {resp.status}): {err_text}")
+                        # HTML parse hatası durumunda HTML etiketlerini temizleyip düz metin olarak güvenli iletim
+                        if "can't parse entities" in err_text.lower() or "bad request" in err_text.lower():
+                            plain_text = re.sub(r'<[^>]+>', '', text)
+                            payload["text"] = plain_text
+                            payload.pop("parse_mode", None)
+                            async with session.post(self.api_url, json=payload, timeout=8) as fb_resp:
+                                if fb_resp.status == 200:
+                                    print(">> Telegram Bildirimi Düz Metin (Plain Text) Fallback ile başarıyla iletildi.")
         except Exception as e:
             print(f">> Telegram gonderim hatasi: {e}")
 
@@ -50,18 +61,39 @@ class TelegramNotifier:
                 await self.send_message(caption)
                 return
 
-            data = aiohttp.FormData()
-            data.add_field('chat_id', str(self.chat_id))
-            data.add_field('caption', caption[:1024])
-            data.add_field('parse_mode', 'HTML')
-            data.add_field('photo', buf, filename='trade_chart.png', content_type='image/png')
+            # Telegram fotoğraf açıklama (caption) limiti 1024 karakterdir.
+            # 1024 karakteri aştığında fotoğraf kısa başlıkla, tam detaylı quant raporu ise hemen ardından mesaj olarak iletilir.
+            if len(caption) <= 1000:
+                data = aiohttp.FormData()
+                data.add_field('chat_id', str(self.chat_id))
+                data.add_field('caption', caption)
+                data.add_field('parse_mode', 'HTML')
+                data.add_field('photo', buf, filename='trade_chart.png', content_type='image/png')
 
-            async with aiohttp.ClientSession() as session:
-                async with session.post(self.photo_url, data=data, timeout=15) as resp:
-                    if resp.status != 200:
-                        err_text = await resp.text()
-                        print(f">> Telegram sendPhoto Hatasi (HTTP {resp.status}): {err_text}, metin olarak iletiliyor...")
-                        await self.send_message(caption)
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(self.photo_url, data=data, timeout=15) as resp:
+                        if resp.status != 200:
+                            err_text = await resp.text()
+                            print(f">> Telegram sendPhoto Hatasi (HTTP {resp.status}): {err_text}, metin olarak iletiliyor...")
+                            await self.send_message(caption)
+            else:
+                # Başlık 1024 karakterden uzun: Fotoğrafı özet başlıkla gönder, ardından tüm detaylı metni ilet
+                lines = [l.strip() for l in caption.strip().splitlines() if l.strip() and "━━" not in l]
+                headline = "\n".join(lines[:4]) if lines else "📊 <b>Valkyrie Quant Pozisyon Grafiği</b>"
+
+                data = aiohttp.FormData()
+                data.add_field('chat_id', str(self.chat_id))
+                data.add_field('caption', headline)
+                data.add_field('parse_mode', 'HTML')
+                data.add_field('photo', buf, filename='trade_chart.png', content_type='image/png')
+
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(self.photo_url, data=data, timeout=15) as resp:
+                        if resp.status != 200:
+                            err_text = await resp.text()
+                            print(f">> Telegram sendPhoto (Uzun) Hatasi (HTTP {resp.status}): {err_text}")
+                # Tüm detaylı metni mesaj olarak gönder (4096 karakter kapasitesi)
+                await self.send_message(caption)
         except Exception as e:
             print(f">> Telegram sendPhoto istisnasi: {e}, metin gonderiliyor...")
             await self.send_message(caption)
@@ -170,8 +202,8 @@ class TelegramNotifier:
         bal_line = f"💼 <b>Serbest Kasa:</b> <code>${free_balance:.2f} USDT</code>\n" if free_balance is not None else ""
         tp2_line = f"🚀 <b>TP2 Final:</b> <code>${pos['tp2']:.6f}</code>\n" if pos.get("tp2") else ""
 
-        macro_str = pos.get('macro_climate', '⚪ Nötr / Dengeli Piyasa')
-        decouple_str = pos.get('decoupling_status', '⚪ Nötr_Takipçi (Beta)')
+        macro_str = str(pos.get('macro_climate', '⚪ Nötr / Dengeli Piyasa'))
+        decouple_str = str(pos.get('decoupling_status', '⚪ Nötr_Takipçi (Beta)'))
         rs_score = pos.get('dynamic_rs_score', pos.get('rs_vs_btc', 0.0))
 
         f_rate = pos.get('entry_funding_rate', 0.0100)
@@ -184,12 +216,21 @@ class TelegramNotifier:
         liq_line = f"💥 <b>Tasfiye Teyidi:</b> <code>${liq_vol:,.0f} Perakende Tasfiyesi Süpürüldü 🎯</code>\n" if (liq_conf and liq_vol > 0) else ""
 
         cvd_val = float(pos.get('entry_cvd_pct', 50.0))
-        cvd_stat = pos.get('cvd_status', 'DENGELİ')
+        cvd_stat = str(pos.get('cvd_status', 'DENGELİ'))
         cvd_d = float(pos.get('entry_cvd_delta', 0.0))
         cvd_line = ""
         if cvd_val != 50.0 or cvd_stat != "DENGELİ":
             d_str = f"{cvd_d/1000:+.0f}K" if abs(cvd_d) >= 1000 else f"{cvd_d:+.0f}"
-            cvd_line = f"🔬 <b>Mikro-CVD:</b> <code>%{cvd_val:.1f} Alıcı (Delta: ${d_str}) — {cvd_stat}</code>\n"
+            safe_cvd_stat = html.escape(cvd_stat, quote=False)
+            cvd_line = f"🔬 <b>Mikro-CVD:</b> <code>%{cvd_val:.1f} Alıcı (Delta: ${d_str}) — {safe_cvd_stat}</code>\n"
+
+        # 🧠 Yapay Zeka Dinamik Taktik Brifingi
+        ai_tactic_note = self._generate_quant_entry_briefing(pos, vol_val, rs_score, macro_str)
+
+        # HTML injection/parse hatasını önlemek için dinamik metinleri sanitize et
+        safe_reason = html.escape(str(pos.get('reason', 'Strateji Sinyali')), quote=False)
+        safe_macro = html.escape(macro_str, quote=False)
+        safe_decouple = html.escape(decouple_str, quote=False)
 
         msg = f"""💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎
 ⚡ <b>YENİ POZİSYON AÇILDI</b> ⚡
@@ -201,11 +242,11 @@ Giriş: <code>${pos['entry_price']:.6f}</code> | Marjin: <b>${pos.get('margin_us
 🎯 <b>TP1 Hedefi:</b> <code>${pos.get('tp1', 0.0):.6f}</code>
 {tp2_line}🛡️ <b>Kâr Zırhı:</b> <code>+%7 ROE veya 90dk (%50 Kilit)</code>
 📊 <b>ATR / Hacim:</b> <code>%{atr_val:.2f} | {vol_val:.2f}x</code>
-🌐 <b>Makro İklim:</b> <code>{macro_str}</code>
-⚡ <b>Alfa/Beta Gücü:</b> <code>{decouple_str} (RS: {rs_score:+.2f})</code>
+🌐 <b>Makro İklim:</b> <code>{safe_macro}</code>
+⚡ <b>Alfa/Beta Gücü:</b> <code>{safe_decouple} (RS: {rs_score:+.2f})</code>
 {funding_line}{liq_line}{cvd_line}{bal_line}━━━━━━━━━━━━━━━━━━━━━━━━
-📌 <b>Setup:</b> <i>{pos['reason']}</i>
-{ai_tactic_note}⏰ <b>Zaman:</b> <code>{pos['entry_time']}</code>
+📌 <b>Setup:</b> <i>{safe_reason}</i>
+{ai_tactic_note}⏰ <b>Zaman:</b> <code>{pos.get('entry_time', '')}</code>
 💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎"""
 
         # Grafik Fotograf Olustur
@@ -294,8 +335,8 @@ Giriş: <code>${pos['entry_price']:.6f}</code> | Marjin: <b>${pos.get('margin_us
         return f"🧠 <b>Yapay Zeka Otopisi:</b> <i>{pool[idx % len(pool)]}</i>\n"
 
     async def notify_position_closed(self, record: dict, is_manual: bool = False, df_5m = None, levels: dict = None):
-        net_pnl = record["net_pnl"]
-        roe = record["roe_pct"]
+        net_pnl = float(record.get("net_pnl", 0.0))
+        roe = float(record.get("roe_pct", 0.0))
         is_win = net_pnl >= 0
         is_partial_tp1 = record.get("id", "").endswith("-TP1") or "Dinamik" in str(record.get("close_reason", "")) or "Zaman Kalkanı" in str(record.get("close_reason", ""))
         is_breakeven = "Breakeven" in str(record.get("close_reason", "")) or (record.get("is_half_closed") and not is_win)
@@ -307,11 +348,14 @@ Giriş: <code>${pos['entry_price']:.6f}</code> | Marjin: <b>${pos.get('margin_us
             pnl_emoji = "🛡️ <b>BREAKEVEN KORUMASI İLE KAPATILDI (0 RİSK KORUMASI)</b> 🟢"
         else:
             pnl_emoji = "🎉 <b>KÂRLI KAPANIŞ (TAM HEDEF)</b> 🟢" if is_win else "🛑 <b>ZARAR KES (STOP)</b> 🔴"
-        clean_sym = record["symbol"].replace("/USDT", "")
+        clean_sym = record.get("symbol", "").replace("/USDT", "")
 
         manual_tag = "\n⚠️ <i>Kullanıcı Dashboard üzerinden acil müdahale ile pozisyonu kapattı.</i>\n" if is_manual else ""
         bal_after = record.get('balance_after', '')
-        bal_str = f"💼 <b>Güncel Toplam Kasa:</b> <b>{bal_after:.2f} USDT</b>\n" if bal_after != '' else ""
+        try:
+            bal_str = f"💼 <b>Güncel Toplam Kasa:</b> <b>{float(bal_after):.2f} USDT</b>\n" if bal_after != '' else ""
+        except Exception:
+            bal_str = ""
 
         open_reason = record.get("reason", "Strateji Sinyali")
         close_reason = record.get("close_reason", "Hedef/Stop Kapanışı")
@@ -320,20 +364,23 @@ Giriş: <code>${pos['entry_price']:.6f}</code> | Marjin: <b>${pos.get('margin_us
         # 🧠 Yapay Zeka Dinamik İşlem Otopisi (20+ Varyasyon)
         ai_autopsy_note = self._generate_quant_exit_autopsy(record, net_pnl, roe, is_win, is_partial_tp1, is_breakeven, is_manual)
 
-        macro_line = f"🌐 <b>İşlem İklimi:</b> <code>{record.get('macro_climate')}</code>\n" if record.get('macro_climate') else ""
+        safe_open_reason = html.escape(str(open_reason), quote=False)
+        safe_close_reason = html.escape(str(close_reason), quote=False)
+        safe_macro = html.escape(str(record.get('macro_climate', '')), quote=False)
+        macro_line = f"🌐 <b>İşlem İklimi:</b> <code>{safe_macro}</code>\n" if safe_macro else ""
 
         msg = f"""💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎
 {pnl_emoji}
 ━━━━━━━━━━━━━━━━━━━━━━━━
-Parite: <b>#{clean_sym}/USDT</b> ({record['side']} {record['leverage']}x)
-Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record['exit_price']:.6f}</code>
+Parite: <b>#{clean_sym}/USDT</b> ({record.get('side', '')} {record.get('leverage', 5)}x)
+Giriş: <code>${float(record.get('entry_price', 0.0)):.6f}</code> ➔ Çıkış: <code>${float(record.get('exit_price', 0.0)):.6f}</code>
 ━━━━━━━━━━━━━━━━━━━━━━━━
 💰 <b>Net Kâr / Zarar:</b> <b>{net_pnl:+.4f} USDT ({roe:+.2f}%)</b>
-💵 <b>Brüt:</b> {record.get('gross_pnl', net_pnl):+.4f} $ | 💸 <b>Komisyon:</b> {record['fees']:.4f} $
+💵 <b>Brüt:</b> {float(record.get('gross_pnl', net_pnl)):+.4f} $ | 💸 <b>Komisyon:</b> {float(record.get('fees', 0.0)):.4f} $
 {bal_str}━━━━━━━━━━━━━━━━━━━━━━━━
-📥 <b>Açılış Nedeni:</b> <i>{open_reason}</i>
-📤 <b>Kapanış Nedeni:</b> <i>{close_reason}</i>{manual_tag}{partial_note}
-{macro_line}{ai_autopsy_note}⏰ <b>Çıkış Zamanı:</b> <code>{record['exit_time']}</code>
+📥 <b>Açılış Nedeni:</b> <i>{safe_open_reason}</i>
+📤 <b>Kapanış Nedeni:</b> <i>{safe_close_reason}</i>{manual_tag}{partial_note}
+{macro_line}{ai_autopsy_note}⏰ <b>Çıkış Zamanı:</b> <code>{record.get('exit_time', '')}</code>
 💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎"""
 
         chart_buf = None
@@ -351,11 +398,11 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
                     symbol=record["symbol"],
                     df_5m=df_5m,
                     levels=levels or {},
-                    side=record["side"],
-                    entry_price=record["entry_price"],
-                    exit_price=record["exit_price"],
+                    side=record.get("side", "LONG"),
+                    entry_price=record.get("entry_price"),
+                    exit_price=record.get("exit_price"),
                     entry_timestamp=entry_ts,
-                    reason=record["close_reason"],
+                    reason=record.get("close_reason", ""),
                     is_closed=True,
                     net_pnl=net_pnl,
                     roe_pct=roe
@@ -368,18 +415,18 @@ Giriş: <code>${record['entry_price']:.6f}</code> ➔ Çıkış: <code>${record[
                         os.makedirs("ANALİZ/KRİTİK_GRAFİKLER", exist_ok=True)
                         clean_dt = datetime.now().strftime("%Y%m%d_%H%M%S")
                         pnl_label = f"KÂR_{net_pnl:+.2f}USDT" if is_win else f"ZARAR_{net_pnl:+.2f}USDT"
-                        fname = f"{clean_dt}_{clean_sym}_{record['side']}_{pnl_label}.png".replace("+", "plus_").replace("-", "minus_").replace("$", "")
+                        fname = f"{clean_dt}_{clean_sym}_{record.get('side', '')}_{pnl_label}.png".replace("+", "plus_").replace("-", "minus_").replace("$", "")
                         fpath = os.path.join("ANALİZ/KRİTİK_GRAFİKLER", fname)
                         with open(fpath, "wb") as f_img:
                             f_img.write(chart_buf.getvalue())
-                        archive_tag = f"\n📸 <b>Adli Analiz Grafiği Kaydedildi:</b> <code>ANALİZ/KRİTİK_GRAFİKLER/{fname}</code>\n"
+                        archive_tag = f"📸 <b>Adli Analiz Grafiği Kaydedildi:</b> <code>ANALİZ/KRİTİK_GRAFİKLER/{fname}</code>\n"
                     except Exception as ex_arch:
                         print(f"[ARŞİVLEME HATA]: {ex_arch}")
             except Exception as e:
                 print(f"[TELEGRAM] Kapanis grafigi olusturulamadi: {e}")
 
         if archive_tag:
-            msg = msg.replace("💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎\n⏰", f"{archive_tag}💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎\n⏰")
+            msg = msg.replace("⏰ <b>Çıkış Zamanı:</b>", f"{archive_tag}⏰ <b>Çıkış Zamanı:</b>")
 
         if chart_buf:
             await self.send_photo(chart_buf, msg)

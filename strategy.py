@@ -396,26 +396,32 @@ class StrategyEngine:
     async def _notify_open(self, pos: dict, levels: dict = None):
         if not self.notifier:
             return
-        symbol = pos.get("symbol", "")
-        df_5m = self.market_data.candles_5m.get(symbol) if self.market_data else None
-        await self.notifier.notify_position_opened(
-            pos=pos,
-            free_balance=self.paper_trader.get_free_balance(),
-            df_5m=df_5m,
-            levels=levels
-        )
+        try:
+            symbol = pos.get("symbol", "")
+            df_5m = self.market_data.candles_5m.get(symbol) if self.market_data else None
+            await self.notifier.notify_position_opened(
+                pos=pos,
+                free_balance=self.paper_trader.get_free_balance(),
+                df_5m=df_5m,
+                levels=levels
+            )
+        except Exception as e:
+            print(f">> [TELEGRAM BİLDİRİM AÇILIŞ HATASI] {pos.get('symbol')}: {e}")
 
     async def _notify_close(self, record: dict, is_manual: bool = False, levels: dict = None):
         if not self.notifier or not record:
             return
-        symbol = record.get("symbol", "")
-        df_5m = self.market_data.candles_5m.get(symbol) if self.market_data else None
-        await self.notifier.notify_position_closed(
-            record=record,
-            is_manual=is_manual,
-            df_5m=df_5m,
-            levels=levels
-        )
+        try:
+            symbol = record.get("symbol", "")
+            df_5m = self.market_data.candles_5m.get(symbol) if self.market_data else None
+            await self.notifier.notify_position_closed(
+                record=record,
+                is_manual=is_manual,
+                df_5m=df_5m,
+                levels=levels
+            )
+        except Exception as e:
+            print(f">> [TELEGRAM BİLDİRİM KAPANIŞ HATASI] {record.get('symbol')}: {e}")
 
     async def _safe_close_position(self, *args, **kwargs):
         res = self.paper_trader.close_position(*args, **kwargs)
