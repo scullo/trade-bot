@@ -998,20 +998,20 @@ class MarketDataManager:
         kline_chunks = [kline_streams[i:i + chunk_size] for i in range(0, len(kline_streams), chunk_size)]
 
         async def kline_worker(chunk):
-            url = f"wss://fstream.binance.com/stream?streams={'/'.join(chunk)}"
+            url = f"wss://fstream.binance.com/market/stream?streams={'/'.join(chunk)}"
             while True:
                 try:
                     async with aiohttp.ClientSession() as session:
                         async with session.ws_connect(url, heartbeat=10) as ws:
+                            print(f">> [CANLI] K-Line & Mikro-CVD Stream chunk baglandi ({len(chunk)} parite).")
                             async for msg in ws:
                                 if msg.type == aiohttp.WSMsgType.TEXT:
                                     data = json.loads(msg.data)
-                                    payload = data.get('data', {})
+                                    payload = data.get('data', data) if isinstance(data, dict) else {}
                                     kline = payload.get('k', {})
-                                    raw_s = payload.get('s', '').upper()
-                                    if raw_s in symbol_map and kline:
-                                        norm_s = symbol_map[raw_s]
-
+                                    raw_s = (payload.get('s') or kline.get('s') or (data.get('stream', '').split('@')[0] if isinstance(data, dict) and '@' in data.get('stream', '') else '')).upper()
+                                    norm_s = symbol_map.get(raw_s, raw_s.replace('USDT', '/USDT'))
+                                    if norm_s in self.all_symbols and kline:
                                         # Anlık Mikro-CVD (Taker Buy vs Taker Sell) Hesaplama (<0.001ms)
                                         try:
                                             cur_q = float(kline.get('q', 0.0))
@@ -1099,7 +1099,8 @@ class MarketDataManager:
                                                 await self.on_candle_close_callback(norm_s, new_candle, prev_candle)
                                 elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
                                     break
-                except Exception:
+                except Exception as e:
+                    print(f">> [K-LINE WS UYARI] {e}")
                     await asyncio.sleep(2)
 
         # Worker 3: 5M Periyodik REST Mum Senkronizasyonu (Ultra Hizli Paralel 100 Parite Taramasi)
