@@ -1115,6 +1115,7 @@ HTML_PAGE = """
         }
 
         /* 1. COCKPIT HERO FINANSAL KPI GRID */
+        /* 1. COCKPIT HERO FINANSAL KPI GRID (MİKRO-SİMÜLASYONLU & CAM EFEKTLİ) */
         .cockpit-kpi-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -1122,16 +1123,23 @@ HTML_PAGE = """
             margin-bottom: 24px;
         }
         .cockpit-kpi-card {
-            background: linear-gradient(180deg, rgba(18, 25, 40, 0.9) 0%, rgba(13, 18, 30, 0.95) 100%);
-            border: 1px solid var(--border);
-            border-radius: 16px;
+            background: linear-gradient(180deg, rgba(18, 25, 40, 0.88) 0%, rgba(12, 17, 28, 0.94) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            border-radius: 18px;
             padding: 18px 20px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(12px);
+            transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+        .cockpit-kpi-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(0, 242, 254, 0.35);
+            box-shadow: 0 12px 38px rgba(0, 0, 0, 0.55), 0 0 20px rgba(0, 242, 254, 0.12);
         }
         .cockpit-kpi-card::after {
             content: '';
@@ -1141,12 +1149,53 @@ HTML_PAGE = """
             right: 0;
             height: 3px;
             background: linear-gradient(90deg, #00f2fe, #4facfe);
+            z-index: 3;
+        }
+        .cockpit-kpi-card.kpi-card-growth::after {
+            background: linear-gradient(90deg, #10b981, #00f2fe);
+        }
+        .cockpit-kpi-card.kpi-card-growth.drawdown::after {
+            background: linear-gradient(90deg, #f43f5e, #fb923c);
+        }
+        .cockpit-kpi-card.kpi-card-radar::after {
+            background: linear-gradient(90deg, #38bdf8, #818cf8);
+        }
+        .cockpit-kpi-card.kpi-card-reactor::after {
+            background: linear-gradient(90deg, #c084fc, #00f2fe);
+        }
+        .kpi-sim-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .kpi-card-inner {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
         }
         .kpi-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .kpi-card-title { font-size: 12px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
-        .kpi-card-icon { font-size: 18px; }
-        .kpi-card-val { font-size: 24px; font-weight: 900; font-family: 'JetBrains Mono', monospace; color: #ffffff; margin-bottom: 4px; }
-        .kpi-card-sub { font-size: 11.5px; color: #64748b; font-family: 'JetBrains Mono', monospace; }
+        .kpi-card-title { font-size: 11.5px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.6px; display: inline-flex; align-items: center; gap: 6px; }
+        .kpi-card-icon { font-size: 18px; filter: drop-shadow(0 0 8px rgba(0,242,254,0.3)); }
+        .kpi-card-val { font-size: 25px; font-weight: 900; font-family: 'JetBrains Mono', monospace; color: #ffffff; margin-bottom: 4px; text-shadow: 0 0 16px rgba(255,255,255,0.15); }
+        .kpi-card-sub { font-size: 11.5px; color: #94a3b8; font-family: 'JetBrains Mono', monospace; }
+        .kpi-telemetry-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 9.5px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 2px 7px;
+            border-radius: 6px;
+            letter-spacing: 0.5px;
+        }
 
         /* 🧠 VALKYRIE AI CANLI AKIL & YORUM ODASI */
         .ai-quant-room {
@@ -2331,48 +2380,73 @@ HTML_PAGE = """
          ========================================================================= -->
     <div id="main-tab-content-cockpit" class="main-tab-content active-tab">
         <!-- 4 HERO FINANSAL KPI KARTI -->
+        <!-- 4 HERO FINANSAL KPI KARTI (MİKRO-SİMÜLASYONLU) -->
         <div class="cockpit-kpi-grid">
-            <div class="cockpit-kpi-card">
-                <div class="kpi-card-head">
-                    <span class="kpi-card-title">Toplam Kasa Bakiyesi</span>
-                    <span class="kpi-card-icon">💼</span>
+            <div class="cockpit-kpi-card kpi-card-vault" id="card-kpi-vault">
+                <canvas class="kpi-sim-canvas" id="canvas-kpi-vault"></canvas>
+                <div class="kpi-card-inner">
+                    <div class="kpi-card-head">
+                        <span class="kpi-card-title">
+                            Toplam Kasa Bakiyesi
+                            <span class="kpi-telemetry-chip" style="background:rgba(0,242,254,0.12); border:1px solid rgba(0,242,254,0.3); color:var(--cyan);">REZERV</span>
+                        </span>
+                        <span class="kpi-card-icon">💼</span>
+                    </div>
+                    <div class="kpi-card-val" id="cockpit-balance">10,000.00 $</div>
+                    <div class="kpi-card-sub" id="cockpit-free-bal">Kullanılabilir Kasa: $10,000.00 USDT (5x)</div>
+                    <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px; display:flex; align-items:center; gap:5px;">
+                        <span>🛡️ Dinamik Sermaye Koruması Aktif</span>
+                    </div>
                 </div>
-                <div class="kpi-card-val" id="cockpit-balance">10,000.00 $</div>
-                <div class="kpi-card-sub" id="cockpit-free-bal">Serbest: 10,000.00 USDT (5x)</div>
-                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">🛡️ Dinamik Sermaye Koruması Aktif</div>
             </div>
 
-            <div class="cockpit-kpi-card">
-                <div class="kpi-card-head">
-                    <span class="kpi-card-title">Net Kâr / Zarar & Büyüme</span>
-                    <span class="kpi-card-icon">📈</span>
+            <div class="cockpit-kpi-card kpi-card-growth" id="card-kpi-growth">
+                <canvas class="kpi-sim-canvas" id="canvas-kpi-growth"></canvas>
+                <div class="kpi-card-inner">
+                    <div class="kpi-card-head">
+                        <span class="kpi-card-title">
+                            Net Kâr / Zarar & Büyüme
+                            <span class="kpi-telemetry-chip" id="chip-kpi-growth" style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:var(--green);">CANLI NABIZ</span>
+                        </span>
+                        <span class="kpi-card-icon">📈</span>
+                    </div>
+                    <div class="kpi-card-val" id="cockpit-pnl" style="color:var(--green);">+0.00 $</div>
+                    <div class="kpi-card-sub" id="cockpit-growth">+0.00% Büyüme</div>
+                    <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">Realize + Açık Pozisyonlar Toplamı</div>
                 </div>
-                <div class="kpi-card-val" id="cockpit-pnl" style="color:var(--green);">+0.00 $</div>
-                <div class="kpi-card-sub" id="cockpit-growth">+0.00% Kasa Büyümesi</div>
-                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">Realize + Açık Pozisyonlar Toplamı</div>
             </div>
 
-            <div class="cockpit-kpi-card">
-                <div class="kpi-card-head">
-                    <span class="kpi-card-title">Kazanma Oranı (Win Rate)</span>
-                    <span class="kpi-card-icon">🎯</span>
+            <div class="cockpit-kpi-card kpi-card-radar" id="card-kpi-radar">
+                <canvas class="kpi-sim-canvas" id="canvas-kpi-radar"></canvas>
+                <div class="kpi-card-inner">
+                    <div class="kpi-card-head">
+                        <span class="kpi-card-title">
+                            Kazanma Oranı (Win Rate)
+                            <span class="kpi-telemetry-chip" id="chip-kpi-winrate" style="background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3); color:#38bdf8;">RADAR</span>
+                        </span>
+                        <span class="kpi-card-icon">🎯</span>
+                    </div>
+                    <div class="kpi-card-val" id="cockpit-winrate">%0.0</div>
+                    <div class="kpi-card-sub" id="cockpit-win-loss-count">0 Kazanç / 0 Kayıp</div>
+                    <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">Sürdürülebilir Hedef: &gt; %50.0</div>
                 </div>
-                <div class="kpi-card-val" id="cockpit-winrate">%0.0</div>
-                <div class="kpi-card-sub" id="cockpit-win-loss-count">0 Kazanç / 0 Kayıp</div>
-                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">Sürdürülebilir Hedef: &gt; %50.0</div>
             </div>
 
-            <div class="cockpit-kpi-card" title="Profit Factor (Kâr Faktörü): Dünyadaki kurumsal fonların en temel sistem kalite göstergesidir. Kaybedilen her 1$'a karşılık kasaya kaç dolar kâr girdiğini ifade eder.">
-                <div class="kpi-card-head">
-                    <span class="kpi-card-title" style="display:inline-flex; align-items:center; gap:6px;">
-                        KÂR FAKTÖRÜ (PROFIT FACTOR)
-                        <span class="kpi-info-icon" title="Profit Factor (Kâr Faktörü): Sistemin kurumsal getiri kalitesini gösterir. Kaybedilen her 1$'a karşılık kasaya kaç dolar kâr girdiğini ifade eder.&#10;&#10;Formül: Toplam Kâr ÷ Toplam Kayıp&#10;• < 1.00x: Negatif (Zarar Baskısı)&#10;• 1.00x: Başa-Baş&#10;• 1.20x - 1.50x: Kârlı Sistem&#10;• 1.50x - 2.00x: Çok Güçlü&#10;• 2.00x+: Kurumsal Elit Seviye" style="cursor:help; font-size:11px; color:#38bdf8; background:rgba(56, 189, 248, 0.15); border-radius:50%; width:16px; height:16px; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(56, 189, 248, 0.35);">ⓘ</span>
-                    </span>
-                    <span class="kpi-card-icon" title="Sistemin Kâr/Zarar Güç Çarpanı">💎</span>
+            <div class="cockpit-kpi-card kpi-card-reactor" id="card-kpi-reactor" title="Profit Factor (Kâr Faktörü): Dünyadaki kurumsal fonların en temel sistem kalite göstergesidir. Kaybedilen her 1$'a karşılık kasaya kaç dolar kâr girdiğini ifade eder.">
+                <canvas class="kpi-sim-canvas" id="canvas-kpi-reactor"></canvas>
+                <div class="kpi-card-inner">
+                    <div class="kpi-card-head">
+                        <span class="kpi-card-title">
+                            KÂR FAKTÖRÜ (PROFIT FACTOR)
+                            <span class="kpi-info-icon" title="Profit Factor (Kâr Faktörü): Sistemin kurumsal getiri kalitesini gösterir. Kaybedilen her 1$'a karşılık kasaya kaç dolar kâr girdiğini ifade eder.&#10;&#10;Formül: Toplam Kâr ÷ Toplam Kayıp&#10;• < 1.00x: Negatif (Zarar Baskısı)&#10;• 1.00x: Başa-Baş&#10;• 1.20x - 1.50x: Kârlı Sistem&#10;• 1.50x - 2.00x: Çok Güçlü&#10;• 2.00x+: Kurumsal Elit Seviye" style="cursor:help; font-size:11px; color:#38bdf8; background:rgba(56, 189, 248, 0.15); border-radius:50%; width:16px; height:16px; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(56, 189, 248, 0.35);">ⓘ</span>
+                            <span class="kpi-telemetry-chip" id="chip-kpi-reactor" style="background:rgba(192,132,252,0.12); border:1px solid rgba(192,132,252,0.3); color:#c084fc;">REAKTÖR</span>
+                        </span>
+                        <span class="kpi-card-icon" title="Sistemin Kâr/Zarar Güç Çarpanı">💎</span>
+                    </div>
+                    <div class="kpi-card-val" id="cockpit-pf" style="color:#94a3b8;">— (İşlem Bekleniyor)</div>
+                    <div class="kpi-card-sub" id="cockpit-fees">Brüt Kâr: +$0.00 | Kayıp: -$0.00</div>
+                    <div id="cockpit-pf-note" style="font-size:11px; color:#38bdf8; font-family:'JetBrains Mono', monospace; margin-top:3px; font-weight:700;">Her 1$ Kayba: İlk işlem bekleniyor</div>
                 </div>
-                <div class="kpi-card-val" id="cockpit-pf" style="color:#94a3b8;">— (İşlem Bekleniyor)</div>
-                <div class="kpi-card-sub" id="cockpit-fees">Brüt Kâr: +$0.00 | Kayıp: -$0.00</div>
-                <div id="cockpit-pf-note" style="font-size:11px; color:#38bdf8; font-family:'JetBrains Mono', monospace; margin-top:3px; font-weight:700;">Her 1$ Kayba: İlk işlem bekleniyor</div>
             </div>
         </div>
 
@@ -4541,6 +4615,7 @@ async function loadAdminMetrics() {
             if (tabName === 'cockpit') {
                 renderCockpitView();
                 if (window.ValkyrieBattleEngine) ValkyrieBattleEngine.resize();
+                if (window.ValkyrieKpiSimEngine) window.ValkyrieKpiSimEngine.resize();
             } else if (tabName === 'positions') {
                 renderPositions();
             } else if (tabName === 'radar') {
@@ -4953,6 +5028,646 @@ async function loadAdminMetrics() {
         window.toggleBattleView = toggleBattleView;
         window.setBattleViewMode = setBattleViewMode;
         window.restoreBattleViewPreference = restoreBattleViewPreference;
+
+        // =========================================================================
+        // 🔮 VALKYRIE 4X KPI QUANT SIMULATION ENGINE (GÖRSEL ŞÖLEN & CANLI SİMÜLASYON)
+        // =========================================================================
+        const ValkyrieKpiSimEngine = (function() {
+            let canvases = {};
+            let ctxs = {};
+            let sizes = {};
+            let animId = null;
+            let dpr = window.devicePixelRatio || 1;
+            let isRunning = false;
+
+            let metrics = {
+                balance: 10000.0,
+                initialBalance: 10000.0,
+                pnl: 0.0,
+                growthPct: 0.0,
+                winRate: 0.0,
+                wins: 0,
+                losses: 0,
+                totalTrades: 0,
+                pf: 0.0
+            };
+
+            // 1. Vault Sim State
+            let vaultTime = 0;
+            let vaultRipples = [];
+            let vaultParticles = [];
+            for (let i = 0; i < 18; i++) {
+                vaultParticles.push({
+                    x: Math.random(),
+                    y: 0.5 + Math.random() * 0.5,
+                    vx: (Math.random() - 0.5) * 0.002,
+                    vy: -(0.003 + Math.random() * 0.004),
+                    size: 1 + Math.random() * 2,
+                    alpha: 0.2 + Math.random() * 0.5
+                });
+            }
+
+            // 2. Growth Sim State
+            let ekgPhase = 0;
+            let growthSparks = [];
+            for (let i = 0; i < 20; i++) {
+                growthSparks.push({
+                    x: Math.random(),
+                    y: Math.random(),
+                    vx: (Math.random() - 0.5) * 0.004,
+                    vy: -(0.003 + Math.random() * 0.006),
+                    size: 1 + Math.random() * 2,
+                    alpha: Math.random() * 0.7
+                });
+            }
+
+            // 3. Radar Sim State
+            let radarAngle = 0;
+            let radarBlips = [];
+            function refreshRadarBlips() {
+                radarBlips = [];
+                const total = Math.min(12, Math.max(4, metrics.totalTrades || 6));
+                const winCount = metrics.wins || 0;
+                for (let i = 0; i < total; i++) {
+                    const isWin = i < winCount;
+                    const r = 0.25 + Math.random() * 0.65;
+                    const theta = Math.random() * Math.PI * 2;
+                    radarBlips.push({
+                        x: Math.cos(theta) * r,
+                        y: Math.sin(theta) * r,
+                        theta: theta < 0 ? theta + Math.PI * 2 : theta,
+                        isWin: isWin,
+                        intensity: 0.2
+                    });
+                }
+            }
+            refreshRadarBlips();
+
+            // 4. Reactor Sim State
+            let reactorAngle = 0;
+            let reactorTilt = 0;
+            let reactorParticles = [];
+            for (let i = 0; i < 22; i++) {
+                reactorParticles.push({
+                    angle: Math.random() * Math.PI * 2,
+                    dist: 12 + Math.random() * 24,
+                    speed: (0.015 + Math.random() * 0.03) * (Math.random() > 0.5 ? 1 : -1),
+                    size: 1 + Math.random() * 2,
+                    alpha: 0.3 + Math.random() * 0.6
+                });
+            }
+
+            function init() {
+                const ids = ['vault', 'growth', 'radar', 'reactor'];
+                ids.forEach(id => {
+                    const c = document.getElementById('canvas-kpi-' + id);
+                    if (c) {
+                        canvases[id] = c;
+                        ctxs[id] = c.getContext('2d');
+                    }
+                });
+
+                resize();
+                window.addEventListener('resize', resize);
+                startLoop();
+            }
+
+            function resize() {
+                dpr = window.devicePixelRatio || 1;
+                for (const id in canvases) {
+                    const c = canvases[id];
+                    if (!c) continue;
+                    const rect = c.parentElement ? c.parentElement.getBoundingClientRect() : c.getBoundingClientRect();
+                    const w = rect.width || 280;
+                    const h = rect.height || 135;
+                    sizes[id] = { w, h };
+                    c.width = Math.floor(w * dpr);
+                    c.height = Math.floor(h * dpr);
+                    const ctx = ctxs[id];
+                    if (ctx) {
+                        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                    }
+                }
+            }
+
+            function updateMetrics(newData) {
+                const prevBal = metrics.balance;
+                metrics = Object.assign(metrics, newData);
+
+                if (Math.abs(metrics.balance - prevBal) > 0.5) {
+                    vaultRipples.push({ r: 5, maxR: 70, alpha: 0.8 });
+                }
+
+                const growthCard = document.getElementById('card-kpi-growth');
+                const growthChip = document.getElementById('chip-kpi-growth');
+                if (growthCard) {
+                    if (metrics.pnl < 0) {
+                        growthCard.classList.add('drawdown');
+                        if (growthChip) {
+                            growthChip.style.background = 'rgba(244,63,94,0.15)';
+                            growthChip.style.borderColor = 'rgba(244,63,94,0.35)';
+                            growthChip.style.color = 'var(--red)';
+                            growthChip.innerText = '🛡️ SAVUNMA';
+                        }
+                    } else {
+                        growthCard.classList.remove('drawdown');
+                        if (growthChip) {
+                            growthChip.style.background = 'rgba(16,185,129,0.15)';
+                            growthChip.style.borderColor = 'rgba(16,185,129,0.35)';
+                            growthChip.style.color = 'var(--green)';
+                            growthChip.innerText = 'CANLI NABIZ';
+                        }
+                    }
+                }
+
+                const reactorChip = document.getElementById('chip-kpi-reactor');
+                if (reactorChip) {
+                    if (metrics.pf >= 2.0) {
+                        reactorChip.style.background = 'rgba(192,132,252,0.18)';
+                        reactorChip.style.borderColor = 'rgba(192,132,252,0.45)';
+                        reactorChip.style.color = '#c084fc';
+                        reactorChip.innerText = '🏆 ELİT ALFA';
+                    } else if (metrics.pf >= 1.5) {
+                        reactorChip.style.background = 'rgba(16,185,129,0.18)';
+                        reactorChip.style.borderColor = 'rgba(16,185,129,0.45)';
+                        reactorChip.style.color = 'var(--green)';
+                        reactorChip.innerText = '⚡ GÜÇLÜ';
+                    } else if (metrics.pf >= 1.0) {
+                        reactorChip.style.background = 'rgba(245,158,11,0.18)';
+                        reactorChip.style.borderColor = 'rgba(245,158,11,0.45)';
+                        reactorChip.style.color = '#fbbf24';
+                        reactorChip.innerText = '🟡 KÂRLI';
+                    } else {
+                        reactorChip.style.background = 'rgba(244,63,94,0.18)';
+                        reactorChip.style.borderColor = 'rgba(244,63,94,0.45)';
+                        reactorChip.style.color = 'var(--red)';
+                        reactorChip.innerText = '🛡️ KALKAN';
+                    }
+                }
+
+                refreshRadarBlips();
+            }
+
+            function startLoop() {
+                if (isRunning) return;
+                isRunning = true;
+                function loop() {
+                    render();
+                    animId = requestAnimationFrame(loop);
+                }
+                animId = requestAnimationFrame(loop);
+            }
+
+            // 1. RENDER VAULT (KUANTUM LİKİDİTE KASASI)
+            function renderVault(ctx, w, h) {
+                ctx.clearRect(0, 0, w, h);
+                vaultTime += 0.025;
+
+                // Wave layer
+                const waveH = h * 0.32;
+                ctx.save();
+                const grad = ctx.createLinearGradient(0, h - waveH, 0, h);
+                grad.addColorStop(0, 'rgba(0, 242, 254, 0.09)');
+                grad.addColorStop(1, 'rgba(79, 172, 254, 0.01)');
+                ctx.fillStyle = grad;
+
+                ctx.beginPath();
+                ctx.moveTo(0, h);
+                for (let x = 0; x <= w; x += 10) {
+                    const y = (h - waveH * 0.6) + Math.sin(x * 0.018 + vaultTime) * 6 + Math.cos(x * 0.035 - vaultTime * 0.8) * 3;
+                    ctx.lineTo(x, y);
+                }
+                ctx.lineTo(w, h);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.strokeStyle = 'rgba(0, 242, 254, 0.35)';
+                ctx.lineWidth = 1.2;
+                ctx.stroke();
+                ctx.restore();
+
+                // Floating Sparkles
+                ctx.save();
+                for (let p of vaultParticles) {
+                    p.y += p.vy;
+                    p.x += p.vx;
+                    if (p.y < 0.2) { p.y = 0.95; p.x = Math.random(); }
+                    if (p.x < 0) p.x = 1; if (p.x > 1) p.x = 0;
+
+                    ctx.fillStyle = `rgba(0, 242, 254, ${p.alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x * w, p.y * h, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+
+                // Holographic 3D Orb on right
+                const ox = w - 48;
+                const oy = h * 0.48;
+                const r = 24;
+
+                ctx.save();
+                const corePulse = 1 + Math.sin(vaultTime * 2) * 0.08;
+                const orbGrad = ctx.createRadialGradient(ox, oy, 2, ox, oy, r * 1.5 * corePulse);
+                orbGrad.addColorStop(0, 'rgba(0, 242, 254, 0.35)');
+                orbGrad.addColorStop(0.5, 'rgba(79, 172, 254, 0.12)');
+                orbGrad.addColorStop(1, 'rgba(0, 242, 254, 0)');
+                ctx.fillStyle = orbGrad;
+                ctx.beginPath();
+                ctx.arc(ox, oy, r * 1.5 * corePulse, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.lineWidth = 1.3;
+                const drawRing = (rx, ry, rot, col) => {
+                    ctx.save();
+                    ctx.translate(ox, oy);
+                    ctx.rotate(rot);
+                    ctx.strokeStyle = col;
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.restore();
+                };
+
+                drawRing(r, r * Math.abs(Math.cos(vaultTime)), vaultTime * 0.6, 'rgba(0, 242, 254, 0.55)');
+                drawRing(r * Math.abs(Math.sin(vaultTime * 0.8)), r, -vaultTime * 0.7, 'rgba(129, 140, 248, 0.5)');
+                drawRing(r * 0.75, r * 0.75 * Math.abs(Math.sin(vaultTime * 1.2)), Math.PI / 4 + vaultTime, 'rgba(56, 189, 248, 0.6)');
+
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowColor = '#00f2fe';
+                ctx.shadowBlur = 8;
+                ctx.beginPath();
+                ctx.arc(ox, oy, 3.5 * corePulse, 0, Math.PI * 2);
+                ctx.fill();
+
+                for (let i = vaultRipples.length - 1; i >= 0; i--) {
+                    const rip = vaultRipples[i];
+                    rip.r += 1.8;
+                    rip.alpha *= 0.94;
+                    ctx.strokeStyle = `rgba(0, 242, 254, ${rip.alpha})`;
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.arc(ox, oy, rip.r, 0, Math.PI * 2);
+                    ctx.stroke();
+                    if (rip.alpha < 0.02 || rip.r >= rip.maxR) {
+                        vaultRipples.splice(i, 1);
+                    }
+                }
+                ctx.restore();
+            }
+
+            // 2. RENDER GROWTH (NEON EKG NABZI)
+            function renderGrowth(ctx, w, h) {
+                ctx.clearRect(0, 0, w, h);
+                ekgPhase += 0.035;
+
+                const isPositive = metrics.pnl >= 0;
+                const mainColor = isPositive ? '#10b981' : '#f43f5e';
+                const glowColor = isPositive ? 'rgba(16, 185, 129, ' : 'rgba(244, 63, 94, ';
+
+                ctx.save();
+                for (let p of growthSparks) {
+                    p.y += p.vy;
+                    p.x += p.vx;
+                    if (p.y < 0.05) { p.y = 0.95; p.x = Math.random(); }
+                    if (p.x < 0) p.x = 1; if (p.x > 1) p.x = 0;
+
+                    ctx.fillStyle = glowColor + (p.alpha * 0.45) + ')';
+                    ctx.beginPath();
+                    ctx.arc(p.x * w, p.y * h, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+
+                const baseY = h * 0.72;
+                ctx.save();
+                ctx.strokeStyle = mainColor;
+                ctx.shadowColor = mainColor;
+                ctx.shadowBlur = 9;
+                ctx.lineWidth = 2;
+
+                ctx.beginPath();
+                ctx.moveTo(0, baseY);
+
+                const scanPos = (ekgPhase * 60) % (w + 100) - 50;
+
+                for (let x = 0; x <= w; x += 3) {
+                    const distToScan = x - scanPos;
+                    let y = baseY;
+
+                    if (distToScan > -40 && distToScan < 40) {
+                        const t = (distToScan + 40) / 80;
+                        if (t > 0.25 && t < 0.35) {
+                            y -= Math.sin((t - 0.25) * 10 * Math.PI) * 5;
+                        } else if (t >= 0.35 && t < 0.42) {
+                            y += Math.sin((t - 0.35) * 14 * Math.PI) * 4;
+                        } else if (t >= 0.42 && t < 0.58) {
+                            const spikeH = isPositive ? 26 : 18;
+                            y -= Math.sin((t - 0.42) * 6.25 * Math.PI) * spikeH;
+                        } else if (t >= 0.58 && t < 0.68) {
+                            y += Math.sin((t - 0.58) * 10 * Math.PI) * 5;
+                        } else if (t >= 0.68 && t < 0.85) {
+                            y -= Math.sin((t - 0.68) * 5.88 * Math.PI) * 7;
+                        }
+                    } else {
+                        y += Math.sin(x * 0.04 + ekgPhase * 2) * 1.5;
+                    }
+
+                    ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+
+                if (scanPos >= 0 && scanPos <= w) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.shadowColor = '#ffffff';
+                    ctx.shadowBlur = 12;
+                    ctx.beginPath();
+                    ctx.arc(scanPos, baseY, 3.2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+
+                // Vector Indicator on right
+                const ax = w - 44;
+                const ay = h * 0.46;
+                ctx.save();
+                ctx.strokeStyle = glowColor + '0.45)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                if (isPositive) {
+                    ctx.moveTo(ax - 10, ay + 10);
+                    ctx.lineTo(ax, ay - 8);
+                    ctx.lineTo(ax + 10, ay + 10);
+                } else {
+                    ctx.moveTo(ax - 10, ay - 6);
+                    ctx.lineTo(ax, ay + 8);
+                    ctx.lineTo(ax + 10, ay - 6);
+                }
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // 3. RENDER RADAR (SİBER NİŞANGAH)
+            function renderRadar(ctx, w, h) {
+                ctx.clearRect(0, 0, w, h);
+                radarAngle += 0.035;
+
+                const cx = w - 48;
+                const cy = h * 0.48;
+                const r = 30;
+
+                ctx.save();
+
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.18)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(cx, cy, r * 0.55, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(cx - r - 4, cy); ctx.lineTo(cx - 6, cy);
+                ctx.moveTo(cx + 6, cy); ctx.lineTo(cx + r + 4, cy);
+                ctx.moveTo(cx, cy - r - 4); ctx.lineTo(cx, cy - 6);
+                ctx.moveTo(cx, cy + 6); ctx.lineTo(cx, cy + r + 4);
+                ctx.stroke();
+
+                const sweepGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+                sweepGrad.addColorStop(0, 'rgba(56, 189, 248, 0.25)');
+                sweepGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+                ctx.fillStyle = sweepGrad;
+
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.arc(cx, cy, r, radarAngle - 0.7, radarAngle);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.strokeStyle = '#38bdf8';
+                ctx.shadowColor = '#38bdf8';
+                ctx.shadowBlur = 8;
+                ctx.lineWidth = 1.4;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(cx + Math.cos(radarAngle) * r, cy + Math.sin(radarAngle) * r);
+                ctx.stroke();
+
+                for (let b of radarBlips) {
+                    const bx = cx + b.x * r;
+                    const by = cy + b.y * r;
+
+                    let dTheta = (radarAngle - b.theta) % (Math.PI * 2);
+                    if (dTheta < 0) dTheta += Math.PI * 2;
+                    if (dTheta < 0.25) {
+                        b.intensity = 1.0;
+                    } else {
+                        b.intensity = Math.max(0.15, b.intensity * 0.97);
+                    }
+
+                    const blipCol = b.isWin ? `rgba(16, 185, 129, ${b.intensity})` : `rgba(244, 63, 94, ${b.intensity})`;
+                    ctx.fillStyle = blipCol;
+                    ctx.shadowColor = b.isWin ? '#10b981' : '#f43f5e';
+                    ctx.shadowBlur = b.intensity > 0.5 ? 8 : 2;
+                    ctx.beginPath();
+                    ctx.arc(bx, by, b.intensity > 0.5 ? 2.5 : 1.8, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    if (b.intensity > 0.8) {
+                        ctx.strokeStyle = blipCol;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.arc(bx, by, (1 - b.intensity) * 12 + 2, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+                }
+
+                const wr = Math.max(0, Math.min(100, metrics.winRate || 0));
+                const startAngle = -Math.PI / 2;
+                const endAngle = startAngle + (wr / 100) * (Math.PI * 2);
+
+                ctx.shadowColor = '#00f2fe';
+                ctx.shadowBlur = 10;
+                ctx.strokeStyle = '#00f2fe';
+                ctx.lineWidth = 2.4;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r + 4, startAngle, endAngle);
+                ctx.stroke();
+
+                if (wr > 0) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(cx + Math.cos(endAngle) * (r + 4), cy + Math.sin(endAngle) * (r + 4), 2.8, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            }
+
+            // 4. RENDER REACTOR (KUANTUM ALFA REAKTÖRÜ)
+            function renderReactor(ctx, w, h) {
+                ctx.clearRect(0, 0, w, h);
+                const pf = metrics.pf || 0.0;
+
+                let colMain = '#c084fc';
+                let colSec = '#00f2fe';
+                let rotSpeed = 0.025;
+
+                if (pf >= 2.0) {
+                    colMain = '#c084fc';
+                    colSec = '#00f2fe';
+                    rotSpeed = 0.038;
+                } else if (pf >= 1.5) {
+                    colMain = '#10b981';
+                    colSec = '#34d399';
+                    rotSpeed = 0.030;
+                } else if (pf >= 1.0) {
+                    colMain = '#f59e0b';
+                    colSec = '#fbbf24';
+                    rotSpeed = 0.022;
+                } else {
+                    colMain = '#f43f5e';
+                    colSec = '#fb7185';
+                    rotSpeed = 0.016;
+                }
+
+                reactorAngle += rotSpeed;
+                reactorTilt += rotSpeed * 0.7;
+
+                const cx = w - 48;
+                const cy = h * 0.48;
+                const r = 24;
+
+                ctx.save();
+
+                for (let p of reactorParticles) {
+                    p.angle += p.speed;
+                    const px = cx + Math.cos(p.angle) * p.dist;
+                    const py = cy + Math.sin(p.angle) * p.dist * 0.55;
+                    ctx.fillStyle = colMain;
+                    ctx.globalAlpha = p.alpha * 0.65;
+                    ctx.beginPath();
+                    ctx.arc(px, py, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.globalAlpha = 1.0;
+
+                ctx.lineWidth = 1.4;
+                ctx.shadowColor = colMain;
+                ctx.shadowBlur = 8;
+
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(0.5);
+                ctx.strokeStyle = colMain;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, r * 1.3, r * 0.45 * Math.abs(Math.sin(reactorAngle)), 0, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(-0.5);
+                ctx.strokeStyle = colSec;
+                ctx.shadowColor = colSec;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, r * 1.3, r * 0.45 * Math.abs(Math.cos(reactorAngle * 0.9)), 0, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+
+                ctx.save();
+                ctx.translate(cx, cy);
+
+                const pts = [
+                    { x: 0, y: -r * 0.85, z: 0 },
+                    { x: 0, y: r * 0.85, z: 0 },
+                    { x: r * 0.75, y: 0, z: 0 },
+                    { x: -r * 0.75, y: 0, z: 0 },
+                    { x: 0, y: 0, z: r * 0.75 },
+                    { x: 0, y: 0, z: -r * 0.75 }
+                ];
+
+                const proj = pts.map(p => {
+                    const cosY = Math.cos(reactorAngle);
+                    const sinY = Math.sin(reactorAngle);
+                    let x1 = p.x * cosY + p.z * sinY;
+                    let z1 = -p.x * sinY + p.z * cosY;
+
+                    const cosX = Math.cos(reactorTilt);
+                    const sinX = Math.sin(reactorTilt);
+                    let y2 = p.y * cosX - z1 * sinX;
+                    return { x: x1, y: y2 };
+                });
+
+                ctx.strokeStyle = colMain;
+                ctx.lineWidth = 1.3;
+                ctx.beginPath();
+                const edges = [
+                    [0, 2], [0, 3], [0, 4], [0, 5],
+                    [1, 2], [1, 3], [1, 4], [1, 5],
+                    [2, 4], [4, 3], [3, 5], [5, 2]
+                ];
+                for (let e of edges) {
+                    ctx.moveTo(proj[e[0]].x, proj[e[0]].y);
+                    ctx.lineTo(proj[e[1]].x, proj[e[1]].y);
+                }
+                ctx.stroke();
+
+                const plasmaGrad = ctx.createRadialGradient(0, 0, 1, 0, 0, 8);
+                plasmaGrad.addColorStop(0, '#ffffff');
+                plasmaGrad.addColorStop(0.5, colSec);
+                plasmaGrad.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = plasmaGrad;
+                ctx.beginPath();
+                ctx.arc(0, 0, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                const barW = w - 40;
+                const barH = 2.5;
+                const barX = 20;
+                const barY = h - 6;
+
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+                ctx.fillRect(barX, barY, barW, barH);
+
+                const fillRatio = Math.max(0.05, Math.min(1.0, pf / 3.0));
+                const activeGrad = ctx.createLinearGradient(barX, 0, barX + barW * fillRatio, 0);
+                activeGrad.addColorStop(0, colMain);
+                activeGrad.addColorStop(1, colSec);
+                ctx.fillStyle = activeGrad;
+                ctx.fillRect(barX, barY, barW * fillRatio, barH);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowColor = colSec;
+                ctx.shadowBlur = 6;
+                ctx.beginPath();
+                ctx.arc(barX + barW * fillRatio, barY + barH / 2, 2.2, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            function render() {
+                if ((window.currentActiveMainTab && window.currentActiveMainTab !== 'cockpit') || document.hidden) {
+                    return;
+                }
+
+                if (ctxs.vault && sizes.vault) renderVault(ctxs.vault, sizes.vault.w, sizes.vault.h);
+                if (ctxs.growth && sizes.growth) renderGrowth(ctxs.growth, sizes.growth.w, sizes.growth.h);
+                if (ctxs.radar && sizes.radar) renderRadar(ctxs.radar, sizes.radar.w, sizes.radar.h);
+                if (ctxs.reactor && sizes.reactor) renderReactor(ctxs.reactor, sizes.reactor.w, sizes.reactor.h);
+            }
+
+            return {
+                init,
+                resize,
+                updateMetrics
+            };
+        })();
+        window.ValkyrieKpiSimEngine = ValkyrieKpiSimEngine;
 
         // =========================================================================
         // 🏛️ VALKYRIE INSTITUTIONAL QUANT COMMENTARY ENGINE (15-20+ VARYASYON)
@@ -5406,6 +6121,21 @@ async function loadAdminMetrics() {
                         cPfNote.style.color = noteColor;
                     }
                 }
+            }
+
+            // 🔮 Canlı 4x Kuantum KPI Simülasyon Motoruna Verileri Aktar
+            if (window.ValkyrieKpiSimEngine) {
+                window.ValkyrieKpiSimEngine.updateMetrics({
+                    balance: bal,
+                    initialBalance: initBal,
+                    pnl: totalNetPnl,
+                    growthPct: growthPct,
+                    winRate: parseFloat(winRate) || 0.0,
+                    wins: wins,
+                    losses: losses,
+                    totalTrades: totalTrades,
+                    pf: parseFloat(pf) || 0.0
+                });
             }
 
             // 2. AI Quant Intelligence Stream & 1H Macro Trend Breakdown
@@ -8175,6 +8905,7 @@ function downloadExcelReport() {
                 restorePersistedSession();
                 restoreBattleViewPreference();
                 if (window.ValkyrieBattleEngine) ValkyrieBattleEngine.init();
+                if (window.ValkyrieKpiSimEngine) ValkyrieKpiSimEngine.init();
                 await syncBackendState();
                 startBinanceGlobalFeed();
                 startSSEFallback();
