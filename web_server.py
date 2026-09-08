@@ -1535,7 +1535,7 @@ HTML_PAGE = """
         }
         .tactical-radar-body {
             display: grid;
-            grid-template-columns: 1.15fr 0.85fr;
+            grid-template-columns: 1.3fr 0.85fr;
             gap: 20px;
             align-items: center;
             margin-top: 14px;
@@ -1548,12 +1548,12 @@ HTML_PAGE = """
         .radar-canvas-container {
             position: relative;
             width: 100%;
-            height: 330px;
+            height: 460px;
             background: radial-gradient(circle at center, rgba(16, 24, 40, 0.8) 0%, rgba(8, 12, 22, 0.95) 75%);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 16px;
             overflow: hidden;
-            box-shadow: inset 0 0 35px rgba(0, 0, 0, 0.85);
+            box-shadow: inset 0 0 45px rgba(0, 0, 0, 0.9);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1568,9 +1568,9 @@ HTML_PAGE = """
         }
         .radar-hud-legend {
             position: absolute;
-            bottom: 10px;
-            left: 12px;
-            right: 12px;
+            bottom: 12px;
+            left: 14px;
+            right: 14px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -1578,17 +1578,17 @@ HTML_PAGE = """
             gap: 6px;
             pointer-events: none;
             z-index: 2;
-            background: rgba(10, 15, 28, 0.75);
-            padding: 4px 10px;
+            background: rgba(10, 15, 28, 0.8);
+            padding: 5px 12px;
             border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(6px);
         }
         .legend-item {
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            font-size: 10.5px;
+            font-size: 11px;
             color: #94a3b8;
             font-family: 'JetBrains Mono', monospace;
         }
@@ -1606,11 +1606,11 @@ HTML_PAGE = """
             background: rgba(13, 19, 33, 0.85);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 16px;
-            padding: 16px 18px;
+            padding: 18px 20px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            min-height: 330px;
+            min-height: 460px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
         }
         .telemetry-header {
@@ -6288,10 +6288,10 @@ async function loadAdminMetrics() {
             function resize() {
                 if (!canvas) return;
                 const rect = canvas.getBoundingClientRect();
-                width = rect.width || (canvas.parentElement ? canvas.parentElement.clientWidth : 0) || 450;
-                height = rect.height || (canvas.parentElement ? canvas.parentElement.clientHeight : 0) || 330;
-                if (width <= 0) width = 450;
-                if (height <= 0) height = 330;
+                width = rect.width || (canvas.parentElement ? canvas.parentElement.clientWidth : 0) || 550;
+                height = rect.height || (canvas.parentElement ? canvas.parentElement.clientHeight : 0) || 460;
+                if (width <= 0) width = 550;
+                if (height <= 0) height = 460;
                 dpr = window.devicePixelRatio || 1;
                 canvas.width = Math.floor(width * dpr);
                 canvas.height = Math.floor(height * dpr);
@@ -6456,21 +6456,21 @@ async function loadAdminMetrics() {
                     ctx.shadowBlur = t.intensity > 0.5 ? 12 : 4;
                     ctx.beginPath();
                     if (t.category === 'blocked') {
-                        ctx.moveTo(pos.x, pos.y - 4);
-                        ctx.lineTo(pos.x + 4, pos.y);
-                        ctx.lineTo(pos.x, pos.y + 4);
-                        ctx.lineTo(pos.x - 4, pos.y);
+                        ctx.moveTo(pos.x, pos.y - 5);
+                        ctx.lineTo(pos.x + 5, pos.y);
+                        ctx.lineTo(pos.x, pos.y + 5);
+                        ctx.lineTo(pos.x - 5, pos.y);
                         ctx.closePath();
                     } else {
-                        ctx.arc(pos.x, pos.y, isSelected ? 4.5 : 3.2, 0, Math.PI * 2);
+                        ctx.arc(pos.x, pos.y, isSelected ? 5.5 : 3.8, 0, Math.PI * 2);
                     }
                     ctx.fill();
                     ctx.shadowBlur = 0;
 
                     ctx.fillStyle = isSelected ? '#ffffff' : (t.intensity > 0.5 ? dotColor : '#cbd5e1');
-                    ctx.font = `${isSelected ? 'bold 11px' : '10px'} "JetBrains Mono", monospace`;
-                    const labelY = (pos.y > cy) ? pos.y + 12 : pos.y - 6;
-                    ctx.fillText(t.symbol, pos.x - 12, labelY);
+                    ctx.font = `${isSelected ? 'bold 12px' : '11px'} "JetBrains Mono", monospace`;
+                    const labelY = (pos.y > cy) ? pos.y + 14 : pos.y - 8;
+                    ctx.fillText(t.symbol, pos.x - 14, labelY);
                 }
 
                 for (let i = shieldSparks.length - 1; i >= 0; i--) {
