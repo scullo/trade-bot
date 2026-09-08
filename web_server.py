@@ -2590,17 +2590,17 @@ HTML_PAGE = """
             4. İşlem Geçmişi
         </button>
         <button class="nav-tab-btn" id="tab-btn-persona" onclick="switchMainTab('persona')">
-            <span style="font-size:14px; margin-right:6px;">🧬</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
             5. DNA
             <span class="tab-badge-sub" id="nav-persona-badge" style="background:rgba(0,242,254,0.12); color:var(--cyan); border:1px solid rgba(0,242,254,0.3);">100 Parite</span>
         </button>
         <button class="nav-tab-btn" id="tab-btn-funding" onclick="switchMainTab('funding')">
-            <span style="font-size:14px; margin-right:6px;">⚡</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
             6. Fonlama
             <span class="tab-badge-sub" id="nav-funding-badge" style="background:rgba(255,107,107,0.15); color:var(--red); border:1px solid rgba(255,107,107,0.3);">0 Squeeze</span>
         </button>
         <button class="nav-tab-btn" id="tab-btn-cvd" onclick="switchMainTab('cvd')">
-            <span style="font-size:14px; margin-right:6px;">🔬</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
             7. CVD
             <span class="tab-badge-sub" id="nav-cvd-badge" style="background:rgba(34,197,94,0.15); color:#22c55e; border:1px solid rgba(34,197,94,0.3);">Canlı</span>
         </button>
@@ -2625,12 +2625,12 @@ HTML_PAGE = """
                             Toplam Kasa Bakiyesi
                             <span class="kpi-telemetry-chip" style="background:rgba(0,242,254,0.12); border:1px solid rgba(0,242,254,0.3); color:var(--cyan);">REZERV</span>
                         </span>
-                        <span class="kpi-card-icon">💼</span>
                     </div>
                     <div class="kpi-card-val" id="cockpit-balance">10,000.00 $</div>
                     <div class="kpi-card-sub" id="cockpit-free-bal">Kullanılabilir Kasa: $10,000.00 USDT (5x)</div>
-                    <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px; display:flex; align-items:center; gap:5px;">
-                        <span>🛡️ Dinamik Sermaye Koruması Aktif</span>
+                    <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px; display:flex; align-items:center; gap:6px;">
+                        <span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:#10b981; box-shadow:0 0 6px #10b981;"></span>
+                        <span>Dinamik Sermaye Koruması Aktif</span>
                     </div>
                 </div>
             </div>
@@ -2643,7 +2643,6 @@ HTML_PAGE = """
                             Net Kâr / Zarar & Büyüme
                             <span class="kpi-telemetry-chip" id="chip-kpi-growth" style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:var(--green);">CANLI NABIZ</span>
                         </span>
-                        <span class="kpi-card-icon">📈</span>
                     </div>
                     <div class="kpi-card-val" id="cockpit-pnl" style="color:var(--green);">+0.00 $</div>
                     <div class="kpi-card-sub" id="cockpit-growth">+0.00% Büyüme</div>
@@ -2659,7 +2658,6 @@ HTML_PAGE = """
                             Kazanma Oranı (Win Rate)
                             <span class="kpi-telemetry-chip" id="chip-kpi-winrate" style="background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3); color:#38bdf8;">RADAR</span>
                         </span>
-                        <span class="kpi-card-icon">🎯</span>
                     </div>
                     <div class="kpi-card-val" id="cockpit-winrate">%0.0</div>
                     <div class="kpi-card-sub" id="cockpit-win-loss-count">0 Kazanç / 0 Kayıp</div>
@@ -2676,7 +2674,6 @@ HTML_PAGE = """
                             <span class="kpi-info-icon" title="Profit Factor (Kâr Faktörü): Sistemin kurumsal getiri kalitesini gösterir. Kaybedilen her 1$'a karşılık kasaya kaç dolar kâr girdiğini ifade eder.&#10;&#10;Formül: Toplam Kâr ÷ Toplam Kayıp&#10;• < 1.00x: Negatif (Zarar Baskısı)&#10;• 1.00x: Başa-Baş&#10;• 1.20x - 1.50x: Kârlı Sistem&#10;• 1.50x - 2.00x: Çok Güçlü&#10;• 2.00x+: Kurumsal Elit Seviye" style="cursor:help; font-size:11px; color:#38bdf8; background:rgba(56, 189, 248, 0.15); border-radius:50%; width:16px; height:16px; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(56, 189, 248, 0.35);">ⓘ</span>
                             <span class="kpi-telemetry-chip" id="chip-kpi-reactor" style="background:rgba(192,132,252,0.12); border:1px solid rgba(192,132,252,0.3); color:#c084fc;">REAKTÖR</span>
                         </span>
-                        <span class="kpi-card-icon" title="Sistemin Kâr/Zarar Güç Çarpanı">💎</span>
                     </div>
                     <div class="kpi-card-val" id="cockpit-pf" style="color:#94a3b8;">— (İşlem Bekleniyor)</div>
                     <div class="kpi-card-sub" id="cockpit-fees">Brüt Kâr: +$0.00 | Kayıp: -$0.00</div>
@@ -2685,28 +2682,27 @@ HTML_PAGE = """
             </div>
         </div>
 
-        <!-- 🧠 AI PİYASA & PUSU AKIŞI -->
+        <!-- AI PİYASA & PUSU AKIŞI -->
         <div class="ai-quant-room">
             <div class="ai-room-head">
                 <div class="ai-room-title">
                     <div class="ai-pulse-dot"></div>
-                    <span>🧠 AI PİYASA & PUSU AKIŞI</span>
+                    <span>AI PİYASA & PUSU AKIŞI</span>
                 </div>
                 <div style="font-size:12px; color:#cbd5e1; font-family:'JetBrains Mono', monospace;" id="ai-market-time-badge">
-                    ⚡ Canlı 5M Senkronizasyon
+                    <span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:#00f2fe; box-shadow:0 0 6px #00f2fe; margin-right:5px;"></span>Canlı 5M Senkronizasyon
                 </div>
             </div>
 
-            <!-- ⚔️ VALKYRIE CANLI LİKİDİTE SAVAŞI: BOĞA VS AYI CEPHESİ (CANLI ARENA) -->
+            <!-- VALKYRIE CANLI LİKİDİTE SAVAŞI: BOĞA VS AYI CEPHESİ (CANLI ARENA) -->
             <div class="regime-battle-card">
                 <div class="regime-battle-top-bar">
                     <div class="regime-battle-title">
-                        <span style="font-size:16px;">⚔️</span>
                         <span>VALKYRIE LİKİDİTE SAVAŞI: BOĞA VS AYI CEPHESİ</span>
                         <span style="font-size:11px; color:#94a3b8; font-weight:700;">(100 PARİTE 1H MAKRO)</span>
                     </div>
                     <button id="btn-toggle-battle-view" class="btn-battle-toggle" onclick="toggleBattleView()" title="Görünüm Modunu Değiştir">
-                        📊 Sade Çubuğa Geç
+                        Sade Çubuğa Geç
                     </button>
                 </div>
 
@@ -2716,7 +2712,7 @@ HTML_PAGE = """
                     <div class="regime-arena-hud-overlay">
                         <div class="hud-side-box bull">
                             <div class="hud-army-name">
-                                <span>🐂 BOĞA ORDUSU</span>
+                                <span>BOĞA CEPHESİ</span>
                                 <span class="hud-tag-taarruz">TAARRUZ</span>
                             </div>
                             <div class="hud-power-stat" id="hud-bull-pct">%0</div>
@@ -2724,13 +2720,13 @@ HTML_PAGE = """
                         </div>
 
                         <div class="hud-center-neutral" id="hud-neutral-badge">
-                            <span>⚪ TAMPON BÖLGE: %0 YATAY</span>
+                            <span>TAMPON BÖLGE: %0 YATAY</span>
                         </div>
 
                         <div class="hud-side-box bear">
                             <div class="hud-army-name">
                                 <span class="hud-tag-savunma">SAVUNMA</span>
-                                <span>🐻 AYI ORDUSU</span>
+                                <span>AYI CEPHESİ</span>
                             </div>
                             <div class="hud-power-stat" id="hud-bear-pct">%0</div>
                             <div class="hud-parite-count" id="hud-bear-count">0 Parite Baskıda</div>
@@ -2742,15 +2738,15 @@ HTML_PAGE = """
                 <div id="regime-simple-wrap" style="display:none;">
                     <div class="regime-battle-header">
                         <div class="regime-side-bull">
-                            <span>🐂 BOĞA HAKİMİYETİ:</span>
+                            <span>BOĞA HAKİMİYETİ:</span>
                             <b id="regime-bull-text">%0 (0 Parite)</b>
                         </div>
                         <div class="regime-side-range">
-                            <span>⚪ YATAY KONSOLİDASYON:</span>
+                            <span>YATAY KONSOLİDASYON:</span>
                             <b id="regime-range-text">%0 (0 Parite)</b>
                         </div>
                         <div class="regime-side-bear">
-                            <span>🐻 AYI BASKISI:</span>
+                            <span>AYI BASKISI:</span>
                             <b id="regime-bear-text">%0 (0 Parite)</b>
                         </div>
                     </div>
@@ -2763,27 +2759,26 @@ HTML_PAGE = """
                 </div>
 
                 <div class="regime-battle-footer">
-                    <span style="color:#00f2fe; font-weight:800; flex-shrink:0;">⚡ CEBHE RAPORU:</span>
+                    <span style="color:#00f2fe; font-weight:800; flex-shrink:0;">CEBHE RAPORU:</span>
                     <span id="regime-commentary" style="color:#e2e8f0;">100 paritede 1H makro likidite dengesi hesaplanıyor...</span>
                 </div>
                 <div class="regime-battle-footer" style="margin-top:6px; border-top:1px dashed rgba(255,255,255,0.06); padding-top:6px;">
-                    <span style="color:#fbc531; font-weight:800; flex-shrink:0;">⚡ FONLAMA REJİMİ:</span>
+                    <span style="color:#fbc531; font-weight:800; flex-shrink:0;">FONLAMA REJİMİ:</span>
                     <span id="cockpit-funding-commentary" style="color:#94a3b8; font-family:'JetBrains Mono'; font-size:12px;">100 paritede fonlama oranları ve squeeze riskleri taranıyor...</span>
                 </div>
             </div>
 
-            <!-- 🎯 VALKYRIE 360° TAKTİK LİKİDİTE RADARI & SAVUNMA KALKANI (CANLI KOMUTA KONSOLU) -->
+            <!-- VALKYRIE 360° TAKTİK LİKİDİTE RADARI & SAVUNMA KALKANI (CANLI KOMUTA KONSOLU) -->
             <div class="tactical-radar-card" id="tactical-radar-wrap">
                 <div class="tactical-radar-topbar">
                     <div class="tactical-radar-title">
                         <span class="radar-live-blip"></span>
-                        <span style="font-size:15px;">🎯</span>
                         <span style="font-weight:800; letter-spacing:0.5px;">VALKYRIE TAKTİK LİKİDİTE RADARI & SAVUNMA KALKANI</span>
                         <span class="radar-scope-badge" id="radar-active-count-badge">0 HEDEF TARANIYOR</span>
                     </div>
                     <div style="display:flex; gap:8px; align-items:center;">
                         <button id="btn-toggle-radar-view" class="btn-battle-toggle" onclick="toggleRadarView()" title="Radar Görünümünü Aç / Kapat">
-                            📡 Radarı Gizle
+                            Radarı Gizle
                         </button>
                     </div>
                 </div>
@@ -2849,11 +2844,11 @@ HTML_PAGE = """
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
                 <div class="ai-thought-filters" style="margin-bottom:0;">
                     <button class="ai-filter-btn active" id="btn-filter-all" onclick="setAiThoughtFilter('all')">TÜMÜ (<span id="ai-cnt-all">0</span>)</button>
-                    <button class="ai-filter-btn" id="btn-filter-macro" onclick="setAiThoughtFilter('macro')">🌐 Makro (<span id="ai-cnt-macro">1</span>)</button>
-                    <button class="ai-filter-btn" id="btn-filter-near" onclick="setAiThoughtFilter('near')">🎯 Pusu & Seviye (<span id="ai-cnt-near">0</span>)</button>
-                    <button class="ai-filter-btn" id="btn-filter-rejected" onclick="setAiThoughtFilter('rejected')">⛔ Elenenler (<span id="ai-cnt-rej">0</span>)</button>
-                    <button class="ai-filter-btn" id="btn-filter-positions" onclick="setAiThoughtFilter('positions')">⚡ Pozisyonlar (<span id="ai-cnt-pos">0</span>)</button>
-                    <button class="ai-filter-btn" id="btn-filter-autopsy" onclick="setAiThoughtFilter('autopsy')">📋 Otopi (<span id="ai-cnt-autopsy">0</span>)</button>
+                    <button class="ai-filter-btn" id="btn-filter-macro" onclick="setAiThoughtFilter('macro')">Makro (<span id="ai-cnt-macro">1</span>)</button>
+                    <button class="ai-filter-btn" id="btn-filter-near" onclick="setAiThoughtFilter('near')">Pusu & Seviye (<span id="ai-cnt-near">0</span>)</button>
+                    <button class="ai-filter-btn" id="btn-filter-rejected" onclick="setAiThoughtFilter('rejected')">Elenenler (<span id="ai-cnt-rej">0</span>)</button>
+                    <button class="ai-filter-btn" id="btn-filter-positions" onclick="setAiThoughtFilter('positions')">Pozisyonlar (<span id="ai-cnt-pos">0</span>)</button>
+                    <button class="ai-filter-btn" id="btn-filter-autopsy" onclick="setAiThoughtFilter('autopsy')">Otopi (<span id="ai-cnt-autopsy">0</span>)</button>
                 </div>
                 <div style="display:flex; gap:6px; align-items:center;">
                     <button class="ai-filter-btn active" id="btn-layout-grid" onclick="setAiThoughtLayout('grid')" title="2 Sütunlu Kompakt Görünüm" style="padding:5px 11px; font-size:11.5px; border-color:rgba(0, 242, 254, 0.4); color:#00f2fe;">
@@ -5499,22 +5494,22 @@ async function loadAdminMetrics() {
                         reactorChip.style.background = 'rgba(192,132,252,0.18)';
                         reactorChip.style.borderColor = 'rgba(192,132,252,0.45)';
                         reactorChip.style.color = '#c084fc';
-                        reactorChip.innerText = '🏆 ELİT ALFA';
+                        reactorChip.innerText = 'ELİT ALFA';
                     } else if (metrics.pf >= 1.5) {
                         reactorChip.style.background = 'rgba(16,185,129,0.18)';
                         reactorChip.style.borderColor = 'rgba(16,185,129,0.45)';
                         reactorChip.style.color = 'var(--green)';
-                        reactorChip.innerText = '⚡ GÜÇLÜ';
+                        reactorChip.innerText = 'GÜÇLÜ';
                     } else if (metrics.pf >= 1.0) {
                         reactorChip.style.background = 'rgba(245,158,11,0.18)';
                         reactorChip.style.borderColor = 'rgba(245,158,11,0.45)';
                         reactorChip.style.color = '#fbbf24';
-                        reactorChip.innerText = '🟡 KÂRLI';
+                        reactorChip.innerText = 'KÂRLI';
                     } else {
                         reactorChip.style.background = 'rgba(244,63,94,0.18)';
                         reactorChip.style.borderColor = 'rgba(244,63,94,0.45)';
                         reactorChip.style.color = 'var(--red)';
-                        reactorChip.innerText = '🛡️ KALKAN';
+                        reactorChip.innerText = 'KALKAN';
                     }
                 }
 
