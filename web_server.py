@@ -1471,10 +1471,245 @@ HTML_PAGE = """
             align-items: center;
             gap: 6px;
             line-height: 1.4;
-            font-family: 'Inter', system-ui, sans-serif;
         }
 
-        .ai-thought-filters {
+        /* 🎯 VALKYRIE 360° TAKTİK LİKİDİTE RADARI & SAVUNMA KALKANI STİLLERİ */
+        .tactical-radar-card {
+            background: linear-gradient(180deg, rgba(14, 20, 34, 0.95) 0%, rgba(10, 14, 25, 0.98) 100%);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            border-radius: 20px;
+            padding: 18px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.55), 0 0 25px rgba(0, 242, 254, 0.12);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(12px);
+        }
+        .tactical-radar-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #00f2fe, #38bdf8, #10b981, #f43f5e);
+            z-index: 3;
+        }
+        .tactical-radar-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .tactical-radar-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #ffffff;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .radar-live-blip {
+            width: 8px;
+            height: 8px;
+            background: #00f2fe;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00f2fe;
+            animation: radarBlipPulse 1.4s infinite;
+        }
+        @keyframes radarBlipPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.3; transform: scale(0.7); }
+        }
+        .radar-scope-badge {
+            font-size: 10.5px;
+            background: rgba(0, 242, 254, 0.12);
+            border: 1px solid rgba(0, 242, 254, 0.35);
+            color: var(--cyan);
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-weight: 700;
+        }
+        .tactical-radar-body {
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr;
+            gap: 20px;
+            align-items: center;
+            margin-top: 14px;
+        }
+        @media (max-width: 950px) {
+            .tactical-radar-body {
+                grid-template-columns: 1fr;
+            }
+        }
+        .radar-canvas-container {
+            position: relative;
+            width: 100%;
+            height: 330px;
+            background: radial-gradient(circle at center, rgba(16, 24, 40, 0.8) 0%, rgba(8, 12, 22, 0.95) 75%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: inset 0 0 35px rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #tactical-radar-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+        .radar-hud-legend {
+            position: absolute;
+            bottom: 10px;
+            left: 12px;
+            right: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            pointer-events: none;
+            z-index: 2;
+            background: rgba(10, 15, 28, 0.75);
+            padding: 4px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(4px);
+        }
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10.5px;
+            color: #94a3b8;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .legend-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+        }
+        .legend-dot.contact { background: #10b981; box-shadow: 0 0 6px #10b981; }
+        .legend-dot.ambush { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+        .legend-dot.approach { background: #38bdf8; box-shadow: 0 0 6px #38bdf8; }
+        .legend-dot.blocked { background: #f43f5e; box-shadow: 0 0 6px #f43f5e; }
+
+        .radar-telemetry-panel {
+            background: rgba(13, 19, 33, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 16px 18px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 330px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+        }
+        .telemetry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+        }
+        .telemetry-target-name {
+            font-size: 16px;
+            font-weight: 900;
+            color: #ffffff;
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-shadow: 0 0 12px rgba(0, 242, 254, 0.4);
+        }
+        .telemetry-badge {
+            font-size: 10px;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: rgba(56, 189, 248, 0.15);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            color: #38bdf8;
+            letter-spacing: 0.5px;
+        }
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .telemetry-stat-box {
+            background: rgba(0, 0, 0, 0.28);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            padding: 8px 10px;
+        }
+        .stat-label {
+            font-size: 10px;
+            font-weight: 800;
+            color: #64748b;
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+        .stat-val {
+            font-size: 15px;
+            font-weight: 900;
+            color: #ffffff;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .stat-sub {
+            font-size: 10.5px;
+            color: #94a3b8;
+            font-family: 'JetBrains Mono', monospace;
+            margin-top: 1px;
+        }
+        .telemetry-briefing-box {
+            background: rgba(0, 0, 0, 0.35);
+            border-left: 3px solid #00f2fe;
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-size: 11.5px;
+            color: #cbd5e1;
+            line-height: 1.5;
+            margin-bottom: 12px;
+            min-height: 68px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .telemetry-footer-action {
+            display: flex;
+            justify-content: flex-end;
+        }
+        .btn-radar-focus {
+            background: linear-gradient(135deg, rgba(0, 242, 254, 0.15) 0%, rgba(79, 172, 254, 0.2) 100%);
+            border: 1px solid rgba(0, 242, 254, 0.4);
+            color: #00f2fe;
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 11.5px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 12px rgba(0, 242, 254, 0.15);
+        }
+        .btn-radar-focus:hover {
+            background: rgba(0, 242, 254, 0.25);
+            border-color: #00f2fe;
+            color: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 0 18px rgba(0, 242, 254, 0.3);
+        }
             display: flex;
             gap: 8px;
             margin-bottom: 12px;
@@ -2534,6 +2769,78 @@ HTML_PAGE = """
                 <div class="regime-battle-footer" style="margin-top:6px; border-top:1px dashed rgba(255,255,255,0.06); padding-top:6px;">
                     <span style="color:#fbc531; font-weight:800; flex-shrink:0;">⚡ FONLAMA REJİMİ:</span>
                     <span id="cockpit-funding-commentary" style="color:#94a3b8; font-family:'JetBrains Mono'; font-size:12px;">100 paritede fonlama oranları ve squeeze riskleri taranıyor...</span>
+            </div>
+
+            <!-- 🎯 VALKYRIE 360° TAKTİK LİKİDİTE RADARI & SAVUNMA KALKANI (CANLI KOMUTA KONSOLU) -->
+            <div class="tactical-radar-card" id="tactical-radar-wrap">
+                <div class="tactical-radar-topbar">
+                    <div class="tactical-radar-title">
+                        <span class="radar-live-blip"></span>
+                        <span style="font-size:15px;">🎯</span>
+                        <span style="font-weight:800; letter-spacing:0.5px;">VALKYRIE TAKTİK LİKİDİTE RADARI & SAVUNMA KALKANI</span>
+                        <span class="radar-scope-badge" id="radar-active-count-badge">0 HEDEF TARANIYOR</span>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <button id="btn-toggle-radar-view" class="btn-battle-toggle" onclick="toggleRadarView()" title="Radar Görünümünü Aç / Kapat">
+                            📡 Radarı Gizle
+                        </button>
+                    </div>
+                </div>
+
+                <div id="tactical-radar-body" class="tactical-radar-body">
+                    <!-- SOL: 360° CANVAS RADAR EKRANI -->
+                    <div class="radar-canvas-container">
+                        <canvas id="tactical-radar-canvas"></canvas>
+                        <!-- Radar HUD Legend Overlay -->
+                        <div class="radar-hud-legend">
+                            <span class="legend-item"><span class="legend-dot contact"></span> Merkez: Seviyede Temas</span>
+                            <span class="legend-item"><span class="legend-dot ambush"></span> Orta: Hacim Bekleyen</span>
+                            <span class="legend-item"><span class="legend-dot approach"></span> Dış: Yaklaşan</span>
+                            <span class="legend-item"><span class="legend-dot blocked"></span> Kalkan: Girecekti / Elendi</span>
+                        </div>
+                    </div>
+
+                    <!-- SAĞ: CANLI TELEMETRİ MONİTÖRÜ (HEDEF BRİFİNGİ) -->
+                    <div class="radar-telemetry-panel" id="radar-telemetry-panel">
+                        <div class="telemetry-header">
+                            <div class="telemetry-target-name" id="radar-target-name">HEDEF SEÇİLİYOR...</div>
+                            <div class="telemetry-badge" id="radar-target-badge">RADAR KİLİTLENMESİ</div>
+                        </div>
+
+                        <div class="telemetry-grid">
+                            <div class="telemetry-stat-box">
+                                <div class="stat-label">SEVİYE MESAFESİ</div>
+                                <div class="stat-val" id="radar-stat-distance">%0.00</div>
+                                <div class="stat-sub" id="radar-stat-target-lvl">nPOC / S3 / R4</div>
+                            </div>
+                            <div class="telemetry-stat-box">
+                                <div class="stat-label">5M HACİM PATLAMASI</div>
+                                <div class="stat-val" id="radar-stat-volume">1.00x</div>
+                                <div class="stat-sub" id="radar-stat-vol-target">Min 1.50x Şartı</div>
+                            </div>
+                            <div class="telemetry-stat-box">
+                                <div class="stat-label">MİKRO-CVD DELTA</div>
+                                <div class="stat-val" id="radar-stat-cvd">%50 Dengeli</div>
+                                <div class="stat-sub" id="radar-stat-cvd-delta">Net $0 Taker</div>
+                            </div>
+                            <div class="telemetry-stat-box">
+                                <div class="stat-label">SİSTEM TEŞHİSİ</div>
+                                <div class="stat-val" id="radar-stat-status" style="font-size:12px;">Taranıyor</div>
+                                <div class="stat-sub" id="radar-stat-action">Bekleme Modu</div>
+                            </div>
+                        </div>
+
+                        <!-- Canlı Taktik Açıklama Kutusu -->
+                        <div class="telemetry-briefing-box" id="radar-target-briefing">
+                            Radar 100 paritede nPOC, AVWAP ve Camarilla seviyelerine yaklaşan ve koruma kalkanına çarpan sinyalleri tarıyor. Hedeflerin üzerine tıklayarak veya fareyle gelerek canlı telemetrisini inceleyebilirsiniz.
+                        </div>
+
+                        <div class="telemetry-footer-action">
+                            <button class="btn-radar-focus" id="btn-radar-focus-card" onclick="focusRadarTargetCard()">
+                                🔍 Alttaki Detaylı Analiz Kartına Odaklan ➔
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -4616,6 +4923,7 @@ async function loadAdminMetrics() {
                 renderCockpitView();
                 if (window.ValkyrieBattleEngine) ValkyrieBattleEngine.resize();
                 if (window.ValkyrieKpiSimEngine) window.ValkyrieKpiSimEngine.resize();
+                if (window.ValkyrieTacticalRadarEngine) window.ValkyrieTacticalRadarEngine.resize();
             } else if (tabName === 'positions') {
                 renderPositions();
             } else if (tabName === 'radar') {
@@ -5670,6 +5978,540 @@ async function loadAdminMetrics() {
         window.ValkyrieKpiSimEngine = ValkyrieKpiSimEngine;
 
         // =========================================================================
+        // 🎯 VALKYRIE 360° TAKTİK LİKİDİTE RADARI & SAVUNMA KALKANI MOTORU
+        // =========================================================================
+        let currentRadarMode = localStorage.getItem('valkyrie_radar_mode') || 'expanded';
+
+        function toggleRadarView() {
+            currentRadarMode = (currentRadarMode === 'expanded') ? 'collapsed' : 'expanded';
+            localStorage.setItem('valkyrie_radar_mode', currentRadarMode);
+            applyRadarViewMode();
+        }
+
+        function applyRadarViewMode() {
+            const body = document.getElementById('tactical-radar-body');
+            const btn = document.getElementById('btn-toggle-radar-view');
+            if (currentRadarMode === 'collapsed') {
+                if (body) body.style.display = 'none';
+                if (btn) btn.innerHTML = '📡 Radarı Aç';
+            } else {
+                if (body) body.style.display = 'grid';
+                if (btn) btn.innerHTML = '📡 Radarı Gizle';
+                if (window.ValkyrieTacticalRadarEngine) window.ValkyrieTacticalRadarEngine.resize();
+            }
+        }
+
+        function focusRadarTargetCard() {
+            if (window.ValkyrieTacticalRadarEngine) {
+                window.ValkyrieTacticalRadarEngine.focusSelectedInFeed();
+            }
+        }
+
+        const ValkyrieTacticalRadarEngine = (function() {
+            let canvas, ctx;
+            let width = 0, height = 0;
+            let dpr = window.devicePixelRatio || 1;
+            let animId = null;
+            let sweepAngle = 0;
+            let isRunning = false;
+
+            let radarTargets = [];
+            let selectedTarget = null;
+            let selectedIndex = 0;
+            let lastAutoCycleTime = Date.now();
+            let isUserHovering = false;
+            let mousePos = { x: -1, y: -1 };
+
+            let shieldSparks = [];
+
+            function getStableAngle(str) {
+                let h = 0;
+                for (let i = 0; i < str.length; i++) {
+                    h = (h << 5) - h + str.charCodeAt(i);
+                    h |= 0;
+                }
+                return Math.abs(h % 360) * (Math.PI / 180);
+            }
+
+            function setRadarData(nearCandidates, rejections) {
+                const list = [];
+
+                if (nearCandidates && Array.isArray(nearCandidates)) {
+                    nearCandidates.forEach(c => {
+                        const cleanS = (c.symbol || '').replace('/USDT', '').replace('USDT', '').trim();
+                        if (!cleanS) return;
+                        const dist = c.distPct !== undefined ? c.distPct : 0.5;
+                        const volSurge = c.volSurge !== undefined ? c.volSurge : 1.0;
+                        const minSurge = c.minVolSurge !== undefined ? c.minVolSurge : 1.5;
+                        const isContact = dist < 0.25;
+                        const isVolOk = volSurge >= minSurge;
+
+                        let cat = 'approach';
+                        if (isContact) cat = 'contact';
+                        else if (dist <= 0.55) cat = 'ambush';
+
+                        list.push({
+                            symbol: cleanS,
+                            category: cat,
+                            distPct: dist,
+                            volSurge: volSurge,
+                            minVolSurge: minSurge,
+                            isVolOk: isVolOk,
+                            targetName: c.targetName || 'Destek / Direnç',
+                            action: c.action || (c.side === 'SHORT' ? 'SHORT Satış' : 'LONG Alış'),
+                            price: c.price || 0,
+                            targetPrice: c.targetPrice || 0,
+                            rsScore: c.rsScore || 0,
+                            reason: isContact 
+                                ? (isVolOk ? 'Seviyede tam temas & Hacim onaylı!' : `Seviyede temas var; ${minSurge.toFixed(1)}x hacim patlaması ve 5M kapanış bekleniyor.`)
+                                : `Fiyat ${c.targetName} seviyesine süzülüyor (Kalan: %${dist.toFixed(2)}).`,
+                            angle: getStableAngle(cleanS + '_near'),
+                            intensity: 0.25,
+                            pulse: 0
+                        });
+                    });
+                }
+
+                if (rejections && Array.isArray(rejections)) {
+                    rejections.slice(-8).forEach(r => {
+                        const cleanS = (r.symbol || '').replace('/USDT', '').replace('USDT', '').trim();
+                        if (!cleanS) return;
+                        if (list.some(t => t.symbol === cleanS && t.category === 'blocked')) return;
+
+                        list.push({
+                            symbol: cleanS,
+                            category: 'blocked',
+                            distPct: 0.0,
+                            volSurge: 0,
+                            minVolSurge: 1.5,
+                            isVolOk: false,
+                            targetName: r.setup || 'Sinyal Kurulumu',
+                            action: 'ENGEL / İŞLEM REDDİ',
+                            price: 0,
+                            targetPrice: 0,
+                            rsScore: 0,
+                            reason: r.reason || 'Kriterler sağlanamadığı için işlem güvenliği gereği iptal edildi.',
+                            angle: getStableAngle(cleanS + '_rej'),
+                            intensity: 0.35,
+                            pulse: 0
+                        });
+                    });
+                }
+
+                radarTargets = list;
+
+                const badge = document.getElementById('radar-active-count-badge');
+                if (badge) {
+                    badge.innerText = `${radarTargets.length} HEDEF TARANIYOR`;
+                }
+
+                if (!selectedTarget || !radarTargets.some(t => t.symbol === selectedTarget.symbol)) {
+                    selectedTarget = radarTargets.find(t => t.category === 'contact') 
+                        || radarTargets.find(t => t.category === 'ambush') 
+                        || radarTargets[0] || null;
+                    updateTelemetryHUD(selectedTarget);
+                }
+            }
+
+            function updateTelemetryHUD(target) {
+                if (!target) return;
+                const nameEl = document.getElementById('radar-target-name');
+                const badgeEl = document.getElementById('radar-target-badge');
+                const distEl = document.getElementById('radar-stat-distance');
+                const lvlEl = document.getElementById('radar-stat-target-lvl');
+                const volEl = document.getElementById('radar-stat-volume');
+                const volSubEl = document.getElementById('radar-stat-vol-target');
+                const cvdEl = document.getElementById('radar-stat-cvd');
+                const cvdSubEl = document.getElementById('radar-stat-cvd-delta');
+                const statEl = document.getElementById('radar-stat-status');
+                const actEl = document.getElementById('radar-stat-action');
+                const briefEl = document.getElementById('radar-target-briefing');
+
+                if (nameEl) nameEl.innerHTML = `${target.category === 'blocked' ? '🛡️' : (target.category === 'contact' ? '🔥' : '🎯')} ${target.symbol}/USDT`;
+                
+                if (badgeEl) {
+                    if (target.category === 'contact') {
+                        badgeEl.innerText = '⚡ SEVİYEDE TAM TEMAS';
+                        badgeEl.style.background = 'rgba(16, 185, 129, 0.18)';
+                        badgeEl.style.borderColor = 'rgba(16, 185, 129, 0.45)';
+                        badgeEl.style.color = '#10b981';
+                    } else if (target.category === 'ambush') {
+                        badgeEl.innerText = '⏳ HACİM BEKLENİYOR';
+                        badgeEl.style.background = 'rgba(245, 158, 11, 0.18)';
+                        badgeEl.style.borderColor = 'rgba(245, 158, 11, 0.45)';
+                        badgeEl.style.color = '#f59e0b';
+                    } else if (target.category === 'blocked') {
+                        badgeEl.innerText = '⛔ AEGIS KALKANI (ELENDİ)';
+                        badgeEl.style.background = 'rgba(244, 63, 94, 0.18)';
+                        badgeEl.style.borderColor = 'rgba(244, 63, 94, 0.45)';
+                        badgeEl.style.color = 'var(--red)';
+                    } else {
+                        badgeEl.innerText = '🎯 PUSUDA YAKLAŞIYOR';
+                        badgeEl.style.background = 'rgba(56, 189, 248, 0.18)';
+                        badgeEl.style.borderColor = 'rgba(56, 189, 248, 0.35)';
+                        badgeEl.style.color = '#38bdf8';
+                    }
+                }
+
+                if (distEl) {
+                    if (target.category === 'blocked') {
+                        distEl.innerText = '🛡️ KALKAN';
+                        distEl.style.color = 'var(--red)';
+                    } else {
+                        distEl.innerText = `%${target.distPct.toFixed(2)}`;
+                        distEl.style.color = target.category === 'contact' ? '#10b981' : '#38bdf8';
+                    }
+                }
+                if (lvlEl) lvlEl.innerText = target.targetName;
+
+                if (volEl) {
+                    if (target.category === 'blocked') {
+                        volEl.innerText = '⛔ İptal';
+                        volEl.style.color = 'var(--red)';
+                    } else {
+                        volEl.innerText = `${target.volSurge.toFixed(2)}x`;
+                        volEl.style.color = target.isVolOk ? '#10b981' : '#f59e0b';
+                    }
+                }
+                if (volSubEl) volSubEl.innerText = target.category === 'blocked' ? 'Kriter Reddedildi' : `Hedef: Min ${target.minVolSurge.toFixed(1)}x`;
+
+                if (cvdEl) {
+                    if (target.reason && target.reason.includes('%')) {
+                        const m = target.reason.match(/%(\d+)/);
+                        cvdEl.innerText = m ? `%${m[1]} Taker Baskı` : 'Taker Analizi';
+                    } else {
+                        cvdEl.innerText = target.category === 'contact' ? 'Emilim Teyitli' : 'Dengeli Akış';
+                    }
+                }
+                if (cvdSubEl) {
+                    if (target.reason && target.reason.includes('-$')) {
+                        const m = target.reason.match(/-\$[\d,]+/);
+                        cvdSubEl.innerText = m ? `Delta: ${m[0]}` : 'Normal Seviye';
+                    } else {
+                        cvdSubEl.innerText = 'Piyasa Emirleri';
+                    }
+                }
+
+                if (statEl) {
+                    if (target.category === 'contact') statEl.innerText = '🔥 Kritik Bölge';
+                    else if (target.category === 'ambush') statEl.innerText = '⏳ Pusu Fazı';
+                    else if (target.category === 'blocked') statEl.innerText = '🛡️ Kalkan Koruması';
+                    else statEl.innerText = '📡 Taktik Radarda';
+                }
+                if (actEl) actEl.innerText = target.action;
+
+                if (briefEl) briefEl.innerHTML = `<b>⚡ Masa Raporu:</b> ${target.reason}`;
+            }
+
+            function focusSelectedInFeed() {
+                if (!selectedTarget) return;
+                const sym = selectedTarget.symbol.toUpperCase();
+                const feed = document.getElementById('ai-thought-feed');
+                if (!feed) return;
+                const items = feed.querySelectorAll('.ai-thought-item');
+                let found = null;
+                for (let item of items) {
+                    if (item.innerText && item.innerText.toUpperCase().includes(sym)) {
+                        found = item;
+                        break;
+                    }
+                }
+                if (found) {
+                    found.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    found.style.transition = 'all 0.4s ease';
+                    found.style.boxShadow = '0 0 25px rgba(0, 242, 254, 0.8), inset 0 0 15px rgba(0, 242, 254, 0.2)';
+                    found.style.borderColor = 'var(--cyan)';
+                    setTimeout(() => {
+                        found.style.boxShadow = '';
+                        found.style.borderColor = '';
+                    }, 2500);
+                } else {
+                    if (selectedTarget.category === 'blocked') {
+                        setAiThoughtFilter('rejected');
+                    } else {
+                        setAiThoughtFilter('near');
+                    }
+                }
+            }
+
+            function init() {
+                canvas = document.getElementById('tactical-radar-canvas');
+                if (!canvas) return;
+                ctx = canvas.getContext('2d');
+                resize();
+                window.addEventListener('resize', resize);
+
+                canvas.addEventListener('mousemove', e => {
+                    const rect = canvas.getBoundingClientRect();
+                    mousePos.x = e.clientX - rect.left;
+                    mousePos.y = e.clientY - rect.top;
+                    checkHover();
+                });
+
+                canvas.addEventListener('mouseleave', () => {
+                    mousePos.x = -1;
+                    mousePos.y = -1;
+                    isUserHovering = false;
+                });
+
+                canvas.addEventListener('click', () => {
+                    if (selectedTarget) {
+                        focusSelectedInFeed();
+                    }
+                });
+
+                applyRadarViewMode();
+                startLoop();
+            }
+
+            function checkHover() {
+                if (mousePos.x < 0 || mousePos.y < 0) return;
+                const cx = width / 2;
+                const cy = height / 2;
+                const rMax = Math.min(cx, cy) * 0.88;
+
+                for (let t of radarTargets) {
+                    const pos = getTargetCoords(t, cx, cy, rMax);
+                    const dx = mousePos.x - pos.x;
+                    const dy = mousePos.y - pos.y;
+                    if (Math.hypot(dx, dy) < 14) {
+                        selectedTarget = t;
+                        isUserHovering = true;
+                        updateTelemetryHUD(t);
+                        canvas.style.cursor = 'pointer';
+                        return;
+                    }
+                }
+                canvas.style.cursor = 'crosshair';
+            }
+
+            function resize() {
+                if (!canvas) return;
+                const rect = canvas.getBoundingClientRect();
+                width = rect.width || (canvas.parentElement ? canvas.parentElement.clientWidth : 0) || 450;
+                height = rect.height || (canvas.parentElement ? canvas.parentElement.clientHeight : 0) || 330;
+                if (width <= 0) width = 450;
+                if (height <= 0) height = 330;
+                dpr = window.devicePixelRatio || 1;
+                canvas.width = Math.floor(width * dpr);
+                canvas.height = Math.floor(height * dpr);
+                if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
+
+            function getTargetCoords(t, cx, cy, rMax) {
+                let r = 0;
+                if (t.category === 'contact') {
+                    r = rMax * (0.08 + Math.min(0.12, t.distPct * 0.4));
+                } else if (t.category === 'ambush') {
+                    r = rMax * (0.28 + (t.distPct - 0.25) * 0.4);
+                } else if (t.category === 'approach') {
+                    r = rMax * (0.55 + (t.distPct - 0.55) * 0.35);
+                } else if (t.category === 'blocked') {
+                    r = rMax * 0.94;
+                }
+                return {
+                    x: cx + Math.cos(t.angle) * r,
+                    y: cy + Math.sin(t.angle) * r,
+                    r: r
+                };
+            }
+
+            function startLoop() {
+                if (isRunning) return;
+                isRunning = true;
+                function loop() {
+                    render();
+                    animId = requestAnimationFrame(loop);
+                }
+                animId = requestAnimationFrame(loop);
+            }
+
+            function render() {
+                if ((window.currentActiveMainTab && window.currentActiveMainTab !== 'cockpit') || document.hidden || !ctx) {
+                    return;
+                }
+                if (currentRadarMode === 'collapsed') return;
+
+                if (width <= 0 || canvas.width <= 0) resize();
+
+                ctx.clearRect(0, 0, width, height);
+                sweepAngle += 0.024;
+
+                const cx = width / 2;
+                const cy = height / 2;
+                const rMax = Math.min(cx, cy) * 0.88;
+
+                if (!isUserHovering && radarTargets.length > 0 && Date.now() - lastAutoCycleTime > 4000) {
+                    selectedIndex = (selectedIndex + 1) % radarTargets.length;
+                    selectedTarget = radarTargets[selectedIndex];
+                    updateTelemetryHUD(selectedTarget);
+                    lastAutoCycleTime = Date.now();
+                }
+
+                ctx.save();
+
+                const rings = [
+                    { r: rMax * 0.20, col: 'rgba(16, 185, 129, 0.35)', label: '0.0% TEMAS' },
+                    { r: rMax * 0.48, col: 'rgba(245, 158, 11, 0.25)', label: '0.3% PUSU' },
+                    { r: rMax * 0.72, col: 'rgba(56, 189, 248, 0.20)', label: '0.8% YAKLAŞAN' },
+                    { r: rMax * 0.94, col: 'rgba(244, 63, 94, 0.45)', label: 'AEGIS SAVUNMA KALKANI', isShield: true }
+                ];
+
+                rings.forEach(ring => {
+                    ctx.strokeStyle = ring.col;
+                    ctx.lineWidth = ring.isShield ? 2.2 : 1;
+                    if (ring.isShield) {
+                        ctx.shadowColor = '#f43f5e';
+                        ctx.shadowBlur = 8;
+                    } else {
+                        ctx.shadowBlur = 0;
+                    }
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, ring.r, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    ctx.fillStyle = ring.col;
+                    ctx.font = '9px "JetBrains Mono", monospace';
+                    ctx.fillText(ring.label, cx + 4, cy - ring.r + 11);
+                });
+                ctx.shadowBlur = 0;
+
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(cx - rMax, cy); ctx.lineTo(cx + rMax, cy);
+                ctx.moveTo(cx, cy - rMax); ctx.lineTo(cx, cy + rMax);
+                ctx.stroke();
+
+                for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+                    ctx.beginPath();
+                    ctx.moveTo(cx + Math.cos(a) * (rMax * 0.90), cy + Math.sin(a) * (rMax * 0.90));
+                    ctx.lineTo(cx + Math.cos(a) * (rMax * 0.98), cy + Math.sin(a) * (rMax * 0.98));
+                    ctx.stroke();
+                }
+
+                const sweepGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rMax);
+                sweepGrad.addColorStop(0, 'rgba(0, 242, 254, 0.25)');
+                sweepGrad.addColorStop(1, 'rgba(0, 242, 254, 0)');
+                ctx.fillStyle = sweepGrad;
+
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.arc(cx, cy, rMax * 0.94, sweepAngle - 0.65, sweepAngle);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.strokeStyle = '#00f2fe';
+                ctx.shadowColor = '#00f2fe';
+                ctx.shadowBlur = 10;
+                ctx.lineWidth = 1.6;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(cx + Math.cos(sweepAngle) * rMax * 0.94, cy + Math.sin(sweepAngle) * rMax * 0.94);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                for (let t of radarTargets) {
+                    const pos = getTargetCoords(t, cx, cy, rMax);
+
+                    let dAngle = (sweepAngle - t.angle) % (Math.PI * 2);
+                    if (dAngle < 0) dAngle += Math.PI * 2;
+                    if (dAngle < 0.22) {
+                        t.intensity = 1.0;
+                        if (t.category === 'blocked' && Math.random() > 0.4) {
+                            for (let s = 0; s < 3; s++) {
+                                shieldSparks.push({
+                                    x: pos.x,
+                                    y: pos.y,
+                                    vx: Math.cos(t.angle + (Math.random() - 0.5)) * (1 + Math.random() * 2),
+                                    vy: Math.sin(t.angle + (Math.random() - 0.5)) * (1 + Math.random() * 2),
+                                    life: 1.0,
+                                    col: '#f43f5e'
+                                });
+                            }
+                        }
+                    } else {
+                        t.intensity = Math.max(0.2, t.intensity * 0.97);
+                    }
+
+                    const isSelected = selectedTarget && selectedTarget.symbol === t.symbol;
+                    let dotColor = '#38bdf8';
+                    if (t.category === 'contact') dotColor = '#10b981';
+                    else if (t.category === 'ambush') dotColor = '#f59e0b';
+                    else if (t.category === 'blocked') dotColor = '#f43f5e';
+
+                    if (t.category === 'contact' || isSelected) {
+                        t.pulse = (t.pulse + 0.05) % 1.0;
+                        ctx.strokeStyle = dotColor;
+                        ctx.lineWidth = 1.2;
+                        ctx.beginPath();
+                        ctx.arc(pos.x, pos.y, 5 + t.pulse * 14, 0, Math.PI * 2);
+                        ctx.globalAlpha = (1 - t.pulse) * 0.7;
+                        ctx.stroke();
+                        ctx.globalAlpha = 1.0;
+                    }
+
+                    ctx.fillStyle = dotColor;
+                    ctx.shadowColor = dotColor;
+                    ctx.shadowBlur = t.intensity > 0.5 ? 12 : 4;
+                    ctx.beginPath();
+                    if (t.category === 'blocked') {
+                        ctx.moveTo(pos.x, pos.y - 4);
+                        ctx.lineTo(pos.x + 4, pos.y);
+                        ctx.lineTo(pos.x, pos.y + 4);
+                        ctx.lineTo(pos.x - 4, pos.y);
+                        ctx.closePath();
+                    } else {
+                        ctx.arc(pos.x, pos.y, isSelected ? 4.5 : 3.2, 0, Math.PI * 2);
+                    }
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+
+                    ctx.fillStyle = isSelected ? '#ffffff' : (t.intensity > 0.5 ? dotColor : '#cbd5e1');
+                    ctx.font = `${isSelected ? 'bold 11px' : '10px'} "JetBrains Mono", monospace`;
+                    const labelY = (pos.y > cy) ? pos.y + 12 : pos.y - 6;
+                    ctx.fillText(t.symbol, pos.x - 12, labelY);
+                }
+
+                for (let i = shieldSparks.length - 1; i >= 0; i--) {
+                    const sp = shieldSparks[i];
+                    sp.x += sp.vx;
+                    sp.y += sp.vy;
+                    sp.life -= 0.04;
+                    if (sp.life <= 0) {
+                        shieldSparks.splice(i, 1);
+                        continue;
+                    }
+                    ctx.fillStyle = `rgba(244, 63, 94, ${sp.life})`;
+                    ctx.shadowColor = '#f43f5e';
+                    ctx.shadowBlur = 6;
+                    ctx.beginPath();
+                    ctx.arc(sp.x, sp.y, 1.8 * sp.life, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowColor = '#00f2fe';
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            return {
+                init,
+                resize,
+                setRadarData,
+                focusSelectedInFeed
+            };
+        })();
+        window.ValkyrieTacticalRadarEngine = ValkyrieTacticalRadarEngine;
+        window.toggleRadarView = toggleRadarView;
+        window.focusRadarTargetCard = focusRadarTargetCard;
+
+        // =========================================================================
         // 🏛️ VALKYRIE INSTITUTIONAL QUANT COMMENTARY ENGINE (15-20+ VARYASYON)
         // =========================================================================
         const ValkyrieCommentaryEngine = {
@@ -6393,6 +7235,11 @@ async function loadAdminMetrics() {
                         </div>
                     `
                 });
+
+                // 🎯 Canlı Taktik Likidite Radarı ve Savunma Kalkanını Besle
+                if (window.ValkyrieTacticalRadarEngine) {
+                    window.ValkyrieTacticalRadarEngine.setRadarData(nearCandidates, appState.recent_rejections || []);
+                }
 
                 // 1. TEMASTA OLAN VE YAKLAŞAN COİNLERİN DERİN ANALİZİ (Pusu / Neden Girmedi / Ne Bekliyor?)
                 if (nearCandidates && nearCandidates.length > 0) {
@@ -8906,6 +9753,7 @@ function downloadExcelReport() {
                 restoreBattleViewPreference();
                 if (window.ValkyrieBattleEngine) ValkyrieBattleEngine.init();
                 if (window.ValkyrieKpiSimEngine) ValkyrieKpiSimEngine.init();
+                if (window.ValkyrieTacticalRadarEngine) ValkyrieTacticalRadarEngine.init();
                 await syncBackendState();
                 startBinanceGlobalFeed();
                 startSSEFallback();
