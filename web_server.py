@@ -1834,7 +1834,7 @@ HTML_PAGE = """
             display: block;
         }
 
-    </style></style>
+    </style>
 </head>
 <body>
     <!-- GLOBAL VALKYRIE BRAND VECTOR ASSETS & GRADIENTS -->
@@ -2769,6 +2769,7 @@ HTML_PAGE = """
                 <div class="regime-battle-footer" style="margin-top:6px; border-top:1px dashed rgba(255,255,255,0.06); padding-top:6px;">
                     <span style="color:#fbc531; font-weight:800; flex-shrink:0;">⚡ FONLAMA REJİMİ:</span>
                     <span id="cockpit-funding-commentary" style="color:#94a3b8; font-family:'JetBrains Mono'; font-size:12px;">100 paritede fonlama oranları ve squeeze riskleri taranıyor...</span>
+                </div>
             </div>
 
             <!-- 🎯 VALKYRIE 360° TAKTİK LİKİDİTE RADARI & SAVUNMA KALKANI (CANLI KOMUTA KONSOLU) -->
@@ -4919,26 +4920,30 @@ async function loadAdminMetrics() {
                 }
             }
 
-            if (tabName === 'cockpit') {
-                renderCockpitView();
-                if (window.ValkyrieBattleEngine) ValkyrieBattleEngine.resize();
-                if (window.ValkyrieKpiSimEngine) window.ValkyrieKpiSimEngine.resize();
-                if (window.ValkyrieTacticalRadarEngine) window.ValkyrieTacticalRadarEngine.resize();
-            } else if (tabName === 'positions') {
-                renderPositions();
-            } else if (tabName === 'radar') {
-                renderCards();
-            } else if (tabName === 'ledger') {
-                renderHistoryTable();
-            } else if (tabName === 'persona') {
-                renderPersonaMatrixView();
-            } else if (tabName === 'funding') {
-                renderFundingMatrixView();
-                renderLiquidationView();
-            } else if (tabName === 'cvd') {
-                renderCvdView();
-            } else if (tabName === 'admin') {
-                loadAdminMetrics();
+            try {
+                if (tabName === 'cockpit') {
+                    renderCockpitView();
+                    if (window.ValkyrieBattleEngine) ValkyrieBattleEngine.resize();
+                    if (window.ValkyrieKpiSimEngine) window.ValkyrieKpiSimEngine.resize();
+                    if (window.ValkyrieTacticalRadarEngine) window.ValkyrieTacticalRadarEngine.resize();
+                } else if (tabName === 'positions') {
+                    renderPositions();
+                } else if (tabName === 'radar') {
+                    renderCards();
+                } else if (tabName === 'ledger') {
+                    renderHistoryTable();
+                } else if (tabName === 'persona') {
+                    renderPersonaMatrixView();
+                } else if (tabName === 'funding') {
+                    renderFundingMatrixView();
+                    renderLiquidationView();
+                } else if (tabName === 'cvd') {
+                    renderCvdView();
+                } else if (tabName === 'admin') {
+                    loadAdminMetrics();
+                }
+            } catch (tabErr) {
+                console.warn("[Valkyrie Navigation] View rendering warning for tab " + tabName + ":", tabErr);
             }
         }
 
