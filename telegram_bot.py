@@ -762,7 +762,7 @@ Giriş: <code>${float(record.get('entry_price', 0.0)):.6f}</code> ➔ Çıkış:
 
                                 is_kasa_cmd = any(w in text for w in ["kasa", "durum", "bakiye", "start", "help", "rapor", "pnl", "portfoy"])
                                 if is_kasa_cmd:
-                                    bal = getattr(trader_manager, 'balance', 100000.0)
+                                    bal = getattr(trader_manager, 'balance', 10000.0)
                                     open_p = getattr(trader_manager, 'open_positions', {})
                                     hist = getattr(trader_manager, 'history', [])
                                     

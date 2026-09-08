@@ -9,7 +9,7 @@ class ValkyrieQuantBrain:
         self.excel_path = excel_path
         self.json_path = json_path
         self.history = []
-        self.balance = 100000.0
+        self.balance = 10000.0
         self.load_data()
 
     def load_data(self):
@@ -17,7 +17,7 @@ class ValkyrieQuantBrain:
             with open(self.json_path, 'r', encoding='utf-8') as f:
                 d = json.load(f)
                 self.history = d.get('history', [])
-                self.balance = d.get('balance', 100000.0)
+                self.balance = d.get('balance', 10000.0)
         elif self.excel_path and os.path.exists(self.excel_path):
             wb = openpyxl.load_workbook(self.excel_path, data_only=True)
             if '📜 DETAYLI İŞLEM DEFTERİ' in wb.sheetnames:

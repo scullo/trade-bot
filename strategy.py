@@ -22,6 +22,7 @@ class StrategyEngine:
         self.boot_time = time.time()  # Sunucu baslangic zamani (Isinma Kalkanı)
         self.warmup_seconds = 45.0   # Ilk 45 saniye ani kapatmalari onle
         self.recent_rejections = []  # 🧠 Son elenen / girilmeyen sinyaller ve nedenleri (Canlı Dashboard Zekası)
+        self.setup_attempts = {}     # Seviye temas takibi (Madde 5)
         self.dna_baseline = {}       # 🧬 3,615 Gerçek İşlem Analizinden Türetilen Parite DNA Hafızası
         try:
             import json, os
@@ -524,48 +525,67 @@ class StrategyEngine:
 
         # ── 2. TAKE-PROFIT (KAR ALMA) KONTROLU ──────────────────────────────
         if side == "LONG":
-            if tp1 > 0 and current_price >= tp1:
-                lvl_tag = self._get_level_name_by_price(tp1, levels)
-                lvl_str = f" [{lvl_tag}]" if lvl_tag else ""
-                if trade_type == "SCALP" or not tp2:
-                    record = await self._safe_close_position(symbol, current_price, f"🎯 TP Hedefine Ulaşıldı{lvl_str} (${tp1:.4f})")
-                    if record:
-                        await self._notify_close(record, levels=levels)
-                        self._cleanup_tracking(symbol)
-                elif trade_type == "BREAKOUT" and not pos.get("is_half_closed"):
-                    record = await self._safe_close_position(symbol, current_price, f"🎯 TP1 Alındı{lvl_str} (%50 Kapatıldı)", is_partial=True)
-                    if record:
-                        await self._notify_close(record, levels=levels)
-
-            elif tp2 > 0 and pos.get("is_half_closed") and current_price >= tp2:
+            if tp2 > 0 and pos.get("is_half_closed") and current_price >= tp2:
                 lvl_tag2 = self._get_level_name_by_price(tp2, levels)
                 lvl_str2 = f" [{lvl_tag2}]" if lvl_tag2 else ""
                 record = await self._safe_close_position(symbol, current_price, f"🚀 TP2 Final Hedefe Ulaşıldı{lvl_str2} (${tp2:.4f})")
                 if record:
                     await self._notify_close(record, levels=levels)
                     self._cleanup_tracking(symbol)
+
+            elif not pos.get("is_half_closed") and tp1 > 0 and current_price >= tp1:
+                lvl_tag = self._get_level_name_by_price(tp1, levels)
+                lvl_str = f" [{lvl_tag}]" if lvl_tag else ""
+
+                # Anlık Mikro-CVD ve Runner Teyidi
+                cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+                cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
+                # TP2 varsa ve (Breakout veya CVD alıcı üstünlüğü >= 52.0% ise) Runner'a izin ver
+                has_runner = bool(tp2 and tp2 > tp1 and (trade_type == "BREAKOUT" or cvd_ratio >= 52.0))
+
+                if not has_runner or not tp2:
+                    record = await self._safe_close_position(symbol, current_price, f"🎯 TP Hedefine Ulaşıldı{lvl_str} (${tp1:.4f})")
+                    if record:
+                        await self._notify_close(record, levels=levels)
+                        self._cleanup_tracking(symbol)
+                    return
+                else:
+                    record = await self._safe_close_position(symbol, current_price, f"🎯 TP1 Alındı{lvl_str} (%50 Kapatıldı - TP2 Runner Aktif)", is_partial=True)
+                    if record:
+                        await self._notify_close(record, levels=levels)
+                    return
 
         elif side == "SHORT":
-            if tp1 > 0 and current_price <= tp1:
-                lvl_tag = self._get_level_name_by_price(tp1, levels)
-                lvl_str = f" [{lvl_tag}]" if lvl_tag else ""
-                if trade_type == "SCALP" or not tp2:
-                    record = await self._safe_close_position(symbol, current_price, f"🎯 TP Hedefine Ulaşıldı{lvl_str} (${tp1:.4f})")
-                    if record:
-                        await self._notify_close(record, levels=levels)
-                        self._cleanup_tracking(symbol)
-                elif trade_type == "BREAKOUT" and not pos.get("is_half_closed"):
-                    record = await self._safe_close_position(symbol, current_price, f"🎯 TP1 Alındı{lvl_str} (%50 Kapatıldı)", is_partial=True)
-                    if record:
-                        await self._notify_close(record, levels=levels)
-
-            elif tp2 > 0 and pos.get("is_half_closed") and current_price <= tp2:
+            if tp2 > 0 and pos.get("is_half_closed") and current_price <= tp2:
                 lvl_tag2 = self._get_level_name_by_price(tp2, levels)
                 lvl_str2 = f" [{lvl_tag2}]" if lvl_tag2 else ""
                 record = await self._safe_close_position(symbol, current_price, f"🚀 TP2 Final Hedefe Ulaşıldı{lvl_str2} (${tp2:.4f})")
                 if record:
                     await self._notify_close(record, levels=levels)
                     self._cleanup_tracking(symbol)
+                return
+
+            elif not pos.get("is_half_closed") and tp1 > 0 and current_price <= tp1:
+                lvl_tag = self._get_level_name_by_price(tp1, levels)
+                lvl_str = f" [{lvl_tag}]" if lvl_tag else ""
+
+                # Anlık Mikro-CVD ve Runner Teyidi
+                cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+                cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
+                # TP2 varsa ve (Breakout veya CVD satıcı üstünlüğü <= 48.0% ise) Runner'a izin ver
+                has_runner = bool(tp2 and tp2 < tp1 and (trade_type == "BREAKOUT" or cvd_ratio <= 48.0))
+
+                if not has_runner or not tp2:
+                    record = await self._safe_close_position(symbol, current_price, f"🎯 TP Hedefine Ulaşıldı{lvl_str} (${tp1:.4f})")
+                    if record:
+                        await self._notify_close(record, levels=levels)
+                        self._cleanup_tracking(symbol)
+                    return
+                else:
+                    record = await self._safe_close_position(symbol, current_price, f"🎯 TP1 Alındı{lvl_str} (%50 Kapatıldı - TP2 Runner Aktif)", is_partial=True)
+                    if record:
+                        await self._notify_close(record, levels=levels)
+                    return
 
         # ── 2.5 DİNAMİK ROE VE ZAMAN BAZLI KÂR KİLİDİ (%50 KÂR AL & BREAKEVEN) ──
         if symbol in self.paper_trader.open_positions and not self.paper_trader.open_positions[symbol].get("is_half_closed", False):
@@ -632,14 +652,14 @@ class StrategyEngine:
 
         updated = False
 
-        # ── ASAMA 1: ROE >= %6 → Breakeven korumasi (giris fiyatina) ─────────
+        # ── ASAMA 1: ROE >= %6 → Breakeven korumasi (giris fiyatina + komisyon kalkanı) ──
         if roe >= TRAILING_BREAKEVEN_ROE and not pos.get("_trail_be"):
             if side == "LONG":
-                new_stop = entry * 1.001  # Giris + kucuk tampon
+                new_stop = round(entry * 1.003, 8)  # Giris + %0.30 komisyon kalkanı
                 pos["hard_stop"] = max(pos.get("hard_stop", 0), new_stop)
                 pos["soft_stop"] = max(pos.get("soft_stop", 0), new_stop)
             else:
-                new_stop = entry * 0.999  # Giris - kucuk tampon
+                new_stop = round(entry * 0.997, 8)  # Giris - %0.30 komisyon kalkanı
                 pos["hard_stop"] = min(pos.get("hard_stop", float('inf')), new_stop)
                 pos["soft_stop"] = min(pos.get("soft_stop", float('inf')), new_stop)
             pos["_trail_be"] = True
@@ -838,13 +858,25 @@ class StrategyEngine:
         else:
             # Sekme (Bounce): Destekten dönüşte alıcı devreye girdi mi veya limit emilimi var mı?
             if side == "LONG":
-                if cvd_ratio_60s >= 55.0 or (cvd_delta_60s > 0 and cvd_ratio_60s >= 50.0):
+                # 🛡️ DÜŞEN BIÇAK KALKANI (Falling Knife Shield): Destekte agresif Taker Satış sürüyorsa ters işlem açma!
+                if cvd_ratio_60s < 42.0 and cvd_delta_60s < -3000:
+                    rej_msg = f"🛡️ Mikro-CVD Düşen Bıçak Kalkanı (Falling Knife): Destek seviyesinde agresif Taker Satıcı baskısı devam ediyor (%{100-cvd_ratio_60s:.0f} Satıcı, Delta: -${abs(cvd_delta_60s):,.0f}). Bıçak tutulmadı, işlem engellendi."
+                    print(f">> [RED - CVD FALLING KNIFE] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg)
+                    return {"error": "CVD_FALLING_KNIFE_BLOCKED"}
+                elif cvd_ratio_60s >= 55.0 or (cvd_delta_60s > 0 and cvd_ratio_60s >= 50.0):
                     cvd_confirmed = True
                     cvd_status = "🛡️ KURUMSAL ALICI EMİLİMİ (Teyitli)"
                     cvd_tag = f" [🛡️ Mikro-CVD Destek Emilimi Teyitli (%{cvd_ratio_60s:.0f})]"
                     cvd_margin_mult = 1.10
             elif side == "SHORT":
-                if cvd_ratio_60s <= 45.0 or (cvd_delta_60s < 0 and cvd_ratio_60s <= 50.0):
+                # 🛡️ YÜKSELEN BIÇAK KALKANI (Rising Knife Shield): Dirençte agresif Taker Alış sürüyorsa ters işlem açma!
+                if cvd_ratio_60s > 58.0 and cvd_delta_60s > 3000:
+                    rej_msg = f"🛡️ Mikro-CVD Yükselen Bıçak Kalkanı (Rising Knife): Direnç seviyesinde agresif Taker Alıcı baskısı devam ediyor (%{cvd_ratio_60s:.0f} Alıcı, Delta: +${cvd_delta_60s:,.0f}). Ters işlem engellendi."
+                    print(f">> [RED - CVD RISING KNIFE] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg)
+                    return {"error": "CVD_RISING_KNIFE_BLOCKED"}
+                elif cvd_ratio_60s <= 45.0 or (cvd_delta_60s < 0 and cvd_ratio_60s <= 50.0):
                     cvd_confirmed = True
                     cvd_status = "🛡️ KURUMSAL SATICI EMİLİMİ (Teyitli)"
                     cvd_tag = f" [🛡️ Mikro-CVD Direnç Emilimi Teyitli (%{100-cvd_ratio_60s:.0f})]"
@@ -1339,14 +1371,34 @@ class StrategyEngine:
                 if (side == "LONG" and close_price >= tp1_target) or (side == "SHORT" and close_price <= tp1_target):
                     lvl_tag = self._get_level_name_by_price(tp1_target, levels)
                     lvl_str = f" [{lvl_tag}]" if lvl_tag else ""
-                    record = await self._safe_close_position(
-                        symbol, tp1_target,
-                        f"🎯 TP1 Hedefine Ulaşıldı{lvl_str} (%50 Kâr Alındı - Stop Breakeven'e Çekildi)",
-                        is_partial=True
-                    )
-                    if record:
-                        await self._notify_close(record, levels=levels)
-                    return
+
+                    cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+                    cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
+
+                    if side == "LONG":
+                        has_runner = bool(tp2_target and tp2_target > tp1_target and (pos.get("trade_type") == "BREAKOUT" or cvd_ratio >= 52.0))
+                    else:
+                        has_runner = bool(tp2_target and tp2_target < tp1_target and (pos.get("trade_type") == "BREAKOUT" or cvd_ratio <= 48.0))
+
+                    if has_runner:
+                        record = await self._safe_close_position(
+                            symbol, tp1_target,
+                            f"🎯 TP1 Hedefine Ulaşıldı{lvl_str} (%50 Kâr Alındı - Stop Breakeven'e Çekildi)",
+                            is_partial=True
+                        )
+                        if record:
+                            await self._notify_close(record, levels=levels)
+                        return
+                    else:
+                        record = await self._safe_close_position(
+                            symbol, tp1_target,
+                            f"🎯 TP Hedefine Ulaşıldı{lvl_str} (${tp1_target:.4f})",
+                            is_partial=False
+                        )
+                        if record:
+                            await self._notify_close(record, levels=levels)
+                            self._cleanup_tracking(symbol)
+                        return
 
             # 1b. NİHAİ KÂR ALMA (TP2 - Kalan %50 Kapatma)
             if is_half and tp2_target > 0:
@@ -1413,7 +1465,7 @@ class StrategyEngine:
         user_daily_loss_pct = getattr(self.paper_trader, 'max_daily_drawdown_pct', 0.05)
         cb_ok, cb_msg = self.vault.check_daily_circuit_breaker(
             getattr(self.paper_trader, 'history', []),
-            getattr(self.paper_trader, 'balance', 100000.0),
+            getattr(self.paper_trader, 'balance', 10000.0),
             max_loss_pct=user_daily_loss_pct
         )
         if not cb_ok:
@@ -1426,7 +1478,7 @@ class StrategyEngine:
         mc_ok, mc_msg = self.vault.check_margin_cap(
             getattr(self.paper_trader, 'open_positions', {}),
             new_trade_margin=pos_size,
-            balance=getattr(self.paper_trader, 'balance', 100000.0),
+            balance=getattr(self.paper_trader, 'balance', 10000.0),
             max_cap_pct=user_margin_cap_pct
         )
         if not mc_ok:
@@ -1440,6 +1492,8 @@ class StrategyEngine:
         macro = self.get_macro_climate()
         is_dead_zone = macro.get("is_dead_zone", False)
         eth_leading = macro.get("eth_leading", False)
+        macro_regime = macro.get("regime", "NEUTRAL")
+        is_bear_dump = (macro_regime == "BEAR_DUMP")
         is_range_regime = is_dead_zone
 
         if tepe_avwap > 0 and p > 0 and close_price > tepe_avwap and close_price > p:
@@ -1478,11 +1532,11 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 1 R4 Breakout", struct_reason)
                 return
 
-            # 🛡️ MAKRO ÖLÜ BÖLGE KALKANI: BTC+ETH Sıkışmasında Beta Kırılımını Filtrele
-            if is_dead_zone and not is_decoupled_bull:
+            # 🛡️ MAKRO ÖLÜ BÖLGE / AYI DÖKÜLMESİ KALKANI: BTC+ETH Sıkışmasında veya Çöküşünde Beta Kırılımını Filtrele
+            if (is_dead_zone or is_bear_dump) and not is_decoupled_bull:
                 self.log_rejection(
                     symbol, "SETUP 1 R4 Breakout",
-                    f"Makro Ölü Bölge (BTC 1S: %{macro['btc_range_1h']:.2f}, ETH 1S: %{macro['eth_range_1h']:.2f}); Beta sahte kırılım riski nedeniyle elendi (Bağımsız Alfa RS: {coin_rs_score:+.2f} / Hacim: {coin_vol_surge:.1f}x teyidi yok)"
+                    f"Makro Risk Kalkanı ({macro_regime} - BTC 1S: %{macro['btc_chg_1h']:+.2f}, ETH 1S: %{macro['eth_chg_1h']:+.2f}); Beta sahte kırılım riski nedeniyle elendi (Bağımsız Alfa RS: {coin_rs_score:+.2f} / Hacim: {coin_vol_surge:.1f}x teyidi yok)"
                 )
                 return
 
@@ -1532,7 +1586,15 @@ class StrategyEngine:
                 )
                 return
 
-            min_breakout_vol = 1.25 if eth_leading else (1.8 if is_range_regime else 1.35)
+            if is_bear_dump:
+                min_breakout_vol = 1.10  # Makro dökülmede breakdown shortları trend yönünde ödüllendirilir
+            elif eth_leading:
+                min_breakout_vol = 1.25
+            elif is_range_regime:
+                min_breakout_vol = 1.80
+            else:
+                min_breakout_vol = 1.35
+
             if vol_surge < min_breakout_vol:
                 self.log_rejection(symbol, "SETUP 2 S4 Breakdown", f"{'Yatay piyasada sahte kırılım kalkanı: ' if is_range_regime else ''}Hacim patlaması {vol_surge:.2f}x yetersiz (en az {min_breakout_vol:.2f}x patlama aranıyor)")
                 return
@@ -1567,6 +1629,14 @@ class StrategyEngine:
             struct_ok, struct_reason = self.check_structural_invalidation(symbol, "LONG", close_price, levels)
             if not struct_ok:
                 self.log_rejection(symbol, "SETUP 3 S3 Destek", struct_reason)
+                return
+
+            # 🛡️ MAKRO AYI DÖKÜLMESİ KALKANI: BTC/ETH Ana Destekleri Kırarken Bıçak Tutma Engeli
+            if is_bear_dump and not (coin_rs_score >= 1.5 and coin_vol_surge >= 2.5):
+                self.log_rejection(
+                    symbol, "SETUP 3 S3 Destek",
+                    f"Makro Ayı Dökülmesi (BEAR_DUMP - BTC 1S: %{macro['btc_chg_1h']:+.2f}, ETH 1S: %{macro['eth_chg_1h']:+.2f}); Piyasa genel düşüşündeyken S3 destek sekmesi engellendi (Yalnızca bağımsız RS >= +1.5 ve Hacim >= 2.5x olanlara izin verilir)."
+                )
                 return
 
             # 🛡️ ALICI EMİLİM MUMU ŞARTI (Ezilen Parite Koruma Zırhı)
@@ -1772,7 +1842,10 @@ class StrategyEngine:
                 return
 
             # 🛡️ HACİM TEYİDİ: Aylık mVAL dökülmesi kurumsal hacim patlaması gerektirir
-            min_mval_vol = min_vol_surge if min_vol_surge else 1.5
+            if is_bear_dump:
+                min_mval_vol = 1.10
+            else:
+                min_mval_vol = min_vol_surge if min_vol_surge else 1.5
             if vol_surge < min_mval_vol:
                 self.log_rejection(symbol, "SETUP 8 mVAL Breakdown", f"mVAL kırılım hacmi {vol_surge:.2f}x yetersiz (en az {min_mval_vol:.2f}x aranıyor)")
                 return
@@ -1804,6 +1877,14 @@ class StrategyEngine:
             struct_ok, struct_reason = self.check_structural_invalidation(symbol, "LONG", close_price, levels)
             if not struct_ok:
                 self.log_rejection(symbol, "SETUP 9 nPOC Sekmesi", struct_reason)
+                return
+
+            # 🛡️ MAKRO AYI DÖKÜLMESİ KALKANI: BTC/ETH Ana Destekleri Kırarken Bıçak Tutma Engeli
+            if is_bear_dump and not (coin_rs_score >= 1.5 and coin_vol_surge >= 2.5):
+                self.log_rejection(
+                    symbol, "SETUP 9 nPOC Sekmesi",
+                    f"Makro Ayı Dökülmesi (BEAR_DUMP - BTC 1S: %{macro['btc_chg_1h']:+.2f}, ETH 1S: %{macro['eth_chg_1h']:+.2f}); Piyasa genel düşüşündeyken nPOC likidite sekmesi engellendi (Yalnızca bağımsız RS >= +1.5 ve Hacim >= 2.5x olanlara izin verilir)."
+                )
                 return
 
             # 🛡️ ALICI EMİLİM MUMU ŞARTI (Ezilen Parite Koruma Zırhı)

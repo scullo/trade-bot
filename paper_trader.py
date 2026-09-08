@@ -71,11 +71,13 @@ class PaperTrader:
                 content_str = base64.b64decode(content_b64).decode("utf-8")
                 data = json.loads(content_str)
                 self.balance = float(data.get("balance", self.initial_balance))
-                if self.balance > 150000.0 or self.balance <= 1000.0:
+                if self.balance > (self.initial_balance * 1.5) or self.balance <= 100.0:
                     self.balance = float(self.initial_balance)
-                    self.history = [h for h in self.history if abs(h.get('pnl', 0)) < 50000]
-                self.open_positions = data.get("open_positions", {})
-                self.history = data.get("history", [])
+                    self.open_positions = {}
+                    self.history = []
+                else:
+                    self.open_positions = data.get("open_positions", {})
+                    self.history = data.get("history", [])
                 loaded = True
                 print(f">> [GITHUB PERSISTENCE] trade_history.json GitHub'dan yuklendi (SHA: {self._github_sha[:8]}...) Bakiye: {self.balance}")
             except Exception as e:
@@ -87,11 +89,13 @@ class PaperTrader:
                 with open(HISTORY_FILE, "r", encoding="utf-8-sig") as f:
                     data = json.load(f)
                     self.balance = float(data.get("balance", self.initial_balance))
-                    if self.balance > 150000.0 or self.balance <= 1000.0:
+                    if self.balance > (self.initial_balance * 1.5) or self.balance <= 100.0:
                         self.balance = float(self.initial_balance)
-                        self.history = [h for h in self.history if abs(h.get('pnl', 0)) < 50000]
-                    self.open_positions = data.get("open_positions", {})
-                    self.history = data.get("history", [])
+                        self.open_positions = {}
+                        self.history = []
+                    else:
+                        self.open_positions = data.get("open_positions", {})
+                        self.history = data.get("history", [])
                     loaded = True
                     print(f">> [LOCAL] trade_history.json lokal dosyadan yuklendi. Bakiye: {self.balance}")
             except Exception as e:
@@ -414,8 +418,8 @@ class PaperTrader:
             pos["margin"] = closed_margin
             pos["position_value"] = closed_val
             pos["quantity"] = closed_qty
-            pos["entry_fee"] = entry_fee - portion_entry_fee
-            be_price = entry_p * 1.002 if side == "LONG" else entry_p * 0.998
+            # Fee-Armor Breakeven: Komisyon kalkanı (+%0.30) ile net kâr garantisi
+            be_price = round(entry_p * 1.003, 8) if side == "LONG" else round(entry_p * 0.997, 8)
             pos["soft_stop"] = be_price
             pos["hard_stop"] = be_price
             pos["tp1_hit"] = True

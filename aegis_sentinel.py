@@ -276,7 +276,7 @@ class ValkyrieAegisSentinel:
         self.last_audit_result = result
         return result
 
-    def generate_executive_telegram_report(self, audit: dict, trader_manager, initial_balance: float = 100000.0) -> str:
+    def generate_executive_telegram_report(self, audit: dict, trader_manager, initial_balance: float = 10000.0) -> str:
         """
         5. & 6. KATMAN: Telegram Saatlik VIP Quant Yonetici Raporu
         """
@@ -287,7 +287,7 @@ class ValkyrieAegisSentinel:
         healing = audit.get("healing_actions", [])
         near = audit.get("near_targets", [])
 
-        bal = getattr(trader_manager, 'balance', 100000.0)
+        bal = getattr(trader_manager, 'balance', 10000.0)
         open_pos = getattr(trader_manager, 'open_positions', {})
         hist = getattr(trader_manager, 'history', [])
         mode = audit.get("mode", "DEMO")

@@ -13,7 +13,7 @@ def _safe_float(val, default=0.0):
 import os
 import tempfile
 
-def create_styled_excel_report(history_data: list, current_balance: float = 100000.0, initial_balance: float = 100000.0) -> io.BytesIO:
+def create_styled_excel_report(history_data: list, current_balance: float = 10000.0, initial_balance: float = 10000.0) -> io.BytesIO:
     with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp:
         tmp_path = tmp.name
         

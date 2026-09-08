@@ -1967,7 +1967,7 @@ HTML_PAGE = """
 
             <div style="display:flex; justify-content:center; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:44px;">
                 <button onclick="openAuthModal('register')" style="background:linear-gradient(135deg, #00f2fe, #4facfe); border:none; color:#000; font-weight:900; font-size:14.5px; padding:14px 30px; border-radius:12px; cursor:pointer; box-shadow:0 8px 30px rgba(0,242,254,0.35);">
-                    🚀 48 Saatlik Ücretsiz Demo Başlat ($100,000 Sanal Kasa)
+                    🚀 48 Saatlik Ücretsiz Demo Başlat ($10,000 Sanal Kasa)
                 </button>
                 <button onclick="openAuthModal('login')" style="background:rgba(255,255,255,0.04); border:1.5px solid rgba(255,255,255,0.15); color:#ffffff; font-weight:800; font-size:14.5px; padding:14px 26px; border-radius:12px; cursor:pointer;">
                     🔐 Yatırımcı Girişi
@@ -2337,8 +2337,8 @@ HTML_PAGE = """
                     <span class="kpi-card-title">Toplam Kasa Bakiyesi</span>
                     <span class="kpi-card-icon">💼</span>
                 </div>
-                <div class="kpi-card-val" id="cockpit-balance">100,000.00 $</div>
-                <div class="kpi-card-sub" id="cockpit-free-bal">Serbest: 100,000.00 USDT (5x)</div>
+                <div class="kpi-card-val" id="cockpit-balance">10,000.00 $</div>
+                <div class="kpi-card-sub" id="cockpit-free-bal">Serbest: 10,000.00 USDT (5x)</div>
                 <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">🛡️ Dinamik Sermaye Koruması Aktif</div>
             </div>
 
@@ -3095,7 +3095,7 @@ HTML_PAGE = """
                     <span class="kpi-card-title">Toplam Yönetilen Fon (AUM)</span>
                     <span class="kpi-card-icon">🏦</span>
                 </div>
-                <div class="kpi-card-val" id="admin-total-aum" style="color:var(--cyan);">$100,000.00</div>
+                <div class="kpi-card-val" id="admin-total-aum" style="color:var(--cyan);">$10,000.00</div>
                 <div class="kpi-card-sub">Bağlı Müşteri Cüzdanları Toplamı</div>
             </div>
 
@@ -3755,7 +3755,7 @@ async function loadAdminMetrics() {
                 const vipEl = document.getElementById('admin-vip-count');
                 const tbody = document.getElementById('admin-users-table-body');
 
-                if (aumEl) aumEl.innerText = `$${(data.total_aum || 100000).toLocaleString('en-US', {minimumFractionDigits:2})}`;
+                if (aumEl) aumEl.innerText = `$${(data.total_aum || 10000).toLocaleString('en-US', {minimumFractionDigits:2})}`;
                 if (usrEl) usrEl.innerText = `${data.total_users || 1} Yatırımcı`;
                 if (trlEl) trlEl.innerText = `${data.trial_count || 0} Aktif`;
                 if (vipEl) vipEl.innerText = `${(data.vip_count || 1) + (data.pro_count || 0)} Abone`;
@@ -5294,8 +5294,8 @@ async function loadAdminMetrics() {
             if (!appState) return;
 
             // 1. Cockpit Financial KPIs
-            const bal = Number(appState.balance || 100000.0);
-            const initBal = Number(appState.initial_balance || 100000.0);
+            const bal = Number(appState.balance || 10000.0);
+            const initBal = Number(appState.initial_balance || 10000.0);
             const hist = appState.history || [];
             
             let totalNetPnl = 0.0;
@@ -7350,7 +7350,7 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 }
             });
 
-            const bal = appState.balance || 100000.0;
+            const bal = appState.balance || 10000.0;
             const totalPortfolioEquity = bal + totalUnrealizedPnl;
             const totalNetPnl = totalRealizedNetPnl + totalUnrealizedPnl;
 
@@ -7365,7 +7365,7 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 pnlEl.style.color = totalNetPnl >= 0 ? 'var(--green)' : 'var(--red)';
             }
             
-            const initialBal = (appState.initial_balance || 100000.0);
+            const initialBal = (appState.initial_balance || 10000.0);
             const growthPct = ((totalPortfolioEquity - initialBal) / initialBal) * 100;
             if (growthEl) {
                 if (growthPct >= 0) {
@@ -8404,7 +8404,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
 
             return web.json_response({
                 "balance": trader_manager.balance,
-                "initial_balance": 100000.0,
+                "initial_balance": 10000.0,
                 "free_balance": trader_manager.get_free_balance(),
                 "open_positions": trader_manager.open_positions,
                 "history": hist_full[-150:], # BELLEK DOSTU: Sadece son 150 işlem
@@ -8427,7 +8427,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             hist_full = trader_manager.history
             return web.json_response({
                 "balance": trader_manager.balance,
-                "initial_balance": 100000.0,
+                "initial_balance": 10000.0,
                 "free_balance": trader_manager.get_free_balance(),
                 "open_positions": trader_manager.open_positions,
                 "history": hist_full[-150:],
@@ -8462,7 +8462,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
     async def api_reset_trading_state(request):
         try:
             if trader_manager and hasattr(trader_manager, 'paper_trader') and trader_manager.paper_trader:
-                trader_manager.paper_trader.balance = 100000.0
+                trader_manager.paper_trader.balance = 10000.0
                 trader_manager.paper_trader.open_positions = {}
                 trader_manager.paper_trader.history = []
                 trader_manager.paper_trader.save_history(critical=True)
@@ -8477,8 +8477,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                     strategy.recent_rejections.clear()
             return web.json_response({
                 "status": "ok",
-                "message": "Cüzdan $100,000 USDT seviyesine çekildi, tüm açık pozisyonlar ve defter sıfırlandı!",
-                "balance": 100000.0,
+                "message": "Cüzdan $10,000 USDT seviyesine çekildi, tüm açık pozisyonlar ve defter sıfırlandı!",
+                "balance": 10000.0,
                 "open_positions": 0,
                 "history": 0
             })

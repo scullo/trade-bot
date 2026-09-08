@@ -120,7 +120,7 @@ DEFAULT_ACTIVE_SYMBOLS = ALL_AVAILABLE_SYMBOLS.copy()
 SYMBOLS = DEFAULT_ACTIVE_SYMBOLS
 
 # 2. Risk ve Kasa Yonetimi
-INITIAL_BALANCE = 100000.0       # Demo baslangic bakiyesi (USDT)
+INITIAL_BALANCE = 10000.0        # Demo baslangic bakiyesi (USDT)
 LEVERAGE = 5                  # Kaldirac (5x)
 POSITION_SIZE_USDT = 100.0     # Her islemde kullanilacak marjin (10 USDT)
 MAX_OPEN_POSITIONS = 100      # Tum aktif paritelerde bakiye yettigince islem acilabilmesi icin 100
