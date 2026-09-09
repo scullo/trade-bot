@@ -103,6 +103,24 @@ async def main():
 
     asyncio.create_task(memory_and_sync_watchdog())
 
+    # Render 15 Dakikalık Hareketsizlik Uyku Kalkanı (Keep-Alive Self-Ping)
+    async def render_keepalive_watchdog():
+        import aiohttp
+        render_url = os.environ.get("RENDER_EXTERNAL_URL", "https://trade-bot-0te2.onrender.com") + "/ping"
+        await asyncio.sleep(60)
+        while True:
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(render_url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                        if resp.status == 200:
+                            print(">> [KEEP-ALIVE] Render uyku kalkanı aktif (ping 200 OK)")
+            except Exception as e:
+                # print(f">> [KEEP-ALIVE UYARI] {e}")
+                pass
+            await asyncio.sleep(300)  # Her 5 dakikada bir
+
+    asyncio.create_task(render_keepalive_watchdog())
+
     # Saatlik otomatik Telegram Kasa & Portföy Raporlayıcıyı Başlat
     asyncio.create_task(notifier.start_hourly_scheduler(trader_manager, initial_balance=INITIAL_BALANCE, market_data=market_data))
     # Telegram /kasa ve kasa İnteraktif Komut Dinleyicisini Başlat

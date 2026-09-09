@@ -537,22 +537,17 @@ class StrategyEngine:
                 lvl_tag = self._get_level_name_by_price(tp1, levels)
                 lvl_str = f" [{lvl_tag}]" if lvl_tag else ""
 
-                # Anlık Mikro-CVD ve Runner Teyidi
-                cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
-                cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
-                # TP2 varsa ve (Breakout veya CVD alıcı üstünlüğü >= 52.0% ise) Runner'a izin ver
-                has_runner = bool(tp2 and tp2 > tp1 and (trade_type == "BREAKOUT" or cvd_ratio >= 52.0))
-
-                if not has_runner or not tp2:
+                # TP2 tanımlıysa %50 Kâr Al & Kalan %50 Runner'ı Breakeven Korumasıyla Bırak
+                if tp2 and tp2 > tp1:
+                    record = await self._safe_close_position(symbol, current_price, f"🎯 TP1 Alındı{lvl_str} (%50 Kapatıldı - TP2 Runner Aktif)", is_partial=True)
+                    if record:
+                        await self._notify_close(record, levels=levels)
+                    return
+                else:
                     record = await self._safe_close_position(symbol, current_price, f"🎯 TP Hedefine Ulaşıldı{lvl_str} (${tp1:.4f})")
                     if record:
                         await self._notify_close(record, levels=levels)
                         self._cleanup_tracking(symbol)
-                    return
-                else:
-                    record = await self._safe_close_position(symbol, current_price, f"🎯 TP1 Alındı{lvl_str} (%50 Kapatıldı - TP2 Runner Aktif)", is_partial=True)
-                    if record:
-                        await self._notify_close(record, levels=levels)
                     return
 
         elif side == "SHORT":
@@ -569,22 +564,17 @@ class StrategyEngine:
                 lvl_tag = self._get_level_name_by_price(tp1, levels)
                 lvl_str = f" [{lvl_tag}]" if lvl_tag else ""
 
-                # Anlık Mikro-CVD ve Runner Teyidi
-                cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
-                cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
-                # TP2 varsa ve (Breakout veya CVD satıcı üstünlüğü <= 48.0% ise) Runner'a izin ver
-                has_runner = bool(tp2 and tp2 < tp1 and (trade_type == "BREAKOUT" or cvd_ratio <= 48.0))
-
-                if not has_runner or not tp2:
+                # TP2 tanımlıysa %50 Kâr Al & Kalan %50 Runner'ı Breakeven Korumasıyla Bırak
+                if tp2 and tp2 < tp1:
+                    record = await self._safe_close_position(symbol, current_price, f"🎯 TP1 Alındı{lvl_str} (%50 Kapatıldı - TP2 Runner Aktif)", is_partial=True)
+                    if record:
+                        await self._notify_close(record, levels=levels)
+                    return
+                else:
                     record = await self._safe_close_position(symbol, current_price, f"🎯 TP Hedefine Ulaşıldı{lvl_str} (${tp1:.4f})")
                     if record:
                         await self._notify_close(record, levels=levels)
                         self._cleanup_tracking(symbol)
-                    return
-                else:
-                    record = await self._safe_close_position(symbol, current_price, f"🎯 TP1 Alındı{lvl_str} (%50 Kapatıldı - TP2 Runner Aktif)", is_partial=True)
-                    if record:
-                        await self._notify_close(record, levels=levels)
                     return
 
         # ── 2.5 DİNAMİK ROE VE ZAMAN BAZLI KÂR KİLİDİ (%50 KÂR AL & BREAKEVEN) ──
@@ -1372,13 +1362,8 @@ class StrategyEngine:
                     lvl_tag = self._get_level_name_by_price(tp1_target, levels)
                     lvl_str = f" [{lvl_tag}]" if lvl_tag else ""
 
-                    cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
-                    cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
-
-                    if side == "LONG":
-                        has_runner = bool(tp2_target and tp2_target > tp1_target and (pos.get("trade_type") == "BREAKOUT" or cvd_ratio >= 52.0))
-                    else:
-                        has_runner = bool(tp2_target and tp2_target < tp1_target and (pos.get("trade_type") == "BREAKOUT" or cvd_ratio <= 48.0))
+                    has_runner = bool((side == "LONG" and tp2_target and tp2_target > tp1_target) or
+                                      (side == "SHORT" and tp2_target and tp2_target < tp1_target))
 
                     if has_runner:
                         record = await self._safe_close_position(
@@ -1632,29 +1617,39 @@ class StrategyEngine:
                 return
 
             # 🛡️ MAKRO AYI DÖKÜLMESİ KALKANI: BTC/ETH Ana Destekleri Kırarken Bıçak Tutma Engeli
-            if is_bear_dump and not (coin_rs_score >= 1.5 and coin_vol_surge >= 2.5):
+            # 🛡️ MAKRO VE TREND DÜŞÜŞÜ KALKANI: BTC düşerken veya genel satışta bıçak tutma engeli
+            btc_chg_1h = macro.get("btc_chg_1h", 0.0)
+            if is_bear_dump or (btc_chg_1h < -0.25 and coin_rs_score < 0.5):
                 self.log_rejection(
                     symbol, "SETUP 3 S3 Destek",
-                    f"Makro Ayı Dökülmesi (BEAR_DUMP - BTC 1S: %{macro['btc_chg_1h']:+.2f}, ETH 1S: %{macro['eth_chg_1h']:+.2f}); Piyasa genel düşüşündeyken S3 destek sekmesi engellendi (Yalnızca bağımsız RS >= +1.5 ve Hacim >= 2.5x olanlara izin verilir)."
+                    f"Makro Düşüş Kalkanı (BTC 1S: %{btc_chg_1h:+.2f}, RS: {coin_rs_score:+.2f}); Piyasa genel düşüşündeyken S3 destek sekmesi engellendi."
                 )
                 return
 
-            # 🛡️ ALICI EMİLİM MUMU ŞARTI (Ezilen Parite Koruma Zırhı)
-            if is_severely_weak:
-                c_open = current_candle.get('open', close_price)
-                c_low = current_candle.get('low', close_price)
-                c_high = current_candle.get('high', close_price)
-                c_range = c_high - c_low
-                lower_wick = (min(c_open, close_price) - c_low) if c_range > 0 else 0
-                lower_wick_ratio = (lower_wick / c_range) if c_range > 0 else 0
-                is_absorption = (lower_wick_ratio >= 0.35) or (close_price >= c_open)
-                if not is_absorption:
-                    self.log_rejection(symbol, "SETUP 3 S3 Destek", f"Aşırı Zayıf Parite: S3 desteğinde alıcı emilimi (min %35 alt fitil veya yeşil kapanış) yok (Fitil: %{lower_wick_ratio*100:.1f})")
-                    return
+            # 🛡️ GÖRECELİ GÜÇ (RS) BARİYERİ: Zayıf coinlerde S3 desteği tutunamaz
+            if coin_rs_score < -0.30 or is_severely_weak:
+                self.log_rejection(
+                    symbol, "SETUP 3 S3 Destek",
+                    f"Zayıf Parite Kalkanı: Negatif Göreceli Güç (RS: {coin_rs_score:+.2f}) olan paritede S3 sekmesi engellendi."
+                )
+                return
 
-            buffer = (s3 - s4) * BUFFER_RATIO
-            soft_stop = s3 - buffer
-            hard_stop = s4
+            # 🛡️ ALICI EMİLİM MUMU ŞARTI
+            c_open = current_candle.get('open', close_price)
+            c_low = current_candle.get('low', close_price)
+            c_high = current_candle.get('high', close_price)
+            c_range = c_high - c_low
+            lower_wick = (min(c_open, close_price) - c_low) if c_range > 0 else 0
+            lower_wick_ratio = (lower_wick / c_range) if c_range > 0 else 0
+            is_absorption = (lower_wick_ratio >= 0.25) or (close_price >= c_open)
+            if not is_absorption:
+                self.log_rejection(symbol, "SETUP 3 S3 Destek", f"S3 desteğinde alıcı emilimi (min %25 alt fitil veya yeşil kapanış) yok (Fitil: %{lower_wick_ratio*100:.1f})")
+                return
+
+            buffer = (s3 - s4) * BUFFER_RATIO if (s3 > s4) else (s3 * 0.004)
+            soft_stop = max(s3 - buffer, close_price * 0.992)
+            # 🛡️ SERT STOP TAVAN KORUMASI: Maksimum %1.2 risk sınırı
+            hard_stop = max(s4 if s4 > 0 else (s3 - buffer * 2.0), close_price * 0.988)
             up_targets = [lvl for lvl in [dip_avwap, tepe_avwap, mpoc, p, r3] if lvl and lvl > close_price * 1.008]
             up_targets.sort()
             tp1 = up_targets[0] if up_targets else (close_price * 1.012)
@@ -1680,9 +1675,9 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 4 R3 Direnç", struct_reason)
                 return
 
-            buffer = (r4 - r3) * BUFFER_RATIO
-            soft_stop = r3 + buffer
-            hard_stop = r4
+            buffer = (r4 - r3) * BUFFER_RATIO if (r4 > r3) else (r3 * 0.004)
+            soft_stop = min(r3 + buffer, close_price * 1.008)
+            hard_stop = min(r4 if r4 > 0 else (r3 + buffer * 2.0), close_price * 1.012)
             down_targets = [lvl for lvl in [tepe_avwap, dip_avwap, mpoc, p, s3] if lvl and lvl < close_price * 0.992]
             down_targets.sort(reverse=True)
             tp1 = down_targets[0] if down_targets else (close_price * 0.988)
@@ -1879,30 +1874,50 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 9 nPOC Sekmesi", struct_reason)
                 return
 
-            # 🛡️ MAKRO AYI DÖKÜLMESİ KALKANI: BTC/ETH Ana Destekleri Kırarken Bıçak Tutma Engeli
-            if is_bear_dump and not (coin_rs_score >= 1.5 and coin_vol_surge >= 2.5):
+            # 🛡️ MAKRO VE TREND DÜŞÜŞÜ KALKANI: BTC düşerken veya genel dökülmede bıçak tutma engeli
+            btc_chg_1h = macro.get("btc_chg_1h", 0.0)
+            if is_bear_dump or (btc_chg_1h < -0.25 and coin_rs_score < 0.5):
                 self.log_rejection(
                     symbol, "SETUP 9 nPOC Sekmesi",
-                    f"Makro Ayı Dökülmesi (BEAR_DUMP - BTC 1S: %{macro['btc_chg_1h']:+.2f}, ETH 1S: %{macro['eth_chg_1h']:+.2f}); Piyasa genel düşüşündeyken nPOC likidite sekmesi engellendi (Yalnızca bağımsız RS >= +1.5 ve Hacim >= 2.5x olanlara izin verilir)."
+                    f"Makro Düşüş Kalkanı (BTC 1S: %{btc_chg_1h:+.2f}, RS: {coin_rs_score:+.2f}); Piyasa düşüşündeyken nPOC likidite sekmesi engellendi."
+                )
+                return
+
+            # 🛡️ GÖRECELİ GÜÇ (RS) BARİYERİ: Negatif RS'li zayıf coinlerde nPOC desteği tutunamaz
+            if coin_rs_score < -0.30 or is_severely_weak:
+                self.log_rejection(
+                    symbol, "SETUP 9 nPOC Sekmesi",
+                    f"Zayıf Parite Kalkanı: Negatif Göreceli Güç (RS: {coin_rs_score:+.2f}) olan paritede nPOC sekmesi engellendi."
+                )
+                return
+
+            # 🛡️ CVD ALICI EMİLİMİ ŞARTI: Tahtada satıcı üstünlüğü varken girilmez
+            cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+            cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
+            if cvd_ratio < 48.0:
+                self.log_rejection(
+                    symbol, "SETUP 9 nPOC Sekmesi",
+                    f"CVD Satıcı Baskısı: Mikro-CVD alıcı oranı %{cvd_ratio:.1f} yetersiz (en az %48 alıcı emilimi aranıyor)."
                 )
                 return
 
             # 🛡️ ALICI EMİLİM MUMU ŞARTI (Ezilen Parite Koruma Zırhı)
-            if is_severely_weak:
-                c_open = current_candle.get('open', close_price)
-                c_low = current_candle.get('low', close_price)
-                c_high = current_candle.get('high', close_price)
-                c_range = c_high - c_low
-                lower_wick = (min(c_open, close_price) - c_low) if c_range > 0 else 0
-                lower_wick_ratio = (lower_wick / c_range) if c_range > 0 else 0
-                is_absorption = (lower_wick_ratio >= 0.35) or (close_price >= c_open)
-                if not is_absorption:
-                    self.log_rejection(symbol, "SETUP 9 nPOC Sekmesi", f"Aşırı Zayıf Parite: Aşağı nPOC desteğinde alıcı emilimi (min %35 alt fitil veya yeşil kapanış) yok (Fitil: %{lower_wick_ratio*100:.1f})")
-                    return
+            c_open = current_candle.get('open', close_price)
+            c_low = current_candle.get('low', close_price)
+            c_high = current_candle.get('high', close_price)
+            c_range = c_high - c_low
+            lower_wick = (min(c_open, close_price) - c_low) if c_range > 0 else 0
+            lower_wick_ratio = (lower_wick / c_range) if c_range > 0 else 0
+            is_absorption = (lower_wick_ratio >= 0.25) or (close_price >= c_open)
+            if not is_absorption:
+                self.log_rejection(symbol, "SETUP 9 nPOC Sekmesi", f"Aşırı Zayıf Parite: Aşağı nPOC desteğinde alıcı emilimi (min %25 alt fitil veya yeşil kapanış) yok (Fitil: %{lower_wick_ratio*100:.1f})")
+                return
 
             buffer = (p - support_npoc) * BUFFER_RATIO if (p > support_npoc) else (support_npoc * 0.004)
-            soft_stop = support_npoc - buffer
-            hard_stop = s4 if (s4 > 0 and s4 < support_npoc) else (support_npoc - buffer * 2)
+            soft_stop = max(support_npoc - buffer, close_price * 0.992)
+            raw_hard_stop = s4 if (s4 > 0 and s4 < support_npoc) else (support_npoc - buffer * 2)
+            # 🛡️ SERT STOP TAVAN KORUMASI: Stop mesafesi maksimum %1.2 ile sınırlandırılır
+            hard_stop = max(raw_hard_stop, close_price * 0.988)
 
             # Smart Multi-Target: En yakin ilk direnci TP1, nihai hedefi TP2 yap
             up_targets = [
@@ -1956,8 +1971,10 @@ class StrategyEngine:
                     return
 
             buffer = (resist_npoc - p) * BUFFER_RATIO if (resist_npoc > p) else (resist_npoc * 0.004)
-            soft_stop = resist_npoc + buffer
-            hard_stop = r4 if (r4 > 0 and r4 > resist_npoc) else (resist_npoc + buffer * 2)
+            soft_stop = min(resist_npoc + buffer, close_price * 1.008)
+            raw_hard_stop = r4 if (r4 > 0 and r4 > resist_npoc) else (resist_npoc + buffer * 2)
+            # 🛡️ SERT STOP TAVAN KORUMASI: Stop mesafesi maksimum %1.2 ile sınırlandırılır
+            hard_stop = min(raw_hard_stop, close_price * 1.012)
 
             # Smart Multi-Target: En yakin ilk destegi TP1, nihai hedefi TP2 yap
             down_targets = [

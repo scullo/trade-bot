@@ -70,16 +70,31 @@ class PaperTrader:
                 content_b64 = gh_data.get("content", "")
                 content_str = base64.b64decode(content_b64).decode("utf-8")
                 data = json.loads(content_str)
-                self.balance = float(data.get("balance", self.initial_balance))
-                if self.balance > (self.initial_balance * 1.5) or self.balance <= 100.0:
-                    self.balance = float(self.initial_balance)
-                    self.open_positions = {}
-                    self.history = []
-                else:
-                    self.open_positions = data.get("open_positions", {})
-                    self.history = data.get("history", [])
+                gh_history = data.get("history", [])
+                gh_balance = float(data.get("balance", self.initial_balance))
+                gh_positions = data.get("open_positions", {})
+
+                # Yerel dosya kontrolü: Yerel dosyada daha fazla işlem varsa (GitHub eski kalmışsa) yereli koru
+                local_has_more = False
+                if os.path.exists(HISTORY_FILE):
+                    try:
+                        with open(HISTORY_FILE, "r", encoding="utf-8-sig") as lf:
+                            local_data = json.load(lf)
+                            if len(local_data.get("history", [])) > len(gh_history):
+                                local_has_more = True
+                                self.balance = float(local_data.get("balance", self.initial_balance))
+                                self.open_positions = local_data.get("open_positions", {})
+                                self.history = local_data.get("history", [])
+                                print(f">> [PERSISTENCE GUARD] Yerel dosyada daha fazla işlem var ({len(self.history)} vs GitHub {len(gh_history)}). Yerel korundu!")
+                    except Exception:
+                        pass
+
+                if not local_has_more:
+                    self.balance = gh_balance
+                    self.open_positions = gh_positions
+                    self.history = gh_history
                 loaded = True
-                print(f">> [GITHUB PERSISTENCE] trade_history.json GitHub'dan yuklendi (SHA: {self._github_sha[:8]}...) Bakiye: {self.balance}")
+                print(f">> [GITHUB PERSISTENCE] trade_history.json GitHub'dan yuklendi ({len(self.history)} islem, SHA: {self._github_sha[:8] if self._github_sha else 'None'}) Bakiye: {self.balance}")
             except Exception as e:
                 print(f">> [GITHUB PERSISTENCE] GitHub'dan yuklenemedi: {e}")
 
@@ -89,20 +104,30 @@ class PaperTrader:
                 with open(HISTORY_FILE, "r", encoding="utf-8-sig") as f:
                     data = json.load(f)
                     self.balance = float(data.get("balance", self.initial_balance))
-                    if self.balance > (self.initial_balance * 1.5) or self.balance <= 100.0:
-                        self.balance = float(self.initial_balance)
-                        self.open_positions = {}
-                        self.history = []
-                    else:
-                        self.open_positions = data.get("open_positions", {})
-                        self.history = data.get("history", [])
+                    self.open_positions = data.get("open_positions", {})
+                    self.history = data.get("history", [])
                     loaded = True
-                    print(f">> [LOCAL] trade_history.json lokal dosyadan yuklendi. Bakiye: {self.balance}")
+                    print(f">> [LOCAL] trade_history.json lokal dosyadan yuklendi ({len(self.history)} islem). Bakiye: {self.balance}")
             except Exception as e:
                 print(f">> Gecmis yuklenirken hata: {e}")
 
         if not loaded:
             print(f">> [INIT] Yeni trade_history baslatiliyor. Baslangic Kasa: {self.initial_balance}")
+
+    def save_local_history(self):
+        """Yalnızca lokal dosyaya atomik kaydeder (API kotası harcamaz)."""
+        state = {
+            "balance": round(self.balance, 4),
+            "open_positions": self.open_positions,
+            "history": self.history
+        }
+        try:
+            tmp_file = HISTORY_FILE + ".tmp"
+            with open(tmp_file, "w", encoding="utf-8") as f:
+                json.dump(state, f, ensure_ascii=False, separators=(',', ':'), default=str)
+            os.replace(tmp_file, HISTORY_FILE)
+        except Exception as e:
+            print(f">> Lokal gecmis kaydedilirken hata: {e}")
 
     def save_history(self, critical=False):
         """Hem lokale hem GitHub'a kaydet. critical=True ise GitHub push senkron yapılır (veri kaybı önleme)."""
@@ -112,14 +137,8 @@ class PaperTrader:
             "history": self.history
         }
 
-        # 1. Lokal dosyaya atomik kaydet (Bozulma Korumasi & Yedekleme)
-        try:
-            tmp_file = HISTORY_FILE + ".tmp"
-            with open(tmp_file, "w", encoding="utf-8") as f:
-                json.dump(state, f, ensure_ascii=False, separators=(',', ':'), default=str)
-            os.replace(tmp_file, HISTORY_FILE)
-        except Exception as e:
-            print(f">> Lokal gecmis kaydedilirken hata: {e}")
+        # 1. Lokal dosyaya atomik kaydet
+        self.save_local_history()
 
         # 2. GitHub'a kaydet
         if GITHUB_TOKEN:
@@ -293,7 +312,7 @@ class PaperTrader:
             print(f">> [TRAILING TIER 2] {symbol} +%8 ROE Goruldu -> Stop +%3.5 Kâra Kilitlendi!")
 
         if updated_stop:
-            self.save_history()
+            self.save_local_history()
 
     def open_position(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None, atr_pct: float = 1.0, trend_regime: str = "YATAY", session: str = "LONDRA", volume_surge: float = 1.0, confluence_score: str = "2/4", htf_alignment: str = "TREND YÖNÜNDE", custom_margin: float = None, rs_vs_btc: float = 0.0, decoupling_status: str = "⚪ NÖTR_TAKİPÇİ", cvd_pct: float = 50.0, candle_velocity: float = 1.0, **kwargs):
         if symbol in self.open_positions:
