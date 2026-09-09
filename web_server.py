@@ -2650,7 +2650,7 @@ HTML_PAGE = """
                 </div>
             </div>
 
-            <div class="cockpit-kpi-card kpi-card-radar" id="card-kpi-radar">
+            <div class="cockpit-kpi-card kpi-card-radar" id="card-kpi-radar" title="Kazanma Oranı (Win Rate): Sadece kârı veya zararı kesinleşen (kapanmış) işlemleri hesaplar. Halen piyasada açık olan pozisyonlar henüz kapanmadığı için buraya dahil edilmez.">
                 <canvas class="kpi-sim-canvas" id="canvas-kpi-radar"></canvas>
                 <div class="kpi-card-inner">
                     <div class="kpi-card-head">
@@ -2661,7 +2661,7 @@ HTML_PAGE = """
                     </div>
                     <div class="kpi-card-val" id="cockpit-winrate">%0.0</div>
                     <div class="kpi-card-sub" id="cockpit-win-loss-count">0 Kazanç / 0 Kayıp</div>
-                    <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">Sürdürülebilir Hedef: &gt; %50.0</div>
+                    <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;" id="cockpit-winrate-subtext">Sürdürülebilir Hedef: &gt; %50.0</div>
                 </div>
             </div>
 
@@ -6907,8 +6907,23 @@ async function loadAdminMetrics() {
                 cPnl.style.color = totalNetPnl >= 0 ? 'var(--green)' : 'var(--red)';
             }
             if (cGrowth) cGrowth.innerText = `${growthPct >= 0 ? '+' : ''}${growthPct.toFixed(2)}% Büyüme`;
+            const openCount = Object.keys(appState.open_positions || {}).length;
             if (cWinrate) cWinrate.innerText = `%${winRate}`;
-            if (cWinLoss) cWinLoss.innerText = `${wins} Kazanç / ${losses} Kayıp (${totalTrades} İşlem)`;
+            if (cWinLoss) {
+                if (openCount > 0) {
+                    cWinLoss.innerText = `${wins} Kazanç / ${losses} Kayıp (${totalTrades} Kapanmış | ${openCount} Açık Poz)`;
+                } else {
+                    cWinLoss.innerText = `${wins} Kazanç / ${losses} Kayıp (${totalTrades} Kapanmış İşlem)`;
+                }
+            }
+            const cWinSub = document.getElementById('cockpit-winrate-subtext');
+            if (cWinSub) {
+                if (openCount > 0) {
+                    cWinSub.innerText = `${openCount} pozisyon sürüyor (realize bekleniyor)`;
+                } else {
+                    cWinSub.innerText = `Sürdürülebilir Hedef: > %50.0`;
+                }
+            }
 
             if (cPf) {
                 if (totalTrades === 0) {
