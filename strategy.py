@@ -1086,7 +1086,8 @@ class StrategyEngine:
         # Sığ/gece saatlerinde mikro fitillerde (%0.6) boğulmayı önleyen asgari %1.25 mesafe tabanı
         safe_atr_pct = max(0.5, min(5.0, atr_pct))
         stop_mult = persona.get("stop_loss_atr_mult", 1.0)
-        effective_stop_pct = max(1.25, min(6.0, safe_atr_pct * 2.0 * stop_mult))
+        # 🛡️ GLOBAL RİSK TAVANI: Hiçbir setup'ta stop mesafesi %2.20'yi (5x'te %11 ROE) aşamaz
+        effective_stop_pct = max(1.25, min(2.20, safe_atr_pct * 1.8 * stop_mult))
         stop_dist = entry_price * (effective_stop_pct / 100.0)
 
         # TP1: Dinamik 1.8 ATR (En az %1.25 mesafe, R:R >= 1:1 Hızlı Kâr & Breakeven Kilidi)
@@ -1675,6 +1676,11 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 4 R3 Direnç", struct_reason)
                 return
 
+            # 🛡️ GÜÇLÜ BOĞA TRENDİ KALKANI: Güçlü Boğa rejimindeyken R3 direncine kafa atılmaz (Short Squeeze Koruması)
+            if "GÜÇLÜ BOĞA" in trend_regime:
+                self.log_rejection(symbol, "SETUP 4 R3 Direnç", "Piyasa Güçlü Boğa rejimindeyken R3 direncinden SHORT açılmadı (Short Squeeze Koruması)")
+                return
+
             buffer = (r4 - r3) * BUFFER_RATIO if (r4 > r3) else (r3 * 0.004)
             soft_stop = min(r3 + buffer, close_price * 1.008)
             hard_stop = min(r4 if r4 > 0 else (r3 + buffer * 2.0), close_price * 1.012)
@@ -1730,8 +1736,9 @@ class StrategyEngine:
             coin_atr = self.get_symbol_atr_pct(symbol)
             dyn_stop_pct = max(0.008, min(0.025, coin_atr * 1.0))
             buffer = r4 * dyn_stop_pct
-            soft_stop = r4 - buffer
-            hard_stop = r4 - buffer * 1.5
+            soft_stop = max(r4 - buffer, close_price * 0.992)
+            # 🛡️ SERT STOP TAVAN KORUMASI: Maksimum %1.2 risk sınırı
+            hard_stop = max(r4 - buffer * 1.5, close_price * 0.988)
             target_r5 = r5 if (r5 >= close_price * 1.008) else (mvah if (mvah >= close_price * 1.008) else close_price * 1.015)
             await self._handle_open(
                 symbol=symbol, side="LONG", entry_price=close_price,
@@ -1807,9 +1814,10 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 7 S4 Resistance Flip", f"Retest hacmi {vol_surge:.2f}x yetersiz (en az {min_retest_vol:.2f}x aranıyor)")
                 return
 
-            buffer = (s3 - s4) * BUFFER_RATIO
-            soft_stop = s4 + buffer
-            hard_stop = s3
+            buffer = (s3 - s4) * BUFFER_RATIO if (s3 > s4) else (s4 * 0.004)
+            soft_stop = min(s4 + buffer, close_price * 1.008)
+            # 🛡️ SERT STOP TAVAN KORUMASI: Maksimum %1.2 risk sınırı
+            hard_stop = min(s3 if (s3 > 0 and s3 > s4) else (s4 + buffer * 2.0), close_price * 1.012)
             target_s5 = s5 if (s5 > 0 and s5 <= close_price * 0.992) else (mval if (mval > 0 and mval <= close_price * 0.992) else close_price * 0.985)
             await self._handle_open(
                 symbol=symbol, side="SHORT", entry_price=close_price,
