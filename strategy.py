@@ -7,7 +7,9 @@ import numpy as np
 from config import (
     BUFFER_RATIO, MAX_OPEN_POSITIONS,
     TRAILING_BREAKEVEN_ROE, TRAILING_LOCK_30_ROE, TRAILING_LOCK_50_ROE,
-    SCALP_MAX_HOLD_CANDLES
+    SCALP_MAX_HOLD_CANDLES, MAX_PORTFOLIO_MARGIN_PCT,
+    ELITE_SLOT_BASE, ELITE_SLOT_MAX,
+    STAGNATION_CANDLES_MEME, STAGNATION_CANDLES_MAJOR
 )
 
 class StrategyEngine:
@@ -180,10 +182,12 @@ class StrategyEngine:
 
         try:
             btc_close = float(df_btc['close'].iloc[-1])
+            btc_open_5m = float(df_btc['open'].iloc[-1]) if 'open' in df_btc.columns else btc_close
             btc_high_1h = float(df_btc['high'].iloc[-12:].max())
             btc_low_1h = float(df_btc['low'].iloc[-12:].min())
             btc_range_1h = round(((btc_high_1h - btc_low_1h) / btc_close) * 100.0, 2) if btc_close > 0 else 0.0
             btc_chg_1h = round(((btc_close - df_btc['close'].iloc[-12]) / df_btc['close'].iloc[-12]) * 100.0, 2)
+            btc_chg_5m = round(((btc_close - btc_open_5m) / btc_open_5m) * 100.0, 2) if btc_open_5m > 0 else 0.0
         except Exception:
             return default_climate
 
@@ -258,6 +262,7 @@ class StrategyEngine:
             "btc_chg_1h": float(btc_chg_1h),
             "eth_chg_1h": float(eth_chg_1h),
             "eth_lead_pct": float(eth_lead_pct),
+            "btc_chg_5m": float(btc_chg_5m),
             "btc_price": float(btc_close),
             "eth_price": float(eth_close)
         }
@@ -700,11 +705,30 @@ class StrategyEngine:
     # POZISYON ACMA YARDIMCISI
     # =========================================================================
     async def _handle_open(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None):
-        # ── 1. ATR / VOLATILITE HESABI ──
+        # ── 0. ESNEK PORTFÖY KAPASİTESİ & SERMAYE BÜTÇESİ KONTROLÜ (ELASTIC SLOTS) ──
+        open_positions = getattr(self.paper_trader, 'open_positions', {})
+        current_open_cnt = len(open_positions)
+        current_balance = getattr(self.paper_trader, 'balance', 10000.0)
+        total_open_margin = sum(float(p.get("margin", 0.0)) for p in open_positions.values())
+        max_margin_budget = current_balance * (MAX_PORTFOLIO_MARGIN_PCT / 100.0)
+
+        # Kural 1: Toplam Marjin Riski Tavanı (%20 Kasa)
+        if total_open_margin >= max_margin_budget:
+            rej_msg = f"🛡️ Portföy Risk Tavanı: Toplam açık marjin ${total_open_margin:.1f} (kasanın %{total_open_margin/current_balance*100:.1f}'i) azami bütçeyi aştı. Yeni pozisyon engellendi."
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "PORTFOLIO_MARGIN_CAP_REACHED"}
+
+        # Kural 2: Mutlak Portföy Slot Tavanı (Azami 8)
+        if current_open_cnt >= ELITE_SLOT_MAX:
+            rej_msg = f"🛡️ Esnek Portföy Dolu: Aktif {current_open_cnt} pozisyon mevcut (azami sınır {ELITE_SLOT_MAX}). Yeni işlem açılamaz."
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "MAX_SLOTS_REACHED"}
+
+        # ── 1. ATR / VOLATILITE HESABI & KATMANLI LİKİDİTE EŞİĞİ ──
         atr_pct = 1.2
         vol_surge = 1.0
         is_top_80 = True
-        min_vol_surge = 1.2
+        min_vol_surge = 1.5
         if self.market_data and symbol in self.market_data.candles_5m:
             df = self.market_data.candles_5m[symbol]
             if isinstance(df, pd.DataFrame) and not df.empty and len(df) >= 14:
@@ -727,18 +751,24 @@ class StrategyEngine:
                         cur_vol = df['volume'].iloc[-1]
                         vol_surge = round(float(cur_vol / avg_vol), 2) if avg_vol > 0 else 1.0
                         
-                        # MADDE 6: DINAMIK YUZDELIK VE HACIM SARTLARI
+                        # MADDE 6: DINAMIK YUZDELIK VE KATMANLI LIKIDITE SARTLARI
                         if len(df) >= 288:
                             vol_80th = df['volume'].iloc[-288:-1].quantile(0.80)
                         else:
                             vol_80th = df['volume'].iloc[:-1].quantile(0.80) if len(df) > 1 else 0
                         is_top_80 = (cur_vol >= vol_80th)
-                        majors = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "ADA/USDT"]
-                        min_vol_surge = 1.2 if symbol in majors else 1.5
+                        
+                        top_20 = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "DOGE/USDT", "BNB/USDT", "SUI/USDT", "PEPE/USDT", "AVAX/USDT", "LINK/USDT", "NEAR/USDT", "ADA/USDT", "LTC/USDT", "TRX/USDT", "DOT/USDT", "AAVE/USDT", "UNI/USDT", "SHIB/USDT", "WIF/USDT", "FET/USDT"]
+                        if symbol in top_20:
+                            min_vol_surge = 1.35
+                        elif is_top_80:
+                            min_vol_surge = 1.80
+                        else:
+                            min_vol_surge = 2.40
                 except Exception:
                     vol_surge = 1.0
                     is_top_80 = True
-                    min_vol_surge = 1.2
+                    min_vol_surge = 1.5
 
         if self.market_data and hasattr(self.market_data, 'get_symbol_metrics'):
             met = self.market_data.get_symbol_metrics(symbol)
@@ -1001,6 +1031,35 @@ class StrategyEngine:
         conf_labels = {1: "1/4 (Tekil Teyit)", 2: "2/4 (Çift Teyit)", 3: "3/4 (Güçlü Confluence)", 4: "4/4 (Maksimum Kurumsal Teyit)"}
         conf_score_str = conf_labels.get(c_count, f"{c_count}/4")
 
+        # ── KADEMELİ KALİTE KONTROLÜ (SLOT 6, 7, 8 YALNIZCA GOD-TIER OLABİLİR) ──
+        if current_open_cnt >= ELITE_SLOT_BASE:
+            is_god_tier = (c_count >= 4) or (c_count >= 3 and vol_surge >= 2.2 and dynamic_rs_score >= 0.8)
+            if not is_god_tier:
+                rej_msg = f"🛡️ Kademeli Slot Kalkanı: Portföyde {current_open_cnt} aktif pozisyon varken 6-8. slotlar yalnızca 'God-Tier / Süper Elit' (4/4 Confluence veya 2.2x Hacim + Alfa) fırsatlara açılır. İşlem reddedildi."
+                self.log_rejection(symbol, reason, rej_msg)
+                return {"error": "GOD_TIER_REQUIRED_FOR_EXTRA_SLOTS"}
+
+        # ── DİNAMİK BTC HIZ & MAKRO YÖN VALİSİ (3 BOYUTLU AKILLI KALKAN) ──
+        macro_clim = self.get_macro_climate()
+        btc_chg_5m = macro_clim.get("btc_chg_5m", 0.0)
+        btc_chg_1h = macro_clim.get("btc_chg_1h", 0.0)
+        regime_clim = macro_clim.get("regime", "NEUTRAL")
+
+        # 1. Anlık 5M Panik Çöküş Kalkanı: BTC son 5 dakikada sert düşüyorsa altcoinlerde LONG açma!
+        if side == "LONG" and btc_chg_5m <= -0.30 and dynamic_rs_score < 1.20:
+            rej_msg = f"🛡️ 5M BTC Panik Kalkanı: Bitcoin son 5 dakikada %{btc_chg_5m:+.2f} sert çöküş mumu atıyor. Düşen bıçak tutulmadı."
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "BTC_5M_PANIC_DUMP_BLOCKED"}
+
+        # 2. Makro Ayı Karşı-Trend Kalkanı: BTC 1S trendi belirgin düşüşteyken (%-0.40 altı veya BEAR_DUMP)
+        #    altcoin sekme LONG'ları yalnızca pozitif göreceli güç (RS >= +0.80) veya yüksek kurumsal CVD emilimi (>= %65) varsa açılabilir!
+        if side == "LONG" and not is_breakout and (btc_chg_1h <= -0.40 or regime_clim == "BEAR_DUMP"):
+            cvd_r = float(cvd_data.get('ratio_60s', 50.0)) if 'cvd_data' in locals() and cvd_data else 50.0
+            if dynamic_rs_score < 0.80 and cvd_r < 65.0:
+                rej_msg = f"🛡️ Makro Ayı Yön Valisi: BTC 1S (%{btc_chg_1h:+.2f}) düşüşteyken ve parite bağımsız alfa üretmiyorken (RS: {dynamic_rs_score:+.2f}, CVD: %{cvd_r:.0f}) karşı-trend LONG engellendi."
+                self.log_rejection(symbol, reason, rej_msg)
+                return {"error": "MACRO_BEAR_LONG_BLOCKED"}
+
         # ── 6. ÜST ZAMAN DİLİMİ (HTF) MAKRO UYUMU ──
         mpoc_val = snaps.get('mpoc', 0.0)
         if side == "LONG":
@@ -1090,10 +1149,11 @@ class StrategyEngine:
         effective_stop_pct = max(1.25, min(2.20, safe_atr_pct * 1.8 * stop_mult))
         stop_dist = entry_price * (effective_stop_pct / 100.0)
 
-        # TP1: Dinamik 1.8 ATR (En az %1.25 mesafe, R:R >= 1:1 Hızlı Kâr & Breakeven Kilidi)
-        # TP2: Dinamik 3.6 ATR / Makro Seviye (En az %2.50 mesafe, R:R >= 1:2 Runner Trend Koşusu)
-        tp1_dist = entry_price * (max(1.25, safe_atr_pct * 1.8) / 100.0)
-        tp2_dist = entry_price * (max(2.50, safe_atr_pct * 3.6) / 100.0)
+        # TP1 & TP2: Zorunlu Asimetrik Kâr Oranı (R:R >= 1.25x Asgari Hedef Kilidi)
+        min_tp1_dist = stop_dist * 1.25
+        adaptive_tp1_dist = entry_price * (max(1.50, safe_atr_pct * 2.0) / 100.0)
+        tp1_dist = max(min_tp1_dist, adaptive_tp1_dist)
+        tp2_dist = max(tp1_dist * 1.8, entry_price * (max(2.80, safe_atr_pct * 3.6) / 100.0))
 
         caller_hard_stop = hard_stop
         caller_soft_stop = soft_stop
@@ -1108,15 +1168,21 @@ class StrategyEngine:
             else:
                 hard_stop = atr_hard_stop
             soft_stop = hard_stop  # Dinamik ATR / Yapısal Stop: UI, telemetri ve risk motoru ile tam senkron
+
+            actual_stop_dist = abs(entry_price - hard_stop)
+            enforced_min_tp1 = entry_price + max(actual_stop_dist * 1.25, tp1_dist)
             
-            atr_tp1 = round(entry_price + tp1_dist, 6)
+            atr_tp1 = round(enforced_min_tp1, 6)
             atr_tp2 = round(entry_price + tp2_dist, 6)
             
             macro_target = caller_tp2 if (caller_tp2 and caller_tp2 > entry_price) else (caller_tp1 if (caller_tp1 and caller_tp1 > entry_price) else None)
-            tp1 = atr_tp1
-            if macro_target and macro_target > tp1:
-                tp2 = round(macro_target, 6)
+            
+            # Eğer çağıran setup'ın yapısal hedefi zorunlu 1.25x R:R mesafesini karşılıyorsa kullan, aksi halde hedefe zorunlu genişleme uygula
+            if macro_target and macro_target >= atr_tp1:
+                tp1 = round(macro_target, 6)
+                tp2 = max(atr_tp2, round(tp1 * 1.015, 6))
             else:
+                tp1 = atr_tp1
                 tp2 = atr_tp2
         else:
             atr_hard_stop = round(entry_price + stop_dist, 6)
@@ -1126,15 +1192,20 @@ class StrategyEngine:
             else:
                 hard_stop = atr_hard_stop
             soft_stop = hard_stop  # Dinamik ATR / Yapısal Stop: UI, telemetri ve risk motoru ile tam senkron
+
+            actual_stop_dist = abs(hard_stop - entry_price)
+            enforced_min_tp1 = entry_price - max(actual_stop_dist * 1.25, tp1_dist)
             
-            atr_tp1 = round(entry_price - tp1_dist, 6)
+            atr_tp1 = round(enforced_min_tp1, 6)
             atr_tp2 = round(entry_price - tp2_dist, 6)
             
             macro_target = caller_tp2 if (caller_tp2 and caller_tp2 < entry_price) else (caller_tp1 if (caller_tp1 and caller_tp1 < entry_price) else None)
-            tp1 = atr_tp1
-            if macro_target and macro_target < tp1:
-                tp2 = round(macro_target, 6)
+            
+            if macro_target and macro_target <= atr_tp1:
+                tp1 = round(macro_target, 6)
+                tp2 = min(atr_tp2, round(tp1 * 0.985, 6))
             else:
+                tp1 = atr_tp1
                 tp2 = atr_tp2
 
         macro_clim = self.get_macro_climate()
@@ -1427,9 +1498,35 @@ class StrategyEngine:
                 if closed:
                     return
 
-                # 1e. SCALP ZAMAN ASIMI
+                # 1e. COIN DNA VE HIZINA UYARLI ZAMAN STOPU (ADAPTIVE STAGNATION EXIT)
                 if pos.get("trade_type") == "SCALP":
                     hold_seconds = time.time() - pos.get("entry_timestamp", 0)
+                    hold_candles = hold_seconds / 300.0
+
+                    coin_atr = pos.get("atr_pct", 1.0)
+                    is_meme_or_high_beta = coin_atr >= 0.70 or any(m in symbol for m in ["PEPE", "WIF", "DOGE", "BONK", "SHIB", "MEME"])
+                    stag_limit_candles = STAGNATION_CANDLES_MEME if is_meme_or_high_beta else STAGNATION_CANDLES_MAJOR
+
+                    entry_p = pos.get("entry_price", close_price)
+                    roe_raw = ((close_price - entry_p) / entry_p * 100.0 * 5) if side == "LONG" else ((entry_p - close_price) / entry_p * 100.0 * 5)
+
+                    cvd_info = self.market_data.get_symbol_cvd(symbol) if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+                    cvd_ratio = cvd_info.get('ratio_60s', 50.0)
+                    cvd_exhausted = (side == "LONG" and cvd_ratio < 45.0) or (side == "SHORT" and cvd_ratio > 55.0)
+
+                    # Eğer pozisyon belirlenen mum sayısını aştıysa VE
+                    # kâr/zarar -%2.5 ile +%1.5 arasında sıkışıp kaldıysa (ölü bölge) VE
+                    # CVD ivmesi tersine döndüyse:
+                    if hold_candles >= stag_limit_candles and -2.5 <= roe_raw <= 1.5 and cvd_exhausted:
+                        record = await self._safe_close_position(
+                            symbol, close_price,
+                            f"⏱️ Adaptif Zaman Stopu / İvme Kaybı ({int(hold_candles)} mum, ROE: %{roe_raw:+.1f}, CVD Çürümesi)")
+                        if record:
+                            await self._notify_close(record, levels=levels)
+                            self._cleanup_tracking(symbol)
+                        return
+
+                    # Normal azami tavan (4 saat)
                     max_seconds = SCALP_MAX_HOLD_CANDLES * 300  # candle sayisi x 5dk
                     if hold_seconds > max_seconds:
                         hours = hold_seconds / 3600.0
@@ -1439,12 +1536,21 @@ class StrategyEngine:
                         if record:
                             await self._notify_close(record, levels=levels)
                             self._cleanup_tracking(symbol)
+                        return
             return
 
         # ═══════════════════════════════════════════════════════════════════
         # BOLUM 2: YENI POZISYON GIRIS KONTROLLERI (8 SETUP)
         # ═══════════════════════════════════════════════════════════════════
-        if len(self.paper_trader.open_positions) >= MAX_OPEN_POSITIONS:
+        # ── ESNEK PORTFÖY KAPASİTESİ (ELASTIC SLOTS KONTROLÜ) ──
+        cur_open_len = len(self.paper_trader.open_positions)
+        if cur_open_len >= ELITE_SLOT_MAX:
+            return
+
+        tot_open_margin = sum(float(p.get("margin", 0.0)) for p in self.paper_trader.open_positions.values())
+        cur_bal = getattr(self.paper_trader, 'balance', 10000.0)
+        max_margin_budget = cur_bal * (MAX_PORTFOLIO_MARGIN_PCT / 100.0)
+        if tot_open_margin >= max_margin_budget:
             return
 
         # 🛡️ GÜVENLİK ZIRHI 1: GÜNLÜK DEVRE KESİCİ TELEMETRİSİ (7 Günlük Test/Veri Toplama Modunda İşlemi Durdurmaz)

@@ -119,26 +119,31 @@ DEFAULT_ACTIVE_SYMBOLS = ALL_AVAILABLE_SYMBOLS.copy()
 
 SYMBOLS = DEFAULT_ACTIVE_SYMBOLS
 
-# 2. Risk ve Kasa Yonetimi
+# 2. Risk ve Kasa Yonetimi (Elastic Quant Portfolio)
 INITIAL_BALANCE = 10000.0        # Demo baslangic bakiyesi (USDT)
-LEVERAGE = 5                  # Kaldirac (5x)
-POSITION_SIZE_USDT = 100.0     # Her islemde kullanilacak marjin (10 USDT)
-MAX_OPEN_POSITIONS = 100      # Tum aktif paritelerde bakiye yettigince islem acilabilmesi icin 100
-COMMISSION_RATE = 0.0005      # %0.05 Binance vadeli islem komisyon simulasyonu
+LEVERAGE = 5                     # Kaldirac (5x)
+POSITION_SIZE_USDT = 80.0        # Kurumsal dengeli baz marjin (80 USDT)
+MAX_OPEN_POSITIONS = 8           # Esnek portfoy tavani: 1-5 standart kaliteli, 6-8 yalnizca God-Tier
+MAX_PORTFOLIO_MARGIN_PCT = 20.0  # Azami toplam kilitli marjin: Kasanin %20'si (10,000$ icin max 2,000$)
+ELITE_SLOT_BASE = 5              # Standart kaliteli slot siniri
+ELITE_SLOT_MAX = 8               # God-Tier icin esnek ust sinir
+COMMISSION_RATE = 0.0005         # %0.05 Binance vadeli islem komisyon simulasyonu
 
 # 3. Strateji Parametreleri
-TIMEFRAME = "5m"              # Ana islem zaman dilimi
-LOOKBACK_DAYS_AVWAP = 10      # Son 10 gunluk tepe/dip AVWAP referansi
-BUFFER_RATIO = 0.25           # %25 akilli stop tampon payi
-BREAKOUT_HOLD_SECONDS = 60    # Kirilim tutunma teyit suresi (60 saniye)
+TIMEFRAME = "5m"                 # Ana islem zaman dilimi
+LOOKBACK_DAYS_AVWAP = 10         # Son 10 gunluk tepe/dip AVWAP referansi
+BUFFER_RATIO = 0.25              # %25 akilli stop tampon payi
+BREAKOUT_HOLD_SECONDS = 60       # Kirilim tutunma teyit suresi (60 saniye)
 
 # 4. Trailing Stop / Kar Koruma Esikleri
-TRAILING_BREAKEVEN_ROE = 3.5    # %6 ROE'de soft stop -> breakeven (giris fiyatina) tasir
-TRAILING_LOCK_30_ROE = 12.0     # %12 ROE'de karin %30'unu kilitleyen seviyeye tasir
-TRAILING_LOCK_50_ROE = 20.0     # %20 ROE'de hard stop ile karin %50'sini kilitle
+TRAILING_BREAKEVEN_ROE = 3.5     # %3.5 ROE'de soft stop -> breakeven (+%0.3 komisyon korumali)
+TRAILING_LOCK_30_ROE = 12.0      # %12 ROE'de karin %30'unu kilitleyen seviyeye tasir
+TRAILING_LOCK_50_ROE = 20.0      # %20 ROE'de hard stop ile karin %50'sini kilitle
 
-# 5. Scalp Zaman Siniri
-SCALP_MAX_HOLD_CANDLES = 48     # 48 x 5dk = 4 saat (SCALP pozisyon max tutma suresi)
+# 5. Scalp & Stagnation Zaman Sinirlari
+SCALP_MAX_HOLD_CANDLES = 48      # Azami tutma: 48 mum (4 saat)
+STAGNATION_CANDLES_MEME = 6      # Yüksek beta / meme paritelerde ivme bekleme süresi: 6 mum (30 dk)
+STAGNATION_CANDLES_MAJOR = 12    # Majör ve DeFi paritelerde ivme bekleme süresi: 12 mum (60 dk)
 
 # 6. Veri Fetch Ayarlari
 CANDLE_5M_FETCH_DAYS = 15       # 5m mum verisi icin ~15 gun (paginated, ~4300 mum)
