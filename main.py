@@ -107,17 +107,18 @@ async def main():
     async def render_keepalive_watchdog():
         import aiohttp
         render_url = os.environ.get("RENDER_EXTERNAL_URL", "https://trade-bot-0te2.onrender.com") + "/ping"
-        await asyncio.sleep(60)
+        await asyncio.sleep(30)
         while True:
             try:
                 async with aiohttp.ClientSession() as session:
                     async with session.get(render_url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
                         if resp.status == 200:
                             print(">> [KEEP-ALIVE] Render uyku kalkanı aktif (ping 200 OK)")
+                        else:
+                            print(f">> [KEEP-ALIVE UYARI] Render ping yanıtı: {resp.status}")
             except Exception as e:
-                # print(f">> [KEEP-ALIVE UYARI] {e}")
-                pass
-            await asyncio.sleep(300)  # Her 5 dakikada bir
+                print(f">> [KEEP-ALIVE HATA] {e}")
+            await asyncio.sleep(180)  # Her 3 dakikada bir (Render 15dk uyku sınırı için güvenli aralık)
 
     asyncio.create_task(render_keepalive_watchdog())
 
@@ -126,12 +127,22 @@ async def main():
     # Telegram /kasa ve kasa İnteraktif Komut Dinleyicisini Başlat
     asyncio.create_task(notifier.start_command_listener(trader_manager, market_data=market_data))
 
-    try:
-        await market_data.start_websocket()
-    except KeyboardInterrupt:
-        print("\n>> Robot durduruluyor...")
-    finally:
-        await market_data.close()
+    # Global Crash Recovery Loop — WebSocket çöktüğünde bot ölmez, otomatik yeniden başlar
+    ws_backoff = 5
+    while True:
+        try:
+            await market_data.start_websocket()
+        except KeyboardInterrupt:
+            print("\n>> Robot durduruluyor...")
+            break
+        except Exception as e:
+            print(f">> [KRİTİK] WebSocket ana döngüsü çöktü: {e}. {ws_backoff}s sonra yeniden başlatılıyor...")
+            await asyncio.sleep(ws_backoff)
+            ws_backoff = min(ws_backoff * 2, 120)  # Max 2dk bekleme
+        else:
+            ws_backoff = 5  # Başarılı çalışma sonrası sıfırla
+
+    await market_data.close()
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -559,7 +559,7 @@ class MarketDataManager:
                         is_spot = "binance.vision" in ep
                         mult = spot_mult if is_spot else 1.0
                         url_1d_v = f"{ep}&interval=1d&limit=35"
-                        url_5m_v = f"{ep}&interval=5m&limit=500"
+                        url_5m_v = f"{ep}&interval=5m&limit=200"
                         t_1d, t_5m = None, None
                         async with session.get(url_1d_v, timeout=aiohttp.ClientTimeout(total=4)) as r1:
                             if r1.status == 200:
@@ -934,8 +934,8 @@ class MarketDataManager:
                                 elif cur_candle['timestamp'] > last_ts:
                                     self.candles_5m[s] = pd.concat([self.candles_5m[s], pd.DataFrame([cur_candle])], ignore_index=True)
                                 self.candles_5m[s] = self.candles_5m[s].drop_duplicates(subset=['timestamp'], keep='last').reset_index(drop=True)
-                                if len(self.candles_5m[s]) > 300:
-                                    self.candles_5m[s] = self.candles_5m[s].iloc[-300:].reset_index(drop=True)
+                                if len(self.candles_5m[s]) > 200:
+                                    self.candles_5m[s] = self.candles_5m[s].iloc[-200:].reset_index(drop=True)
                                 self.recalculate_levels(s)
                             else:
                                 self.candles_5m[s] = pd.DataFrame([cur_candle])
@@ -1092,8 +1092,8 @@ class MarketDataManager:
                                             else:
                                                 self.candles_5m[norm_s] = pd.DataFrame([new_candle])
                                             self.candles_5m[norm_s] = self.candles_5m[norm_s].drop_duplicates(subset=['timestamp'], keep='last').reset_index(drop=True)
-                                            if len(self.candles_5m[norm_s]) > 500:
-                                                self.candles_5m[norm_s] = self.candles_5m[norm_s].iloc[-500:].reset_index(drop=True)
+                                            if len(self.candles_5m[norm_s]) > 200:
+                                                self.candles_5m[norm_s] = self.candles_5m[norm_s].iloc[-200:].reset_index(drop=True)
                                             self.recalculate_levels(norm_s)
                                             if self.on_candle_close_callback and norm_s in self.active_symbols:
                                                 await self.on_candle_close_callback(norm_s, new_candle, prev_candle)
@@ -1235,7 +1235,27 @@ class MarketDataManager:
                     print(f">> [LİKİDASYON RADARI UYARI] Yeniden bağlanılıyor: {e}")
                     await asyncio.sleep(3)
 
-        tasks = [bookticker_worker(), candle_poller_worker(), hourly_futures_watchdog_worker(), funding_worker(), forceorder_worker()] + [kline_worker(c) for c in kline_chunks]
+        # Her worker'ı crash-proof saran koruyucu (bir worker çökerse diğerlerini öldürmez, otomatik yeniden başlatır)
+        async def resilient_worker(name, coro_fn, *args):
+            backoff = 2
+            while True:
+                try:
+                    print(f">> [WORKER] {name} başlatılıyor...")
+                    await coro_fn(*args)
+                except Exception as e:
+                    print(f">> [WORKER CRASH] {name} çöktü: {e}. {backoff}s sonra yeniden başlatılacak...")
+                    await asyncio.sleep(backoff)
+                    backoff = min(backoff * 2, 60)  # Exponential backoff, max 60s
+                else:
+                    backoff = 2  # Başarılı çalışma sonrası sıfırla
+
+        tasks = [
+            resilient_worker("BookTicker", bookticker_worker),
+            resilient_worker("CandlePoller", candle_poller_worker),
+            resilient_worker("HourlyFuturesWatchdog", hourly_futures_watchdog_worker),
+            resilient_worker("FundingWorker", funding_worker),
+            resilient_worker("ForceOrderRadar", forceorder_worker),
+        ] + [resilient_worker(f"KLine-Chunk-{i}", kline_worker, c) for i, c in enumerate(kline_chunks)]
         await asyncio.gather(*tasks)
 
     async def close(self):
