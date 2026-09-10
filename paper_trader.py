@@ -495,7 +495,12 @@ class PaperTrader:
                 "liq_confirmed": pos.get("liq_confirmed", False),
                 "entry_cvd_pct": pos.get("entry_cvd_pct", 50.0),
                 "cvd_status": pos.get("cvd_status", "DENGELİ"),
-                "entry_cvd_delta": pos.get("entry_cvd_delta", 0.0)
+                "entry_cvd_delta": pos.get("entry_cvd_delta", 0.0),
+                "orderbook_imbalance": pos.get("orderbook_imbalance", 0.0),
+                "orderbook_ratio": pos.get("orderbook_ratio", 1.0),
+                "orderbook_bid_qty": pos.get("orderbook_bid_qty", 0.0),
+                "orderbook_ask_qty": pos.get("orderbook_ask_qty", 0.0),
+                "orderbook_wall_side": pos.get("orderbook_wall_side", "BALANCED")
             }
             self.history.append(record)
             self.save_history(critical=True)
@@ -570,7 +575,12 @@ class PaperTrader:
                 "liq_confirmed": pos.get("liq_confirmed", False),
                 "entry_cvd_pct": pos.get("entry_cvd_pct", 50.0),
                 "cvd_status": pos.get("cvd_status", "DENGELİ"),
-                "entry_cvd_delta": pos.get("entry_cvd_delta", 0.0)
+                "entry_cvd_delta": pos.get("entry_cvd_delta", 0.0),
+                "orderbook_imbalance": pos.get("orderbook_imbalance", 0.0),
+                "orderbook_ratio": pos.get("orderbook_ratio", 1.0),
+                "orderbook_bid_qty": pos.get("orderbook_bid_qty", 0.0),
+                "orderbook_ask_qty": pos.get("orderbook_ask_qty", 0.0),
+                "orderbook_wall_side": pos.get("orderbook_wall_side", "BALANCED")
             }
             self.history.append(record)
             del self.open_positions[symbol]

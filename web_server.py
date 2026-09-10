@@ -10012,6 +10012,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "symbol_liquidations": symbol_liqs,
                 "cvd_summary": cvd_summary,
                 "symbol_cvd": symbol_cvd,
+                "orderbook_depth": getattr(market_data, 'orderbook_depth', {}) if market_data else {},
                 "recent_rejections": getattr(strategy, "recent_rejections", [])[-20:] if strategy else [],
                 "setup_attempts": getattr(strategy, "setup_attempts", {}) if strategy else {},
                 "system_health": sys_health,

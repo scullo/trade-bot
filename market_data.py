@@ -57,6 +57,18 @@ class MarketDataManager:
         # Anlık Mikro-CVD (Cumulative Volume Delta) & Agresyon Veri Yapıları
         self.symbol_cvd = {}          # norm_s -> {taker_buy_usd, taker_sell_usd, delta_usd, cvd_pct, delta_60s, ratio_60s, bias, last_update}
         self.symbol_cvd_history = {}  # norm_s -> deque(maxlen=60) of (timestamp, taker_buy_usd, taker_sell_usd)
+        # Order Book Imbalance (OBI) & Tahta Derinlik Duvarı Veri Yapıları
+        self.orderbook_depth = {s: {
+            'symbol': s,
+            'bid_price': 0.0,
+            'bid_qty': 0.0,
+            'ask_price': 0.0,
+            'ask_qty': 0.0,
+            'imbalance': 0.0,
+            'ratio': 1.0,
+            'wall_side': 'BALANCED',
+            'last_update': 0.0
+        } for s in all_symbols}
         self.on_tick_callback = None
         self.on_candle_close_callback = None
 
@@ -422,6 +434,23 @@ class MarketDataManager:
             'bias': 'NEUTRAL',
             'last_price': 0.0,
             'last_update': 0
+        }
+
+    def get_orderbook_depth(self, symbol: str) -> dict:
+        data = getattr(self, 'orderbook_depth', {}).get(symbol, None)
+        if data:
+            return data
+        cur_p = getattr(self, 'current_prices', {}).get(symbol, 0.0)
+        return {
+            'symbol': symbol,
+            'bid_price': cur_p,
+            'bid_qty': 0.0,
+            'ask_price': cur_p,
+            'ask_qty': 0.0,
+            'imbalance': 0.0,
+            'ratio': 1.0,
+            'wall_side': 'BALANCED',
+            'last_update': 0.0
         }
 
     def get_market_cvd_summary(self) -> dict:
@@ -977,9 +1006,35 @@ class MarketDataManager:
                                         norm_s = symbol_map[raw_s]
                                         bid = float(data.get('b', 0.0))
                                         ask = float(data.get('a', 0.0))
+                                        bid_qty = float(data.get('B', 0.0))
+                                        ask_qty = float(data.get('A', 0.0))
                                         price = (bid + ask) / 2.0 if (bid and ask) else (bid or ask)
                                         if price > 0:
                                             self.current_prices[norm_s] = price
+
+                                            # Order Book Imbalance (OBI) & Likidite Duvarı Hesaplama (<0.001ms)
+                                            tot_q = bid_qty + ask_qty
+                                            if tot_q > 0:
+                                                imbalance = (bid_qty - ask_qty) / tot_q
+                                                ratio = bid_qty / max(0.0001, ask_qty)
+                                                wall_side = 'BALANCED'
+                                                if ratio >= 1.5:
+                                                    wall_side = 'BID_WALL'
+                                                elif ratio <= 0.65:
+                                                    wall_side = 'ASK_WALL'
+
+                                                self.orderbook_depth[norm_s] = {
+                                                    'symbol': norm_s,
+                                                    'bid_price': bid,
+                                                    'bid_qty': bid_qty,
+                                                    'ask_price': ask,
+                                                    'ask_qty': ask_qty,
+                                                    'imbalance': round(imbalance, 4),
+                                                    'ratio': round(ratio, 4),
+                                                    'wall_side': wall_side,
+                                                    'last_update': time.time()
+                                                }
+
                                             if self.on_tick_callback:
                                                 await self.on_tick_callback(norm_s, price)
                                 elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):

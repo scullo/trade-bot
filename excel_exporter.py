@@ -323,7 +323,11 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ('Tasfiye Teyit Durumu', 26),
         ('Giriş Mikro-CVD Alıcı Oranı (%)', 24),
         ('Mikro Agresyon & Emilim Teyidi', 28),
-        ('Kayan 60s Net Delta ($)', 22)
+        ('Kayan 60s Net Delta ($)', 22),
+        ('Tahta Dengesizlik (OBI %)', 22),
+        ('Tahta Derinlik Oranı (Bid/Ask)', 24),
+        ('Tahta Likidite Duvarı', 24),
+        ('En İyi Alış/Satış Derinliği', 24)
     ]
 
     def _get_coin_persona(sym, st):
@@ -466,13 +470,27 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ws.write(r_idx, 61, f"${l_vol:,.2f}" if l_vol > 0 else "-", cell_currency if l_vol > 0 else cell_center)
         ws.write(r_idx, 62, l_lbl, cell_left)
 
-        # Mikro-CVD (Kayan 60s) & Agresyon Durumu (Sütun 64, 65, 66)
+        # Mikro-CVD (Kayan 60s) & Agresyon Durumu (Sütun 63, 64, 65)
         c_pct = _safe_float(h.get('entry_cvd_pct', 50.0))
         c_stat = str(h.get('cvd_status', 'DENGELİ'))
         c_delta = _safe_float(h.get('entry_cvd_delta', 0.0))
         ws.write(r_idx, 63, f"%{c_pct:.1f}", cell_roe_green if c_pct >= 50 else cell_roe_red)
         ws.write(r_idx, 64, c_stat, cell_left)
         ws.write(r_idx, 65, f"${c_delta:+,.2f}", cell_roe_green if c_delta >= 0 else cell_roe_red)
+
+        # Order Book Imbalance (OBI) & Tahta Derinlik Duvarı (Sütun 66, 67, 68, 69)
+        obi_pct = _safe_float(h.get('orderbook_imbalance', 0.0)) * 100.0
+        obi_ratio = _safe_float(h.get('orderbook_ratio', 1.0))
+        obi_wall = str(h.get('orderbook_wall_side', 'BALANCED'))
+        wall_lbl = "🟢 GÜÇLÜ ALICI DUVARI" if obi_wall == "BID_WALL" else ("🔴 GÜÇLÜ SATICI DUVARI" if obi_wall == "ASK_WALL" else "⚪ DENGELİ TAHTA")
+        b_qty = _safe_float(h.get('orderbook_bid_qty', 0.0))
+        a_qty = _safe_float(h.get('orderbook_ask_qty', 0.0))
+        qty_str = f"B:{b_qty:,.1f} / A:{a_qty:,.1f}" if (b_qty > 0 or a_qty > 0) else "-"
+
+        ws.write(r_idx, 66, f"%{obi_pct:+.1f}", cell_roe_green if obi_pct >= 0 else cell_roe_red)
+        ws.write(r_idx, 67, f"{obi_ratio:.2f}x", cell_roe_green if obi_ratio >= 1.0 else cell_roe_red)
+        ws.write(r_idx, 68, wall_lbl, cell_left)
+        ws.write(r_idx, 69, qty_str, cell_center)
 
     def render_table_sheet(ws_obj, t_list):
         for col_idx, (h_name, width) in enumerate(headers_granular):
