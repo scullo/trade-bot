@@ -877,30 +877,24 @@ class StrategyEngine:
                     return {"error": "CVD_FAKEOUT_BLOCKED"}
         else:
             # Sekme (Bounce): Destekten dönüşte alıcı devreye girdi mi veya limit emilimi var mı?
+            # Pasif limit alıcı emilimi doğal olarak negatif delta içerdiğinden bloklama yapılmaz, teyit varsa ödüllendirilir.
             if side == "LONG":
-                # 🛡️ DÜŞEN BIÇAK KALKANI (Falling Knife Shield): Destekte agresif Taker Satış sürüyorsa ters işlem açma!
-                if cvd_ratio_60s < 42.0 and cvd_delta_60s < -3000:
-                    rej_msg = f"🛡️ Mikro-CVD Düşen Bıçak Kalkanı (Falling Knife): Destek seviyesinde agresif Taker Satıcı baskısı devam ediyor (%{100-cvd_ratio_60s:.0f} Satıcı, Delta: -${abs(cvd_delta_60s):,.0f}). Bıçak tutulmadı, işlem engellendi."
-                    print(f">> [RED - CVD FALLING KNIFE] {symbol}: {rej_msg}")
-                    self.log_rejection(symbol, reason, rej_msg)
-                    return {"error": "CVD_FALLING_KNIFE_BLOCKED"}
-                elif cvd_ratio_60s >= 55.0 or (cvd_delta_60s > 0 and cvd_ratio_60s >= 50.0):
+                if cvd_ratio_60s >= 55.0 or (cvd_delta_60s > 0 and cvd_ratio_60s >= 50.0):
                     cvd_confirmed = True
                     cvd_status = "🛡️ KURUMSAL ALICI EMİLİMİ (Teyitli)"
                     cvd_tag = f" [🛡️ Mikro-CVD Destek Emilimi Teyitli (%{cvd_ratio_60s:.0f})]"
                     cvd_margin_mult = 1.10
+                elif cvd_ratio_60s < 40.0:
+                    # Agresif satış baskısı varsa korumalı marjin
+                    cvd_margin_mult = 0.85
             elif side == "SHORT":
-                # 🛡️ YÜKSELEN BIÇAK KALKANI (Rising Knife Shield): Dirençte agresif Taker Alış sürüyorsa ters işlem açma!
-                if cvd_ratio_60s > 58.0 and cvd_delta_60s > 3000:
-                    rej_msg = f"🛡️ Mikro-CVD Yükselen Bıçak Kalkanı (Rising Knife): Direnç seviyesinde agresif Taker Alıcı baskısı devam ediyor (%{cvd_ratio_60s:.0f} Alıcı, Delta: +${cvd_delta_60s:,.0f}). Ters işlem engellendi."
-                    print(f">> [RED - CVD RISING KNIFE] {symbol}: {rej_msg}")
-                    self.log_rejection(symbol, reason, rej_msg)
-                    return {"error": "CVD_RISING_KNIFE_BLOCKED"}
-                elif cvd_ratio_60s <= 45.0 or (cvd_delta_60s < 0 and cvd_ratio_60s <= 50.0):
+                if cvd_ratio_60s <= 45.0 or (cvd_delta_60s < 0 and cvd_ratio_60s <= 50.0):
                     cvd_confirmed = True
                     cvd_status = "🛡️ KURUMSAL SATICI EMİLİMİ (Teyitli)"
                     cvd_tag = f" [🛡️ Mikro-CVD Direnç Emilimi Teyitli (%{100-cvd_ratio_60s:.0f})]"
                     cvd_margin_mult = 1.10
+                elif cvd_ratio_60s > 60.0:
+                    cvd_margin_mult = 0.85
 
         if cvd_confirmed and cvd_tag:
             reason += cvd_tag
@@ -1031,13 +1025,23 @@ class StrategyEngine:
         conf_labels = {1: "1/4 (Tekil Teyit)", 2: "2/4 (Çift Teyit)", 3: "3/4 (Güçlü Confluence)", 4: "4/4 (Maksimum Kurumsal Teyit)"}
         conf_score_str = conf_labels.get(c_count, f"{c_count}/4")
 
-        # ── KADEMELİ KALİTE KONTROLÜ (SLOT 6, 7, 8 YALNIZCA GOD-TIER OLABİLİR) ──
+        # ── ESNEK PORTFÖY KAPASİTESİ (ELASTIC SLOTS 5-8 ARASI MARJİN BÜTÇELİ GEÇİŞ) ──
+        # 5 slot dolduktan sonra 6., 7. ve 8. pozisyonlar engellenmez; bütçe ve temel confluence (>=2/4) ile girer!
         if current_open_cnt >= ELITE_SLOT_BASE:
-            is_god_tier = (c_count >= 4) or (c_count >= 3 and vol_surge >= 2.2 and dynamic_rs_score >= 0.8)
-            if not is_god_tier:
-                rej_msg = f"🛡️ Kademeli Slot Kalkanı: Portföyde {current_open_cnt} aktif pozisyon varken 6-8. slotlar yalnızca 'God-Tier / Süper Elit' (4/4 Confluence veya 2.2x Hacim + Alfa) fırsatlara açılır. İşlem reddedildi."
+            if c_count < 2:
+                rej_msg = f"🛡️ Esnek Slot Koruması: Portföyde {current_open_cnt} aktif pozisyon varken ek slotlar için en az 2/4 teyit aranır. İşlem reddedildi."
                 self.log_rejection(symbol, reason, rej_msg)
-                return {"error": "GOD_TIER_REQUIRED_FOR_EXTRA_SLOTS"}
+                return {"error": "CONFLUENCE_TOO_LOW_FOR_EXTRA_SLOTS"}
+
+        # ── YÖN DENGESİ & PORTFÖY KORELASYON KALKANI (MAX %60 TEK YÖN) ──
+        if current_open_cnt >= 3:
+            same_side_count = sum(1 for p in open_positions.values() if p.get("side") == side)
+            same_side_ratio = same_side_count / current_open_cnt
+            if same_side_ratio >= 0.60:
+                opp_side = "SHORT" if side == "LONG" else "LONG"
+                rej_msg = f"🛡️ Yön Dengesi Kalkanı: Portföyde {current_open_cnt} pozisyonun {same_side_count} tanesi (%{same_side_ratio*100:.0f}) {side} yönünde. Portföy korelasyon riskini önlemek için yeni {side} engellendi, {opp_side} aranıyor."
+                self.log_rejection(symbol, reason, rej_msg)
+                return {"error": "DIRECTIONAL_BIAS_LIMIT"}
 
         # ── DİNAMİK BTC HIZ & MAKRO YÖN VALİSİ (3 BOYUTLU AKILLI KALKAN) ──
         macro_clim = self.get_macro_climate()
@@ -1092,9 +1096,8 @@ class StrategyEngine:
                 self.log_rejection(symbol, reason, f"Piyasa {trend_regime} iken ters yöne SHORT açılması engellendi (Trend Kalkanı)")
                 return {"error": "MACRO_TREND_VIOLATION"}
 
-        # ── 8. DİNAMİK MARJİN & RİSK BOYUTLANDIRMA (RISK PARITY) ──
-        # Aşırı volatil coinlerde (AMP, BICO) marjini küçültüp riski maks 3.5$ ile sınırla
-        # MADDE 2 & 8: SEANS VE YON BAZLI DINAMIK MARJIN DENGELEMESI
+        # ── 8. DİNAMİK MARJİN & VOLATİLİTE PARİTESİ (RISK PARITY) ──
+        # Her paritede potansiyel dolar riskini ~$1.50 seviyesinde eşitlemek için:
         if "LONDRA" in session_str:
             if side == "SHORT":
                 self.margin_multiplier *= 1.2
@@ -1104,18 +1107,19 @@ class StrategyEngine:
             if side == "SHORT":
                 self.margin_multiplier *= 0.8
 
-        # MADDE 1: OTONOM COIN DNA LİGİ MARJİN VE RİSK ÖLÇEKLEMESİ
+        # OTONOM COIN DNA LİGİ MARJİN VE RİSK ÖLÇEKLEMESİ
         persona_margin_mult = persona.get("margin_scale", 1.0)
         self.margin_multiplier *= persona_margin_mult
-        if persona.get("persona_class") == "GOLD":
-            print(f">> [ÖDÜL - ALTIN LİG] {symbol}: {persona.get('persona_name')} (WR %{persona.get('win_rate')}). Marjin x{persona_margin_mult}")
-        elif persona.get("persona_class") == "WHIPSAW":
-            print(f">> [KORUMA - WHIPSAW SEKME] {symbol}: {persona.get('persona_name')} Sekme Pususu. Marjin x{persona_margin_mult} korumalı.")
 
-        safe_atr = max(0.5, atr_pct)
-        dyn_margin = min(80.0, max(25.0, round(100.0 / (safe_atr / 1.0), 2)))
-        min_floor = 8.0 if persona.get("persona_class") == "WHIPSAW" else 15.0
-        dyn_margin = min(80.0, max(min_floor, round(dyn_margin * getattr(self, 'margin_multiplier', 1.0), 2)))
+        is_meme_coin = any(m in symbol for m in ["PEPE", "WIF", "DOGE", "BONK", "SHIB", "FLOKI", "MEME"])
+        if is_meme_coin or atr_pct >= 2.5:
+            dyn_margin = 50.0  # Yüksek oynaklıkta düşük marjin (sabit risk)
+        elif symbol in ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT"]:
+            dyn_margin = 90.0  # Düşük oynaklıkta yüksek marjin
+        else:
+            dyn_margin = 75.0  # Standart dengeli marjin
+
+        dyn_margin = min(100.0, max(25.0, round(dyn_margin * getattr(self, 'margin_multiplier', 1.0), 2)))
 
         # ── 1c. GERÇEK CVD (TAKER BUY RATIO) VE İVME (CANDLE VELOCITY) HESABI ──
         cvd_pct = 50.0
@@ -1141,19 +1145,19 @@ class StrategyEngine:
             except Exception as e:
                 print(f">> [CVD/HIZ HATA] {symbol}: {e}")
 
-        # ── DİNAMİK STOP VE HEDEFLERİ (ADAPTIVE ATR & VOLATILITY FLOOR) ──
-        # Sığ/gece saatlerinde mikro fitillerde (%0.6) boğulmayı önleyen asgari %1.25 mesafe tabanı
-        safe_atr_pct = max(0.5, min(5.0, atr_pct))
+        # ── DİNAMİK STOP VE HEDEFLERİ (YAPISAL SEVİYE & SIKI RİSK TAVANI) ──
+        # Sıkı yapısal stop ile ortalama kaybı -$1.50 bandına çekme
+        safe_atr_pct = max(0.4, min(4.0, atr_pct))
         stop_mult = persona.get("stop_loss_atr_mult", 1.0)
-        # 🛡️ GLOBAL RİSK TAVANI: Hiçbir setup'ta stop mesafesi %2.20'yi (5x'te %11 ROE) aşamaz
-        effective_stop_pct = max(1.25, min(2.20, safe_atr_pct * 1.8 * stop_mult))
+        # Sıkı dinamik stop: min %0.50, maks %1.50 (Eski %2.20 tavanı küçültüldü)
+        effective_stop_pct = max(0.50, min(1.50, safe_atr_pct * 0.8 * stop_mult))
         stop_dist = entry_price * (effective_stop_pct / 100.0)
 
-        # TP1 & TP2: Zorunlu Asimetrik Kâr Oranı (R:R >= 1.25x Asgari Hedef Kilidi)
+        # TP1 & TP2: Asimetrik Kâr Oranı (R:R >= 1.25x - 2.5x Hedef)
         min_tp1_dist = stop_dist * 1.25
-        adaptive_tp1_dist = entry_price * (max(1.50, safe_atr_pct * 2.0) / 100.0)
+        adaptive_tp1_dist = entry_price * (max(0.80, safe_atr_pct * 1.4) / 100.0)
         tp1_dist = max(min_tp1_dist, adaptive_tp1_dist)
-        tp2_dist = max(tp1_dist * 1.8, entry_price * (max(2.80, safe_atr_pct * 3.6) / 100.0))
+        tp2_dist = max(tp1_dist * 1.8, entry_price * (max(1.80, safe_atr_pct * 2.5) / 100.0))
 
         caller_hard_stop = hard_stop
         caller_soft_stop = soft_stop
@@ -1636,6 +1640,14 @@ class StrategyEngine:
             if vol_surge < min_breakout_vol:
                 self.log_rejection(symbol, "SETUP 1 R4 Breakout", f"{'Yatay piyasada sahte kırılım kalkanı: ' if is_range_regime else ''}Hacim patlaması {vol_surge:.2f}x yetersiz (en az {min_breakout_vol:.2f}x patlama aranıyor)")
                 return
+
+            # 🛡️ CVD BOĞA TUZAĞI KALKANI (BULL TRAP FILTER)
+            cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+            cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
+            if cvd_ratio < 45.0:
+                self.log_rejection(symbol, "SETUP 1 R4 Breakout", f"Boğa Tuzağı Kalkanı: Fiyat R4'ü aştı fakat mikro-CVD satıcı ağırlıklı (%{cvd_ratio:.1f} alıcı). Sahte kırılım elendi.")
+                return
+
             if tepe_avwap > 0 and close_price <= tepe_avwap:
                 self.log_rejection(symbol, "SETUP 1 R4 Breakout", f"Fiyat (${close_price:.4f}) Tepe AVWAP (${tepe_avwap:.4f}) altında kaldığı için boğa onayı verilmedi")
                 return
@@ -1670,22 +1682,21 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 2 S4 Breakdown", struct_reason)
                 return
 
-            # 🛡️ MAKRO ÖLÜ BÖLGE KALKANI: BTC+ETH Sıkışmasında Beta Dökülmesini Filtrele
-            if is_dead_zone and not is_decoupled_bear:
-                self.log_rejection(
-                    symbol, "SETUP 2 S4 Breakdown",
-                    f"Makro Ölü Bölge (BTC 1S: %{macro['btc_range_1h']:.2f}, ETH 1S: %{macro['eth_range_1h']:.2f}); Beta sahte dökülme riski nedeniyle elendi (Bağımsız Alfa RS: {coin_rs_score:+.2f} / Hacim: {coin_vol_surge:.1f}x teyidi yok)"
-                )
+            # 🛡️ CVD AYI TUZAĞI KALKANI (BEAR TRAP FILTER)
+            cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+            cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
+            if cvd_ratio > 58.0:
+                self.log_rejection(symbol, "SETUP 2 S4 Breakdown", f"Ayı Tuzağı Kalkanı: Fiyat S4'ü aşağı kırdı fakat mikro-CVD alıcı ağırlıklı (%{cvd_ratio:.1f} alıcı). Sahte çöküş elendi.")
                 return
 
             if is_bear_dump:
-                min_breakout_vol = 1.10  # Makro dökülmede breakdown shortları trend yönünde ödüllendirilir
+                min_breakout_vol = 1.05  # Makro dökülmede breakdown shortları trend yönünde ödüllendirilir
             elif eth_leading:
-                min_breakout_vol = 1.25
+                min_breakout_vol = 1.20
             elif is_range_regime:
-                min_breakout_vol = 1.80
+                min_breakout_vol = 1.50
             else:
-                min_breakout_vol = 1.35
+                min_breakout_vol = 1.20
 
             if vol_surge < min_breakout_vol:
                 self.log_rejection(symbol, "SETUP 2 S4 Breakdown", f"{'Yatay piyasada sahte kırılım kalkanı: ' if is_range_regime else ''}Hacim patlaması {vol_surge:.2f}x yetersiz (en az {min_breakout_vol:.2f}x patlama aranıyor)")
@@ -2002,16 +2013,6 @@ class StrategyEngine:
                 self.log_rejection(
                     symbol, "SETUP 9 nPOC Sekmesi",
                     f"Zayıf Parite Kalkanı: Negatif Göreceli Güç (RS: {coin_rs_score:+.2f}) olan paritede nPOC sekmesi engellendi."
-                )
-                return
-
-            # 🛡️ CVD ALICI EMİLİMİ ŞARTI: Tahtada satıcı üstünlüğü varken girilmez
-            cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
-            cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
-            if cvd_ratio < 48.0:
-                self.log_rejection(
-                    symbol, "SETUP 9 nPOC Sekmesi",
-                    f"CVD Satıcı Baskısı: Mikro-CVD alıcı oranı %{cvd_ratio:.1f} yetersiz (en az %48 alıcı emilimi aranıyor)."
                 )
                 return
 

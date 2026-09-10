@@ -123,10 +123,10 @@ SYMBOLS = DEFAULT_ACTIVE_SYMBOLS
 INITIAL_BALANCE = 10000.0        # Demo baslangic bakiyesi (USDT)
 LEVERAGE = 5                     # Kaldirac (5x)
 POSITION_SIZE_USDT = 80.0        # Kurumsal dengeli baz marjin (80 USDT)
-MAX_OPEN_POSITIONS = 8           # Esnek portfoy tavani: 1-5 standart kaliteli, 6-8 yalnizca God-Tier
-MAX_PORTFOLIO_MARGIN_PCT = 20.0  # Azami toplam kilitli marjin: Kasanin %20'si (10,000$ icin max 2,000$)
-ELITE_SLOT_BASE = 5              # Standart kaliteli slot siniri
-ELITE_SLOT_MAX = 8               # God-Tier icin esnek ust sinir
+MAX_OPEN_POSITIONS = 8           # Esnek portfoy tavani: 5 standart, 8'e kadar esnek marjin butcesi
+MAX_PORTFOLIO_MARGIN_PCT = 10.0  # Azami toplam kilitli marjin: Kasanin %10'u (10,000$ icin max 1,000$)
+ELITE_SLOT_BASE = 5              # Temel kaliteli slot hedefi
+ELITE_SLOT_MAX = 8               # Esnek marjin butcesi kapsaminda azami pozisyon siniri
 COMMISSION_RATE = 0.0005         # %0.05 Binance vadeli islem komisyon simulasyonu
 
 # 3. Strateji Parametreleri
