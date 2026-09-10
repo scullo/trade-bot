@@ -50,10 +50,9 @@ async def main():
     async def memory_and_sync_watchdog():
         import gc
         sync_counter = 0
-        emergency_pushed = False
         while True:
             await asyncio.sleep(60)
-            # Agresif bellek temizliği
+            # Agresif bellek temizliği (Render 512MB RAM Koruması)
             gc.collect()
             # 5M mum verilerini 150 satıra sınırla (her döngüde, OOM önleme)
             try:
@@ -64,33 +63,9 @@ async def main():
             except Exception:
                 pass
 
-            # Bellek baskısı algılama (Linux/Render: /proc/meminfo)
-            try:
-                if os.path.exists('/proc/meminfo'):
-                    with open('/proc/meminfo', 'r') as f:
-                        meminfo = f.read()
-                    total = int([l for l in meminfo.split('\n') if 'MemTotal' in l][0].split()[1])
-                    avail = int([l for l in meminfo.split('\n') if 'MemAvailable' in l][0].split()[1])
-                    usage_pct = ((total - avail) / total) * 100
-                    if usage_pct > 80 and not emergency_pushed:
-                        print(f">> [⚠️ BELLEK UYARI] RAM kullanımı %{usage_pct:.0f}! ACİL GitHub push başlatılıyor...")
-                        emergency_pushed = True
-                        paper_trader.retry_pending_push()
-                        # Ekstra agresif temizlik
-                        for sym in list(market_data.candles_5m.keys()):
-                            df = market_data.candles_5m[sym]
-                            if hasattr(df, '__len__') and len(df) > 50:
-                                market_data.candles_5m[sym] = df.iloc[-50:].reset_index(drop=True)
-                        gc.collect()
-                        print(f">> [🧹 ACİL TEMİZLİK] Tüm mum verileri 50 satıra kırpıldı, GC çalıştırıldı.")
-                    elif usage_pct < 70:
-                        emergency_pushed = False
-            except Exception:
-                pass
-
-            # Her 5 dakikada bir (5 * 60s = 5 döngü) GitHub'a zorla push
+            # Her 15 dakikada bir (15 * 60s = 15 döngü) bekleyen GitHub state sync kontrolü
             sync_counter += 1
-            if sync_counter >= 5:
+            if sync_counter >= 15:
                 sync_counter = 0
                 try:
                     paper_trader.retry_pending_push()

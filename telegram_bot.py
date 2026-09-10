@@ -602,9 +602,24 @@ Giriş: <code>${float(record.get('entry_price', 0.0)):.6f}</code> ➔ Çıkış:
         if not self.token or not self.chat_id:
             return
 
-        # Baslangic onay mesaji gonder
-        try:
-            boot_msg = f"""🛡️ <b>VALKYRIE AEGIS SENTINEL — AKTİF EDİLDİ</b>
+        # Baslangic onay mesaji gonder (Son 30 dakika icinde gonderilmisse spam yapma)
+        last_boot_file = ".last_boot_sentinel"
+        should_notify = True
+        now_ts = time.time()
+        if os.path.exists(last_boot_file):
+            try:
+                with open(last_boot_file, "r") as f:
+                    last_ts = float(f.read().strip())
+                    if now_ts - last_ts < 1800:  # 30 dakika spam kalkani
+                        should_notify = False
+            except Exception:
+                pass
+
+        if should_notify:
+            try:
+                with open(last_boot_file, "w") as f:
+                    f.write(str(now_ts))
+                boot_msg = f"""🛡️ <b>VALKYRIE AEGIS SENTINEL — AKTİF EDİLDİ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━
 💰 <b>Başlangıç Kasası:</b> <code>${trader_manager.balance:,.2f} USDT</code>
 📊 <b>Takip Edilen:</b> <code>100 / 100 Parite (Canlı Akış)</code>
@@ -612,9 +627,9 @@ Giriş: <code>${float(record.get('entry_price', 0.0)):.6f}</code> ➔ Çıkış:
 ⏰ <b>Başlangıç Zamanı:</b> <code>{datetime.now(timezone(timedelta(hours=3))).strftime('%Y-%m-%d %H:%M:%S')} (TSİ)</code>
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📌 <i>Her saat başı otonom sağlık denetimi, oto-onarım ve VIP yönetici raporu gönderilecektir.</i>"""
-            await self.send_message(boot_msg)
-        except Exception as e:
-            print(f"[TELEGRAM BOOT MSG ERROR]: {e}")
+                await self.send_message(boot_msg)
+            except Exception as e:
+                print(f"[TELEGRAM BOOT MSG ERROR]: {e}")
 
         while True:
             try:

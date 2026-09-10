@@ -35,6 +35,7 @@ def _get_gh_token():
 
 GITHUB_TOKEN = _get_gh_token()
 GITHUB_REPO = os.environ.get("GITHUB_REPO", "scullo/trade-bot")
+GITHUB_BRANCH = os.environ.get("GITHUB_STATE_BRANCH", "state")
 GITHUB_FILE_PATH = "trade_history.json"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_FILE_PATH}"
 
@@ -61,7 +62,7 @@ class PaperTrader:
         if GITHUB_TOKEN:
             try:
                 import urllib.request
-                req = urllib.request.Request(GITHUB_API_URL, headers={
+                req = urllib.request.Request(f"{GITHUB_API_URL}?ref={GITHUB_BRANCH}", headers={
                     "Authorization": f"token {GITHUB_TOKEN}",
                     "Accept": "application/vnd.github.v3+json",
                     "User-Agent": "TradeBot/1.0"
@@ -142,17 +143,21 @@ class PaperTrader:
         # 1. Lokal dosyaya atomik kaydet
         self.save_local_history()
 
-        # 2. GitHub'a kaydet
+        # 2. GitHub'a kaydet (İzole state branch'ine - Render Auto-Deploy tetiklemez!)
         if GITHUB_TOKEN:
             self._pending_state = state
+            now_ts = time.time()
             if critical:
-                # KRİTİK: İşlem kapanışlarında senkron push (veri kaybı önleme)
+                self._last_push_ts = now_ts
                 self._push_to_github(state)
             else:
-                threading.Thread(target=self._push_to_github, args=(state,), daemon=True).start()
+                # Non-critical save: En fazla 20 saniyede 1 push yaparak API ve ağı korur
+                if now_ts - getattr(self, '_last_push_ts', 0) >= 20.0:
+                    self._last_push_ts = now_ts
+                    threading.Thread(target=self._push_to_github, args=(state,), daemon=True).start()
 
     def _push_to_github(self, state: dict):
-        """trade_history.json dosyasini GitHub API uzerinden repo'ya kaydeder (Otomatik Yeniden Deneme ile)."""
+        """trade_history.json dosyasini izole state branch'ine kaydeder (Render restart dongusunu onler)."""
         if not self._push_lock.acquire(blocking=False):
             return  # Zaten başka bir push devam ediyor, çakışma önleme
         try:
@@ -162,9 +167,9 @@ class PaperTrader:
                     content_str = json.dumps(state, ensure_ascii=False, separators=(',', ':'), default=str)
                     content_b64 = base64.b64encode(content_str.encode("utf-8")).decode("utf-8")
 
-                    # Her denemede guncel SHA'yi al (conflict olmamasi icin)
+                    # Her denemede state branch'inin guncel SHA'sini al
                     try:
-                        req = urllib.request.Request(GITHUB_API_URL, headers={
+                        req = urllib.request.Request(f"{GITHUB_API_URL}?ref={GITHUB_BRANCH}", headers={
                             "Authorization": f"token {GITHUB_TOKEN}",
                             "Accept": "application/vnd.github.v3+json",
                             "User-Agent": "TradeBot/1.0"
@@ -178,7 +183,7 @@ class PaperTrader:
                     payload = {
                         "message": f"[BOT] Trade state auto-save ({datetime.now(timezone(timedelta(hours=3))).strftime('%H:%M:%S')})",
                         "content": content_b64,
-                        "branch": "main"
+                        "branch": GITHUB_BRANCH
                     }
                     if self._github_sha:
                         payload["sha"] = self._github_sha
@@ -196,7 +201,7 @@ class PaperTrader:
                     self._github_sha = new_sha
                     self._last_push_ok = True
                     self._pending_state = None
-                    print(f">> [GITHUB SYNC] trade_history.json kaydedildi (Deneme {attempt}, SHA: {new_sha[:8]}...)")
+                    print(f">> [GITHUB SYNC] trade_history.json ({GITHUB_BRANCH}) kaydedildi (Deneme {attempt}, SHA: {new_sha[:8]}...)")
                     return
                 except Exception as e:
                     print(f">> [GITHUB SYNC DENEME {attempt}/5 HATA] {e}")
@@ -208,17 +213,11 @@ class PaperTrader:
             self._push_lock.release()
 
     def retry_pending_push(self):
-        """Başarısız kalan GitHub push'unu yeniden dener. Periyodik sync tarafından çağrılır."""
-        if self._pending_state is not None and not self._last_push_ok:
-            print(">> [PERİYODİK SYNC] Bekleyen GitHub push yeniden deneniyor...")
-            self._push_to_github(self._pending_state)
-        elif GITHUB_TOKEN:
-            # Her durumda güncel state'i push et (güvenlik ağı)
-            state = {
-                "balance": round(self.balance, 4),
-                "open_positions": self.open_positions,
-                "history": self.history
-            }
+        """Başarısız veya bekleyen GitHub push'unu yeniden dener. Periyodik sync tarafından çağrılır."""
+        if self._pending_state is not None and GITHUB_TOKEN:
+            print(">> [PERİYODİK SYNC] Bekleyen/gecikmeli GitHub push deneniyor...")
+            state = self._pending_state
+            self._pending_state = None
             self._push_to_github(state)
 
     def get_free_balance(self):
