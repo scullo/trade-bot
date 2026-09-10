@@ -912,42 +912,51 @@ class StrategyEngine:
         obi_bid_qty = float(obi_data.get('bid_qty', 0.0))
         obi_ask_qty = float(obi_data.get('ask_qty', 0.0))
         obi_last_upd = float(obi_data.get('last_update', 0.0))
-        is_obi_fresh = (time.time() - obi_last_upd < 30.0) if obi_last_upd > 0 else False
+        now_ts = time.time()
+        age_sec = (now_ts - obi_last_upd) if obi_last_upd > 0 else 999.0
+        is_obi_fresh = (age_sec < 20.0) and (obi_bid_qty > 0) and (obi_ask_qty > 0)
+
+        # 🛡️ ISINMA KORUMASI (WARM-UP GATE):
+        # Canlı tahta derinliği (OBI) henüz akmamış, sıfır veya 20 saniyeden eski ise körleme işlem AÇILMAZ!
+        if not is_obi_fresh:
+            rej_msg = f"🛡️ Isınma Koruması (Warm-up Gate): Canlı tahta derinliği (OBI) henüz oturmadı veya bayat ({age_sec:.1f}s önce güncellendi, B:{obi_bid_qty:.1f}, A:{obi_ask_qty:.1f}). Körleme işleme girilmedi."
+            print(f">> [RED - ISINMA KALKANI] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "OBI_WARMUP_GATE_BLOCKED"}
 
         obi_confirmed = False
         obi_tag = ""
         obi_margin_mult = 1.0
 
-        if is_obi_fresh:
-            if side == "LONG":
-                # Kalkan: Satıcı duvarı baskınsa (Bid/Ask < 0.65 veya Ask > 1.5x Bid) destek tutunamaz
-                if obi_ratio < 0.65 or obi_imbalance <= -0.21:
-                    rej_msg = f"🛡️ Tahta Derinlik Kalkanı (OBI): Satıcı duvarı baskın (Bid/Ask: {obi_ratio:.2f}x, OBI: %{obi_imbalance*100:.1f}). Alıcı derinliği zayıf, LONG engellendi."
-                    print(f">> [RED - OBI KALKANI] {symbol}: {rej_msg}")
-                    self.log_rejection(symbol, reason, rej_msg)
-                    return {"error": "OBI_WEAK_BID_WALL_BLOCKED"}
-                elif obi_ratio >= 1.50 or obi_imbalance >= 0.20:
-                    obi_confirmed = True
-                    obi_tag = f" [🧱 Tahta Alıcı Duvarı Teyitli ({obi_ratio:.1f}x)]"
-                    obi_margin_mult = 1.10
-            elif side == "SHORT":
-                # Kalkan: Alıcı duvarı baskınsa (Bid/Ask > 1.55 veya Bid > 1.55x Ask) direnç kırılamaz
-                if obi_ratio > 1.55 or obi_imbalance >= 0.21:
-                    rej_msg = f"🛡️ Tahta Derinlik Kalkanı (OBI): Alıcı duvarı baskın (Bid/Ask: {obi_ratio:.2f}x, OBI: %{obi_imbalance*100:+.1f}). Satıcı derinliği zayıf, SHORT engellendi."
-                    print(f">> [RED - OBI KALKANI] {symbol}: {rej_msg}")
-                    self.log_rejection(symbol, reason, rej_msg)
-                    return {"error": "OBI_WEAK_ASK_WALL_BLOCKED"}
-                elif obi_ratio <= 0.65 or obi_imbalance <= -0.20:
-                    obi_confirmed = True
-                    ask_mult = 1.0 / max(0.01, obi_ratio)
-                    obi_tag = f" [🧱 Tahta Satıcı Duvarı Teyitli ({ask_mult:.1f}x)]"
-                    obi_margin_mult = 1.10
+        if side == "LONG":
+            # Kalkan: Satıcı duvarı baskınsa (Bid/Ask < 0.65 veya Ask > 1.5x Bid) destek tutunamaz
+            if obi_ratio < 0.65 or obi_imbalance <= -0.21:
+                rej_msg = f"🛡️ Tahta Derinlik Kalkanı (OBI): Satıcı duvarı baskın (Bid/Ask: {obi_ratio:.2f}x, OBI: %{obi_imbalance*100:.1f}). Alıcı derinliği zayıf, LONG engellendi."
+                print(f">> [RED - OBI KALKANI] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, reason, rej_msg)
+                return {"error": "OBI_WEAK_BID_WALL_BLOCKED"}
+            elif obi_ratio >= 1.50 or obi_imbalance >= 0.20:
+                obi_confirmed = True
+                obi_tag = f" [🧱 Tahta Alıcı Duvarı Teyitli ({obi_ratio:.1f}x)]"
+                obi_margin_mult = 1.10
+        elif side == "SHORT":
+            # Kalkan: Alıcı duvarı baskınsa (Bid/Ask > 1.55 veya Bid > 1.55x Ask) direnç kırılamaz
+            if obi_ratio > 1.55 or obi_imbalance >= 0.21:
+                rej_msg = f"🛡️ Tahta Derinlik Kalkanı (OBI): Alıcı duvarı baskın (Bid/Ask: {obi_ratio:.2f}x, OBI: %{obi_imbalance*100:+.1f}). Satıcı derinliği zayıf, SHORT engellendi."
+                print(f">> [RED - OBI KALKANI] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, reason, rej_msg)
+                return {"error": "OBI_WEAK_ASK_WALL_BLOCKED"}
+            elif obi_ratio <= 0.65 or obi_imbalance <= -0.20:
+                obi_confirmed = True
+                ask_mult = 1.0 / max(0.01, obi_ratio)
+                obi_tag = f" [🧱 Tahta Satıcı Duvarı Teyitli ({ask_mult:.1f}x)]"
+                obi_margin_mult = 1.10
 
-            if obi_confirmed and obi_tag:
-                reason += obi_tag
-                if confluence_list is not None and isinstance(confluence_list, list):
-                    wall_name = "Tahta_Derinlik_Alıcı_Duvarı" if side == "LONG" else "Tahta_Derinlik_Satıcı_Duvarı"
-                    confluence_list.append(wall_name)
+        if obi_confirmed and obi_tag:
+            reason += obi_tag
+            if confluence_list is not None and isinstance(confluence_list, list):
+                wall_name = "Tahta_Derinlik_Alıcı_Duvarı" if side == "LONG" else "Tahta_Derinlik_Satıcı_Duvarı"
+                confluence_list.append(wall_name)
 
         # MADDE 5: TEMAS (TOUCH) TAKIBI VE FAKEOUT KORUMASI
         from datetime import datetime
@@ -1195,19 +1204,21 @@ class StrategyEngine:
             except Exception as e:
                 print(f">> [CVD/HIZ HATA] {symbol}: {e}")
 
-        # ── DİNAMİK STOP VE HEDEFLERİ (YAPISAL SEVİYE & SIKI RİSK TAVANI) ──
-        # Sıkı yapısal stop ile ortalama kaybı -$1.50 bandına çekme
-        safe_atr_pct = max(0.4, min(4.0, atr_pct))
+        # ── DİNAMİK STOP VE HEDEFLERİ (YAPISAL SEVİYE & ADAPTİF FİTİL KALKANI) ──
+        # Kripto piyasasında %0.50 gibi aşırı dar stoplar normal 5M fitillerinde sahte stop-out'lara yol açar.
+        # Asgari stop tabanı %0.80'e çıkarılmış olup, coin volatilitesine (ATR) ve persona çarpanına göre dinamik ölçeklenir.
+        safe_atr_pct = max(0.60, min(3.5, atr_pct))
         stop_mult = persona.get("stop_loss_atr_mult", 1.0)
-        # Sıkı dinamik stop: min %0.50, maks %1.50 (Eski %2.20 tavanı küçültüldü)
-        effective_stop_pct = max(0.50, min(1.50, safe_atr_pct * 0.8 * stop_mult))
+        # Adaptif stop: minimum %0.80 tabanı (fitil gürültüsü kalkanı), maksimum %1.60 risk tavanı
+        effective_stop_pct = max(0.80, min(1.60, safe_atr_pct * 0.90 * stop_mult))
         stop_dist = entry_price * (effective_stop_pct / 100.0)
+        min_allowed_stop_dist = entry_price * 0.0080  # %0.80 mutlak asgari nefes payı
 
         # TP1 & TP2: Asimetrik Kâr Oranı (R:R >= 1.25x - 2.5x Hedef)
         min_tp1_dist = stop_dist * 1.25
-        adaptive_tp1_dist = entry_price * (max(0.80, safe_atr_pct * 1.4) / 100.0)
+        adaptive_tp1_dist = entry_price * (max(1.10, safe_atr_pct * 1.5) / 100.0)
         tp1_dist = max(min_tp1_dist, adaptive_tp1_dist)
-        tp2_dist = max(tp1_dist * 1.8, entry_price * (max(1.80, safe_atr_pct * 2.5) / 100.0))
+        tp2_dist = max(tp1_dist * 1.8, entry_price * (max(2.00, safe_atr_pct * 2.8) / 100.0))
 
         caller_hard_stop = hard_stop
         caller_soft_stop = soft_stop
@@ -1216,9 +1227,12 @@ class StrategyEngine:
 
         if side == "LONG":
             atr_hard_stop = round(entry_price - stop_dist, 6)
-            # Eğer çağıran setup daha sıkı bir yapısal stop belirlediyse koru, değilse ATR tavanını kullan
-            if caller_hard_stop and 0 < caller_hard_stop < entry_price and caller_hard_stop > atr_hard_stop:
-                hard_stop = round(caller_hard_stop, 6)
+            # Eğer çağıran setup yapısal bir stop belirlediyse ve en az %0.80 nefes payına sahipse koru
+            if caller_hard_stop and 0 < caller_hard_stop <= (entry_price - min_allowed_stop_dist):
+                if caller_hard_stop > atr_hard_stop:
+                    hard_stop = round(caller_hard_stop, 6)
+                else:
+                    hard_stop = atr_hard_stop
             else:
                 hard_stop = atr_hard_stop
             soft_stop = hard_stop  # Dinamik ATR / Yapısal Stop: UI, telemetri ve risk motoru ile tam senkron
@@ -1240,9 +1254,12 @@ class StrategyEngine:
                 tp2 = atr_tp2
         else:
             atr_hard_stop = round(entry_price + stop_dist, 6)
-            # Eğer çağıran setup daha sıkı bir yapısal stop belirlediyse koru, değilse ATR tavanını kullan
-            if caller_hard_stop and caller_hard_stop > entry_price and caller_hard_stop < atr_hard_stop:
-                hard_stop = round(caller_hard_stop, 6)
+            # Eğer çağıran setup yapısal bir stop belirlediyse ve en az %0.80 nefes payına sahipse koru
+            if caller_hard_stop and caller_hard_stop >= (entry_price + min_allowed_stop_dist):
+                if caller_hard_stop < atr_hard_stop:
+                    hard_stop = round(caller_hard_stop, 6)
+                else:
+                    hard_stop = atr_hard_stop
             else:
                 hard_stop = atr_hard_stop
             soft_stop = hard_stop  # Dinamik ATR / Yapısal Stop: UI, telemetri ve risk motoru ile tam senkron

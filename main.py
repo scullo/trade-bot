@@ -43,12 +43,8 @@ async def main():
     await start_server(market_data, trader_manager, notifier, live_trader=live_trader, strategy=strategy)
     await init_task
 
-    # Sistem Hazır — İlk 5M Mum Taramasını Yap
-    print(">> [SİSTEM HAZIR] 100 Parite seviyeleri hesaplandı. İlk 5M mum taraması başlatılıyor...")
-    try:
-        await market_data.poll_all_candles_once()
-    except Exception as e:
-        print(f">> [ILK TARAMA UYARI]: {e}")
+    # Sistem Hazır — WebSocket döngüsüne geçiliyor (candle_poller_worker ısınma sonrası ilk taramayı yapacaktır)
+    print(">> [SİSTEM HAZIR] 100 Parite seviyeleri ve veritabanı hazır. Canlı WebSocket ve tarayıcı başlatılıyor...")
 
     # 60 Saniyelik Bellek Temizleyici + 5 Dakikalık Periyodik GitHub Sync + Bellek Baskısı Algılama (OOM & Veri Kaybı Kalkanı)
     async def memory_and_sync_watchdog():

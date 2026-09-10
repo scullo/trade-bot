@@ -1161,6 +1161,8 @@ class MarketDataManager:
         # Worker 3: 5M Periyodik REST Mum Senkronizasyonu (Ultra Hizli Paralel 100 Parite Taramasi)
         async def candle_poller_worker():
             last_scanned_slot = -1
+            # 🛡️ WebSocket & OBI Isınma Koruması: bookTicker akışının bağlanıp tahtayı doldurması için 5s beklenir
+            await asyncio.sleep(5)
             try:
                 print(">> [İLK BAŞLANGIÇ TARAMASI] 100 Parite için son kapanmış 5M mumlar taranıyor...")
                 await self.poll_all_candles_once()
