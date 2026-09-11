@@ -67,6 +67,8 @@ class MarketDataManager:
             'imbalance': 0.0,
             'ratio': 1.0,
             'wall_side': 'BALANCED',
+            'wall_duration_sec': 0.0,
+            'wall_first_seen': 0.0,
             'last_update': 0.0
         } for s in all_symbols}
         self.on_tick_callback = None
@@ -1033,6 +1035,20 @@ class MarketDataManager:
                                                 elif ratio <= 0.65:
                                                     wall_side = 'ASK_WALL'
 
+                                                now_ts = time.time()
+                                                prev_depth = self.orderbook_depth.get(norm_s, {})
+                                                prev_wall = prev_depth.get('wall_side', 'BALANCED')
+                                                first_seen = prev_depth.get('wall_first_seen', 0.0)
+
+                                                if wall_side != 'BALANCED' and wall_side == prev_wall:
+                                                    duration_sec = (now_ts - first_seen) if first_seen > 0 else 0.0
+                                                elif wall_side != 'BALANCED':
+                                                    first_seen = now_ts
+                                                    duration_sec = 0.0
+                                                else:
+                                                    first_seen = 0.0
+                                                    duration_sec = 0.0
+
                                                 self.orderbook_depth[norm_s] = {
                                                     'symbol': norm_s,
                                                     'bid_price': bid,
@@ -1042,7 +1058,9 @@ class MarketDataManager:
                                                     'imbalance': round(imbalance, 4),
                                                     'ratio': round(ratio, 4),
                                                     'wall_side': wall_side,
-                                                    'last_update': time.time()
+                                                    'wall_duration_sec': round(duration_sec, 2),
+                                                    'wall_first_seen': first_seen,
+                                                    'last_update': now_ts
                                                 }
 
                                             if self.on_tick_callback:

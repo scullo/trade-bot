@@ -329,6 +329,26 @@ class StrategyEngine:
         fakeouts = sum(1 for t in recent if t['pnl'] < 0 and t['mfe'] < 0.8 and ('Stop' in t['reason'] or 'stop' in t['reason']))
         fakeout_rate = (fakeouts / total_t) * 100.0
 
+        # 🪙 MODÜL 4: Tuzakçı Parite Koruması (Son 5 işlemde 2+ kez stoplanan parite anında pusu moduna çekilir, marjini %50 kısılır)
+        recent_5 = coin_trades[-5:]
+        recent_stops = sum(1 for t in recent_5 if t['pnl'] < 0 and ('Stop' in t['reason'] or 'stop' in t['reason']))
+        if recent_stops >= 2:
+            return {
+                "symbol": symbol,
+                "persona_class": "WHIPSAW",
+                "persona_name": "⚠️ Volatil & Tuzakçı (Whipsaw - 2x Stop Pusu Modu)",
+                "trades_count": total_t,
+                "win_rate": round(wr, 1),
+                "fakeout_rate": round(fakeout_rate, 1),
+                "net_pnl": round(net_pnl, 2),
+                "allow_breakout": False,
+                "allow_bounce": True,
+                "margin_scale": 0.5,
+                "stop_loss_atr_mult": 1.5,
+                "status_badge": "⚠️ Whipsaw (Kırılım Kilitli 🔒, Marjin %50)",
+                "strategy_permission": "Yalnızca S3/R3/nPOC Dip-Tepe Sekmesi (Kırılım Kilitli 🔒, Marjin %50)"
+            }
+
         # Sınıflandırma
         if net_pnl > 3.0 and wr >= 60.0 and fakeout_rate <= 25.0:
             return {
@@ -513,20 +533,43 @@ class StrategyEngine:
         tp2 = pos.get("tp2") or 0.0
         hard_stop = pos.get("hard_stop") or 0.0
 
-        # ── 1. SERT STOP KONTROLU (Felaket Korumasi — Aninda Kapat) ──────────
-        if side == "LONG" and hard_stop > 0 and current_price <= hard_stop:
-            record = await self._safe_close_position(symbol, current_price, f"Sert Stop Tetiklendi (${hard_stop:.4f})")
-            if record:
-                await self._notify_close(record, levels=levels)
-                self._cleanup_tracking(symbol)
-            return
+        # ── 1. SERT STOP KONTROLU (Felaket Korumasi & Dinamik Fitil Kalkanı) ──
+        hold_sec = time.time() - pos.get("entry_timestamp", time.time())
+        is_early_stage = (hold_sec <= 600.0) and not pos.get("is_half_closed", False)
 
-        elif side == "SHORT" and hard_stop > 0 and current_price >= hard_stop:
-            record = await self._safe_close_position(symbol, current_price, f"Sert Stop Tetiklendi (${hard_stop:.4f})")
-            if record:
-                await self._notify_close(record, levels=levels)
-                self._cleanup_tracking(symbol)
-            return
+        if side == "LONG" and hard_stop > 0:
+            trigger_stop = hard_stop
+            if is_early_stage:
+                coin_atr = float(pos.get("atr_pct", 1.2))
+                entry_p = float(pos.get("entry_price", current_price))
+                wick_buf = entry_p * (coin_atr / 100.0) * 0.25
+                # İlk 10dk tolerans eşiği (en fazla %1.60 mutlak acil stop tavanı ile sınırlı)
+                trigger_stop = max(hard_stop - wick_buf, entry_p * (1.0 - 0.0160))
+
+            if current_price <= trigger_stop:
+                stop_label = f"Sert Stop Tetiklendi (${hard_stop:.4f})" if not is_early_stage else f"🚨 Acil Fitil Tavan Stopu (${current_price:.4f})"
+                record = await self._safe_close_position(symbol, current_price, stop_label)
+                if record:
+                    await self._notify_close(record, levels=levels)
+                    self._cleanup_tracking(symbol)
+                return
+
+        elif side == "SHORT" and hard_stop > 0:
+            trigger_stop = hard_stop
+            if is_early_stage:
+                coin_atr = float(pos.get("atr_pct", 1.2))
+                entry_p = float(pos.get("entry_price", current_price))
+                wick_buf = entry_p * (coin_atr / 100.0) * 0.25
+                # İlk 10dk tolerans eşiği (en fazla %1.60 mutlak acil stop tavanı ile sınırlı)
+                trigger_stop = min(hard_stop + wick_buf, entry_p * (1.0 + 0.0160))
+
+            if current_price >= trigger_stop:
+                stop_label = f"Sert Stop Tetiklendi (${hard_stop:.4f})" if not is_early_stage else f"🚨 Acil Fitil Tavan Stopu (${current_price:.4f})"
+                record = await self._safe_close_position(symbol, current_price, stop_label)
+                if record:
+                    await self._notify_close(record, levels=levels)
+                    self._cleanup_tracking(symbol)
+                return
 
         # ── 2. TAKE-PROFIT (KAR ALMA) KONTROLU ──────────────────────────────
         if side == "LONG":
@@ -624,8 +667,8 @@ class StrategyEngine:
     def _apply_trailing_stop(self, symbol: str, pos: dict, current_price: float):
         side = pos["side"]
         entry = pos["entry_price"]
-        margin = pos["margin"]
-        leverage = pos["leverage"]
+        margin = pos.get("margin", 50.0)
+        leverage = pos.get("leverage", 5)
 
         # ROE hesapla
         if side == "LONG":
@@ -832,6 +875,29 @@ class StrategyEngine:
                 liq_volume_usd = round(short_liq_usd, 2)
                 liq_tag = f" [💥 ${liq_volume_usd:,.0f} Short Tasfiye Süpürmesi Teyitli]"
 
+        # 🎯 MODÜL 6: TASFİYE 2. DALGA KALKANI (Şelale / Squeeze Devam Koruması)
+        if liq_confirmed and self.market_data and symbol in self.market_data.candles_5m:
+            df_liq = self.market_data.candles_5m[symbol]
+            if isinstance(df_liq, pd.DataFrame) and len(df_liq) > 0:
+                c_low = float(df_liq['low'].iloc[-1]) if 'low' in df_liq.columns else entry_price
+                c_high = float(df_liq['high'].iloc[-1]) if 'high' in df_liq.columns else entry_price
+                c_rng = c_high - c_low
+                if c_rng > 0:
+                    if side == "LONG":
+                        reclaim_p = (entry_price - c_low) / c_rng
+                        if reclaim_p < 0.20:
+                            rej_msg = f"🛡️ Tasfiye 2. Dalga Kalkanı: Tasfiye süpürmesi (${liq_volume_usd:,.0f}) sonrası fiyat henüz dipten en az %20 sekmedi (Reclaim: %{reclaim_p*100:.1f}). Şelale devam riski engellendi."
+                            print(f">> [RED - TASFİYE KALKANI] {symbol}: {rej_msg}")
+                            self.log_rejection(symbol, reason, rej_msg)
+                            return {"error": "LIQUIDATION_FALLING_KNIFE_BLOCKED"}
+                    elif side == "SHORT":
+                        reclaim_p = (c_high - entry_price) / c_rng
+                        if reclaim_p < 0.20:
+                            rej_msg = f"🛡️ Tasfiye 2. Dalga Kalkanı: Tasfiye süpürmesi (${liq_volume_usd:,.0f}) sonrası fiyat tepeden en az %20 geri çekilmedi (Reclaim: %{reclaim_p*100:.1f}). Fışkırma devam riski engellendi."
+                            print(f">> [RED - TASFİYE KALKANI] {symbol}: {rej_msg}")
+                            self.log_rejection(symbol, reason, rej_msg)
+                            return {"error": "LIQUIDATION_FALLING_KNIFE_BLOCKED"}
+
         if liq_confirmed and liq_tag:
             reason += liq_tag
             if confluence_list is not None and isinstance(confluence_list, list):
@@ -896,6 +962,32 @@ class StrategyEngine:
                 elif cvd_ratio_60s > 60.0:
                     cvd_margin_mult = 0.85
 
+        # 🦊 MODÜL 0: SAHTE DUVAR & PASİF EMİLİM (PASSIVE ABSORPTION) KALKANI
+        candle_open_price = entry_price
+        if self.market_data and symbol in self.market_data.candles_5m:
+            df_sym = self.market_data.candles_5m[symbol]
+            if isinstance(df_sym, pd.DataFrame) and len(df_sym) > 0 and 'open' in df_sym.columns:
+                try:
+                    candle_open_price = float(df_sym['open'].iloc[-1])
+                except Exception:
+                    candle_open_price = entry_price
+
+        # Perakende agresif alıyor (CVD >= 65%) ama fiyat 5M mum açılışının altında ve düşüyor!
+        # Whale pasif limit satışla perakendeyi karşılıyor (Passive Sell Absorption).
+        if side == "LONG" and cvd_ratio_60s >= 65.0 and entry_price < candle_open_price:
+            rej_msg = f"🦊 Pasif Satış Emilim Tuzağı (Passive Absorption Trap): Mikro-CVD alıcı baskın (%{cvd_ratio_60s:.0f}) fakat fiyat 5M açılışının altında (${entry_price:.4f} < ${candle_open_price:.4f}). Balina pasif satışla karşılıyor, LONG engellendi."
+            print(f">> [RED - PASİF EMİLİM TUZAĞI] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "PASSIVE_SELL_ABSORPTION_TRAP"}
+
+        # Perakende agresif satıyor (CVD <= 35%) ama fiyat 5M mum açılışının üstünde ve yükseliyor!
+        # Whale pasif limit alışla perakendeyi karşılıyor (Passive Buy Absorption).
+        if side == "SHORT" and cvd_ratio_60s <= 35.0 and entry_price > candle_open_price:
+            rej_msg = f"🦊 Pasif Alış Emilim Tuzağı (Passive Absorption Trap): Mikro-CVD satıcı baskın (%{100-cvd_ratio_60s:.0f}) fakat fiyat 5M açılışının üstünde (${entry_price:.4f} > ${candle_open_price:.4f}). Balina pasif alışla karşılıyor, SHORT engellendi."
+            print(f">> [RED - PASİF EMİLİM TUZAĞI] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "PASSIVE_BUY_ABSORPTION_TRAP"}
+
         if cvd_confirmed and cvd_tag:
             reason += cvd_tag
             if confluence_list is not None and isinstance(confluence_list, list):
@@ -912,6 +1004,8 @@ class StrategyEngine:
         obi_bid_qty = float(obi_data.get('bid_qty', 0.0))
         obi_ask_qty = float(obi_data.get('ask_qty', 0.0))
         obi_last_upd = float(obi_data.get('last_update', 0.0))
+        obi_wall_duration = float(obi_data.get('wall_duration_sec', 0.0))
+        is_persistent_wall = (obi_wall_duration >= 6.0)
         now_ts = time.time()
         age_sec = (now_ts - obi_last_upd) if obi_last_upd > 0 else 999.0
         is_obi_fresh = (age_sec < 20.0) and (obi_bid_qty > 0) and (obi_ask_qty > 0)
@@ -923,6 +1017,16 @@ class StrategyEngine:
             print(f">> [RED - ISINMA KALKANI] {symbol}: {rej_msg}")
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "OBI_WARMUP_GATE_BLOCKED"}
+
+        # ⚖️ MODÜL 3: DENGELİ TAHTA (OBI) KALİTE ÇITASI
+        if obi_wall_side == "BALANCED":
+            has_vol_surge = (vol_surge >= 1.50)
+            has_cvd_flow = (side == "LONG" and cvd_ratio_60s >= 58.0) or (side == "SHORT" and cvd_ratio_60s <= 42.0)
+            if not has_vol_surge and not has_cvd_flow:
+                rej_msg = f"⚖️ Dengeli Tahta Kalite Çıtası: Tahtada koruyucu duvar yok (BALANCED, Bid/Ask: {obi_ratio:.2f}x) ve ek hacim/CVD teyidi yetersiz (Hacim: {vol_surge:.2f}x < 1.5x, CVD: %{cvd_ratio_60s:.0f}). Düşük kaliteli işlem elendi."
+                print(f">> [RED - DENGELİ TAHTA KALKANI] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, reason, rej_msg)
+                return {"error": "BALANCED_OBI_CONFIRMATION_MISSING"}
 
         obi_confirmed = False
         obi_tag = ""
@@ -936,9 +1040,12 @@ class StrategyEngine:
                 self.log_rejection(symbol, reason, rej_msg)
                 return {"error": "OBI_WEAK_BID_WALL_BLOCKED"}
             elif obi_ratio >= 1.50 or obi_imbalance >= 0.20:
-                obi_confirmed = True
-                obi_tag = f" [🧱 Tahta Alıcı Duvarı Teyitli ({obi_ratio:.1f}x)]"
-                obi_margin_mult = 1.10
+                if is_persistent_wall:
+                    obi_confirmed = True
+                    obi_tag = f" [🧱 Tahta Alıcı Duvarı Teyitli ({obi_ratio:.1f}x, {obi_wall_duration:.0f}s)]"
+                    obi_margin_mult = 1.10
+                else:
+                    obi_tag = f" [⚠️ Tahta Alıcı Duvarı Yeni/Kalıcı Değil ({obi_wall_duration:.1f}s)]"
         elif side == "SHORT":
             # Kalkan: Alıcı duvarı baskınsa (Bid/Ask > 1.55 veya Bid > 1.55x Ask) direnç kırılamaz
             if obi_ratio > 1.55 or obi_imbalance >= 0.21:
@@ -947,10 +1054,13 @@ class StrategyEngine:
                 self.log_rejection(symbol, reason, rej_msg)
                 return {"error": "OBI_WEAK_ASK_WALL_BLOCKED"}
             elif obi_ratio <= 0.65 or obi_imbalance <= -0.20:
-                obi_confirmed = True
-                ask_mult = 1.0 / max(0.01, obi_ratio)
-                obi_tag = f" [🧱 Tahta Satıcı Duvarı Teyitli ({ask_mult:.1f}x)]"
-                obi_margin_mult = 1.10
+                if is_persistent_wall:
+                    obi_confirmed = True
+                    ask_mult = 1.0 / max(0.01, obi_ratio)
+                    obi_tag = f" [🧱 Tahta Satıcı Duvarı Teyitli ({ask_mult:.1f}x, {obi_wall_duration:.0f}s)]"
+                    obi_margin_mult = 1.10
+                else:
+                    obi_tag = f" [⚠️ Tahta Satıcı Duvarı Yeni/Kalıcı Değil ({obi_wall_duration:.1f}s)]"
 
         if obi_confirmed and obi_tag:
             reason += obi_tag
@@ -1084,6 +1194,34 @@ class StrategyEngine:
         conf_labels = {1: "1/4 (Tekil Teyit)", 2: "2/4 (Çift Teyit)", 3: "3/4 (Güçlü Confluence)", 4: "4/4 (Maksimum Kurumsal Teyit)"}
         conf_score_str = conf_labels.get(c_count, f"{c_count}/4")
 
+        # 🐻 MODÜL 1: AYI REJİMİNDE LONG KALİTE FİLTRESİ (4/4 TAM CONFLUENCE ZORUNLU)
+        if side == "LONG" and ("AYI" in trend_regime):
+            if c_count < 4:
+                rej_msg = f"🐻 Ayı Rejimi LONG Kalkanı: Piyasa {trend_regime} rejimindeyken altcoinlerde sekme LONG açmak için 4/4 tam confluence teyidi zorunludur (Mevcut: {conf_score_str}). Riskli işlem engellendi."
+                print(f">> [RED - AYI REJİMİ KALKANI] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, reason, rej_msg)
+                return {"error": "BEAR_REGIME_LONG_BLOCKED"}
+
+        # ⚓ MODÜL 1: BTC VWAP ÇAPASI (AYI PİYASASINDA ALTCOIN SEKME KORUMASI)
+        if side == "LONG" and not is_breakout and symbol != "BTC/USDT":
+            if self.market_data and 'BTC/USDT' in self.market_data.candles_5m:
+                df_btc = self.market_data.candles_5m['BTC/USDT']
+                if isinstance(df_btc, pd.DataFrame) and len(df_btc) >= 12:
+                    try:
+                        btc_sub = df_btc.tail(min(288, len(df_btc)))
+                        hlc3 = (btc_sub['high'] + btc_sub['low'] + btc_sub['close']) / 3.0
+                        vol = btc_sub['volume']
+                        cum_vol = vol.sum()
+                        btc_vwap = float((hlc3 * vol).sum() / cum_vol) if cum_vol > 0 else float(btc_sub['close'].iloc[-1])
+                        btc_cur = float(df_btc['close'].iloc[-1])
+                        if btc_cur < btc_vwap * 0.998 and dynamic_rs_score < 1.0:
+                            rej_msg = f"⚓ BTC VWAP Çapası: Bitcoin (${btc_cur:,.1f}) günlük intraday VWAP (${btc_vwap:,.1f}) seviyesinin altında ve bağımsız alfa yok (RS: {dynamic_rs_score:+.2f}). Altcoin sekme LONG'u engellendi."
+                            print(f">> [RED - BTC VWAP ÇAPASI] {symbol}: {rej_msg}")
+                            self.log_rejection(symbol, reason, rej_msg)
+                            return {"error": "BTC_VWAP_ANCHOR_BLOCKED"}
+                    except Exception:
+                        pass
+
         # ── ESNEK PORTFÖY KAPASİTESİ (ELASTIC SLOTS 5-8 ARASI MARJİN BÜTÇELİ GEÇİŞ) ──
         # 5 slot dolduktan sonra 6., 7. ve 8. pozisyonlar engellenmez; bütçe ve temel confluence (>=2/4) ile girer!
         if current_open_cnt >= ELITE_SLOT_BASE:
@@ -1170,6 +1308,11 @@ class StrategyEngine:
         persona_margin_mult = persona.get("margin_scale", 1.0)
         self.margin_multiplier *= persona_margin_mult
 
+        # 🎯 MODÜL 6: SETUP ÖNCELİĞİ & MAKRO HACİM PROFİLİ (mVAL / mVAH) TEŞVİKİ
+        is_macro_volume_setup = any(s in setup_id for s in ["MVAH", "MVAL"]) or "mVAH" in reason or "mVAL" in reason
+        if is_macro_volume_setup:
+            self.margin_multiplier *= 1.15
+
         is_meme_coin = any(m in symbol for m in ["PEPE", "WIF", "DOGE", "BONK", "SHIB", "FLOKI", "MEME"])
         if is_meme_coin or atr_pct >= 2.5:
             dyn_margin = 50.0  # Yüksek oynaklıkta düşük marjin (sabit risk)
@@ -1234,10 +1377,11 @@ class StrategyEngine:
         min_allowed_stop_dist = entry_price * 0.0080  # %0.80 mutlak asgari nefes payı
 
         # TP1 & TP2: Asimetrik Kâr Oranı (R:R >= 1.25x - 2.5x Hedef)
-        min_tp1_dist = stop_dist * 1.25
-        adaptive_tp1_dist = entry_price * (max(1.10, safe_atr_pct * 1.5) / 100.0)
+        # 🎯 MODÜL 6: TP1 Tabanı %1.10'dan %1.35'e, TP2 Tabanı %2.00'dan %2.50'ye yükseltildi
+        min_tp1_dist = max(stop_dist * 1.25, entry_price * 0.0135)
+        adaptive_tp1_dist = entry_price * (max(1.35, safe_atr_pct * 1.5) / 100.0)
         tp1_dist = max(min_tp1_dist, adaptive_tp1_dist)
-        tp2_dist = max(tp1_dist * 1.8, entry_price * (max(2.00, safe_atr_pct * 2.8) / 100.0))
+        tp2_dist = max(tp1_dist * 1.85, entry_price * (max(2.50, safe_atr_pct * 2.8) / 100.0))
 
         caller_hard_stop = hard_stop
         caller_soft_stop = soft_stop
@@ -1595,21 +1739,34 @@ class StrategyEngine:
                 if closed:
                     return
 
-                # 1e. COIN DNA VE HIZINA UYARLI ZAMAN STOPU (ADAPTIVE STAGNATION EXIT)
-                if pos.get("trade_type") == "SCALP":
-                    hold_seconds = time.time() - pos.get("entry_timestamp", 0)
-                    hold_candles = hold_seconds / 300.0
+                # 1e. COIN DNA VE HIZINA UYARLI ZAMAN STOPU (ADAPTIVE STAGNATION EXIT & ERKEN CVD ÇÜRÜMESİ)
+                hold_seconds = time.time() - pos.get("entry_timestamp", 0)
+                hold_candles = hold_seconds / 300.0
 
-                    coin_atr = pos.get("atr_pct", 1.0)
+                coin_atr = pos.get("atr_pct", 1.0)
+                entry_p = pos.get("entry_price", close_price)
+                roe_raw = ((close_price - entry_p) / entry_p * 100.0 * 5) if side == "LONG" else ((entry_p - close_price) / entry_p * 100.0 * 5)
+
+                cvd_info = self.market_data.get_symbol_cvd(symbol) if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+                cvd_ratio = cvd_info.get('ratio_60s', 50.0)
+                cvd_exhausted = (side == "LONG" and cvd_ratio < 45.0) or (side == "SHORT" and cvd_ratio > 55.0)
+
+                # 🦊 MODÜL 5: AKILLI ERKEN MOMENTUM / CVD ÇÜRÜME ÇIKIŞI (15 DAKİKA KURALI)
+                # 3 mum (15dk) boyunca beklediği halde yön kazanamamış (-1.5% <= ROE <= +0.8%, yani minimal yatay/ölü bölge)
+                # VE piyasa yapıcı/CVD tersine dönmüşse 12 mumu beklemeden mikro zararla serbest bırak:
+                if hold_candles >= 3.0 and -1.5 <= roe_raw <= 0.8 and cvd_exhausted:
+                    record = await self._safe_close_position(
+                        symbol, close_price,
+                        f"⏱️ Erken Momentum Kaybı / CVD Çürümesi ({int(hold_candles)} mum, ROE: %{roe_raw:+.1f}, CVD: %{cvd_ratio:.0f})"
+                    )
+                    if record:
+                        await self._notify_close(record, levels=levels)
+                        self._cleanup_tracking(symbol)
+                    return
+
+                if pos.get("trade_type") == "SCALP":
                     is_meme_or_high_beta = coin_atr >= 0.70 or any(m in symbol for m in ["PEPE", "WIF", "DOGE", "BONK", "SHIB", "MEME"])
                     stag_limit_candles = STAGNATION_CANDLES_MEME if is_meme_or_high_beta else STAGNATION_CANDLES_MAJOR
-
-                    entry_p = pos.get("entry_price", close_price)
-                    roe_raw = ((close_price - entry_p) / entry_p * 100.0 * 5) if side == "LONG" else ((entry_p - close_price) / entry_p * 100.0 * 5)
-
-                    cvd_info = self.market_data.get_symbol_cvd(symbol) if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
-                    cvd_ratio = cvd_info.get('ratio_60s', 50.0)
-                    cvd_exhausted = (side == "LONG" and cvd_ratio < 45.0) or (side == "SHORT" and cvd_ratio > 55.0)
 
                     # Eğer pozisyon belirlenen mum sayısını aştıysa VE
                     # kâr/zarar -%2.5 ile +%1.5 arasında sıkışıp kaldıysa (ölü bölge) VE

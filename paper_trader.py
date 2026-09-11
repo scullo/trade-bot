@@ -413,14 +413,14 @@ class PaperTrader:
         pos = self.open_positions[symbol]
         side = pos["side"]
         entry_p = pos["entry_price"]
-        margin = pos["margin"]
-        entry_fee = pos["entry_fee"]
+        margin = pos.get("margin", 50.0)
+        entry_fee = pos.get("entry_fee", 0.0)
 
         if is_partial and not pos.get("is_half_closed", False):
             # %50 TP1 Kapatma
             closed_margin = margin * 0.5
-            closed_val = pos["position_value"] * 0.5
-            closed_qty = pos["quantity"] * 0.5
+            closed_val = pos.get("position_value", margin * 5.0) * 0.5
+            closed_qty = pos.get("quantity", pos.get("position_size", 1.0)) * 0.5
             exit_fee = closed_val * self.commission_rate
             portion_entry_fee = entry_fee * 0.5
 
@@ -519,8 +519,8 @@ class PaperTrader:
 
         else:
             # Tam Kapatma
-            qty = pos["quantity"]
-            pos_val = pos["position_value"]
+            qty = pos.get("quantity", pos.get("position_size", 1.0))
+            pos_val = pos.get("position_value", margin * pos.get("leverage", 5))
             exit_fee = (qty * exit_price) * self.commission_rate
             total_fees = entry_fee + exit_fee
 
@@ -544,11 +544,11 @@ class PaperTrader:
             dur_str = f"{dur_hrs}sa {dur_mins % 60}dk" if dur_hrs > 0 else f"{dur_mins}dk"
 
             record = {
-                "id": pos["id"],
+                "id": pos.get("id", f"{symbol}_{int(time.time())}"),
                 "symbol": symbol,
                 "side": side,
                 "trade_type": pos.get("trade_type", "SCALP"),
-                "leverage": pos["leverage"],
+                "leverage": pos.get("leverage", 5),
                 "margin": round(margin, 2),
                 "entry_price": round(entry_p, 8),
                 "exit_price": round(exit_price, 8),
@@ -557,7 +557,7 @@ class PaperTrader:
                 "net_pnl": round(net_pnl, 4),
                 "roe_pct": round(roe_pct, 2),
                 "balance_after": round(self.balance, 2),
-                "entry_time": pos["entry_time"],
+                "entry_time": pos.get("entry_time", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
                 "exit_time": exit_time_str,
                 "duration": dur_str,
                 "reason": pos.get("reason", "Strateji Sinyali"),
