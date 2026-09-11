@@ -351,8 +351,14 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         roe_fmt = cell_roe_green if is_win else cell_roe_red
         r_mult = _safe_float(h.get('r_multiple', 1.0))
         
-        mfe_val = _safe_float(h.get('max_mfe_roe', h.get('mfe_roe', max(0.0, _safe_float(h.get('roe_pct', 0.0))))))
-        mae_val = _safe_float(h.get('max_mae_roe', h.get('mae_roe', abs(min(0.0, _safe_float(h.get('roe_pct', 0.0)))))))
+        mfe_val = _safe_float(h.get('max_mfe_roe'))
+        if mfe_val <= 0.0:
+            mfe_val = _safe_float(h.get('mfe_roe', max(0.0, _safe_float(h.get('roe_pct', 0.0)))))
+        
+        mae_val = _safe_float(h.get('max_mae_roe'))
+        if mae_val <= 0.0:
+            mae_val = _safe_float(h.get('mae_roe', abs(min(0.0, _safe_float(h.get('roe_pct', 0.0))))))
+
         c_reason = str(h.get('close_reason', ''))
 
         # Fitil ve Tuzak Tespiti
@@ -384,8 +390,8 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ws.write(r_idx, 5, h.get('entry_time', ''), cell_center)
         ws.write(r_idx, 6, h.get('exit_time', ''), cell_center)
         ws.write(r_idx, 7, h.get('duration', '-'), cell_center)
-        ws.write(r_idx, 8, h.get('candle_count', 1), cell_center)
-        ws.write(r_idx, 9, h.get('session_tag', 'Hafta Sonu / Asya'), cell_center)
+        ws.write(r_idx, 8, int(h.get('candle_count') or 1), cell_center)
+        ws.write(r_idx, 9, h.get('session') or h.get('session_tag') or 'Hafta Sonu / Asya', cell_center)
         ws.write(r_idx, 10, h.get('trend_regime', '⚪ YATAY (Range)'), cell_center)
         ws.write(r_idx, 11, f"%{_safe_float(h.get('atr_pct', 1.2)):.2f}", cell_center)
         ws.write(r_idx, 12, f"{_safe_float(h.get('volume_surge', 1.0)):.2f}x", cell_center)
@@ -401,9 +407,9 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ws.write(r_idx, 22, _safe_float(h.get('high_price', h.get('entry_price', 0.0))), cell_currency)
         ws.write(r_idx, 23, _safe_float(h.get('low_price', h.get('entry_price', 0.0))), cell_currency)
         ws.write(r_idx, 24, _safe_float(h.get('exit_price', 0.0)), cell_currency)
-        ws.write(r_idx, 25, _safe_float(h.get('tp1_target', 0.0)), cell_currency)
-        ws.write(r_idx, 26, _safe_float(h.get('tp2_target', 0.0)), cell_currency)
-        ws.write(r_idx, 27, _safe_float(h.get('planned_stop', 0.0)), cell_currency)
+        ws.write(r_idx, 25, _safe_float(h.get('tp1_target') or h.get('tp1', 0.0)), cell_currency)
+        ws.write(r_idx, 26, _safe_float(h.get('tp2_target') or h.get('tp2', 0.0)), cell_currency)
+        ws.write(r_idx, 27, _safe_float(h.get('planned_stop') or h.get('hard_stop') or h.get('soft_stop', 0.0)), cell_currency)
         ws.write(r_idx, 28, _safe_float(h.get('gross_pnl', pnl)), cell_currency)
         ws.write(r_idx, 29, _safe_float(h.get('fees', 0.0)), cell_currency)
         ws.write(r_idx, 30, pnl, pnl_fmt)

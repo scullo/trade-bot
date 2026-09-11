@@ -595,8 +595,11 @@ class MarketDataManager:
                                 d1 = await r1.json()
                                 if isinstance(d1, list) and len(d1) > 0:
                                     t_1d = pd.DataFrame(d1, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'qav', 'num_trades', 'taker_base', 'taker_quote', 'ignore'])
+                                    for col in ['open', 'high', 'low', 'close', 'qav', 'taker_quote', 'taker_base']:
+                                        if col in t_1d.columns:
+                                            t_1d[col] = pd.to_numeric(t_1d[col], errors='coerce').fillna(0.0)
                                     for col in ['open', 'high', 'low', 'close']:
-                                        t_1d[col] = t_1d[col].astype(float) * mult
+                                        t_1d[col] = t_1d[col] * mult
                                     t_1d['timestamp'] = t_1d['timestamp'].astype(float)
                                     t_1d['volume'] = t_1d['volume'].astype(float) / (mult if is_spot else 1.0)
                                     t_1d['quote_volume'] = t_1d['qav'].astype(float)
@@ -606,8 +609,11 @@ class MarketDataManager:
                                 d2 = await r2.json()
                                 if isinstance(d2, list) and len(d2) > 0:
                                     t_5m = pd.DataFrame(d2, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'qav', 'num_trades', 'taker_base', 'taker_quote', 'ignore'])
+                                    for col in ['open', 'high', 'low', 'close', 'qav', 'taker_quote', 'taker_base']:
+                                        if col in t_5m.columns:
+                                            t_5m[col] = pd.to_numeric(t_5m[col], errors='coerce').fillna(0.0)
                                     for col in ['open', 'high', 'low', 'close']:
-                                        t_5m[col] = t_5m[col].astype(float) * mult
+                                        t_5m[col] = t_5m[col] * mult
                                     t_5m['timestamp'] = t_5m['timestamp'].astype(float)
                                     t_5m['volume'] = t_5m['volume'].astype(float) / (mult if is_spot else 1.0)
                                     t_5m['quote_volume'] = t_5m['qav'].astype(float)
@@ -930,7 +936,9 @@ class MarketDataManager:
                                                 'low': float(closed_k[3]) * mult,
                                                 'close': float(closed_k[4]) * mult,
                                                 'volume': float(closed_k[5]) / base_div,
-                                                'quote_volume': float(closed_k[7])
+                                                'quote_volume': float(closed_k[7]),
+                                                'qav': float(closed_k[7]),
+                                                'taker_quote': float(closed_k[10]) if len(closed_k) > 10 else 0.0
                                             }
                                             prev_candle = {
                                                 'timestamp': prev_k[0],
@@ -939,7 +947,9 @@ class MarketDataManager:
                                                 'low': float(prev_k[3]) * mult,
                                                 'close': float(prev_k[4]) * mult,
                                                 'volume': float(prev_k[5]) / base_div,
-                                                'quote_volume': float(prev_k[7])
+                                                'quote_volume': float(prev_k[7]),
+                                                'qav': float(prev_k[7]),
+                                                'taker_quote': float(prev_k[10]) if len(prev_k) > 10 else 0.0
                                             }
                                             break
                             except Exception:

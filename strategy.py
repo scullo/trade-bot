@@ -1180,27 +1180,46 @@ class StrategyEngine:
 
         dyn_margin = min(100.0, max(25.0, round(dyn_margin * getattr(self, 'margin_multiplier', 1.0), 2)))
 
-        # ── 1c. GERÇEK CVD (TAKER BUY RATIO) VE İVME (CANDLE VELOCITY) HESABI ──
+        # ── 1c. GERÇEK CVD (TAKER BUY RATIO), İVME VE FİTİL ORANI HESABI ──
         cvd_pct = 50.0
         candle_velocity = 1.0
+        wick_ratio_pct = 35.0
         if self.market_data and symbol in self.market_data.candles_5m:
             try:
                 df = self.market_data.candles_5m[symbol]
                 if len(df) > 0:
-                    # 1. Gerçek CVD Hesaplama
+                    # 1. Gerçek CVD Hesaplama (Taker Buy Quote / Toplam Quote Volume)
                     if 'taker_quote' in df.columns and 'qav' in df.columns:
-                        t_q = df['taker_quote'].iloc[-1]
-                        qav = df['qav'].iloc[-1]
-                        if qav > 0:
-                            cvd_pct = round(float((t_q / qav) * 100.0), 1)
+                        try:
+                            t_q = float(df['taker_quote'].iloc[-1])
+                            qav = float(df['qav'].iloc[-1])
+                            if qav > 0:
+                                cvd_pct = round((t_q / qav) * 100.0, 1)
+                        except (ValueError, TypeError):
+                            pass
 
-                    # 2. Breakout İvmesi (Hız) Hesaplama
+                    # 2. Breakout İvmesi (Hız) & 3. Fitil Oranı Hesaplama
                     if 'open' in df.columns and 'close' in df.columns:
-                        body_size = abs(df['close'].iloc[-1] - df['open'].iloc[-1])
-                        current_close = df['close'].iloc[-1]
-                        atr_usd = (atr_pct / 100.0) * current_close
-                        if atr_usd > 0:
-                            candle_velocity = round(float(body_size / atr_usd), 2)
+                        try:
+                            c_open = float(df['open'].iloc[-1])
+                            c_close = float(df['close'].iloc[-1])
+                            c_high = float(df['high'].iloc[-1]) if 'high' in df.columns else max(c_open, c_close)
+                            c_low = float(df['low'].iloc[-1]) if 'low' in df.columns else min(c_open, c_close)
+                            
+                            body_size = abs(c_close - c_open)
+                            total_range = c_high - c_low
+                            current_close = c_close
+                            atr_usd = (atr_pct / 100.0) * current_close
+                            if atr_usd > 0:
+                                candle_velocity = round(float(body_size / atr_usd), 2)
+                            
+                            if total_range > 0:
+                                upper_wick = c_high - max(c_open, c_close)
+                                lower_wick = min(c_open, c_close) - c_low
+                                total_wicks = upper_wick + lower_wick
+                                wick_ratio_pct = round((total_wicks / total_range) * 100.0, 1)
+                        except (ValueError, TypeError):
+                            pass
             except Exception as e:
                 print(f">> [CVD/HIZ HATA] {symbol}: {e}")
 
@@ -1286,12 +1305,14 @@ class StrategyEngine:
             tp1=tp1, tp2=tp2, trade_type=trade_type,
             snapshot_levels=snapshot_levels, setup_id=setup_id, confluence_list=confluence_list,
             atr_pct=atr_pct, trend_regime=trend_regime, session=session_str,
+            session_tag=session_str,
             volume_surge=vol_surge, confluence_score=conf_score_str, htf_alignment=htf_str,
             custom_margin=dyn_margin, rs_vs_btc=rs_vs_btc, decoupling_status=decoupling_status,
             dynamic_rs_score=dynamic_rs_score,
             macro_climate=macro_clim.get('status', '⚪ Nötr / Dengeli Piyasa'),
             eth_leading=macro_clim.get('eth_leading', False),
             cvd_pct=cvd_pct, candle_velocity=candle_velocity,
+            wick_ratio_pct=wick_ratio_pct,
             margin_multiplier=getattr(self, 'margin_multiplier', 1.0),
             touch_count=current_touch if 'current_touch' in locals() else 1,
             entry_funding_rate=f_rate_pct,

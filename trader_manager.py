@@ -53,3 +53,7 @@ class TraderManager:
     def save_history(self):
         if hasattr(self.active_trader, 'save_history'):
             return self.active_trader.save_history()
+
+    def update_tick_telemetry(self, *args, **kwargs):
+        if hasattr(self.active_trader, 'update_tick_telemetry'):
+            return self.active_trader.update_tick_telemetry(*args, **kwargs)
