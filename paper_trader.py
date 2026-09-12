@@ -283,13 +283,13 @@ class PaperTrader:
             pos["_trail_8"] = True
             pos["trail_status"] = "🛡️ Tier 3 (%14.0 Kâr Korumalı)"
             if side == "LONG":
-                lock_p = entry * (1.0 + (0.14 / lev))
+                lock_p = round(entry * (1.0 + (0.14 / lev)), 8)
                 if lock_p > pos.get("soft_stop", 0):
                     pos["soft_stop"] = lock_p
                     pos["hard_stop"] = lock_p
                     updated_stop = True
             else:
-                lock_p = entry * (1.0 - (0.14 / lev))
+                lock_p = round(entry * (1.0 - (0.14 / lev)), 8)
                 if lock_p < pos.get("soft_stop", 999999):
                     pos["soft_stop"] = lock_p
                     pos["hard_stop"] = lock_p
@@ -302,13 +302,13 @@ class PaperTrader:
             pos["_trail_8"] = True
             pos["trail_status"] = "🛡️ Tier 2 (%8.0 Kâr Korumalı)"
             if side == "LONG":
-                lock_p = entry * (1.0 + (0.08 / lev))
+                lock_p = round(entry * (1.0 + (0.08 / lev)), 8)
                 if lock_p > pos.get("soft_stop", 0):
                     pos["soft_stop"] = lock_p
                     pos["hard_stop"] = lock_p
                     updated_stop = True
             else:
-                lock_p = entry * (1.0 - (0.08 / lev))
+                lock_p = round(entry * (1.0 - (0.08 / lev)), 8)
                 if lock_p < pos.get("soft_stop", 999999):
                     pos["soft_stop"] = lock_p
                     pos["hard_stop"] = lock_p
@@ -318,20 +318,39 @@ class PaperTrader:
         # Tier 1: ROE >= +8.0% -> En az +3.5% ROE kilit
         elif current_roe >= 8.0 and not pos.get("_trail_8"):
             pos["_trail_8"] = True
+            pos["_trail_be"] = True
             pos["trail_status"] = "🛡️ Tier 1 (%3.5 Kâr Korumalı)"
             if side == "LONG":
-                lock_p = entry * (1.0 + (0.035 / lev))
+                lock_p = round(entry * (1.0 + (0.035 / lev)), 8)
                 if lock_p > pos.get("soft_stop", 0):
                     pos["soft_stop"] = lock_p
                     pos["hard_stop"] = lock_p
                     updated_stop = True
             else:
-                lock_p = entry * (1.0 - (0.035 / lev))
+                lock_p = round(entry * (1.0 - (0.035 / lev)), 8)
                 if lock_p < pos.get("soft_stop", 999999):
                     pos["soft_stop"] = lock_p
                     pos["hard_stop"] = lock_p
                     updated_stop = True
             print(f">> [TRAILING TIER 1] {symbol} +%8 ROE Görüldü -> Stop +%3.5 Kâra Kilitlendi!")
+
+        # Breakeven Koruması: ROE >= +3.5% -> Giriş + Komisyon Kalkanı (+%0.30 fiyat)
+        elif current_roe >= 3.5 and not pos.get("_trail_be"):
+            pos["_trail_be"] = True
+            pos["trail_status"] = "🛡️ BREAKEVEN KORUMA AKTİF"
+            if side == "LONG":
+                be_p = round(entry * 1.003, 8)
+                if be_p > pos.get("soft_stop", 0):
+                    pos["soft_stop"] = be_p
+                    pos["hard_stop"] = be_p
+                    updated_stop = True
+            else:
+                be_p = round(entry * 0.997, 8)
+                if be_p < pos.get("soft_stop", 999999):
+                    pos["soft_stop"] = be_p
+                    pos["hard_stop"] = be_p
+                    updated_stop = True
+            print(f">> [TRAILING BREAKEVEN] {symbol} +%3.5 ROE Görüldü -> Stop Breakeven (+%0.30) Korumasına Alındı!")
 
         if updated_stop:
             self.save_local_history()
@@ -361,23 +380,38 @@ class PaperTrader:
         old_entry = float(pos.get("entry_price", current_price))
         add_val = add_margin * lev
         add_qty = add_val / current_price
+        add_fee = add_val * self.commission_rate
 
         new_total_qty = old_qty + add_qty
         new_entry_price = (old_entry * old_qty + current_price * add_qty) / new_total_qty
         new_margin = old_margin + add_margin
         new_pos_value = new_margin * lev
+        new_entry_fee = float(pos.get("entry_fee", 0.0)) + add_fee
 
         pos["quantity"] = round(new_total_qty, 6)
         pos["margin"] = round(new_margin, 2)
         pos["position_value"] = round(new_pos_value, 2)
         pos["entry_price"] = round(new_entry_price, 8)
+        pos["entry_fee"] = round(new_entry_fee, 4)
         pos["_pyramided"] = True
         pos["pyramid_price"] = current_price
         pos["pyramid_time"] = datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S")
         pos["trail_status"] = "🚀 PYRAMID EKLENDİ (+%25 Hacim - Kâr Korumalı)"
 
+        # Stop seviyesinin yeni ağırlıklı maliyetin kâr bölgesinde kalmasını garantiye al
+        if side == "LONG":
+            min_lock = round(new_entry_price * (1.0 + (0.01 / lev)), 8)
+            if pos.get("soft_stop", 0) < min_lock and min_lock < current_price:
+                pos["soft_stop"] = min_lock
+                pos["hard_stop"] = min_lock
+        else:
+            min_lock = round(new_entry_price * (1.0 - (0.01 / lev)), 8)
+            if pos.get("soft_stop", float('inf')) > min_lock and min_lock > current_price:
+                pos["soft_stop"] = min_lock
+                pos["hard_stop"] = min_lock
+
         self.save_local_history()
-        print(f">> [PYRAMID EKLENDİ] {symbol} {side} @ {current_price} | +${add_margin} Marjin Eklendi (Yeni Giriş: {new_entry_price:.4f})")
+        print(f">> [PYRAMID EKLENDİ] {symbol} {side} @ {current_price} | +${add_margin} Marjin (Komisyon: ${add_fee:.3f}) | Yeni Giriş: {new_entry_price:.4f} | Stop: {pos.get('soft_stop')}")
         return True
 
     def open_position(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None, atr_pct: float = 1.0, trend_regime: str = "YATAY", session: str = "LONDRA", volume_surge: float = 1.0, confluence_score: str = "2/4", htf_alignment: str = "TREND YÖNÜNDE", custom_margin: float = None, rs_vs_btc: float = 0.0, decoupling_status: str = "⚪ NÖTR_TAKİPÇİ", cvd_pct: float = 50.0, candle_velocity: float = 1.0, **kwargs):
@@ -486,7 +520,7 @@ class PaperTrader:
             closed_margin = margin * 0.5
             closed_val = pos.get("position_value", margin * 5.0) * 0.5
             closed_qty = pos.get("quantity", pos.get("position_size", 1.0)) * 0.5
-            exit_fee = closed_val * self.commission_rate
+            exit_fee = (closed_qty * exit_price) * self.commission_rate
             portion_entry_fee = entry_fee * 0.5
 
             if side == "LONG":
@@ -505,6 +539,7 @@ class PaperTrader:
             pos["margin"] = closed_margin
             pos["position_value"] = closed_val
             pos["quantity"] = closed_qty
+            pos["entry_fee"] = round(entry_fee - portion_entry_fee, 4)
             # Fee-Armor Breakeven: Komisyon kalkanı (+%0.30) ile net kâr garantisi
             be_price = round(entry_p * 1.003, 8) if side == "LONG" else round(entry_p * 0.997, 8)
             pos["soft_stop"] = be_price

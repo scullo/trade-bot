@@ -663,80 +663,16 @@ class StrategyEngine:
     # TRAILING STOP — ROE esiklerine gore stop seviyelerini sikilastirir
     # =========================================================================
     def _apply_trailing_stop(self, symbol: str, pos: dict, current_price: float):
-        side = pos["side"]
-        entry = pos["entry_price"]
-        margin = pos.get("margin", 50.0)
-        leverage = pos.get("leverage", 5)
-
-        # ROE hesapla
-        if side == "LONG":
-            price_pct = ((current_price - entry) / entry) * 100.0
-        else:
-            price_pct = ((entry - current_price) / entry) * 100.0
-        roe = price_pct * leverage
-
-        if roe <= 0:
-            return  # Zarardayken trailing yapma
-
-        # Peak fiyat takibi (trailing mesafe hesabi icin)
-        if symbol not in self.peak_prices:
-            self.peak_prices[symbol] = current_price
-        if side == "LONG" and current_price > self.peak_prices[symbol]:
-            self.peak_prices[symbol] = current_price
-        elif side == "SHORT" and current_price < self.peak_prices[symbol]:
-            self.peak_prices[symbol] = current_price
-
-        updated = False
-
-        # ── ASAMA 1: ROE >= %6 → Breakeven korumasi (giris fiyatina + komisyon kalkanı) ──
-        if roe >= TRAILING_BREAKEVEN_ROE and not pos.get("_trail_be"):
-            if side == "LONG":
-                new_stop = round(entry * 1.003, 8)  # Giris + %0.30 komisyon kalkanı
-                pos["hard_stop"] = max(pos.get("hard_stop", 0), new_stop)
-                pos["soft_stop"] = max(pos.get("soft_stop", 0), new_stop)
-            else:
-                new_stop = round(entry * 0.997, 8)  # Giris - %0.30 komisyon kalkanı
-                pos["hard_stop"] = min(pos.get("hard_stop", float('inf')), new_stop)
-                pos["soft_stop"] = min(pos.get("soft_stop", float('inf')), new_stop)
-            pos["_trail_be"] = True
-            pos["trail_status"] = "🛡️ BREAKEVEN KORUMA AKTİF"
-            updated = True
-            print(f">> [TRAILING] {symbol} [*] Breakeven koruma AKTIF (ROE: {roe:.1f}%)")
-
-        # ── ASAMA 2: ROE >= %12 → Karin %30'unu kilitle ─────────────────────
-        if roe >= TRAILING_LOCK_30_ROE and not pos.get("_trail_30"):
-            peak = self.peak_prices[symbol]
-            if side == "LONG":
-                lock_price = entry + (peak - entry) * 0.3
-                pos["hard_stop"] = max(pos.get("hard_stop", 0), lock_price)
-                pos["soft_stop"] = max(pos.get("soft_stop", 0), lock_price)
-            else:
-                lock_price = entry - (entry - peak) * 0.3
-                pos["hard_stop"] = min(pos.get("hard_stop", float('inf')), lock_price)
-                pos["soft_stop"] = min(pos.get("soft_stop", float('inf')), lock_price)
-            pos["_trail_30"] = True
-            pos["trail_status"] = "🔒 %30 KÂR KİLİTLENDİ"
-            updated = True
-            print(f">> [TRAILING] {symbol} [**] %30 kar kilidi AKTIF (ROE: {roe:.1f}%)")
-
-        # ── ASAMA 3: ROE >= %20 → Hard stop ile karin %50'sini kilitle ───────
-        if roe >= TRAILING_LOCK_50_ROE and not pos.get("_trail_50"):
-            peak = self.peak_prices[symbol]
-            if side == "LONG":
-                lock_price = entry + (peak - entry) * 0.5
-                pos["hard_stop"] = max(pos.get("hard_stop", 0), lock_price)
-                pos["soft_stop"] = max(pos.get("soft_stop", 0), lock_price)
-            else:
-                lock_price = entry - (entry - peak) * 0.5
-                pos["hard_stop"] = min(pos.get("hard_stop", float('inf')), lock_price)
-                pos["soft_stop"] = min(pos.get("soft_stop", float('inf')), lock_price)
-            pos["_trail_50"] = True
-            pos["trail_status"] = "🔒 %50 SERT KÂR KİLİTLENDİ"
-            updated = True
-            print(f">> [TRAILING] {symbol} [***] %50 SERT kar kilidi AKTIF (ROE: {roe:.1f}%)")
-
-        if updated:
-            self.paper_trader.save_history()
+        """
+        Kademeli İzsüren Kâr Kilidi (Tiered Trailing Profit Lock):
+        Tüm kademeler (Breakeven +%3.5, Tier 1 +%8, Tier 2 +%14, Tier 3 +%20)
+        paper_trader.update_tick_telemetry içinde tekil ve atomik olarak yönetilir.
+        """
+        if hasattr(self.paper_trader, "update_tick_telemetry"):
+            try:
+                self.paper_trader.update_tick_telemetry(symbol, current_price)
+            except Exception:
+                pass
 
     def _cleanup_tracking(self, symbol: str):
         """Pozisyon kapandiginda tracking verilerini temizle."""
@@ -764,6 +700,23 @@ class StrategyEngine:
             rej_msg = f"🛡️ Esnek Portföy Dolu: Aktif {current_open_cnt} pozisyon mevcut (azami sınır {ELITE_SLOT_MAX}). Yeni işlem açılamaz."
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "MAX_SLOTS_REACHED"}
+
+        # Kural 3: Beta Sektör & Ekosistem Korelasyon Kalkanı (Cluster Exposure Shield)
+        # Aynı yüksek korelasyonlu kümeden aynı anda en fazla 2 pozisyon açılmasına izin verilir.
+        CLUSTERS = {
+            "MEME": {"DOGE/USDT", "PEPE/USDT", "SHIB/USDT", "WIF/USDT", "BONK/USDT", "FLOKI/USDT", "TURBO/USDT", "BOME/USDT", "PUMP/USDT", "1000PEPE/USDT", "1000SHIB/USDT", "1000BONK/USDT", "1000FLOKI/USDT", "NEIRO/USDT"},
+            "SOL_ECO": {"SOL/USDT", "JTO/USDT", "JUP/USDT", "PYTH/USDT", "RAY/USDT", "KMNO/USDT"},
+            "AI_DATA": {"FET/USDT", "RENDER/USDT", "TAO/USDT", "NEAR/USDT", "VIRTUAL/USDT", "WLD/USDT"},
+            "DEFI_L1": {"ETH/USDT", "AAVE/USDT", "UNI/USDT", "CRV/USDT", "PENDLE/USDT", "ENA/USDT", "LDO/USDT"}
+        }
+        for c_name, c_symbols in CLUSTERS.items():
+            if symbol in c_symbols:
+                c_open = sum(1 for s in open_positions if s in c_symbols)
+                if c_open >= 2:
+                    rej_msg = f"🛡️ Sektör Korelasyon Kalkanı ({c_name}): Bu kümede zaten 2 açık pozisyon var ({c_open}). Beta aşırı riskini önlemek için 3. pozisyon engellendi."
+                    print(f">> [RED - SEKTÖR KÜMELENMESİ] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg)
+                    return {"error": f"CLUSTER_LIMIT_{c_name}"}
 
         # ── 1. ATR / VOLATILITE HESABI & KATMANLI LİKİDİTE EŞİĞİ ──
         atr_pct = 1.2

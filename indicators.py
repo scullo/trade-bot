@@ -142,12 +142,13 @@ def get_tradingview_naked_lines(df_5m: pd.DataFrame, current_price: float) -> di
     if max_p <= min_p:
         return {"above_npoc": 0.0, "below_npoc": 0.0, "above_nvah": 0.0, "below_nvah": 0.0, "above_nval": 0.0, "below_nval": 0.0}
 
-    # 1. Multi-Session test edilmemis (unmitigated) POC tespiti
+    # 1. Multi-Session test edilmemis (unmitigated) POC tespiti (50% Örtüşmeli Kayan Pencere)
     chunk_size = 144
+    step_size = 72
     unmitigated_pocs = []
     total_candles = len(df)
     
-    for start_i in range(0, max(1, total_candles - chunk_size), chunk_size):
+    for start_i in range(0, max(1, total_candles - chunk_size), step_size):
         end_i = min(total_candles, start_i + chunk_size)
         chunk = df.iloc[start_i:end_i]
         if len(chunk) < 20:
@@ -169,9 +170,11 @@ def get_tradingview_naked_lines(df_5m: pd.DataFrame, current_price: float) -> di
         if end_i < total_candles:
             future = df.iloc[end_i:]
             if not ((future['low'] <= c_poc) & (future['high'] >= c_poc)).any():
-                unmitigated_pocs.append(c_poc)
+                if not any(abs(p - c_poc) / max(1e-6, c_poc) < 0.001 for p in unmitigated_pocs):
+                    unmitigated_pocs.append(c_poc)
         else:
-            unmitigated_pocs.append(c_poc)
+            if not any(abs(p - c_poc) / max(1e-6, c_poc) < 0.001 for p in unmitigated_pocs):
+                unmitigated_pocs.append(c_poc)
 
     # 2. Genel Hacim Profili ve HVN Düğümleri
     num_bins = 50
