@@ -777,10 +777,23 @@ Giriş: <code>${float(record.get('entry_price', 0.0)):.6f}</code> ➔ Çıkış:
 
                                 is_kasa_cmd = any(w in text for w in ["kasa", "durum", "bakiye", "start", "help", "rapor", "pnl", "portfoy"])
                                 if is_kasa_cmd:
-                                    bal = getattr(trader_manager, 'balance', 10000.0)
+                                    init_bal = 10000.0
+                                    bal = float(getattr(trader_manager, 'balance', init_bal))
                                     open_p = getattr(trader_manager, 'open_positions', {})
                                     hist = getattr(trader_manager, 'history', [])
                                     
+                                    # Serbest / Kullanılabilir Kasa
+                                    try:
+                                        if hasattr(trader_manager, 'get_free_balance'):
+                                            free_bal = float(trader_manager.get_free_balance())
+                                        else:
+                                            used = sum(float(p.get('margin', p.get('margin_usdt', 0.0))) for p in open_p.values())
+                                            free_bal = max(0.0, bal - used)
+                                    except Exception:
+                                        used = sum(float(p.get('margin', p.get('margin_usdt', 0.0))) for p in open_p.values())
+                                        free_bal = max(0.0, bal - used)
+
+                                    # Canlı Açık PnL
                                     total_unrealized = 0.0
                                     top_movers = []
                                     prices = getattr(market_data, 'current_prices', {}) if market_data else {}
@@ -810,20 +823,96 @@ Giriş: <code>${float(record.get('entry_price', 0.0)):.6f}</code> ➔ Çıkış:
                                         top_str_list.append(f"• {s_emoji} <b>#{clean_s}</b> ({side}): <code>%{roe:+5.2f} ROE (${pnl:+5.2f})</code>")
                                     
                                     top_str = "\n".join(top_str_list) if top_str_list else "• <i>Açık pozisyon yok</i>"
-                                    
-                                    period = self._compute_period_metrics(hist)
-                                    today_pnl = period['today_pnl']
+
+                                    # 4 Gösterge Kartı Hesaplamaları (Cockpit Metrikleri)
+                                    wins = 0
+                                    losses = 0
+                                    win_pnl_sum = 0.0
+                                    loss_pnl_sum = 0.0
+                                    total_realized_pnl = 0.0
+
+                                    for t in hist:
+                                        try:
+                                            p = float(t.get('net_pnl', t.get('Net Kâr ($)', t.get('pnl', 0.0))))
+                                            total_realized_pnl += p
+                                            if p >= 0:
+                                                wins += 1
+                                                win_pnl_sum += p
+                                            else:
+                                                losses += 1
+                                                loss_pnl_sum += abs(p)
+                                        except Exception:
+                                            pass
+
+                                    # 1. Net Kâr / Zarar & Büyüme (Realize + Unrealized)
+                                    total_net_pnl = total_realized_pnl + total_unrealized
+                                    growth_pct = ((bal + total_unrealized - init_bal) / init_bal) * 100.0
+                                    growth_badge = "BÜYÜME" if growth_pct >= 0 else "SAVUNMA"
+                                    growth_word = "BÜYÜME 🚀" if growth_pct >= 0 else "KÜÇÜLME 🛡️"
+
+                                    # 2. Kazanma Oranı (Win Rate)
+                                    total_closed = wins + losses
+                                    win_rate = (wins / total_closed * 100.0) if total_closed > 0 else 0.0
+                                    if len(open_p) > 0:
+                                        win_count_str = f"{wins} Kazanç / {losses} Kayıp ({total_closed} Kapanmış | {len(open_p)} Açık Poz)"
+                                        win_sub_str = f"{len(open_p)} pozisyon sürüyor (realize bekleniyor)"
+                                    else:
+                                        win_count_str = f"{wins} Kazanç / {losses} Kayıp ({total_closed} Kapanmış İşlem)"
+                                        win_sub_str = "Sürdürülebilir Hedef: > %50.0"
+
+                                    # 3. Kâr Faktörü (Profit Factor)
+                                    if total_closed == 0:
+                                        pf_str = "—"
+                                        pf_quality = "İşlem Bekleniyor"
+                                        pf_note = "Her $1 Kayba: İlk işlem bekleniyor"
+                                    elif loss_pnl_sum == 0 and win_pnl_sum > 0:
+                                        pf_str = "∞"
+                                        pf_quality = "Sıfır Kayıp / %100 Kâr 🏆"
+                                        pf_note = "Kayıpsız Serüven: Tüm işlemler kârda!"
+                                    else:
+                                        pf_val = win_pnl_sum / loss_pnl_sum if loss_pnl_sum > 0 else 0.0
+                                        pf_str = f"{pf_val:.2f}x"
+                                        if pf_val >= 2.0:
+                                            pf_quality = "Kurumsal Elit 🏆"
+                                        elif pf_val >= 1.5:
+                                            pf_quality = "Çok Güçlü 🟢"
+                                        elif pf_val >= 1.2:
+                                            pf_quality = "Kârlı Sistem 🟡"
+                                        elif pf_val >= 1.0:
+                                            pf_quality = "Başa-Baş Sınırı ⚪"
+                                        else:
+                                            pf_quality = "Zarar Baskısı 🔴"
+                                        pf_note = f"Her $1 Kayba Karşılık: +${pf_val:.2f} Kâr (Hedef > 1.5x)"
+
                                     now_str = datetime.now(timezone(timedelta(hours=3))).strftime("%H:%M:%S")
 
                                     reply = f"""💎 ━━━━━━━━━━━━━━━━━━━━━━━━━ 💎
-💼 <b>VALKYRIE QUANT — ANLIK KASA RAPORU ({now_str})</b>
+💼 <b>VALKYRIE QUANT — ANLIK KASA & COCKPİT RAPORU</b>
+⏱️ <code>{now_str} (Canlı Piyasa Senkron)</code>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-💰 <b>Toplam Kasa Bakiyesi:</b> <b>${bal:,.2f} USDT</b>
-📊 <b>Açık Pozisyon Sayısı:</b> <b>{len(open_p)} Adet</b>
-⚡ <b>Anlık Canlı Kâr (Unrealized):</b> <b>{total_unrealized:+.2f} USDT</b>
-💵 <b>Bugün Gerçekleşen Kâr:</b> <b>{today_pnl:+.2f} USDT</b>
+
+🏦 <b>TOPLAM KASA BAKİYESİ</b> <code>[REZERV]</code>
+💰 <b>${bal:,.2f} USDT</b>
+🔹 <i>Kullanılabilir Kasa: ${free_bal:,.2f} USDT (5x)</i>
+🛡️ <i>Dinamik Sermaye Koruması Aktif</i>
+
+📊 <b>NET KÂR / ZARAR & BÜYÜME</b> <code>[{growth_badge}]</code>
+💵 <b>{total_net_pnl:+.2f} $</b>
+📉 <code>{growth_pct:+.2f}% {growth_word}</code>
+ℹ️ <i>Realize + Açık Pozisyonlar Toplamı</i>
+
+🎯 <b>KAZANMA ORANI (WİN RATE)</b> <code>[RADAR]</code>
+📈 <b>%{win_rate:.1f}</b>
+📋 <i>{win_count_str}</i>
+🎯 <i>{win_sub_str}</i>
+
+⚖️ <b>KÂR FAKTÖRÜ (PROFIT FACTOR)</b> <code>[KALKAN]</code>
+⚡ <b>{pf_str} ({pf_quality})</b>
+📊 <i>Brüt Kâr: +${win_pnl_sum:.2f} | Kayıp: -${loss_pnl_sum:.2f}</i>
+💡 <i>{pf_note}</i>
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚀 <b>ÖNE ÇIKAN AÇIK POZİSYONLAR:</b>
+🚀 <b>AÇIK POZİSYONLAR ({len(open_p)} Adet | Canlı: {total_unrealized:+.2f}$):</b>
 {top_str}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 💎 ━━━━━━━━━━━━━━━━━━━━━━━━━ 💎"""
