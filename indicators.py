@@ -482,3 +482,96 @@ def calculate_fractional_kelly(win_rate_pct: float, reward_risk_ratio: float = 2
     except Exception:
         return 1.0
 
+
+def detect_bookmap_absorption(
+    taker_buy_usd: float,
+    taker_sell_usd: float,
+    top_bid_usd: float,
+    top_ask_usd: float,
+    price_change_pct_60s: float = 0.0,
+    wall_duration_sec: float = 0.0,
+    is_major: bool = False
+) -> dict:
+    """
+    6. BOOKMAP — Mikro-Sipariş Akışı & Kurumsal Likidite Emilim (Absorption) Dedektörü:
+    - Pasif Satıcı Emilimi (Ask Absorption / Boğa Tuzağı):
+      Agresif alıcılar direnç kademesine hücum ederken fiyat yukarı gidemez (fiyat sıkışması).
+      Pasif satıcı balina tüm alımları sünger gibi emer. Fiyat tavana çarpıp çökmek üzeredir.
+    - Pasif Alıcı Emilimi (Bid Absorption / Ayı Tuzağı):
+      Agresif satıcılar destek kademesine hücum ederken fiyat aşağı delinemez.
+      Pasif alıcı balina tüm satışları sünger gibi emer. Fiyat tabandan patlamak üzeredir.
+    - Kurumsal Çapa Duvarı (Anchor Persistence):
+      Duvar süresi >= 15.0s ise gerçek çapa duvarıdır. >= 40.0s ise masif beton bloktur.
+    """
+    try:
+        min_taker_vol = 15000.0 if is_major else 6000.0
+
+        # Oranlar
+        ask_absorption_ratio = round(float(taker_buy_usd / max(100.0, top_ask_usd)), 2)
+        bid_absorption_ratio = round(float(taker_sell_usd / max(100.0, top_bid_usd)), 2)
+
+        # Fiyat sıkışması: Son 60s'deki fiyat hareketi <= %0.08 ise fiyat o kademede çakılıdır
+        is_price_stalled = abs(float(price_change_pct_60s)) <= 0.08
+
+        # Satıcı Emilimi (Boğa Tuzağı)
+        has_seller_absorption = (
+            taker_buy_usd >= min_taker_vol and
+            ask_absorption_ratio >= 2.5 and
+            is_price_stalled
+        )
+
+        # Alıcı Emilimi (Ayı Tuzağı)
+        has_buyer_absorption = (
+            taker_sell_usd >= min_taker_vol and
+            bid_absorption_ratio >= 2.5 and
+            is_price_stalled
+        )
+
+        # Çapa Duvarı Durumu
+        wall_dur = float(wall_duration_sec)
+        is_anchor_wall = (wall_dur >= 15.0)
+        is_iron_wall = (wall_dur >= 40.0)
+        is_flash_spoof = (0.0 < wall_dur < 5.0)
+
+        absorption_type = "NONE"
+        absorption_desc = "⚪ Normal Sipariş Akışı"
+        if has_seller_absorption and (ask_absorption_ratio >= bid_absorption_ratio):
+            absorption_type = "ASK_ABSORPTION_BEARISH"
+            absorption_desc = f"🌊 Pasif Satıcı Süngeri (Taker Alım: ${taker_buy_usd:,.0f}, {ask_absorption_ratio:.1f}x) — Boğa Tuzağı Riski"
+        elif has_buyer_absorption and (bid_absorption_ratio >= ask_absorption_ratio):
+            absorption_type = "BID_ABSORPTION_BULLISH"
+            absorption_desc = f"🌊 Pasif Alıcı Süngeri (Taker Satım: ${taker_sell_usd:,.0f}, {bid_absorption_ratio:.1f}x) — Kurumsal Taban Güvencesi"
+        elif is_iron_wall:
+            absorption_desc = f"🧱 Masif Beton Çapa Duvarı ({wall_dur:.0f}s Aktif)"
+        elif is_anchor_wall:
+            absorption_desc = f"🧱 Kurumsal Çapa Duvarı ({wall_dur:.0f}s Aktif)"
+
+        return {
+            "has_seller_absorption": bool(has_seller_absorption),
+            "has_buyer_absorption": bool(has_buyer_absorption),
+            "ask_absorption_ratio": float(ask_absorption_ratio),
+            "bid_absorption_ratio": float(bid_absorption_ratio),
+            "is_price_stalled": bool(is_price_stalled),
+            "is_anchor_wall": bool(is_anchor_wall),
+            "is_iron_wall": bool(is_iron_wall),
+            "is_flash_spoof": bool(is_flash_spoof),
+            "wall_duration_sec": round(wall_dur, 1),
+            "absorption_type": absorption_type,
+            "absorption_desc": absorption_desc
+        }
+    except Exception:
+        return {
+            "has_seller_absorption": False,
+            "has_buyer_absorption": False,
+            "ask_absorption_ratio": 1.0,
+            "bid_absorption_ratio": 1.0,
+            "is_price_stalled": False,
+            "is_anchor_wall": False,
+            "is_iron_wall": False,
+            "is_flash_spoof": False,
+            "wall_duration_sec": 0.0,
+            "absorption_type": "NONE",
+            "absorption_desc": "⚪ Normal Sipariş Akışı"
+        }
+
+

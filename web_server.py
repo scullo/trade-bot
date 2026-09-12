@@ -2794,6 +2794,7 @@ HTML_PAGE = """
                             <span class="legend-item"><span class="legend-dot approach"></span> Dış: Yaklaşan</span>
                             <span class="legend-item"><span class="legend-dot blocked"></span> Kalkan: Girecekti / Elendi</span>
                             <span class="legend-item"><span class="legend-dot" style="background:#00f2fe; box-shadow:0 0 8px #00f2fe;"></span> 🧊 Iceberg Gizli Balina</span>
+                            <span class="legend-item"><span class="legend-dot" style="background:#10b981; box-shadow:0 0 8px #10b981;"></span> 🌊 Bookmap Çapa/Emilim</span>
                         </div>
                     </div>
 
@@ -6107,7 +6108,15 @@ async function loadAdminMetrics() {
                             entropyNorm: entropyNorm,
                             hurstVal: hurstVal,
                             hmmPhase: hmmPhase,
-                            hmmDesc: hmmDesc
+                            hmmDesc: hmmDesc,
+                            bookmapSellerAbsorption: Boolean(c.bookmapSellerAbsorption),
+                            bookmapBuyerAbsorption: Boolean(c.bookmapBuyerAbsorption),
+                            bookmapAbsorptionType: c.bookmapAbsorptionType || 'NONE',
+                            bookmapAbsorptionDesc: c.bookmapAbsorptionDesc || '',
+                            isAnchorWall: Boolean(c.isAnchorWall),
+                            isIronWall: Boolean(c.isIronWall),
+                            wallDurationSec: Number(c.wallDurationSec || 0),
+                            priceChangePct60s: Number(c.priceChangePct60s || 0)
                         });
                     });
                 }
@@ -6148,7 +6157,12 @@ async function loadAdminMetrics() {
                             entropyNorm: entropyNorm,
                             hurstVal: hurstVal,
                             hmmPhase: r.hmmPhase || (r.reason && r.reason.includes('HMM') ? 'MANIPULATION_SWEEP' : 'ACCUMULATION'),
-                            hmmDesc: r.hmmDesc || ''
+                            hmmDesc: r.hmmDesc || '',
+                            bookmapSellerAbsorption: Boolean(r.bookmapVeto === 'SELLER_ABSORPTION_BULL_TRAP' || (r.reason && r.reason.includes('Satıcı Emilimi'))),
+                            bookmapBuyerAbsorption: Boolean(r.bookmapVeto === 'BUYER_ABSORPTION_BEAR_TRAP' || (r.reason && r.reason.includes('Alıcı Emilimi'))),
+                            isAnchorWall: Boolean(r.isAnchorWall),
+                            wallDurationSec: Number(r.wallDurationSec || 0),
+                            priceChangePct60s: Number(r.priceChg60s || 0)
                         });
                     });
                 }
@@ -6336,6 +6350,19 @@ async function loadAdminMetrics() {
 
                     if (target.hmmPhase === 'MANIPULATION_SWEEP') {
                         quantAlert += `<br><span style="color:#f43f5e; font-weight:700;">🚨 Jim Simons HMM:</span> Piyasa manipülatif stop süpürme evresinde; tuzak tamamlanmadan işleme girmek tehlikeli!`;
+                    }
+
+                    // 🌊 Bookmap Sipariş Akışı & Çapa Duvarı Teşhisi
+                    if (target.bookmapBuyerAbsorption) {
+                        quantAlert += `<br><span style="color:#10b981; font-weight:700;">🌊 Bookmap Alıcı Süngeri:</span> Destekte kurumsal sünger devrede! Agresif satışlar emildi, taban kilitlendi (+%10 Confluence, 30dk Sabır Modu).`;
+                    } else if (target.bookmapSellerAbsorption) {
+                        quantAlert += `<br><span style="color:#f43f5e; font-weight:700;">🌊 Bookmap Satıcı Süngeri:</span> Dirençte agresif alıcılar pasif balina tarafından yutuluyor; Boğa Tuzağı (Bull Trap) riski, kırılımlar veto edilir!`;
+                    }
+
+                    if (target.isIronWall) {
+                        quantAlert += `<br><span style="color:#00f2fe; font-weight:700;">🧱 Bookmap Çapa Duvarı:</span> Masif Kurumsal Beton Blok (${Math.round(target.wallDurationSec || 40)}s Kesintisiz Aktif). Spoofing değil, kurumsal savunma çapası!`;
+                    } else if (target.isAnchorWall) {
+                        quantAlert += `<br><span style="color:#38bdf8; font-weight:700;">🧱 Bookmap Çapa Duvarı:</span> Kurumsal Çapa (${Math.round(target.wallDurationSec || 15)}s Aktif). Seviye stabilitesi teyitli.`;
                     }
 
                     briefEl.innerHTML = `<b>⚡ Masa Raporu:</b> ${target.reason}${quantAlert}`;
@@ -6618,6 +6645,15 @@ async function loadAdminMetrics() {
                         ctx.shadowBlur = 0;
                     }
 
+                    // 🧱 Bookmap Kurumsal Çapa & Emilim Kalkanı (Emerald / Cyan Armor)
+                    if (t.isAnchorWall || t.bookmapBuyerAbsorption) {
+                        ctx.strokeStyle = t.isIronWall ? '#00f2fe' : (t.bookmapBuyerAbsorption ? '#10b981' : '#38bdf8');
+                        ctx.lineWidth = 1.8;
+                        ctx.beginPath();
+                        ctx.arc(pos.x, pos.y, isSelected ? 8.5 : 7.0, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+
                     ctx.fillStyle = dotColor;
                     ctx.shadowColor = dotColor;
                     ctx.shadowBlur = t.intensity > 0.5 ? 12 : 4;
@@ -6638,7 +6674,8 @@ async function loadAdminMetrics() {
                     ctx.font = `${isSelected ? 'bold 12px' : '11px'} "JetBrains Mono", monospace`;
                     const labelY = (pos.y > cy) ? pos.y + 14 : pos.y - 8;
                     const iceIcon = hasIce ? ' 🧊' : '';
-                    ctx.fillText(t.symbol + iceIcon, pos.x - 14, labelY);
+                    const bmIcon = t.isIronWall ? ' 🧱' : (t.isAnchorWall ? ' ⚓' : (t.bookmapBuyerAbsorption ? ' 🌊' : ''));
+                    ctx.fillText(t.symbol + iceIcon + bmIcon, pos.x - 14, labelY);
                 }
 
                 for (let i = shieldSparks.length - 1; i >= 0; i--) {
@@ -7237,7 +7274,15 @@ async function loadAdminMetrics() {
                                     isCrystalline: Boolean(met.is_crystalline),
                                     hurstVal: Number(met.hurst_exponent !== undefined ? met.hurst_exponent : 0.50),
                                     hmmPhase: met.hmm_phase || 'ACCUMULATION',
-                                    hmmDesc: met.hmm_desc || ''
+                                    hmmDesc: met.hmm_desc || '',
+                                    bookmapSellerAbsorption: Boolean(met.bookmap_seller_absorption),
+                                    bookmapBuyerAbsorption: Boolean(met.bookmap_buyer_absorption),
+                                    bookmapAbsorptionType: met.bookmap_absorption_type || 'NONE',
+                                    bookmapAbsorptionDesc: met.bookmap_absorption_desc || '',
+                                    isAnchorWall: Boolean(met.is_anchor_wall),
+                                    isIronWall: Boolean(met.is_iron_wall),
+                                    wallDurationSec: Number(met.wall_duration_sec || 0),
+                                    priceChangePct60s: Number(met.price_change_pct_60s || 0)
                                 };
                             }
                         }

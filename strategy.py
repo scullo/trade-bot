@@ -1651,6 +1651,43 @@ class StrategyEngine:
                         if confluence_list is not None and isinstance(confluence_list, list):
                             confluence_list.append("L2_Gerçek_Satıcı_Derinliği_Teyitli")
 
+                    # 🌊 BOOKMAP KURUMSAL SİPARİŞ AKIŞI & EMİLİM (ABSORPTION) KALKANLARI
+                    bm_has_seller_abs = bool(l2_info.get("bookmap_seller_absorption", False))
+                    bm_has_buyer_abs = bool(l2_info.get("bookmap_buyer_absorption", False))
+                    bm_is_anchor = bool(l2_info.get("is_anchor_wall", False))
+                    bm_wall_dur = float(l2_info.get("wall_duration_sec", 0.0))
+                    bm_p_chg = float(l2_info.get("price_change_pct_60s", 0.0))
+
+                    # Veto: Breakout Long yaparken tavanda Pasif Satıcı Süngeri (Boğa Tuzağı) varsa engelle!
+                    if trade_type == "BREAKOUT" and side == "LONG" and bm_has_seller_abs:
+                        rej_msg = f"🌊 Bookmap Satıcı Emilimi Kalkanı [{archetype_label}]: Fiyat dirençte boğa tuzağına girdi (Fiyat sıkışık: %{bm_p_chg:+.2f}, Satıcı Süngeri aktif). Sahte kırılım engellendi."
+                        print(f">> [RED - BOOKMAP BOĞA TUZAĞI] {symbol}: {rej_msg}")
+                        self.log_rejection(symbol, reason, rej_msg, bookmapVeto="SELLER_ABSORPTION_BULL_TRAP", priceChg60s=bm_p_chg)
+                        return {"error": "BOOKMAP_BULL_TRAP_ABSORPTION_BLOCKED"}
+
+                    # Veto: Breakdown Short yaparken tabanda Pasif Alıcı Süngeri (Ayı Tuzağı) varsa engelle!
+                    if trade_type == "BREAKOUT" and side == "SHORT" and bm_has_buyer_abs:
+                        rej_msg = f"🌊 Bookmap Alıcı Emilimi Kalkanı [{archetype_label}]: Fiyat destekte ayı tuzağına girdi (Fiyat sıkışık: %{bm_p_chg:+.2f}, Alıcı Süngeri aktif). Sahte çöküş engellendi."
+                        print(f">> [RED - BOOKMAP AYI TUZAĞI] {symbol}: {rej_msg}")
+                        self.log_rejection(symbol, reason, rej_msg, bookmapVeto="BUYER_ABSORPTION_BEAR_TRAP", priceChg60s=bm_p_chg)
+                        return {"error": "BOOKMAP_BEAR_TRAP_ABSORPTION_BLOCKED"}
+
+                    # Confluence: Destek Sekmesinde Alıcı Süngeri veya Çapa Duvarı Teyidi
+                    if side == "LONG":
+                        if bm_has_buyer_abs:
+                            if confluence_list is not None and isinstance(confluence_list, list) and "🌊_Bookmap_Alıcı_Süngeri_Teyidi" not in confluence_list:
+                                confluence_list.append("🌊_Bookmap_Alıcı_Süngeri_Teyidi")
+                        if bm_is_anchor and obi_wall_side == "BID_WALL":
+                            if confluence_list is not None and isinstance(confluence_list, list) and "🧱_Bookmap_Kurumsal_Çapa_Duvarı" not in confluence_list:
+                                confluence_list.append("🧱_Bookmap_Kurumsal_Çapa_Duvarı")
+                    elif side == "SHORT":
+                        if bm_has_seller_abs:
+                            if confluence_list is not None and isinstance(confluence_list, list) and "🌊_Bookmap_Satıcı_Süngeri_Teyidi" not in confluence_list:
+                                confluence_list.append("🌊_Bookmap_Satıcı_Süngeri_Teyidi")
+                        if bm_is_anchor and obi_wall_side == "ASK_WALL":
+                            if confluence_list is not None and isinstance(confluence_list, list) and "🧱_Bookmap_Kurumsal_Çapa_Duvarı" not in confluence_list:
+                                confluence_list.append("🧱_Bookmap_Kurumsal_Çapa_Duvarı")
+
                     # 🌪️ LİKİDİTE BOŞLUĞU (HAVA CEBİ) KÂR GENİŞLEMESİ (Trick 2)
                     if l2_info.get("vacuum_detected", False):
                         vac_side = l2_info.get("vacuum_side", "")
@@ -1704,7 +1741,12 @@ class StrategyEngine:
             orderbook_entropy=float(l2_info.get('entropy_norm', 0.70)) if 'l2_info' in locals() and l2_info else 0.70,
             hurst_exponent=hurst_val if 'hurst_val' in locals() else 0.50,
             iceberg_ratio=max(float(l2_info.get('ask_iceberg_ratio', 1.0)), float(l2_info.get('bid_iceberg_ratio', 1.0))) if 'l2_info' in locals() and l2_info else 1.0,
-            hmm_market_phase=hmm_phase if 'hmm_phase' in locals() else 'ACCUMULATION'
+            hmm_market_phase=hmm_phase if 'hmm_phase' in locals() else 'ACCUMULATION',
+            bookmap_seller_absorption=bool(l2_info.get('bookmap_seller_absorption', False)) if 'l2_info' in locals() and l2_info else False,
+            bookmap_buyer_absorption=bool(l2_info.get('bookmap_buyer_absorption', False)) if 'l2_info' in locals() and l2_info else False,
+            bookmap_absorption_type=str(l2_info.get('bookmap_absorption_type', 'NONE')) if 'l2_info' in locals() and l2_info else 'NONE',
+            is_anchor_wall=bool(l2_info.get('is_anchor_wall', False)) if 'l2_info' in locals() and l2_info else False,
+            wall_duration_sec=float(l2_info.get('wall_duration_sec', 0.0)) if 'l2_info' in locals() and l2_info else 0.0
         )
         if isinstance(res, dict) and res.get("error") == "INSUFFICIENT_BALANCE":
             await self.notifier.notify_insufficient_balance(
@@ -1989,10 +2031,20 @@ class StrategyEngine:
                 cvd_ratio = cvd_info.get('ratio_60s', 50.0)
                 cvd_exhausted = (side == "LONG" and cvd_ratio < 45.0) or (side == "SHORT" and cvd_ratio > 55.0)
 
-                # 🦊 MODÜL 5: AKILLI ERKEN MOMENTUM / CVD ÇÜRÜME ÇIKIŞI (15 DAKİKA KURALI)
-                # 3 mum (15dk) boyunca beklediği halde yön kazanamamış (-1.5% <= ROE <= +0.8%, yani minimal yatay/ölü bölge)
-                # VE piyasa yapıcı/CVD tersine dönmüşse 12 mumu beklemeden mikro zararla serbest bırak:
-                if hold_candles >= 3.0 and -1.5 <= roe_raw <= 0.8 and cvd_exhausted:
+                # 🦊 MODÜL 5: AKILLI ERKEN MOMENTUM / CVD ÇÜRÜME ÇIKIŞI & NEAR DİNAMİK NEFES ALANI
+                # Kırılımlar (BREAKOUT): Anında ivmelenmelidir. 3 mumda (15dk) gitmediyse ve CVD çöktüyse hemen çıkılır.
+                # Destek/nPOC Sekmeleri (MEAN REVERSION): Balinalar tabanda akümülasyon ve silkeleme yapar.
+                # Sert stop patlamadığı sürece 3 mum yerine 6 mum (30dk) nefes alanı tanınır (NEAR gibi erken çıkıp ralliyi kaçırmamak için!).
+                pos_trade_type = str(pos.get("trade_type", "BREAKOUT")).upper()
+                pos_setup_id = str(pos.get("setup_id", "")).upper()
+                pos_reason = str(pos.get("reason", ""))
+                is_breakout = (pos_trade_type == "BREAKOUT") or ("BREAKOUT" in pos_setup_id) or ("BREAKDOWN" in pos_setup_id)
+                is_mean_rev = any(k in pos_setup_id for k in ["NPOC", "S3", "R3", "BOUNCE", "SWEEP", "REJECTION"]) or (pos_trade_type == "SCALP")
+                has_absorb_support = bool(pos.get("is_anchor_wall") or pos.get("bookmap_buyer_absorption") or pos.get("bookmap_seller_absorption") or "Balina" in pos_reason or "Emilimi" in pos_reason)
+
+                early_stag_thresh = 3.0 if is_breakout else (6.0 if (is_mean_rev or has_absorb_support) else 4.0)
+
+                if hold_candles >= early_stag_thresh and -1.8 <= roe_raw <= 0.8 and cvd_exhausted:
                     record = await self._safe_close_position(
                         symbol, close_price,
                         f"⏱️ Erken Momentum Kaybı / CVD Çürümesi ({int(hold_candles)} mum, ROE: %{roe_raw:+.1f}, CVD: %{cvd_ratio:.0f})"

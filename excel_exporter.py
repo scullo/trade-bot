@@ -331,7 +331,8 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ('Tahta Entropisi (Boltzmann %)', 24),
         ('Fraktal Rejim (Hurst H)', 22),
         ('Gizli Likidite (Iceberg Oranı)', 24),
-        ('Piyasa Fazı (Simons HMM)', 26)
+        ('Piyasa Fazı (Simons HMM)', 26),
+        ('Bookmap Sipariş Akışı & Çapa', 28)
     ]
 
     def _get_coin_persona(sym, st):
@@ -513,6 +514,20 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ws.write(r_idx, 71, f"{hurst_v:.2f}", cell_roe_green if hurst_v >= 0.55 else (cell_roe_red if hurst_v < 0.45 else cell_center))
         ws.write(r_idx, 72, f"{ice_v:.2f}x", cell_roe_red if ice_v >= 3.5 else cell_center)
         ws.write(r_idx, 73, hmm_lbl, cell_left)
+
+        # Bookmap Sipariş Akışı & Çapa (74)
+        bm_seller = h.get('bookmap_seller_absorption', False)
+        bm_buyer = h.get('bookmap_buyer_absorption', False)
+        bm_anchor = h.get('is_anchor_wall', False)
+        bm_dur = _safe_float(h.get('wall_duration_sec', 0.0))
+        bm_str = "⚪ Normal Akış"
+        if bm_buyer:
+            bm_str = f"🌊 Alıcı Süngeri ({bm_dur:.0f}s)"
+        elif bm_seller:
+            bm_str = f"🌊 Satıcı Süngeri ({bm_dur:.0f}s)"
+        elif bm_anchor:
+            bm_str = f"🧱 Çapa Duvarı ({bm_dur:.0f}s)"
+        ws.write(r_idx, 74, bm_str, cell_roe_green if (bm_buyer or bm_anchor) else (cell_roe_red if bm_seller else cell_center))
 
     def render_table_sheet(ws_obj, t_list):
         for col_idx, (h_name, width) in enumerate(headers_granular):

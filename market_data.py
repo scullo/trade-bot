@@ -57,6 +57,7 @@ class MarketDataManager:
         # Anlık Mikro-CVD (Cumulative Volume Delta) & Agresyon Veri Yapıları
         self.symbol_cvd = {}          # norm_s -> {taker_buy_usd, taker_sell_usd, delta_usd, cvd_pct, delta_60s, ratio_60s, bias, last_update}
         self.symbol_cvd_history = {}  # norm_s -> deque(maxlen=60) of (timestamp, taker_buy_usd, taker_sell_usd)
+        self.symbol_price_history = {}  # norm_s -> deque(maxlen=60) of (timestamp, price) for 60s micro price change
         # Order Book Imbalance (OBI) & Tahta Derinlik Duvarı Veri Yapıları
         self.orderbook_depth = {s: {
             'symbol': s,
@@ -893,8 +894,8 @@ class MarketDataManager:
                     dynamic_rs_score = 0.0
                     decoupling_status = "⚪ NÖTR_TAKİPÇİ (Beta)"
 
-        # 🧠 5-SÜTUNLU KUANT TELEMETRİSİ (HURST, BOLTZMANN ENTROPİ, ICEBERG, SIMONS HMM)
-        from indicators import calculate_hurst_exponent, calculate_orderbook_entropy, detect_iceberg_orders, estimate_hmm_market_phase
+        # 🧠 6-SÜTUNLU KUANT TELEMETRİSİ (HURST, BOLTZMANN ENTROPİ, ICEBERG, BOOKMAP EMİLİM, SIMONS HMM)
+        from indicators import calculate_hurst_exponent, calculate_orderbook_entropy, detect_iceberg_orders, estimate_hmm_market_phase, detect_bookmap_absorption
         
         # 1. Mandelbrot Hurst Üssü (5M Kapanışlarından Fraktal Hafıza)
         hurst_val = 0.50
@@ -930,6 +931,33 @@ class MarketDataManager:
         iceberg_ratio = max(ask_ice_r, bid_ice_r)
         has_iceberg = bool(ice_data.get('has_seller_iceberg') or ice_data.get('has_buyer_iceberg') or iceberg_ratio >= 3.5)
         iceberg_side = str(ice_data.get('iceberg_side', 'NONE'))
+
+        # 2b. Bookmap Mikro-Emilim Süngeri ve Kurumsal Çapa Duvarı Tespiti
+        price_chg_60s = 0.0
+        p_deque = self.symbol_price_history.get(clean_s) or self.symbol_price_history.get(norm_s)
+        if p_deque and len(p_deque) >= 2:
+            now_t = time.time()
+            t_cutoff = now_t - 60.0
+            old_p = p_deque[0][1]
+            for ts_i, p_i in p_deque:
+                if ts_i >= t_cutoff:
+                    old_p = p_i
+                    break
+            cur_live_p = p_deque[-1][1]
+            if old_p > 0:
+                price_chg_60s = round(((cur_live_p - old_p) / old_p) * 100.0, 3)
+
+        wall_dur_sec = float(depth.get('wall_duration_sec', 0.0))
+        is_major_sym = symbol in {"BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "ADA/USDT", "NEAR/USDT", "AVAX/USDT"}
+        bm_data = detect_bookmap_absorption(
+            taker_buy_usd=diff_buy,
+            taker_sell_usd=diff_sell,
+            top_bid_usd=top_bid_usd,
+            top_ask_usd=top_ask_usd,
+            price_change_pct_60s=price_chg_60s,
+            wall_duration_sec=wall_dur_sec,
+            is_major=is_major_sym
+        )
 
         # 3. HMM Piyasa Evresi
         wick_ratio = 35.0
@@ -972,6 +1000,14 @@ class MarketDataManager:
             "bid_iceberg_ratio": float(bid_ice_r),
             "iceberg_side": str(iceberg_side),
             "has_iceberg": bool(has_iceberg),
+            "bookmap_seller_absorption": bool(bm_data.get('has_seller_absorption', False)),
+            "bookmap_buyer_absorption": bool(bm_data.get('has_buyer_absorption', False)),
+            "bookmap_absorption_type": str(bm_data.get('absorption_type', 'NONE')),
+            "bookmap_absorption_desc": str(bm_data.get('absorption_desc', '⚪ Normal Sipariş Akışı')),
+            "is_anchor_wall": bool(bm_data.get('is_anchor_wall', False)),
+            "is_iron_wall": bool(bm_data.get('is_iron_wall', False)),
+            "wall_duration_sec": float(wall_dur_sec),
+            "price_change_pct_60s": float(price_chg_60s),
             "hmm_phase": str(hmm_phase),
             "hmm_desc": str(hmm_desc)
         }
@@ -1195,8 +1231,8 @@ class MarketDataManager:
 
         spoofing_detected = (top_ratio >= 2.0 and l2_ratio < 0.70)
 
-        # 🧠 BOLTZMANN ENTROPİ & KEN GRIFFIN ICEBERG HESAPLAMASI
-        from indicators import calculate_orderbook_entropy, detect_iceberg_orders
+        # 🧠 BOLTZMANN ENTROPİ, KEN GRIFFIN ICEBERG & BOOKMAP EMİLİM HESAPLAMASI
+        from indicators import calculate_orderbook_entropy, detect_iceberg_orders, detect_bookmap_absorption
         entropy_data = calculate_orderbook_entropy(bids, asks, top_n=20)
 
         # 60s Kayan Taker Hacmi
@@ -1210,6 +1246,34 @@ class MarketDataManager:
 
         iceberg_data = detect_iceberg_orders(diff_buy, diff_sell, top_bid_q, top_ask_q)
 
+        # Bookmap 60s Mikro Fiyat Değişimi ve Çapa Duvarı Tespiti
+        price_chg_60s = 0.0
+        p_deque = self.symbol_price_history.get(clean_s) or self.symbol_price_history.get(symbol)
+        if p_deque and len(p_deque) >= 2:
+            now_t = time.time()
+            t_cutoff = now_t - 60.0
+            old_p = p_deque[0][1]
+            for ts_i, p_i in p_deque:
+                if ts_i >= t_cutoff:
+                    old_p = p_i
+                    break
+            cur_live_p = p_deque[-1][1]
+            if old_p > 0:
+                price_chg_60s = round(((cur_live_p - old_p) / old_p) * 100.0, 3)
+
+        depth_meta = self.orderbook_depth.get(clean_s) or self.orderbook_depth.get(symbol, {})
+        wall_dur_sec = float(depth_meta.get('wall_duration_sec', 0.0))
+        is_major_sym = symbol in {"BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "ADA/USDT", "NEAR/USDT", "AVAX/USDT"}
+        bm_data = detect_bookmap_absorption(
+            taker_buy_usd=diff_buy,
+            taker_sell_usd=diff_sell,
+            top_bid_usd=top_bid_q,
+            top_ask_usd=top_ask_q,
+            price_change_pct_60s=price_chg_60s,
+            wall_duration_sec=wall_dur_sec,
+            is_major=is_major_sym
+        )
+
         # Likidite Boşluğu (Hava Cebi / Liquidity Vacuum) Tespiti:
         # Önündeki derinlik karşı tarafın %40'ından az veya oran aşırı asimetrikse hava cebi vardır
         vacuum_detected = False
@@ -1221,7 +1285,7 @@ class MarketDataManager:
             vacuum_detected = True
             vacuum_side = "BID_VACUUM_BEARISH"  # Alıcı tahtası bomboş, aşağı yön dökülme
 
-        return {
+        res_depth = {
             'symbol': symbol,
             'mid_price': mid_price,
             'bid_usd_05': round(bid_usd_05, 2),
@@ -1242,6 +1306,14 @@ class MarketDataManager:
             'iceberg_side': iceberg_data.get('iceberg_side', 'NONE'),
             'has_seller_iceberg': iceberg_data.get('has_seller_iceberg', False),
             'has_buyer_iceberg': iceberg_data.get('has_buyer_iceberg', False),
+            'bookmap_seller_absorption': bool(bm_data.get('has_seller_absorption', False)),
+            'bookmap_buyer_absorption': bool(bm_data.get('has_buyer_absorption', False)),
+            'bookmap_absorption_type': str(bm_data.get('absorption_type', 'NONE')),
+            'bookmap_absorption_desc': str(bm_data.get('absorption_desc', '⚪ Normal Sipariş Akışı')),
+            'is_anchor_wall': bool(bm_data.get('is_anchor_wall', False)),
+            'is_iron_wall': bool(bm_data.get('is_iron_wall', False)),
+            'wall_duration_sec': float(wall_dur_sec),
+            'price_change_pct_60s': float(price_chg_60s),
             'last_update': now_ts
         }
 
@@ -1258,7 +1330,15 @@ class MarketDataManager:
                 'ask_iceberg_ratio': res_depth['ask_iceberg_ratio'],
                 'bid_iceberg_ratio': res_depth['bid_iceberg_ratio'],
                 'iceberg_side': res_depth['iceberg_side'],
-                'has_iceberg': bool(res_depth['has_seller_iceberg'] or res_depth['has_buyer_iceberg'])
+                'has_iceberg': bool(res_depth['has_seller_iceberg'] or res_depth['has_buyer_iceberg']),
+                'bookmap_seller_absorption': res_depth['bookmap_seller_absorption'],
+                'bookmap_buyer_absorption': res_depth['bookmap_buyer_absorption'],
+                'bookmap_absorption_type': res_depth['bookmap_absorption_type'],
+                'bookmap_absorption_desc': res_depth['bookmap_absorption_desc'],
+                'is_anchor_wall': res_depth['is_anchor_wall'],
+                'is_iron_wall': res_depth['is_iron_wall'],
+                'wall_duration_sec': res_depth['wall_duration_sec'],
+                'price_change_pct_60s': res_depth['price_change_pct_60s']
             })
 
         return res_depth
@@ -1386,6 +1466,12 @@ class MarketDataManager:
                                         price = (bid + ask) / 2.0 if (bid and ask) else (bid or ask)
                                         if price > 0:
                                             self.current_prices[norm_s] = price
+                                            now_ts = time.time()
+                                            if norm_s not in self.symbol_price_history:
+                                                self.symbol_price_history[norm_s] = deque(maxlen=60)
+                                            p_dq = self.symbol_price_history[norm_s]
+                                            if not p_dq or (now_ts - p_dq[-1][0] >= 1.0):
+                                                p_dq.append((now_ts, price))
 
                                             # Order Book Imbalance (OBI) & Likidite Duvarı Hesaplama (<0.001ms)
                                             tot_q = bid_qty + ask_qty
