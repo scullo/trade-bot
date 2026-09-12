@@ -703,7 +703,18 @@ class MarketDataManager:
                 "avg_vol": 0.0,
                 "rs_vs_btc": 0.0,
                 "dynamic_rs_score": 0.0,
-                "decoupling_status": "⚪ NÖTR_TAKİPÇİ"
+                "decoupling_status": "⚪ NÖTR_TAKİPÇİ",
+                "hurst_exponent": 0.50,
+                "entropy_norm": 0.65,
+                "is_chaotic": False,
+                "is_crystalline": False,
+                "iceberg_ratio": 1.0,
+                "ask_iceberg_ratio": 1.0,
+                "bid_iceberg_ratio": 1.0,
+                "iceberg_side": "NONE",
+                "has_iceberg": False,
+                "hmm_phase": "ACCUMULATION",
+                "hmm_desc": "Sessiz Birikim"
             }
             return
 
@@ -882,6 +893,64 @@ class MarketDataManager:
                     dynamic_rs_score = 0.0
                     decoupling_status = "⚪ NÖTR_TAKİPÇİ (Beta)"
 
+        # 🧠 5-SÜTUNLU KUANT TELEMETRİSİ (HURST, BOLTZMANN ENTROPİ, ICEBERG, SIMONS HMM)
+        from indicators import calculate_hurst_exponent, calculate_orderbook_entropy, detect_iceberg_orders, estimate_hmm_market_phase
+        
+        # 1. Mandelbrot Hurst Üssü (5M Kapanışlarından Fraktal Hafıza)
+        hurst_val = 0.50
+        if not df_5m.empty and len(df_5m) >= 30 and 'close' in df_5m.columns:
+            try:
+                hurst_val = calculate_hurst_exponent(df_5m['close'].values)
+            except Exception:
+                hurst_val = 0.50
+
+        # 2. Ken Griffin Iceberg & Boltzmann Derinlik Tespiti
+        clean_s = self._clean_symbol(symbol)
+        norm_s = symbol
+        depth = self.orderbook_depth.get(norm_s) or self.orderbook_depth.get(clean_s, {})
+        h_deque = self.symbol_cvd_history.get(clean_s) or self.symbol_cvd_history.get(norm_s)
+        
+        diff_buy = 0.0
+        diff_sell = 0.0
+        if h_deque and len(h_deque) >= 2:
+            diff_buy = max(0.0, float(h_deque[-1][1] - h_deque[0][1]))
+            diff_sell = max(0.0, float(h_deque[-1][2] - h_deque[0][2]))
+
+        top_bid_usd = float(depth.get('bid_price', 0.0)) * float(depth.get('bid_qty', 0.0))
+        top_ask_usd = float(depth.get('ask_price', 0.0)) * float(depth.get('ask_qty', 0.0))
+        cur_p = current_p if current_p > 0 else self.current_prices.get(symbol, 0.0)
+        if top_bid_usd <= 0 and cur_p > 0:
+            top_bid_usd = cur_p * 50.0
+        if top_ask_usd <= 0 and cur_p > 0:
+            top_ask_usd = cur_p * 50.0
+
+        ice_data = detect_iceberg_orders(diff_buy, diff_sell, top_bid_usd, top_ask_usd)
+        ask_ice_r = float(ice_data.get('ask_iceberg_ratio', 1.0))
+        bid_ice_r = float(ice_data.get('bid_iceberg_ratio', 1.0))
+        iceberg_ratio = max(ask_ice_r, bid_ice_r)
+        has_iceberg = bool(ice_data.get('has_seller_iceberg') or ice_data.get('has_buyer_iceberg') or iceberg_ratio >= 3.5)
+        iceberg_side = str(ice_data.get('iceberg_side', 'NONE'))
+
+        # 3. HMM Piyasa Evresi
+        wick_ratio = 35.0
+        if not df_5m.empty:
+            c_row = df_5m.iloc[-1]
+            tot_range = max(1e-6, float(c_row['high'] - c_row['low']))
+            body_range = abs(float(c_row['close'] - c_row['open']))
+            wick_ratio = round((1.0 - (body_range / tot_range)) * 100.0, 1)
+
+        cvd_info = self.get_symbol_cvd(symbol) if hasattr(self, 'get_symbol_cvd') else {'taker_buy_pct': 50.0}
+        cvd_pct = float(cvd_info.get('taker_buy_pct', 50.0))
+        hmm_res = estimate_hmm_market_phase(df_5m, wick_ratio_pct=wick_ratio, cvd_ratio=cvd_pct, vol_surge=vol_surge)
+        hmm_phase = str(hmm_res.get('phase', 'ACCUMULATION'))
+        hmm_desc = str(hmm_res.get('desc', 'Sessiz Birikim'))
+
+        # JIT L2 önbelleği varsa oradaki derin entropiyi al, yoksa varsayılan
+        cached_l2 = getattr(self, 'jit_l2_cache', {}).get(symbol, {})
+        entropy_norm = float(cached_l2.get('entropy_norm', 0.65))
+        is_chaotic = bool(cached_l2.get('is_chaotic', False))
+        is_crystalline = bool(cached_l2.get('is_crystalline', False))
+
         if not hasattr(self, 'symbol_metrics'):
             self.symbol_metrics = {}
         self.symbol_metrics[symbol] = {
@@ -893,17 +962,28 @@ class MarketDataManager:
             "avg_vol": float(avg_vol),
             "rs_vs_btc": float(rs_vs_btc),
             "dynamic_rs_score": float(dynamic_rs_score),
-            "decoupling_status": str(decoupling_status)
+            "decoupling_status": str(decoupling_status),
+            "hurst_exponent": float(hurst_val),
+            "entropy_norm": float(entropy_norm),
+            "is_chaotic": bool(is_chaotic),
+            "is_crystalline": bool(is_crystalline),
+            "iceberg_ratio": float(iceberg_ratio),
+            "ask_iceberg_ratio": float(ask_ice_r),
+            "bid_iceberg_ratio": float(bid_ice_r),
+            "iceberg_side": str(iceberg_side),
+            "has_iceberg": bool(has_iceberg),
+            "hmm_phase": str(hmm_phase),
+            "hmm_desc": str(hmm_desc)
         }
 
     def get_symbol_metrics(self, symbol: str) -> dict:
         if not hasattr(self, 'symbol_metrics'):
             self.symbol_metrics = {}
-        if symbol in self.symbol_metrics and self.symbol_metrics[symbol]:
-            return self.symbol_metrics[symbol]
-        self.recalculate_levels(symbol)
+        if symbol not in self.symbol_metrics or not self.symbol_metrics[symbol]:
+            self.recalculate_levels(symbol)
+            
         majors = {"BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "ADA/USDT"}
-        return self.symbol_metrics.get(symbol, {
+        base_met = self.symbol_metrics.get(symbol, {
             "vol_surge": 1.0,
             "min_vol_surge": 1.2 if symbol in majors else 1.5,
             "atr_pct": 1.2,
@@ -912,8 +992,52 @@ class MarketDataManager:
             "avg_vol": 0.0,
             "rs_vs_btc": 0.0,
             "dynamic_rs_score": 0.0,
-            "decoupling_status": "⚪ NÖTR_TAKİPÇİ"
+            "decoupling_status": "⚪ NÖTR_TAKİPÇİ",
+            "hurst_exponent": 0.50,
+            "entropy_norm": 0.65,
+            "is_chaotic": False,
+            "is_crystalline": False,
+            "iceberg_ratio": 1.0,
+            "ask_iceberg_ratio": 1.0,
+            "bid_iceberg_ratio": 1.0,
+            "iceberg_side": "NONE",
+            "has_iceberg": False,
+            "hmm_phase": "ACCUMULATION",
+            "hmm_desc": "Sessiz Birikim"
         })
+
+        # Anlık dinamik Iceberg tazeleyici (WebSocket 1s verisinden)
+        try:
+            clean_s = self._clean_symbol(symbol)
+            norm_s = symbol
+            depth = self.orderbook_depth.get(norm_s) or self.orderbook_depth.get(clean_s, {})
+            h_deque = self.symbol_cvd_history.get(clean_s) or self.symbol_cvd_history.get(norm_s)
+            if h_deque and len(h_deque) >= 2 and depth:
+                diff_buy = max(0.0, float(h_deque[-1][1] - h_deque[0][1]))
+                diff_sell = max(0.0, float(h_deque[-1][2] - h_deque[0][2]))
+                top_bid_usd = float(depth.get('bid_price', 0.0)) * float(depth.get('bid_qty', 0.0))
+                top_ask_usd = float(depth.get('ask_price', 0.0)) * float(depth.get('ask_qty', 0.0))
+                cur_p = self.current_prices.get(symbol, 0.0)
+                if top_bid_usd <= 0 and cur_p > 0: top_bid_usd = cur_p * 50.0
+                if top_ask_usd <= 0 and cur_p > 0: top_ask_usd = cur_p * 50.0
+                
+                from indicators import detect_iceberg_orders
+                ice_live = detect_iceberg_orders(diff_buy, diff_sell, top_bid_usd, top_ask_usd)
+                ask_r = float(ice_live.get('ask_iceberg_ratio', 1.0))
+                bid_r = float(ice_live.get('bid_iceberg_ratio', 1.0))
+                max_r = max(ask_r, bid_r)
+                
+                res_met = dict(base_met)
+                res_met['iceberg_ratio'] = max_r
+                res_met['ask_iceberg_ratio'] = ask_r
+                res_met['bid_iceberg_ratio'] = bid_r
+                res_met['iceberg_side'] = str(ice_live.get('iceberg_side', 'NONE'))
+                res_met['has_iceberg'] = bool(ice_live.get('has_seller_iceberg') or ice_live.get('has_buyer_iceberg') or max_r >= 3.5)
+                return res_met
+        except Exception:
+            pass
+
+        return base_met
 
     async def fetch_symbol_open_interest(self, symbol: str) -> dict:
         """
@@ -1120,6 +1244,24 @@ class MarketDataManager:
             'has_buyer_iceberg': iceberg_data.get('has_buyer_iceberg', False),
             'last_update': now_ts
         }
+
+        if not hasattr(self, 'jit_l2_cache'):
+            self.jit_l2_cache = {}
+        self.jit_l2_cache[symbol] = res_depth
+
+        if hasattr(self, 'symbol_metrics') and symbol in self.symbol_metrics:
+            self.symbol_metrics[symbol].update({
+                'entropy_norm': res_depth['entropy_norm'],
+                'is_chaotic': res_depth['is_chaotic'],
+                'is_crystalline': res_depth['is_crystalline'],
+                'iceberg_ratio': max(res_depth['ask_iceberg_ratio'], res_depth['bid_iceberg_ratio']),
+                'ask_iceberg_ratio': res_depth['ask_iceberg_ratio'],
+                'bid_iceberg_ratio': res_depth['bid_iceberg_ratio'],
+                'iceberg_side': res_depth['iceberg_side'],
+                'has_iceberg': bool(res_depth['has_seller_iceberg'] or res_depth['has_buyer_iceberg'])
+            })
+
+        return res_depth
 
     async def poll_all_candles_once(self):
         """100 Paritenin son kapanmis 5M mumlarini aninda REST uzerinden paralel tara ve stratejiye ilet."""

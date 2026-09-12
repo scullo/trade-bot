@@ -2793,10 +2793,11 @@ HTML_PAGE = """
                             <span class="legend-item"><span class="legend-dot ambush"></span> Orta: Hacim Bekleyen</span>
                             <span class="legend-item"><span class="legend-dot approach"></span> Dış: Yaklaşan</span>
                             <span class="legend-item"><span class="legend-dot blocked"></span> Kalkan: Girecekti / Elendi</span>
+                            <span class="legend-item"><span class="legend-dot" style="background:#00f2fe; box-shadow:0 0 8px #00f2fe;"></span> 🧊 Iceberg Gizli Balina</span>
                         </div>
                     </div>
 
-                    <!-- SAĞ: CANLI TELEMETRİ MONİTÖRÜ (HEDEF BRİFİNGİ) -->
+                    <!-- SAĞ: CANLI TELEMETRİ MONİTÖRÜ (HEDEF BRİFİNGİ - 6'LI KUANT KOKPİTİ) -->
                     <div class="radar-telemetry-panel" id="radar-telemetry-panel">
                         <div class="telemetry-header">
                             <div class="telemetry-target-name" id="radar-target-name">HEDEF SEÇİLİYOR...</div>
@@ -2804,25 +2805,45 @@ HTML_PAGE = """
                         </div>
 
                         <div class="telemetry-grid">
+                            <!-- Kutu 1: Seviye Mesafesi -->
                             <div class="telemetry-stat-box">
                                 <div class="stat-label">SEVİYE MESAFESİ</div>
                                 <div class="stat-val" id="radar-stat-distance">%0.00</div>
                                 <div class="stat-sub" id="radar-stat-target-lvl">nPOC / S3 / R4</div>
                             </div>
+                            <!-- Kutu 2: 5M Hacim Patlaması -->
                             <div class="telemetry-stat-box">
                                 <div class="stat-label">5M HACİM PATLAMASI</div>
                                 <div class="stat-val" id="radar-stat-volume">1.00x</div>
                                 <div class="stat-sub" id="radar-stat-vol-target">Min 1.50x Şartı</div>
                             </div>
+                            <!-- Kutu 3: Mikro-CVD Delta -->
                             <div class="telemetry-stat-box">
                                 <div class="stat-label">MİKRO-CVD DELTA</div>
                                 <div class="stat-val" id="radar-stat-cvd">%50 Dengeli</div>
                                 <div class="stat-sub" id="radar-stat-cvd-delta">Net $0 Taker</div>
                             </div>
+                            <!-- Kutu 4: Sistem Teşhisi -->
                             <div class="telemetry-stat-box">
                                 <div class="stat-label">SİSTEM TEŞHİSİ</div>
                                 <div class="stat-val" id="radar-stat-status" style="font-size:12px;">Taranıyor</div>
                                 <div class="stat-sub" id="radar-stat-action">Bekleme Modu</div>
+                            </div>
+                            <!-- Kutu 5: 🧊 Ken Griffin Iceberg Dedektörü -->
+                            <div class="telemetry-stat-box telemetry-quant-iceberg" style="border-color: rgba(0, 242, 254, 0.25); background: linear-gradient(135deg, rgba(0, 242, 254, 0.05) 0%, rgba(0, 0, 0, 0.35) 100%);">
+                                <div class="stat-label" style="color: #00f2fe; display: flex; align-items: center; gap: 4px;">
+                                    <span>🧊 GİZLİ LİKİDİTE (ICEBERG)</span>
+                                </div>
+                                <div class="stat-val" id="radar-stat-iceberg" style="font-size: 13.5px; color: #00f2fe;">⚪ Normal</div>
+                                <div class="stat-sub" id="radar-stat-iceberg-sub">Ken Griffin Taker Emilimi</div>
+                            </div>
+                            <!-- Kutu 6: 🌡️ Boltzmann Entropi & Mandelbrot Hurst -->
+                            <div class="telemetry-stat-box telemetry-quant-entropy" style="border-color: rgba(168, 85, 247, 0.25); background: linear-gradient(135deg, rgba(168, 85, 247, 0.05) 0%, rgba(0, 0, 0, 0.35) 100%);">
+                                <div class="stat-label" style="color: #c084fc; display: flex; align-items: center; gap: 4px;">
+                                    <span>🌡️ ENTROPİ & FRAKTAL</span>
+                                </div>
+                                <div class="stat-val" id="radar-stat-entropy-hurst" style="font-size: 13px;">S: %50 | H: 0.50</div>
+                                <div class="stat-sub" id="radar-stat-entropy-sub">Boltzmann & Mandelbrot</div>
                             </div>
                         </div>
 
@@ -6050,6 +6071,16 @@ async function loadAdminMetrics() {
                         if (isContact) cat = 'contact';
                         else if (dist <= 0.55) cat = 'ambush';
 
+                        const iceRatio = c.icebergRatio !== undefined ? Number(c.icebergRatio) : 1.0;
+                        const askIceRatio = c.askIcebergRatio !== undefined ? Number(c.askIcebergRatio) : 1.0;
+                        const bidIceRatio = c.bidIcebergRatio !== undefined ? Number(c.bidIcebergRatio) : 1.0;
+                        const iceSide = c.icebergSide || 'NONE';
+                        const hasIce = Boolean(c.hasIceberg || (iceRatio >= 3.5));
+                        const entropyNorm = c.entropyNorm !== undefined ? Number(c.entropyNorm) : 0.65;
+                        const hurstVal = c.hurstVal !== undefined ? Number(c.hurstVal) : 0.50;
+                        const hmmPhase = c.hmmPhase || 'ACCUMULATION';
+                        const hmmDesc = c.hmmDesc || '';
+
                         list.push({
                             symbol: cleanS,
                             category: cat,
@@ -6067,7 +6098,16 @@ async function loadAdminMetrics() {
                                 : `Fiyat ${c.targetName} seviyesine süzülüyor (Kalan: %${dist.toFixed(2)}).`,
                             angle: getStableAngle(cleanS + '_near'),
                             intensity: 0.25,
-                            pulse: 0
+                            pulse: 0,
+                            icebergRatio: iceRatio,
+                            askIcebergRatio: askIceRatio,
+                            bidIcebergRatio: bidIceRatio,
+                            icebergSide: iceSide,
+                            hasIceberg: hasIce,
+                            entropyNorm: entropyNorm,
+                            hurstVal: hurstVal,
+                            hmmPhase: hmmPhase,
+                            hmmDesc: hmmDesc
                         });
                     });
                 }
@@ -6077,6 +6117,12 @@ async function loadAdminMetrics() {
                         const cleanS = (r.symbol || '').replace('/USDT', '').replace('USDT', '').trim();
                         if (!cleanS) return;
                         if (list.some(t => t.symbol === cleanS && t.category === 'blocked')) return;
+
+                        const iceRatio = Number(r.icebergRatio || (r.reason && r.reason.includes('x >= 3.5x') ? 3.8 : 1.0));
+                        const hasIce = Boolean(r.hasIceberg || (iceRatio >= 3.5) || (r.reason && (r.reason.includes('Buzdağı') || r.reason.includes('Iceberg'))));
+                        const iceSide = r.icebergSide || (r.reason && r.reason.includes('satıcı') ? 'ICEBERG_ASK_RESISTANCE' : (r.reason && r.reason.includes('alıcı') ? 'ICEBERG_BID_SUPPORT' : 'NONE'));
+                        const entropyNorm = Number(r.entropyNorm !== undefined ? r.entropyNorm : (r.reason && r.reason.includes('Entropi') ? 0.91 : 0.70));
+                        const hurstVal = Number(r.hurstVal !== undefined ? r.hurstVal : (r.reason && r.reason.includes('Mandelbrot') ? 0.38 : 0.50));
 
                         list.push({
                             symbol: cleanS,
@@ -6093,7 +6139,16 @@ async function loadAdminMetrics() {
                             reason: r.reason || 'Kriterler sağlanamadığı için işlem güvenliği gereği iptal edildi.',
                             angle: getStableAngle(cleanS + '_rej'),
                             intensity: 0.35,
-                            pulse: 0
+                            pulse: 0,
+                            icebergRatio: iceRatio,
+                            askIcebergRatio: Number(r.askIcebergRatio || iceRatio),
+                            bidIcebergRatio: Number(r.bidIcebergRatio || iceRatio),
+                            icebergSide: iceSide,
+                            hasIceberg: hasIce,
+                            entropyNorm: entropyNorm,
+                            hurstVal: hurstVal,
+                            hmmPhase: r.hmmPhase || (r.reason && r.reason.includes('HMM') ? 'MANIPULATION_SWEEP' : 'ACCUMULATION'),
+                            hmmDesc: r.hmmDesc || ''
                         });
                     });
                 }
@@ -6102,11 +6157,14 @@ async function loadAdminMetrics() {
 
                 const badge = document.getElementById('radar-active-count-badge');
                 if (badge) {
-                    badge.innerText = `${radarTargets.length} HEDEF TARANIYOR`;
+                    const iceCount = radarTargets.filter(t => t.hasIceberg || t.icebergRatio >= 3.5).length;
+                    const iceTxt = iceCount > 0 ? ` • 🧊 ${iceCount} ICEBERG` : '';
+                    badge.innerText = `${radarTargets.length} HEDEF TARANIYOR${iceTxt}`;
                 }
 
                 if (!selectedTarget || !radarTargets.some(t => t.symbol === selectedTarget.symbol)) {
                     selectedTarget = radarTargets.find(t => t.category === 'contact') 
+                        || radarTargets.find(t => t.hasIceberg)
                         || radarTargets.find(t => t.category === 'ambush') 
                         || radarTargets[0] || null;
                     updateTelemetryHUD(selectedTarget);
@@ -6126,8 +6184,15 @@ async function loadAdminMetrics() {
                 const statEl = document.getElementById('radar-stat-status');
                 const actEl = document.getElementById('radar-stat-action');
                 const briefEl = document.getElementById('radar-target-briefing');
+                const iceEl = document.getElementById('radar-stat-iceberg');
+                const iceSubEl = document.getElementById('radar-stat-iceberg-sub');
+                const entEl = document.getElementById('radar-stat-entropy-hurst');
+                const entSubEl = document.getElementById('radar-stat-entropy-sub');
 
-                if (nameEl) nameEl.innerHTML = `${target.category === 'blocked' ? '🛡️' : (target.category === 'contact' ? '🔥' : '🎯')} ${target.symbol}/USDT`;
+                const hasIce = Boolean(target.hasIceberg || (target.icebergRatio && target.icebergRatio >= 3.5));
+                const iceBadgeIcon = hasIce ? ' 🧊' : '';
+
+                if (nameEl) nameEl.innerHTML = `${target.category === 'blocked' ? '🛡️' : (target.category === 'contact' ? '🔥' : '🎯')} ${target.symbol}/USDT${iceBadgeIcon}`;
                 
                 if (badgeEl) {
                     if (target.category === 'contact') {
@@ -6200,7 +6265,81 @@ async function loadAdminMetrics() {
                 }
                 if (actEl) actEl.innerText = target.action;
 
-                if (briefEl) briefEl.innerHTML = `<b>⚡ Masa Raporu:</b> ${target.reason}`;
+                // 🧊 Box 5: Ken Griffin Iceberg Dedektörü
+                if (iceEl) {
+                    const iRatio = target.icebergRatio || 1.0;
+                    const iSide = target.icebergSide || 'NONE';
+                    
+                    if (target.category === 'blocked' && hasIce) {
+                        iceEl.innerHTML = `<span style="color:#f43f5e; text-shadow:0 0 10px rgba(244,63,94,0.6); font-weight:900;">🧊 Gizli Buzdağı (${iRatio.toFixed(1)}x) ⛔</span>`;
+                        if (iceSubEl) iceSubEl.innerHTML = `<span style="color:#fca5a5;">Kurumsal Duvar: İşlem Engellendi</span>`;
+                    } else if (hasIce && (iSide === 'ICEBERG_ASK_RESISTANCE' || target.askIcebergRatio >= 3.5)) {
+                        iceEl.innerHTML = `<span style="color:#f43f5e; text-shadow:0 0 10px rgba(244,63,94,0.6); font-weight:900;">🧊 Satıcı Buzdağı (${iRatio.toFixed(1)}x) ⚠️</span>`;
+                        if (iceSubEl) iceSubEl.innerHTML = `<span style="color:#fca5a5;">Görünmeyen Direnç Emilimi</span>`;
+                    } else if (hasIce && (iSide === 'ICEBERG_BID_SUPPORT' || target.bidIcebergRatio >= 3.5)) {
+                        iceEl.innerHTML = `<span style="color:#10b981; text-shadow:0 0 10px rgba(16,185,129,0.6); font-weight:900;">🧊 Alıcı Buzdağı (${iRatio.toFixed(1)}x) 🟢</span>`;
+                        if (iceSubEl) iceSubEl.innerHTML = `<span style="color:#86efac;">Görünmeyen Taban Emilimi</span>`;
+                    } else if (iRatio >= 2.0) {
+                        iceEl.innerHTML = `<span style="color:#38bdf8; font-weight:800;">🧊 Kısmi Emilim (${iRatio.toFixed(1)}x)</span>`;
+                        if (iceSubEl) iceSubEl.innerText = 'Gizli Likidite Isınıyor';
+                    } else {
+                        iceEl.innerHTML = `<span style="color:#94a3b8;">⚪ Normal (${iRatio.toFixed(1)}x)</span>`;
+                        if (iceSubEl) iceSubEl.innerText = 'Gizli Balina Duvarı Yok';
+                    }
+                }
+
+                // 🌡️ Box 6: Boltzmann Entropi & Mandelbrot Hurst
+                if (entEl) {
+                    const entVal = target.entropyNorm !== undefined ? target.entropyNorm : 0.65;
+                    const hurstVal = target.hurstVal !== undefined ? target.hurstVal : 0.50;
+                    const entPct = Math.round(entVal * 100);
+                    
+                    let entTag = entVal <= 0.60 ? 'Kristal' : (entVal >= 0.88 ? 'Kaotik' : 'Dengeli');
+                    let hurstTag = hurstVal >= 0.55 ? 'Trend' : (hurstVal <= 0.45 ? 'Tuzak' : 'Gürültü');
+                    
+                    let entCol = entVal <= 0.60 ? '#10b981' : (entVal >= 0.88 ? '#f43f5e' : '#38bdf8');
+                    let hurstCol = hurstVal >= 0.55 ? '#10b981' : (hurstVal <= 0.45 ? '#f59e0b' : '#94a3b8');
+                    
+                    entEl.innerHTML = `<span style="color:${entCol}; font-weight:800;">S:%${entPct}</span> <span style="color:#64748b;">|</span> <span style="color:${hurstCol}; font-weight:800;">H:${hurstVal.toFixed(2)}</span>`;
+                    if (entSubEl) {
+                        entSubEl.innerText = `${entTag} • ${hurstTag}`;
+                    }
+                }
+
+                // Canlı Taktik Masa Raporu
+                if (briefEl) {
+                    let quantAlert = '';
+                    const iRatio = target.icebergRatio || 1.0;
+                    const iSide = target.icebergSide || 'NONE';
+
+                    if (hasIce) {
+                        if (iSide === 'ICEBERG_ASK_RESISTANCE' || target.askIcebergRatio >= 3.5) {
+                            quantAlert += `<br><span style="color:#f43f5e; font-weight:700;">🧊 Ken Griffin Iceberg:</span> Satış tarafında <b>${iRatio.toFixed(1)}x</b> gizli buzdağı tespit edildi! Taker alımlar tahtadaki görünmeyen duvar tarafından emiliyor, tepe ve tuzak riski yüksek!`;
+                        } else {
+                            quantAlert += `<br><span style="color:#10b981; font-weight:700;">🧊 Ken Griffin Iceberg:</span> Alış tarafında <b>${iRatio.toFixed(1)}x</b> gizli alıcı buzdağı tespit edildi! Satışlar görünmeyen kurumsal taban tarafından emiliyor, güçlü destek!`;
+                        }
+                    } else if (iRatio >= 2.0) {
+                        quantAlert += `<br><span style="color:#38bdf8; font-weight:600;">🧊 Iceberg Radarı:</span> Kısmi emilim (${iRatio.toFixed(1)}x) izleniyor; tahtada kurumsal gizli limit emirler toplanıyor.`;
+                    }
+
+                    if (target.entropyNorm >= 0.88) {
+                        quantAlert += `<br><span style="color:#f43f5e; font-weight:700;">⚠️ Boltzmann Entropisi:</span> S=%${Math.round(target.entropyNorm*100)} (Kaotik Tahta). Likidite aşırı dağınık, ani manipülatif iğne riski.`;
+                    } else if (target.entropyNorm <= 0.60) {
+                        quantAlert += `<br><span style="color:#10b981; font-weight:700;">💎 Boltzmann Entropisi:</span> S=%${Math.round(target.entropyNorm*100)} (Kristalize). Kurumsal likidite tek bir hatta kilitlenmiş, yüksek güvenilirlik.`;
+                    }
+
+                    if (target.hurstVal && target.hurstVal <= 0.44) {
+                        quantAlert += `<br><span style="color:#f59e0b; font-weight:700;">🌀 Mandelbrot Hurst:</span> H=${target.hurstVal.toFixed(2)} (Anti-Persistent / Ortalamaya Dönüş). Kırılım sahte (fakeout) olma ihtimali yüksek!`;
+                    } else if (target.hurstVal && target.hurstVal >= 0.58) {
+                        quantAlert += `<br><span style="color:#10b981; font-weight:700;">📈 Mandelbrot Hurst:</span> H=${target.hurstVal.toFixed(2)} (Kalıcı Trend). Kırılım ve seviye devamı güçlü momentum barındırıyor.`;
+                    }
+
+                    if (target.hmmPhase === 'MANIPULATION_SWEEP') {
+                        quantAlert += `<br><span style="color:#f43f5e; font-weight:700;">🚨 Jim Simons HMM:</span> Piyasa manipülatif stop süpürme evresinde; tuzak tamamlanmadan işleme girmek tehlikeli!`;
+                    }
+
+                    briefEl.innerHTML = `<b>⚡ Masa Raporu:</b> ${target.reason}${quantAlert}`;
+                }
             }
 
             function focusSelectedInFeed() {
@@ -6413,6 +6552,7 @@ async function loadAdminMetrics() {
 
                 for (let t of radarTargets) {
                     const pos = getTargetCoords(t, cx, cy, rMax);
+                    const hasIce = Boolean(t.hasIceberg || (t.icebergRatio && t.icebergRatio >= 3.5));
 
                     let dAngle = (sweepAngle - t.angle) % (Math.PI * 2);
                     if (dAngle < 0) dAngle += Math.PI * 2;
@@ -6427,6 +6567,17 @@ async function loadAdminMetrics() {
                                     vy: Math.sin(t.angle + (Math.random() - 0.5)) * (1 + Math.random() * 2),
                                     life: 1.0,
                                     col: '#f43f5e'
+                                });
+                            }
+                        } else if (hasIce && Math.random() > 0.35) {
+                            for (let s = 0; s < 2; s++) {
+                                shieldSparks.push({
+                                    x: pos.x,
+                                    y: pos.y,
+                                    vx: Math.cos(t.angle + (Math.random() - 0.5)) * (1.2 + Math.random() * 2),
+                                    vy: Math.sin(t.angle + (Math.random() - 0.5)) * (1.2 + Math.random() * 2),
+                                    life: 1.0,
+                                    col: '#00f2fe'
                                 });
                             }
                         }
@@ -6451,6 +6602,22 @@ async function loadAdminMetrics() {
                         ctx.globalAlpha = 1.0;
                     }
 
+                    // 🧊 Cryo Iceberg Pulse Halo
+                    if (hasIce) {
+                        if (!t.icePulse) t.icePulse = 0;
+                        t.icePulse = (t.icePulse + 0.035) % 1.0;
+                        ctx.strokeStyle = '#00f2fe';
+                        ctx.shadowColor = '#00f2fe';
+                        ctx.shadowBlur = 14;
+                        ctx.lineWidth = 1.6;
+                        ctx.beginPath();
+                        ctx.arc(pos.x, pos.y, 6 + t.icePulse * 12, 0, Math.PI * 2);
+                        ctx.globalAlpha = (1 - t.icePulse) * 0.85;
+                        ctx.stroke();
+                        ctx.globalAlpha = 1.0;
+                        ctx.shadowBlur = 0;
+                    }
+
                     ctx.fillStyle = dotColor;
                     ctx.shadowColor = dotColor;
                     ctx.shadowBlur = t.intensity > 0.5 ? 12 : 4;
@@ -6467,10 +6634,11 @@ async function loadAdminMetrics() {
                     ctx.fill();
                     ctx.shadowBlur = 0;
 
-                    ctx.fillStyle = isSelected ? '#ffffff' : (t.intensity > 0.5 ? dotColor : '#cbd5e1');
+                    ctx.fillStyle = isSelected ? '#ffffff' : (t.intensity > 0.5 ? (hasIce ? '#00f2fe' : dotColor) : '#cbd5e1');
                     ctx.font = `${isSelected ? 'bold 12px' : '11px'} "JetBrains Mono", monospace`;
                     const labelY = (pos.y > cy) ? pos.y + 14 : pos.y - 8;
-                    ctx.fillText(t.symbol, pos.x - 14, labelY);
+                    const iceIcon = hasIce ? ' 🧊' : '';
+                    ctx.fillText(t.symbol + iceIcon, pos.x - 14, labelY);
                 }
 
                 for (let i = shieldSparks.length - 1; i >= 0; i--) {
@@ -6482,12 +6650,15 @@ async function loadAdminMetrics() {
                         shieldSparks.splice(i, 1);
                         continue;
                     }
-                    ctx.fillStyle = `rgba(244, 63, 94, ${sp.life})`;
-                    ctx.shadowColor = '#f43f5e';
+                    const sparkCol = sp.col || '#f43f5e';
+                    ctx.fillStyle = sparkCol;
+                    ctx.shadowColor = sparkCol;
                     ctx.shadowBlur = 6;
+                    ctx.globalAlpha = Math.max(0, sp.life);
                     ctx.beginPath();
                     ctx.arc(sp.x, sp.y, 1.8 * sp.life, 0, Math.PI * 2);
                     ctx.fill();
+                    ctx.globalAlpha = 1.0;
                 }
 
                 ctx.fillStyle = '#ffffff';
@@ -7055,7 +7226,18 @@ async function loadAdminMetrics() {
                                     curVol: Number(met.cur_vol || 0),
                                     avgVol: Number(met.avg_vol || 0),
                                     rsScore: Number(met.dynamic_rs_score !== undefined ? met.dynamic_rs_score : (met.rs_vs_btc || 0)),
-                                    decouplingStatus: met.decoupling_status || '⚪ Nötr'
+                                    decouplingStatus: met.decoupling_status || '⚪ Nötr',
+                                    icebergRatio: Number(met.iceberg_ratio || 1.0),
+                                    askIcebergRatio: Number(met.ask_iceberg_ratio || 1.0),
+                                    bidIcebergRatio: Number(met.bid_iceberg_ratio || 1.0),
+                                    icebergSide: met.iceberg_side || 'NONE',
+                                    hasIceberg: Boolean(met.has_iceberg || (met.iceberg_ratio >= 3.5)),
+                                    entropyNorm: Number(met.entropy_norm !== undefined ? met.entropy_norm : 0.65),
+                                    isChaotic: Boolean(met.is_chaotic),
+                                    isCrystalline: Boolean(met.is_crystalline),
+                                    hurstVal: Number(met.hurst_exponent !== undefined ? met.hurst_exponent : 0.50),
+                                    hmmPhase: met.hmm_phase || 'ACCUMULATION',
+                                    hmmDesc: met.hmm_desc || ''
                                 };
                             }
                         }
@@ -7278,6 +7460,16 @@ async function loadAdminMetrics() {
                         const pPrice = typeof formatSmartPrice === 'function' ? formatSmartPrice(c.price) : Number(c.price).toFixed(4);
                         const tPrice = typeof formatSmartPrice === 'function' ? formatSmartPrice(c.targetPrice) : Number(c.targetPrice).toFixed(4);
 
+                        const iRatio = c.icebergRatio || 1.0;
+                        const hasIce = c.hasIceberg || (iRatio >= 3.5);
+                        const iceBadge = hasIce 
+                            ? `<span style="background:rgba(0,242,254,0.18); padding:2px 7px; border-radius:4px; border:1px solid rgba(0,242,254,0.45); color:#00f2fe; font-weight:800; text-shadow:0 0 8px rgba(0,242,254,0.5);">🧊 Iceberg: ${iRatio.toFixed(1)}x (${c.icebergSide === 'ICEBERG_ASK_RESISTANCE' ? 'Satıcı' : 'Alıcı'})</span>`
+                            : (iRatio >= 2.0 ? `<span style="background:rgba(0,0,0,0.3); padding:2px 7px; border-radius:4px; border:1px solid rgba(0,242,254,0.25); color:#38bdf8;">🧊 Iceberg: ${iRatio.toFixed(1)}x</span>` : '');
+                        
+                        const entVal = c.entropyNorm !== undefined ? c.entropyNorm : 0.65;
+                        const hurstVal = c.hurstVal !== undefined ? c.hurstVal : 0.50;
+                        const quantBadge = `<span style="background:rgba(168,85,247,0.12); padding:2px 7px; border-radius:4px; border:1px solid rgba(168,85,247,0.3); color:#c084fc;">🌡️ S:%${Math.round(entVal*100)} | H:${hurstVal.toFixed(2)}</span>`;
+
                         const telemetryBar = `
                             <div style="display:flex; gap:6px; margin:6px 0; flex-wrap:wrap; font-size:11px; font-family:'JetBrains Mono',monospace;">
                                 <span style="background:rgba(0,0,0,0.3); padding:2px 7px; border-radius:4px; border:1px solid ${isVolOk ? 'rgba(16,185,129,0.35)' : 'rgba(245,158,11,0.35)'}; color:${isVolOk ? '#10b981' : '#f59e0b'}; font-weight:700;">
@@ -7286,6 +7478,8 @@ async function loadAdminMetrics() {
                                 <span style="background:rgba(0,0,0,0.3); padding:2px 7px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:${rsColor}; font-weight:700;">
                                     ⚡ RS vs BTC: ${rsScore >= 0 ? '+' : ''}${rsScore.toFixed(2)} [${decouplingStatus.split(' ')[0]}]
                                 </span>
+                                ${iceBadge}
+                                ${quantBadge}
                                 <span style="background:rgba(0,0,0,0.3); padding:2px 7px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:${isTop80 ? '#38bdf8' : '#94a3b8'};">
                                     📊 ${isTop80 ? '✓ Top %80 Hacim' : '⚠️ Top %20 Altı (Sığ)'}
                                 </span>

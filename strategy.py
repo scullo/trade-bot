@@ -36,7 +36,7 @@ class StrategyEngine:
         except Exception as e:
             print(f">> [COIN DNA HATA] Baz DNA yüklenemedi: {e}")
 
-    def log_rejection(self, symbol: str, setup_name: str, reason: str):
+    def log_rejection(self, symbol: str, setup_name: str, reason: str, **kwargs):
         now_str = datetime.now().strftime("%H:%M:%S")
         entry = {
             "time": now_str,
@@ -44,6 +44,8 @@ class StrategyEngine:
             "setup": setup_name.split('(')[0].strip(),
             "reason": reason
         }
+        if kwargs:
+            entry.update(kwargs)
         if not hasattr(self, "recent_rejections"):
             self.recent_rejections = []
         self.recent_rejections.append(entry)
@@ -1437,7 +1439,7 @@ class StrategyEngine:
         if trade_type == "BREAKOUT" and hurst_val < 0.45:
             rej_msg = f"🌀 Mandelbrot Fraktal Kalkanı: Fiyat serisi ortalamaya dönme modunda (Hurst H: {hurst_val:.2f} < 0.45). Sahte kırılım (Fakeout) riski yüksek, Breakout engellendi."
             print(f">> [RED - MANDELBROT FAKEOUT] {symbol}: {rej_msg}")
-            self.log_rejection(symbol, reason, rej_msg)
+            self.log_rejection(symbol, reason, rej_msg, hurstVal=hurst_val)
             return {"error": "MANDELBROT_MEAN_REVERTING_FAKEOUT_BLOCKED"}
         elif trade_type != "BREAKOUT" and hurst_val < 0.45:
             if confluence_list is not None and isinstance(confluence_list, list) and "🌀_Mandelbrot_Ortalamaya_Dönüş_Teyidi" not in confluence_list:
@@ -1449,7 +1451,7 @@ class StrategyEngine:
         if hmm_phase == "MANIPULATION_SWEEP" and trade_type == "BREAKOUT":
             rej_msg = f"🧠 Simons HMM Kalkanı: Piyasa %{hmm_info.get('confidence', 0.8)*100:.0f} olasılıkla Manipülasyon / Stop Avı evresinde ({hmm_info.get('description')}). Kırılımlar tuzaklıdır, Breakout engellendi."
             print(f">> [RED - SIMONS HMM MANIPULATION] {symbol}: {rej_msg}")
-            self.log_rejection(symbol, reason, rej_msg)
+            self.log_rejection(symbol, reason, rej_msg, hmmPhase=hmm_phase)
             return {"error": "SIMONS_HMM_MANIPULATION_PHASE_BLOCKED"}
 
         # ── DİNAMİK STOP VE HEDEFLERİ (YAPISAL SEVİYE & ADAPTİF FİTİL KALKANI) ──
@@ -1596,7 +1598,7 @@ class StrategyEngine:
                     if entropy_norm >= 0.88:
                         rej_msg = f"🌡️ Boltzmann Entropi Kalkanı [{archetype_label}]: L2 tahta entropisi %{entropy_norm*100:.1f} >= %88.0 (Kaotik & Dağınık Tahta). Kurumsal savunma çapası yok, işlem engellendi."
                         print(f">> [RED - BOLTZMANN KAOS] {symbol}: {rej_msg}")
-                        self.log_rejection(symbol, reason, rej_msg)
+                        self.log_rejection(symbol, reason, rej_msg, entropyNorm=entropy_norm, isChaotic=True)
                         return {"error": "BOLTZMANN_HIGH_ENTROPY_CHAOS_BLOCKED"}
                     elif entropy_norm <= 0.60:
                         if confluence_list is not None and isinstance(confluence_list, list) and "🌡️_Boltzmann_Kristal_Tahta_Teyidi" not in confluence_list:
@@ -1612,12 +1614,12 @@ class StrategyEngine:
                     if side == "LONG" and has_seller_iceberg:
                         rej_msg = f"🧊 Ken Griffin Buzdağı Kalkanı [{archetype_label}]: Fiyat dirençte gizli satıcı buzdağına çarptı (Taker Alım / Tahta: {ask_ice_r:.1f}x >= 3.5x). Satıcı emilimi var, LONG engellendi."
                         print(f">> [RED - SATICI ICEBERG ENGELİ] {symbol}: {rej_msg}")
-                        self.log_rejection(symbol, reason, rej_msg)
+                        self.log_rejection(symbol, reason, rej_msg, icebergRatio=ask_ice_r, askIcebergRatio=ask_ice_r, icebergSide="ICEBERG_ASK_RESISTANCE", hasIceberg=True)
                         return {"error": "GRIFFIN_SELLER_ICEBERG_BLOCKED"}
                     elif side == "SHORT" and has_buyer_iceberg:
                         rej_msg = f"🧊 Ken Griffin Buzdağı Kalkanı [{archetype_label}]: Fiyat destekte gizli alıcı buzdağına çarptı (Taker Satım / Tahta: {bid_ice_r:.1f}x >= 3.5x). Alıcı emilimi var, SHORT engellendi."
                         print(f">> [RED - ALICI ICEBERG ENGELİ] {symbol}: {rej_msg}")
-                        self.log_rejection(symbol, reason, rej_msg)
+                        self.log_rejection(symbol, reason, rej_msg, icebergRatio=bid_ice_r, bidIcebergRatio=bid_ice_r, icebergSide="ICEBERG_BID_SUPPORT", hasIceberg=True)
                         return {"error": "GRIFFIN_BUYER_ICEBERG_BLOCKED"}
 
                     # Veto 1: Spoofing Tuzağı (1. kademede duvar var ama arkadaki 19 kademe boş)
