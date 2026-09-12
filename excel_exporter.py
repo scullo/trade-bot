@@ -327,7 +327,11 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ('Tahta Dengesizlik (OBI %)', 22),
         ('Tahta Derinlik Oranı (Bid/Ask)', 24),
         ('Tahta Likidite Duvarı', 24),
-        ('En İyi Alış/Satış Derinliği', 24)
+        ('En İyi Alış/Satış Derinliği', 24),
+        ('Tahta Entropisi (Boltzmann %)', 24),
+        ('Fraktal Rejim (Hurst H)', 22),
+        ('Gizli Likidite (Iceberg Oranı)', 24),
+        ('Piyasa Fazı (Simons HMM)', 26)
     ]
 
     def _get_coin_persona(sym, st):
@@ -497,6 +501,18 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ws.write(r_idx, 67, f"{obi_ratio:.2f}x", cell_roe_green if obi_ratio >= 1.0 else cell_roe_red)
         ws.write(r_idx, 68, wall_lbl, cell_left)
         ws.write(r_idx, 69, qty_str, cell_center)
+
+        # Quant Guardian Sütunları (70, 71, 72, 73)
+        ent_val = _safe_float(h.get('orderbook_entropy', 0.70)) * 100.0
+        hurst_v = _safe_float(h.get('hurst_exponent', 0.50))
+        ice_v = _safe_float(h.get('iceberg_ratio', 1.0))
+        hmm_v = str(h.get('hmm_market_phase', 'ACCUMULATION'))
+        hmm_lbl = "⚠️ MANIPULATION / SWEEP" if hmm_v == "MANIPULATION_SWEEP" else ("🚀 DIRECTIONAL EXPANSION" if hmm_v == "DIRECTIONAL_EXPANSION" else "⚪ ACCUMULATION")
+
+        ws.write(r_idx, 70, f"%{ent_val:.1f}", cell_roe_green if ent_val <= 60 else (cell_roe_red if ent_val >= 88 else cell_center))
+        ws.write(r_idx, 71, f"{hurst_v:.2f}", cell_roe_green if hurst_v >= 0.55 else (cell_roe_red if hurst_v < 0.45 else cell_center))
+        ws.write(r_idx, 72, f"{ice_v:.2f}x", cell_roe_red if ice_v >= 3.5 else cell_center)
+        ws.write(r_idx, 73, hmm_lbl, cell_left)
 
     def render_table_sheet(ws_obj, t_list):
         for col_idx, (h_name, width) in enumerate(headers_granular):

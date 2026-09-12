@@ -281,3 +281,204 @@ def calculate_session_and_daily_levels(df_5m: pd.DataFrame, df_1d: pd.DataFrame)
 
     return res
 
+# =========================================================================
+# 5-PILLAR INSTITUTIONAL QUANT GUARDIANS (BOLTZMANN, MANDELBROT, GRIFFIN, SIMONS, THORP)
+# =========================================================================
+
+def calculate_orderbook_entropy(bids: list, asks: list, top_n: int = 20) -> dict:
+    """
+    1. LUDWIG BOLTZMANN — Emir Defteri Termodinamik Entropisi (Order Book Thermodynamic Entropy):
+    - 20 kademe alış ve satış derinliğinin olasılık dağılımını (p_i) hesaplar.
+    - S = - sum(p_i * ln(p_i))
+    - Normalize Entropi S_norm = S / ln(K) -> [0.0, 1.0]
+    - S_norm > 0.88: Maksimum düzensizlik / Kaotik tahta (İşlem engellenir)
+    - S_norm < 0.60: Kurumsal kristalleşme / Konsantre blokaj (Yüksek güven)
+    """
+    try:
+        sub_bids = bids[:top_n] if bids else []
+        sub_asks = asks[:top_n] if asks else []
+
+        def _entropy_of_side(side_items):
+            if not side_items:
+                return 1.0
+            vols = np.array([float(p) * float(q) for p, q in side_items], dtype=np.float64)
+            tot = np.sum(vols)
+            if tot <= 0:
+                return 1.0
+            p_dist = vols / tot
+            p_dist = p_dist[p_dist > 1e-12]
+            ent = -np.sum(p_dist * np.log(p_dist))
+            max_ent = np.log(len(side_items)) if len(side_items) > 1 else 1.0
+            return float(np.clip(ent / max_ent, 0.0, 1.0))
+
+        ent_bid = _entropy_of_side(sub_bids)
+        ent_ask = _entropy_of_side(sub_asks)
+        ent_norm = round(float((ent_bid + ent_ask) / 2.0), 3)
+
+        return {
+            "entropy_norm": ent_norm,
+            "entropy_bid": round(ent_bid, 3),
+            "entropy_ask": round(ent_ask, 3),
+            "is_chaotic": ent_norm >= 0.88,
+            "is_crystalline": ent_norm <= 0.60
+        }
+    except Exception:
+        return {
+            "entropy_norm": 0.70,
+            "entropy_bid": 0.70,
+            "entropy_ask": 0.70,
+            "is_chaotic": False,
+            "is_crystalline": False
+        }
+
+
+def calculate_hurst_exponent(price_series, min_lags: int = 10, max_lags: int = None) -> float:
+    """
+    2. BENOIT MANDELBROT — Hurst Üssü (H) ve Fraktal Rejim Dedektörü:
+    - Rescaled Range (R/S) analiziyle zaman serisinin uzun dönem hafızasını ölçer.
+    - H > 0.55: Kalıcı (Persistent / Trending) -> Breakout izinli.
+    - H < 0.45: Ortalamaya Dönen (Anti-persistent / Mean-Reverting) -> Breakout TUZAK, Sekme oyna!
+    - 0.45 <= H <= 0.55: Rastgele Yürüyüş (Brownian Motion / Gürültü).
+    """
+    try:
+        if price_series is None or len(price_series) < 30:
+            return 0.50
+
+        ts = np.array(price_series, dtype=np.float64)
+        n = len(ts)
+        if max_lags is None:
+            max_lags = min(n // 2, 50)
+        if max_lags <= min_lags:
+            max_lags = min_lags + 5
+
+        lags = range(min_lags, max_lags)
+        rs_values = []
+
+        for lag in lags:
+            num_chunks = n // lag
+            if num_chunks < 1:
+                continue
+            rs_chunk = []
+            for i in range(num_chunks):
+                chunk = ts[i * lag : (i + 1) * lag]
+                mean_c = np.mean(chunk)
+                dev = chunk - mean_c
+                cum_dev = np.cumsum(dev)
+                r_val = np.max(cum_dev) - np.min(cum_dev)
+                s_val = np.std(chunk)
+                if s_val > 1e-12:
+                    rs_chunk.append(r_val / s_val)
+            if rs_chunk:
+                rs_values.append((lag, np.mean(rs_chunk)))
+
+        if len(rs_values) < 3:
+            return 0.50
+
+        x = np.log([item[0] for item in rs_values])
+        y = np.log([item[1] for item in rs_values])
+
+        poly = np.polyfit(x, y, 1)
+        hurst = float(np.clip(poly[0], 0.05, 0.95))
+        return round(hurst, 3)
+    except Exception:
+        return 0.50
+
+
+def detect_iceberg_orders(executed_buy_usd: float, executed_sell_usd: float, top_bid_usd: float, top_ask_usd: float) -> dict:
+    """
+    3. KEN GRIFFIN — Gizli Likidite (Iceberg / Buzdağı) Radarı:
+    - Son 60s gerçekleşen agresif taker hacmini tahtada görünen anlık derinliğe oranlar.
+    - Ask Iceberg (Satıcı Buzdağı): executed_buy_usd / top_ask_usd >= 3.5x
+    - Bid Iceberg (Alıcı Buzdağı): executed_sell_usd / top_bid_usd >= 3.5x
+    """
+    try:
+        ask_ratio = round(float(executed_buy_usd / max(100.0, top_ask_usd)), 2)
+        bid_ratio = round(float(executed_sell_usd / max(100.0, top_bid_usd)), 2)
+
+        has_ask_iceberg = (ask_ratio >= 3.5 and executed_buy_usd >= 5000.0)
+        has_bid_iceberg = (bid_ratio >= 3.5 and executed_sell_usd >= 5000.0)
+
+        iceberg_side = "NONE"
+        if has_ask_iceberg and ask_ratio > bid_ratio:
+            iceberg_side = "ICEBERG_ASK_RESISTANCE"
+        elif has_bid_iceberg and bid_ratio > ask_ratio:
+            iceberg_side = "ICEBERG_BID_SUPPORT"
+
+        return {
+            "ask_iceberg_ratio": ask_ratio,
+            "bid_iceberg_ratio": bid_ratio,
+            "iceberg_side": iceberg_side,
+            "has_seller_iceberg": has_ask_iceberg,
+            "has_buyer_iceberg": has_bid_iceberg
+        }
+    except Exception:
+        return {
+            "ask_iceberg_ratio": 1.0,
+            "bid_iceberg_ratio": 1.0,
+            "iceberg_side": "NONE",
+            "has_seller_iceberg": False,
+            "has_buyer_iceberg": False
+        }
+
+
+def estimate_hmm_market_phase(df_candles: pd.DataFrame, wick_ratio_pct: float = 35.0, cvd_ratio: float = 50.0, vol_surge: float = 1.0) -> dict:
+    """
+    4. JIM SIMONS — Gizli Markov / Piyasa Fazı Sınıflandırıcısı (Latent Market Phase Classifier):
+    - 3 Gizli Durum:
+      1. ACCUMULATION (Sessiz Birikim)
+      2. MANIPULATION_SWEEP (Stop Avı / Likidite Süpürme Evresi - Erken kırılım tuzaktır!)
+      3. DIRECTIONAL_EXPANSION (Yönlü Genişleme / Gerçek Trend Hareketi)
+    """
+    try:
+        is_high_wick = (wick_ratio_pct >= 45.0)
+        is_cvd_divergent = (cvd_ratio >= 65.0 or cvd_ratio <= 35.0)
+
+        if is_high_wick and vol_surge >= 1.75:
+            phase = "MANIPULATION_SWEEP"
+            confidence = 0.85
+            desc = "⚠️ Manipülasyon & Stop Avı Evresi (Yüksek Fitil + Hacim Tuzağı)"
+        elif vol_surge >= 2.0 and not is_high_wick and is_cvd_divergent:
+            phase = "DIRECTIONAL_EXPANSION"
+            confidence = 0.80
+            desc = "🚀 Yönlü Kurumsal Genişleme (Gerçek Trend Koşusu)"
+        else:
+            phase = "ACCUMULATION"
+            confidence = 0.70
+            desc = "⚪ Sessiz Akümülasyon / Denge Fazı"
+
+        return {
+            "phase": phase,
+            "confidence": confidence,
+            "description": desc,
+            "is_manipulation": phase == "MANIPULATION_SWEEP",
+            "is_expansion": phase == "DIRECTIONAL_EXPANSION"
+        }
+    except Exception:
+        return {
+            "phase": "ACCUMULATION",
+            "confidence": 0.50,
+            "description": "⚪ Standart Faz",
+            "is_manipulation": False,
+            "is_expansion": False
+        }
+
+
+def calculate_fractional_kelly(win_rate_pct: float, reward_risk_ratio: float = 2.0, fraction: float = 0.25) -> float:
+    """
+    5. ED THORP — Fraksiyonel Kelly Kriteri Dinamik Marjin Çarpanı:
+    - f* = (b * p - q) / b
+    - fraction = 0.25 (Çeyrek Kelly Koruması - Kripto oynaklığına karşı optimal)
+    - Çıktı: 0.65x ile 1.35x arasında çarpan döndürür.
+    """
+    try:
+        p = float(np.clip(win_rate_pct / 100.0, 0.20, 0.90))
+        q = 1.0 - p
+        b = max(1.0, float(reward_risk_ratio))
+
+        full_kelly = (b * p - q) / b
+        scaled_kelly = full_kelly * fraction
+        mult = 1.0 + (scaled_kelly * 2.0)
+        return round(float(np.clip(mult, 0.65, 1.35)), 2)
+    except Exception:
+        return 1.0
+

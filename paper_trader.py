@@ -610,7 +610,11 @@ class PaperTrader:
                 "orderbook_ratio": pos.get("orderbook_ratio", 1.0),
                 "orderbook_bid_qty": pos.get("orderbook_bid_qty", 0.0),
                 "orderbook_ask_qty": pos.get("orderbook_ask_qty", 0.0),
-                "orderbook_wall_side": pos.get("orderbook_wall_side", "BALANCED")
+                "orderbook_wall_side": pos.get("orderbook_wall_side", "BALANCED"),
+                "orderbook_entropy": pos.get("orderbook_entropy", 0.70),
+                "hurst_exponent": pos.get("hurst_exponent", 0.50),
+                "iceberg_ratio": pos.get("iceberg_ratio", 1.0),
+                "hmm_market_phase": pos.get("hmm_market_phase", "ACCUMULATION")
             }
             self.history.append(record)
             self.save_history(critical=True)
@@ -699,7 +703,11 @@ class PaperTrader:
                 "orderbook_ratio": pos.get("orderbook_ratio", 1.0),
                 "orderbook_bid_qty": pos.get("orderbook_bid_qty", 0.0),
                 "orderbook_ask_qty": pos.get("orderbook_ask_qty", 0.0),
-                "orderbook_wall_side": pos.get("orderbook_wall_side", "BALANCED")
+                "orderbook_wall_side": pos.get("orderbook_wall_side", "BALANCED"),
+                "orderbook_entropy": pos.get("orderbook_entropy", 0.70),
+                "hurst_exponent": pos.get("hurst_exponent", 0.50),
+                "iceberg_ratio": pos.get("iceberg_ratio", 1.0),
+                "hmm_market_phase": pos.get("hmm_market_phase", "ACCUMULATION")
             }
             self.history.append(record)
             del self.open_positions[symbol]

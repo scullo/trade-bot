@@ -1005,12 +1005,21 @@ class MarketDataManager:
             'last_update': 0.0
         })
 
+    def get_symbol_cvd(self, symbol: str) -> dict:
+        clean = self._clean_symbol(symbol)
+        return self.symbol_cvd.get(clean, self.symbol_cvd.get(symbol, {}))
+
+    def get_orderbook_depth(self, symbol: str) -> dict:
+        clean = self._clean_symbol(symbol)
+        return self.orderbook_depth.get(clean, self.orderbook_depth.get(symbol, {}))
+
     async def get_jit_l2_depth(self, symbol: str) -> dict:
         """
         15ms Just-In-Time L2 Derinlik Taraması (Depth 20 Snapshot):
         - Yalnızca işleme girmeden tam 15ms önce çağrılır (Sıfır RAM/soket yükü).
         - Fiyatın %0.5 altındaki ve üstündeki kümülatif derinliği ($) ölçer.
         - 1. kademedeki duvar ile arka kademeler arasındaki çelişkiyi (Spoofing) yakalar.
+        - Boltzmann Termodinamik Entropisi ve Ken Griffin Iceberg oranlarını anında hesaplar.
         """
         clean = self._clean_symbol(symbol).replace('/', '').replace(':USDT', '')
         headers = {'User-Agent': 'Mozilla/5.0'}
@@ -1062,6 +1071,21 @@ class MarketDataManager:
 
         spoofing_detected = (top_ratio >= 2.0 and l2_ratio < 0.70)
 
+        # 🧠 BOLTZMANN ENTROPİ & KEN GRIFFIN ICEBERG HESAPLAMASI
+        from indicators import calculate_orderbook_entropy, detect_iceberg_orders
+        entropy_data = calculate_orderbook_entropy(bids, asks, top_n=20)
+
+        # 60s Kayan Taker Hacmi
+        clean_s = self._clean_symbol(symbol)
+        h_deque = self.symbol_cvd_history.get(clean_s) or self.symbol_cvd_history.get(symbol)
+        diff_buy = 0.0
+        diff_sell = 0.0
+        if h_deque and len(h_deque) >= 2:
+            diff_buy = max(0.0, float(h_deque[-1][1] - h_deque[0][1]))
+            diff_sell = max(0.0, float(h_deque[-1][2] - h_deque[0][2]))
+
+        iceberg_data = detect_iceberg_orders(diff_buy, diff_sell, top_bid_q, top_ask_q)
+
         # Likidite Boşluğu (Hava Cebi / Liquidity Vacuum) Tespiti:
         # Önündeki derinlik karşı tarafın %40'ından az veya oran aşırı asimetrikse hava cebi vardır
         vacuum_detected = False
@@ -1084,6 +1108,16 @@ class MarketDataManager:
             'vacuum_detected': vacuum_detected,
             'vacuum_side': vacuum_side,
             'depth_available': len(bids) > 0,
+            'entropy_norm': entropy_data.get('entropy_norm', 0.70),
+            'entropy_bid': entropy_data.get('entropy_bid', 0.70),
+            'entropy_ask': entropy_data.get('entropy_ask', 0.70),
+            'is_chaotic': entropy_data.get('is_chaotic', False),
+            'is_crystalline': entropy_data.get('is_crystalline', False),
+            'ask_iceberg_ratio': iceberg_data.get('ask_iceberg_ratio', 1.0),
+            'bid_iceberg_ratio': iceberg_data.get('bid_iceberg_ratio', 1.0),
+            'iceberg_side': iceberg_data.get('iceberg_side', 'NONE'),
+            'has_seller_iceberg': iceberg_data.get('has_seller_iceberg', False),
+            'has_buyer_iceberg': iceberg_data.get('has_buyer_iceberg', False),
             'last_update': now_ts
         }
 

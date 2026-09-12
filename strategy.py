@@ -1368,6 +1368,12 @@ class StrategyEngine:
         max_margin_cap = 130.0 if (has_whale_flow or c_count >= 4) else 115.0
         dyn_margin = min(max_margin_cap, max(40.0, round(dyn_margin * getattr(self, 'margin_multiplier', 1.0), 2)))
 
+        # 🎲 ED THORP FRAKSİYONEL KELLY KRİTERİ İLE MARJİN MODÜLASYONU
+        from indicators import calculate_fractional_kelly
+        est_win_rate = 72.0 if (has_whale_flow or c_count >= 4) else (60.0 if c_count >= 3 else 52.0)
+        kelly_mult = calculate_fractional_kelly(win_rate_pct=est_win_rate, reward_risk_ratio=2.0, fraction=0.25)
+        dyn_margin = min(max_margin_cap, max(40.0, round(dyn_margin * kelly_mult, 2)))
+
         # ── 1c. GERÇEK CVD (TAKER BUY RATIO), İVME VE FİTİL ORANI HESABI ──
         cvd_pct = 50.0
         candle_velocity = 1.0
@@ -1419,6 +1425,32 @@ class StrategyEngine:
             print(f">> [RED - FİTİL KALKANI] {symbol}: {rej_msg}")
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "EXCESSIVE_WICK_TRAP_BLOCKED"}
+
+        # 🌀 BENOIT MANDELBROT FRAKTAL REJİM KALKANI (HURST EXPONENT R/S ANALİZİ)
+        from indicators import calculate_hurst_exponent, estimate_hmm_market_phase
+        df_5m_quant = self.market_data.candles_5m.get(symbol, pd.DataFrame()) if self.market_data else pd.DataFrame()
+        hurst_val = 0.50
+        if isinstance(df_5m_quant, pd.DataFrame) and len(df_5m_quant) >= 30 and 'close' in df_5m_quant.columns:
+            hurst_val = calculate_hurst_exponent(df_5m_quant['close'].values)
+
+        # H < 0.45: Ortalamaya Dönen (Anti-persistent / Mean-reverting) piyasada Breakout TUZAKTIR!
+        if trade_type == "BREAKOUT" and hurst_val < 0.45:
+            rej_msg = f"🌀 Mandelbrot Fraktal Kalkanı: Fiyat serisi ortalamaya dönme modunda (Hurst H: {hurst_val:.2f} < 0.45). Sahte kırılım (Fakeout) riski yüksek, Breakout engellendi."
+            print(f">> [RED - MANDELBROT FAKEOUT] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "MANDELBROT_MEAN_REVERTING_FAKEOUT_BLOCKED"}
+        elif trade_type != "BREAKOUT" and hurst_val < 0.45:
+            if confluence_list is not None and isinstance(confluence_list, list) and "🌀_Mandelbrot_Ortalamaya_Dönüş_Teyidi" not in confluence_list:
+                confluence_list.append("🌀_Mandelbrot_Ortalamaya_Dönüş_Teyidi")
+
+        # 🧠 JIM SIMONS GİZLİ MARKOV / PİYASA FAZI KALKANI (HMM LATENT PHASE CLASSIFIER)
+        hmm_info = estimate_hmm_market_phase(df_5m_quant, wick_ratio_pct=wick_ratio_pct, cvd_ratio=cvd_pct, vol_surge=vol_surge)
+        hmm_phase = hmm_info.get("phase", "ACCUMULATION")
+        if hmm_phase == "MANIPULATION_SWEEP" and trade_type == "BREAKOUT":
+            rej_msg = f"🧠 Simons HMM Kalkanı: Piyasa %{hmm_info.get('confidence', 0.8)*100:.0f} olasılıkla Manipülasyon / Stop Avı evresinde ({hmm_info.get('description')}). Kırılımlar tuzaklıdır, Breakout engellendi."
+            print(f">> [RED - SIMONS HMM MANIPULATION] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "SIMONS_HMM_MANIPULATION_PHASE_BLOCKED"}
 
         # ── DİNAMİK STOP VE HEDEFLERİ (YAPISAL SEVİYE & ADAPTİF FİTİL KALKANI) ──
         # Kripto piyasasında %0.50 gibi aşırı dar stoplar normal 5M fitillerinde sahte stop-out'lara yol açar.
@@ -1558,6 +1590,36 @@ class StrategyEngine:
                         self.log_rejection(symbol, reason, rej_msg)
                         return {"error": "L2_FLASH_SPOOFING_ASK_BLOCKED"}
 
+                    # 🌡️ LUDWIG BOLTZMANN EMİR DEFTERİ ENTROPİ KALKANI:
+                    # L2 tahtasındaki likidite dağılımının kaotik mi yoksa kristalleşmiş kurumsal blokaj mı olduğunu ölçer.
+                    entropy_norm = float(l2_info.get('entropy_norm', 0.70))
+                    if entropy_norm >= 0.88:
+                        rej_msg = f"🌡️ Boltzmann Entropi Kalkanı [{archetype_label}]: L2 tahta entropisi %{entropy_norm*100:.1f} >= %88.0 (Kaotik & Dağınık Tahta). Kurumsal savunma çapası yok, işlem engellendi."
+                        print(f">> [RED - BOLTZMANN KAOS] {symbol}: {rej_msg}")
+                        self.log_rejection(symbol, reason, rej_msg)
+                        return {"error": "BOLTZMANN_HIGH_ENTROPY_CHAOS_BLOCKED"}
+                    elif entropy_norm <= 0.60:
+                        if confluence_list is not None and isinstance(confluence_list, list) and "🌡️_Boltzmann_Kristal_Tahta_Teyidi" not in confluence_list:
+                            confluence_list.append("🌡️_Boltzmann_Kristal_Tahta_Teyidi")
+
+                    # 🧊 KEN GRIFFIN GİZLİ LİKİDİTE (ICEBERG / BUZDAĞI) KALKANI:
+                    # Dirençte veya destekte görünmeyen kurumsal buzdağı emirlerini yakalar.
+                    has_seller_iceberg = bool(l2_info.get('has_seller_iceberg', False))
+                    has_buyer_iceberg = bool(l2_info.get('has_buyer_iceberg', False))
+                    ask_ice_r = float(l2_info.get('ask_iceberg_ratio', 1.0))
+                    bid_ice_r = float(l2_info.get('bid_iceberg_ratio', 1.0))
+
+                    if side == "LONG" and has_seller_iceberg:
+                        rej_msg = f"🧊 Ken Griffin Buzdağı Kalkanı [{archetype_label}]: Fiyat dirençte gizli satıcı buzdağına çarptı (Taker Alım / Tahta: {ask_ice_r:.1f}x >= 3.5x). Satıcı emilimi var, LONG engellendi."
+                        print(f">> [RED - SATICI ICEBERG ENGELİ] {symbol}: {rej_msg}")
+                        self.log_rejection(symbol, reason, rej_msg)
+                        return {"error": "GRIFFIN_SELLER_ICEBERG_BLOCKED"}
+                    elif side == "SHORT" and has_buyer_iceberg:
+                        rej_msg = f"🧊 Ken Griffin Buzdağı Kalkanı [{archetype_label}]: Fiyat destekte gizli alıcı buzdağına çarptı (Taker Satım / Tahta: {bid_ice_r:.1f}x >= 3.5x). Alıcı emilimi var, SHORT engellendi."
+                        print(f">> [RED - ALICI ICEBERG ENGELİ] {symbol}: {rej_msg}")
+                        self.log_rejection(symbol, reason, rej_msg)
+                        return {"error": "GRIFFIN_BUYER_ICEBERG_BLOCKED"}
+
                     # Veto 1: Spoofing Tuzağı (1. kademede duvar var ama arkadaki 19 kademe boş)
                     if side == "LONG" and is_dynamic_spoofing:
                         rej_msg = f"🛡️ L2 Spoofing Kalkanı [{archetype_label}]: 1. kademedeki alıcı duvarı sahte (1. Kademe: {top_ratio:.1f}x, Kümülatif Derinlik: {l2_ratio:.2f}x < {spoof_l2_min:.2f}x). Arkadaki 19 kademe boş, alıcı tuzağı engellendi."
@@ -1636,7 +1698,11 @@ class StrategyEngine:
             orderbook_ratio=obi_ratio,
             orderbook_bid_qty=obi_bid_qty,
             orderbook_ask_qty=obi_ask_qty,
-            orderbook_wall_side=obi_wall_side
+            orderbook_wall_side=obi_wall_side,
+            orderbook_entropy=float(l2_info.get('entropy_norm', 0.70)) if 'l2_info' in locals() and l2_info else 0.70,
+            hurst_exponent=hurst_val if 'hurst_val' in locals() else 0.50,
+            iceberg_ratio=max(float(l2_info.get('ask_iceberg_ratio', 1.0)), float(l2_info.get('bid_iceberg_ratio', 1.0))) if 'l2_info' in locals() and l2_info else 1.0,
+            hmm_market_phase=hmm_phase if 'hmm_phase' in locals() else 'ACCUMULATION'
         )
         if isinstance(res, dict) and res.get("error") == "INSUFFICIENT_BALANCE":
             await self.notifier.notify_insufficient_balance(
