@@ -117,6 +117,17 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         'num_format': '+0.00%;-0.00%;0.00%'
     })
 
+    cell_side_long = workbook.add_format({
+        'font_name': 'Segoe UI', 'font_size': 9, 'bold': True,
+        'font_color': '#059669', 'bg_color': '#ECFDF5',
+        'align': 'center', 'valign': 'vcenter', 'border': 1, 'border_color': '#A7F3D0'
+    })
+    cell_side_short = workbook.add_format({
+        'font_name': 'Segoe UI', 'font_size': 9, 'bold': True,
+        'font_color': '#DC2626', 'bg_color': '#FEF2F2',
+        'align': 'center', 'valign': 'vcenter', 'border': 1, 'border_color': '#FECACA'
+    })
+
     # ==================== HESAPLAMALAR ====================
     total_trades = len(history_data)
     win_trades = [h for h in history_data if _safe_float(h.get('net_pnl', 0)) >= 0]
@@ -186,6 +197,28 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
     pie_chart.set_title({'name': '🎯 Win / Loss Dağılımı', 'name_font': {'name': 'Segoe UI', 'size': 12, 'bold': True}})
     pie_chart.set_size({'width': 360, 'height': 240})
     ws1.insert_chart('B13', pie_chart)
+
+    # Yön Analizi (LONG vs SHORT)
+    long_trades = [h for h in history_data if h.get('side') == 'LONG']
+    short_trades = [h for h in history_data if h.get('side') == 'SHORT']
+    long_count = len(long_trades)
+    short_count = len(short_trades)
+    long_pnl = sum(_safe_float(h.get('net_pnl', 0)) for h in long_trades)
+    short_pnl = sum(_safe_float(h.get('net_pnl', 0)) for h in short_trades)
+    long_wr = (sum(1 for h in long_trades if _safe_float(h.get('net_pnl', 0)) >= 0) / long_count * 100) if long_count > 0 else 0.0
+    short_wr = (sum(1 for h in short_trades if _safe_float(h.get('net_pnl', 0)) >= 0) / short_count * 100) if short_count > 0 else 0.0
+
+    ws1.write('B27', 'Piyasa Yönü (Side)', th_fmt)
+    ws1.write('C27', 'İşlem & Kazanma %', th_fmt)
+    ws1.write('D27', 'Toplam Net PnL ($)', th_fmt)
+
+    ws1.write('B28', '🟢 LONG (Boğa)', cell_left)
+    ws1.write('C28', f"{long_count} İşlem (%{long_wr:.1f})", cell_center)
+    ws1.write('D28', long_pnl, cell_green if long_pnl >= 0 else cell_red)
+
+    ws1.write('B29', '🔴 SHORT (Ayı)', cell_left)
+    ws1.write('C29', f"{short_count} İşlem (%{short_wr:.1f})", cell_center)
+    ws1.write('D29', short_pnl, cell_green if short_pnl >= 0 else cell_red)
 
     # Parite bazında özet tablosu
     pair_stats = {}
@@ -389,7 +422,8 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
 
         ws.write(r_idx, 0, h.get('id', f'TR-{r_idx}'), cell_center)
         ws.write(r_idx, 1, sym, cell_left)
-        ws.write(r_idx, 2, h.get('side', 'LONG'), cell_center)
+        side_val = h.get('side', 'LONG')
+        ws.write(r_idx, 2, side_val, cell_side_long if side_val == 'LONG' else cell_side_short)
         ws.write(r_idx, 3, f"{h.get('leverage', 5)}x", cell_center)
         ws.write(r_idx, 4, h.get('trade_type', 'SCALP'), cell_center)
         ws.write(r_idx, 5, h.get('entry_time', ''), cell_center)
@@ -470,7 +504,14 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         # Dinamik Fonlama Oranı & Squeeze Durumu
         f_rate = _safe_float(h.get('entry_funding_rate', 0.0100))
         f_stat = str(h.get('funding_status', 'BALANCED'))
-        f_lbl = "Dengeli" if f_stat == "BALANCED" else ("⚠️ Short Squeeze Korumalı" if f_stat == "SHORT_SQUEEZE_RISK" else "🔥 Aşırı Long")
+        if f_stat == "BALANCED":
+            f_lbl = "Dengeli"
+        elif f_stat == "SHORT_SQUEEZE_RISK":
+            f_lbl = "⚠️ Short Squeeze Korumalı"
+        elif f_stat in ("LONG_OVERHEATED", "LONG_SQUEEZE_RISK"):
+            f_lbl = "🔥 Long Squeeze / Tepe Şişkinliği"
+        else:
+            f_lbl = f_stat
         ws.write(r_idx, 59, f"%{f_rate:+.4f}", cell_roe_green if f_rate >= 0 else cell_roe_red)
         ws.write(r_idx, 60, f_lbl, cell_left)
 
@@ -629,8 +670,15 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
 
     strat_stats = {}
     for h in history_data:
-        r = h.get('reason', 'Diğer Sinyaller')
-        if 'nPOC' in r:
+        r = str(h.get('reason', 'Diğer Sinyaller'))
+        s_id = str(h.get('setup_id', ''))
+        if 'SETUP_11' in s_id or 'Resistance Flip' in r or 'Direnç Retest' in r:
+            cat = 'Bearish Direnç Retest (Setup 11)'
+        elif 'SETUP_12' in s_id or 'Destek Çöküşü' in r or 'Support Breakdown' in r:
+            cat = 'Destek Çöküşü / Breakdown (Setup 12)'
+        elif 'SETUP_13' in s_id or 'S3 Direnc' in r:
+            cat = 'S3 Direnç Retesti / Ayı Devamı (Setup 13)'
+        elif 'nPOC' in r:
             cat = 'nPOC Likidite Sekmesi / Reddi'
         elif 'mVAL' in r or 'mVAH' in r:
             cat = 'mVAL / mVAH Makro Kırılımı'

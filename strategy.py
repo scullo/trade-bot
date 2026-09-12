@@ -833,10 +833,27 @@ class StrategyEngine:
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "OI_SHORT_COVERING_PUMP_BLOCKED"}
 
+        # Veto 3: Kurumsal Long Baskısı — Fiyat yükselirken açık faiz patlıyorsa yükselen rokete SHORT açmak intihardır!
+        if side == "SHORT" and oi_status == "AGGRESSIVE_LONG_EXPANSION":
+            rej_msg = f"🛡️ Açık Faiz (OI) Kalkanı: Paritede açık faiz hızla artarken (%{delta_oi_pct:+.2f}) fiyat yükseliyor. Piyasaya taze kurumsal long basılıyor, zayıf SHORT engellendi."
+            print(f">> [RED - OI LONG BASKISI] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "OI_AGGRESSIVE_LONG_BLOCKED"}
+
+        # Veto 4: Sahte Dökülme / Long Kapaması — Fiyat düşerken açık faiz çöküyorsa dip breakdown SHORT açılmaz!
+        if side == "SHORT" and is_breakout and oi_status == "LONG_LIQUIDATION_DUMP":
+            rej_msg = f"🛡️ Sahte Dökülme Kalkanı: Fiyat düşerken açık faiz düşüyor (%{delta_oi_pct:+.2f}). Hareket taze short değil, panik long kapamasıyla yürüyor. Dip çöküş kırılımı engellendi."
+            print(f">> [RED - SAHTE DÖKÜLME KALKANI] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "OI_LONG_LIQUIDATION_DUMP_BLOCKED"}
+
         # OI Confluence Bonusu
         if side == "LONG" and oi_status == "AGGRESSIVE_LONG_EXPANSION":
             if confluence_list is not None and isinstance(confluence_list, list):
                 confluence_list.append("Kurumsal_OI_Girişi_Teyitli")
+        elif side == "SHORT" and oi_status == "AGGRESSIVE_SHORT_EXPANSION":
+            if confluence_list is not None and isinstance(confluence_list, list):
+                confluence_list.append("Kurumsal_OI_Short_Baskısı_Teyitli")
 
         # ── 1c-3. KURUMSAL SEANS ÇAPALARI & JUDAS SWING LİKİDİTE KALKANI (PDH / PDL / ASYA) ──
         snaps_early = snapshot_levels or {}
@@ -859,6 +876,20 @@ class StrategyEngine:
                         self.log_rejection(symbol, reason, rej_msg)
                         return {"error": "JUDAS_SWING_HIGH_BLOCKED"}
 
+        # 1b. Judas Swing Dip Tuzağı: Fiyat Asya Dibini veya PDL'yi delip hemen ardından üstüne çıkmışsa dip breakdown SHORT VETO!
+        if side == "SHORT" and is_breakout:
+            ref_low = min(pdl_lvl, asia_low_lvl) if (pdl_lvl > 0 and asia_low_lvl > 0) else max(pdl_lvl, asia_low_lvl)
+            if ref_low > 0 and entry_price <= ref_low * 1.005 and entry_price >= ref_low * 0.992:
+                df_5m_chk = self.market_data.candles_5m.get(symbol, pd.DataFrame()) if self.market_data else pd.DataFrame()
+                if not df_5m_chk.empty and len(df_5m_chk) >= 2:
+                    prev_low = float(df_5m_chk['low'].iloc[-2])
+                    prev_close = float(df_5m_chk['close'].iloc[-2])
+                    if prev_low <= ref_low and prev_close > ref_low:
+                        rej_msg = f"🛡️ Judas Swing Dip Tuzağı: Asya/PDL dibi (${ref_low:.4f}) iğnelenip içeri dönüldü (Bear Trap). Dip SHORT engellendi."
+                        print(f">> [RED - JUDAS SWING] {symbol}: {rej_msg}")
+                        self.log_rejection(symbol, reason, rej_msg)
+                        return {"error": "JUDAS_SWING_LOW_BLOCKED"}
+
         # 2. Dip Likidite Süpürmesi Teyidi: Asya Dibi veya PDL delinip fiyata alış geldiyse Sekme LONG'a güçlü teyit ekle!
         ref_low = min(pdl_lvl, asia_low_lvl) if (pdl_lvl > 0 and asia_low_lvl > 0) else max(pdl_lvl, asia_low_lvl)
         if side == "LONG" and not is_breakout and ref_low > 0:
@@ -869,6 +900,16 @@ class StrategyEngine:
                 if prev_low <= ref_low and prev_close > ref_low:
                     if confluence_list is not None and isinstance(confluence_list, list):
                         confluence_list.append("Asya_PDL_Dip_Süpürmesi_Teyitli")
+        elif side == "SHORT" and not is_breakout:
+            ref_high = max(pdh_lvl, asia_high_lvl)
+            if ref_high > 0:
+                df_5m_chk = self.market_data.candles_5m.get(symbol, pd.DataFrame()) if self.market_data else pd.DataFrame()
+                if not df_5m_chk.empty and len(df_5m_chk) >= 2:
+                    prev_high = float(df_5m_chk['high'].iloc[-2])
+                    prev_close = float(df_5m_chk['close'].iloc[-2])
+                    if prev_high >= ref_high and prev_close < ref_high:
+                        if confluence_list is not None and isinstance(confluence_list, list):
+                            confluence_list.append("Asya_PDH_Tepe_Süpürmesi_Teyitli")
 
         # 1c. GLOBAL LİKİDASYON RADARI & TASFİYE SÜPÜRME TEYİDİ (!forceOrder Confluence)
         liq_stats = {}
@@ -1332,15 +1373,15 @@ class StrategyEngine:
                 return {"error": "MACRO_TREND_VIOLATION"}
 
         # ── 8. DİNAMİK MARJİN & VOLATİLİTE PARİTESİ (RISK PARITY) ──
-        # Her paritede potansiyel dolar riskini ~$1.50 seviyesinde eşitlemek için:
+        # Her paritede potansiyel dolar riskini ~$1.50 - $2.50 seviyesinde eşitlemek için:
         if "LONDRA" in session_str:
             if side == "SHORT":
-                self.margin_multiplier *= 1.2
+                self.margin_multiplier *= 1.1
             elif side == "LONG":
-                self.margin_multiplier *= 0.8
+                self.margin_multiplier *= 0.9
         elif "ASYA" in session_str:
-            if side == "SHORT":
-                self.margin_multiplier *= 0.8
+            # Asya seansında yön ayrımı yapılmaz; hem Long hem Short eşit riskle çalışır
+            self.margin_multiplier *= 0.95
 
         # OTONOM COIN DNA LİGİ MARJİN VE RİSK ÖLÇEKLEMESİ
         persona_margin_mult = persona.get("margin_scale", 1.0)
@@ -1367,7 +1408,8 @@ class StrategyEngine:
                 confluence_list.append("🐋_Balina_Akışı_Teyidi")
 
         c_count = len(confluence_list or [1])
-        max_margin_cap = 130.0 if (has_whale_flow or c_count >= 4) else 115.0
+        # 🛡️ ASİMETRİK RİSK TAVANI: Hiçbir pozisyonda marjinin $100'ü aşmasına izin verilmez (ONG/BICO -$6 stop facialarını engeller)
+        max_margin_cap = 100.0 if (has_whale_flow or c_count >= 4) else 85.0
         dyn_margin = min(max_margin_cap, max(40.0, round(dyn_margin * getattr(self, 'margin_multiplier', 1.0), 2)))
 
         # 🎲 ED THORP FRAKSİYONEL KELLY KRİTERİ İLE MARJİN MODÜLASYONU
@@ -2144,6 +2186,8 @@ class StrategyEngine:
             regime_desc = "⚪ YATAY / SIKIŞMA (Ranging)"
             is_range_regime = True
 
+        trend_regime = regime_desc
+
         # Parite Bazlı Alfa ve Hacim Metrikleri (Dinamik Ayrışma)
         sym_met = self.market_data.get_symbol_metrics(symbol) if (self.market_data and hasattr(self.market_data, 'get_symbol_metrics')) else {}
         coin_rs_score = sym_met.get("dynamic_rs_score", 0.0)
@@ -2241,10 +2285,10 @@ class StrategyEngine:
             if vol_surge < min_breakout_vol:
                 self.log_rejection(symbol, "SETUP 2 S4 Breakdown", f"{'Yatay piyasada sahte kırılım kalkanı: ' if is_range_regime else ''}Hacim patlaması {vol_surge:.2f}x yetersiz (en az {min_breakout_vol:.2f}x patlama aranıyor)")
                 return
-            if dip_avwap > 0 and close_price >= dip_avwap:
-                self.log_rejection(symbol, "SETUP 2 S4 Breakdown", f"Fiyat (${close_price:.4f}) Dip AVWAP (${dip_avwap:.4f}) üstünde kaldığı için ayı onayı verilmedi")
+            if tepe_avwap > 0 and close_price >= tepe_avwap:
+                self.log_rejection(symbol, "SETUP 2 S4 Breakdown", f"Fiyat (${close_price:.4f}) Tepe AVWAP (${tepe_avwap:.4f}) üstünde kaldığı için ayı onayı verilmedi")
                 return
-            if dip_avwap == 0 or close_price < dip_avwap:
+            if tepe_avwap == 0 or close_price < tepe_avwap:
                 tp1 = s5 if (s5 > 0 and s5 <= close_price * 0.992) else (mval if (mval > 0 and mval <= close_price * 0.992) else close_price * 0.985)
                 candidates = [c for c in [below_npoc, below_nval, dip_avwap] if c and c <= tp1 * 0.992]
                 tp2 = max(candidates) if candidates else (mval if (mval > 0 and mval <= tp1 * 0.992) else None)
@@ -2256,11 +2300,11 @@ class StrategyEngine:
 
                 await self._handle_open(
                     symbol=symbol, side="SHORT", entry_price=close_price,
-                    reason="Taze S4 Breakdown + Dip AVWAP Alti Onay",
+                    reason="Taze S4 Breakdown + Ayı İvmesi Onayı",
                     soft_stop=soft_stop, hard_stop=hard_stop,
                     tp1=tp1, tp2=tp2, trade_type="BREAKOUT",
                     snapshot_levels=levels, setup_id="SETUP_2_S4_BREAKDOWN",
-                    confluence_list=["S4_Breakdown", "Dip_AVWAP_Alti"]
+                    confluence_list=["S4_Breakdown", "Tepe_AVWAP_Alti"]
                 )
                 return
 
@@ -2283,6 +2327,16 @@ class StrategyEngine:
                     f"Makro Düşüş Kalkanı (BTC 1S: %{btc_chg_1h:+.2f}, RS: {coin_rs_score:+.2f}); Piyasa genel düşüşündeyken S3 destek sekmesi engellendi."
                 )
                 return
+
+            if "GÜÇLÜ AYI" in trend_regime:
+                cvd_data_s3 = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+                cvd_ratio_s3 = float(cvd_data_s3.get('ratio_60s', 50.0))
+                if cvd_ratio_s3 < 58.0 or coin_rs_score < 0.20:
+                    self.log_rejection(
+                        symbol, "SETUP 3 S3 Destek",
+                        f"Güçlü Ayı Rejimi Kalkanı: Genel piyasa düşüşteyken S3 desteğinde LONG için alıcı akışı (CVD: %{cvd_ratio_s3:.1f} < %58, RS: {coin_rs_score:+.2f} < 0.20) yetersiz. Düşen bıçak engellendi."
+                    )
+                    return
 
             # 🛡️ GÖRECELİ GÜÇ (RS) BARİYERİ: Zayıf coinlerde S3 desteği tutunamaz
             if coin_rs_score < -0.30 or is_severely_weak:
@@ -2548,6 +2602,16 @@ class StrategyEngine:
                 )
                 return
 
+            if "GÜÇLÜ AYI" in trend_regime:
+                cvd_data_npoc = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+                cvd_ratio_npoc = float(cvd_data_npoc.get('ratio_60s', 50.0))
+                if cvd_ratio_npoc < 58.0 or coin_rs_score < 0.20:
+                    self.log_rejection(
+                        symbol, "SETUP 9 nPOC Sekmesi",
+                        f"Güçlü Ayı Rejimi Kalkanı: Genel piyasa düşüşteyken nPOC sekmesi için güçlü alıcı akışı (CVD: %{cvd_ratio_npoc:.1f} < %58, RS: {coin_rs_score:+.2f} < 0.20) bulunamadı. Düşen bıçak engellendi."
+                    )
+                    return
+
             # 🛡️ GÖRECELİ GÜÇ (RS) BARİYERİ: Negatif RS'li zayıf coinlerde nPOC desteği tutunamaz
             if coin_rs_score < -0.30 or is_severely_weak:
                 self.log_rejection(
@@ -2652,3 +2716,159 @@ class StrategyEngine:
                 confluence_list=["nPOC_Rejection", f"Target_{target_name}"]
             )
             return
+
+        # ─────────────────────────────────────────────────────────────────
+        # SETUP 11: PİVOT P / mPOC / TEPE AVWAP ALTTAN RETEST AYI REDDİ SHORT (Bearish Resistance Flip)
+        # Fiyat Pivot P veya mPOC altında seyrederken, yukarı tepki verip bu seviyeyi alttan test eder
+        # ve satıcı tepkisiyle (üst fitil / kırmızı kapanış) reddedilir → Trend yönünde yüksek R:R SHORT
+        # ─────────────────────────────────────────────────────────────────
+        resist_cands = [lvl for lvl in [p, mpoc, tepe_avwap] if lvl and lvl > 0]
+        nearby_resists = [lvl for lvl in resist_cands if close_price < lvl and current_candle.get('high', close_price) >= lvl * 0.998 and lvl <= close_price * 1.020]
+
+        if nearby_resists:
+            resist_lvl = min(nearby_resists)
+            resist_tag = "Pivot P" if resist_lvl == p else ("mPOC" if resist_lvl == mpoc else "Tepe AVWAP")
+
+            struct_ok, struct_reason = self.check_structural_invalidation(symbol, "SHORT", close_price, levels)
+            if not struct_ok:
+                self.log_rejection(symbol, f"SETUP 11 {resist_tag} Retest Reddi", struct_reason)
+            else:
+                if "GÜÇLÜ BOĞA" in trend_regime or (coin_rs_score >= 1.2 and not is_bear_dump):
+                    self.log_rejection(symbol, f"SETUP 11 {resist_tag} Retest Reddi", f"Piyasa Boğa rejimindeyken (RS: {coin_rs_score:+.2f}) direnç retest shortu açılmadı.")
+                else:
+                    c_high = current_candle.get('high', close_price)
+                    c_low = current_candle.get('low', close_price)
+                    c_open = current_candle.get('open', close_price)
+                    c_range = c_high - c_low
+                    upper_wick = (c_high - max(c_open, close_price)) if c_range > 0 else 0
+                    upper_wick_ratio = (upper_wick / c_range) if c_range > 0 else 0
+                    is_seller_rejection = (upper_wick_ratio >= 0.18) or (close_price < c_open)
+
+                    cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+                    cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
+
+                    obi_data = self.market_data.get_orderbook_depth(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_orderbook_depth')) else {}
+                    obi_imbalance = float(obi_data.get('imbalance', 0.0))
+                    obi_ratio = float(obi_data.get('ratio', 1.0))
+                    has_seller_flow = (cvd_ratio <= 48.0) or (obi_imbalance <= -0.15) or (obi_ratio <= 0.75)
+
+                    if not is_seller_rejection:
+                        self.log_rejection(symbol, f"SETUP 11 {resist_tag} Retest Reddi", f"Direnç retestinde satıcı reddi (üst fitil veya kırmızı gövde) yetersiz (Fitil: %{upper_wick_ratio*100:.1f})")
+                    elif not has_seller_flow and vol_surge < 1.2:
+                        self.log_rejection(symbol, f"SETUP 11 {resist_tag} Retest Reddi", f"Direnç retestinde satıcı akışı yetersiz (CVD: %{cvd_ratio:.1f}, OBI: %{obi_imbalance*100:.1f})")
+                    else:
+                        down_targets = [
+                            lvl for lvl in [s3, below_npoc, mval, s4, s5]
+                            if lvl and lvl <= close_price * 0.992
+                        ]
+                        down_targets.sort(reverse=True)
+                        tp1_target = down_targets[0] if down_targets else close_price * 0.985
+                        tp2_target = down_targets[-1] if len(down_targets) > 1 else (s4 if (s4 > 0 and s4 < tp1_target) else None)
+
+                        buffer = resist_lvl * 0.003
+                        soft_stop = min(resist_lvl + buffer, close_price * 1.008)
+                        hard_stop = min(resist_lvl + buffer * 2.0, close_price * 1.012)
+
+                        await self._handle_open(
+                            symbol=symbol, side="SHORT", entry_price=close_price,
+                            reason=f"{resist_tag} Direnç Retest Reddi (Bearish Resistance Flip)",
+                            soft_stop=soft_stop, hard_stop=hard_stop,
+                            tp1=tp1_target, tp2=tp2_target, trade_type="SCALP",
+                            snapshot_levels=levels, setup_id="SETUP_11_RESISTANCE_FLIP",
+                            confluence_list=[f"{resist_tag}_Retest_Reddi", "Bearish_Flow"]
+                        )
+                        return
+
+        # ─────────────────────────────────────────────────────────────────
+        # SETUP 12: DESTEK ÇÖKÜŞÜ SHORT (Aşağı nPOC / S3 Breakdown with Seller Wall)
+        # Fiyat Aşağı nPOC veya S3 desteğini aşağı kırar ve tahtada satıcı duvarı baskındır
+        # Düşen bıçağı tutmak yerine trend yönünde SHORT açılarak satıcı gücü arkaya alınır!
+        # ─────────────────────────────────────────────────────────────────
+        break_support = None
+        support_type = ""
+        if support_npoc and support_npoc > 0 and prev_close >= support_npoc and close_price < support_npoc:
+            break_support = support_npoc
+            support_type = "Aşağı nPOC"
+        elif s3 and s3 > 0 and prev_close >= s3 and close_price < s3 and (close_price > s4 if s4 else True):
+            break_support = s3
+            support_type = "S3 Destek"
+
+        if break_support:
+            struct_ok, struct_reason = self.check_structural_invalidation(symbol, "SHORT", close_price, levels)
+            if not struct_ok:
+                self.log_rejection(symbol, f"SETUP 12 {support_type} Çöküşü", struct_reason)
+            else:
+                cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+                cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
+
+                obi_data = self.market_data.get_orderbook_depth(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_orderbook_depth')) else {}
+                obi_imbalance = float(obi_data.get('imbalance', 0.0))
+                obi_ratio = float(obi_data.get('ratio', 1.0))
+
+                has_seller_pressure = (obi_ratio <= 0.65) or (obi_imbalance <= -0.20) or (cvd_ratio <= 42.0)
+
+                if not has_seller_pressure and vol_surge < 1.3:
+                    self.log_rejection(symbol, f"SETUP 12 {support_type} Çöküşü", f"Destek kırılımında satıcı duvarı / CVD teyidi yok (OBI: %{obi_imbalance*100:.1f}, CVD: %{cvd_ratio:.1f})")
+                elif "GÜÇLÜ BOĞA" in trend_regime:
+                    self.log_rejection(symbol, f"SETUP 12 {support_type} Çöküşü", "Piyasa Güçlü Boğa rejimindeyken destek kırılım shortu açılmadı.")
+                else:
+                    down_targets = [lvl for lvl in [s4, s5, below_nval, mval] if lvl and lvl <= close_price * 0.992]
+                    down_targets.sort(reverse=True)
+                    tp1_target = down_targets[0] if down_targets else close_price * 0.985
+                    tp2_target = down_targets[-1] if len(down_targets) > 1 else None
+
+                    buffer = break_support * 0.004
+                    soft_stop = min(break_support + buffer, close_price * 1.008)
+                    hard_stop = min(break_support + buffer * 2.0, close_price * 1.012)
+
+                    await self._handle_open(
+                        symbol=symbol, side="SHORT", entry_price=close_price,
+                        reason=f"{support_type} Destek Çöküşü (Bearish Support Breakdown)",
+                        soft_stop=soft_stop, hard_stop=hard_stop,
+                        tp1=tp1_target, tp2=tp2_target, trade_type="BREAKOUT",
+                        snapshot_levels=levels, setup_id="SETUP_12_SUPPORT_BREAKDOWN",
+                        confluence_list=[f"{support_type}_Breakdown", "Satıcı_Baskısı_Teyitli"]
+                    )
+                    return
+
+        # ─────────────────────────────────────────────────────────────────
+        # SETUP 13: S3 DİRENÇ RETESTİ VE AYI DEVAMI SHORT (S3 Resistance Flip)
+        # Fiyat S3'ün altındayken (S3 kırılmışken) yukarı dönüp S3'ü alttan direnç olarak test eder
+        # ve satıcı tepkisiyle geri itilir → Trend yönünde devam SHORT
+        # ─────────────────────────────────────────────────────────────────
+        if s3 and s3 > 0 and prev_close < s3 and current_candle.get('high', close_price) >= s3 * 0.998 and close_price < s3 and (close_price > s4 if s4 else True):
+            struct_ok, struct_reason = self.check_structural_invalidation(symbol, "SHORT", close_price, levels)
+            if not struct_ok:
+                self.log_rejection(symbol, "SETUP 13 S3 Retest Reddi", struct_reason)
+            else:
+                c_high = current_candle.get('high', close_price)
+                c_low = current_candle.get('low', close_price)
+                c_open = current_candle.get('open', close_price)
+                c_range = c_high - c_low
+                upper_wick = (c_high - max(c_open, close_price)) if c_range > 0 else 0
+                upper_wick_ratio = (upper_wick / c_range) if c_range > 0 else 0
+                is_seller_rej = (upper_wick_ratio >= 0.18) or (close_price < c_open)
+
+                if not is_seller_rej:
+                    self.log_rejection(symbol, "SETUP 13 S3 Retest Reddi", f"S3 retestinde satıcı tepkisi yok (Fitil: %{upper_wick_ratio*100:.1f})")
+                elif "GÜÇLÜ BOĞA" in trend_regime:
+                    self.log_rejection(symbol, "SETUP 13 S3 Retest Reddi", "Piyasa Güçlü Boğa rejimindeyken S3 retest shortu açılmadı.")
+                else:
+                    down_targets = [lvl for lvl in [s4, s5, below_npoc, below_nval] if lvl and lvl <= close_price * 0.992]
+                    down_targets.sort(reverse=True)
+                    tp1_target = down_targets[0] if down_targets else close_price * 0.985
+                    tp2_target = down_targets[-1] if len(down_targets) > 1 else None
+
+                    buffer = (p - s3) * BUFFER_RATIO if (p > s3) else (s3 * 0.003)
+                    soft_stop = min(s3 + buffer, close_price * 1.008)
+                    hard_stop = min(s3 + buffer * 2.0, close_price * 1.012)
+
+                    await self._handle_open(
+                        symbol=symbol, side="SHORT", entry_price=close_price,
+                        reason="S3 Direnc Retest Sekmesi (Resistance Flip)",
+                        soft_stop=soft_stop, hard_stop=hard_stop,
+                        tp1=tp1_target, tp2=tp2_target, trade_type="SCALP",
+                        snapshot_levels=levels, setup_id="SETUP_13_S3_RESISTANCE_FLIP",
+                        confluence_list=["S3_Retest", "Bearish_Continuation"]
+                    )
+                    return
