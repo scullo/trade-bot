@@ -262,42 +262,63 @@ class PaperTrader:
             pos["trough_price"] = current_price
 
         if side == "LONG":
-            current_roe = ((current_price - entry) / entry) * lev * 100.0
-            mfe_roe = ((pos["peak_price"] - entry) / entry) * lev * 100.0
-            mae_roe = ((entry - pos["trough_price"]) / entry) * lev * 100.0
+            current_roe = round(((current_price - entry) / entry) * lev * 100.0, 4)
+            mfe_roe = round(((pos["peak_price"] - entry) / entry) * lev * 100.0, 4)
+            mae_roe = round(((entry - pos["trough_price"]) / entry) * lev * 100.0, 4)
         else:
-            current_roe = ((entry - current_price) / entry) * lev * 100.0
-            mfe_roe = ((entry - pos["trough_price"]) / entry) * lev * 100.0
-            mae_roe = ((pos["peak_price"] - entry) / entry) * lev * 100.0
+            current_roe = round(((entry - current_price) / entry) * lev * 100.0, 4)
+            mfe_roe = round(((entry - pos["trough_price"]) / entry) * lev * 100.0, 4)
+            mae_roe = round(((pos["peak_price"] - entry) / entry) * lev * 100.0, 4)
 
         pos["max_mfe_roe"] = round(max(pos.get("max_mfe_roe", 0.0), mfe_roe), 2)
         pos["max_mae_roe"] = round(max(pos.get("max_mae_roe", 0.0), mae_roe), 2)
 
         # ── KADEMELİ İZSÜREN KÂR KİLİDİ (TIERED TRAILING PROFIT LOCK) ──
         updated_stop = False
-        # Tier 3: ROE >= +15.0% -> En az +9.0% ROE kilit
-        if current_roe >= 15.0 and not pos.get("_trail_15"):
-            pos["_trail_15"] = True
+
+        # Tier 3: ROE >= +20.0% -> En az +14.0% ROE kilit
+        if current_roe >= 20.0 and not pos.get("_trail_20"):
+            pos["_trail_20"] = True
+            pos["_trail_14"] = True
             pos["_trail_8"] = True
-            pos["trail_status"] = "🛡️ Tier 3 (%9.0 Kâr Korumalı)"
+            pos["trail_status"] = "🛡️ Tier 3 (%14.0 Kâr Korumalı)"
             if side == "LONG":
-                lock_p = entry * (1.0 + (0.09 / lev))
+                lock_p = entry * (1.0 + (0.14 / lev))
                 if lock_p > pos.get("soft_stop", 0):
                     pos["soft_stop"] = lock_p
                     pos["hard_stop"] = lock_p
                     updated_stop = True
             else:
-                lock_p = entry * (1.0 - (0.09 / lev))
+                lock_p = entry * (1.0 - (0.14 / lev))
                 if lock_p < pos.get("soft_stop", 999999):
                     pos["soft_stop"] = lock_p
                     pos["hard_stop"] = lock_p
                     updated_stop = True
-            print(f">> [TRAILING TIER 3] {symbol} +%15 ROE Goruldu -> Stop +%9.0 Kâra Kilitlendi!")
+            print(f">> [TRAILING TIER 3] {symbol} +%20 ROE Görüldü -> Stop +%14.0 Kâra Kilitlendi!")
 
-        # Tier 2: ROE >= +8.0% -> En az +3.5% ROE kilit
+        # Tier 2: ROE >= +14.0% -> En az +8.0% ROE kilit
+        elif current_roe >= 14.0 and not pos.get("_trail_14"):
+            pos["_trail_14"] = True
+            pos["_trail_8"] = True
+            pos["trail_status"] = "🛡️ Tier 2 (%8.0 Kâr Korumalı)"
+            if side == "LONG":
+                lock_p = entry * (1.0 + (0.08 / lev))
+                if lock_p > pos.get("soft_stop", 0):
+                    pos["soft_stop"] = lock_p
+                    pos["hard_stop"] = lock_p
+                    updated_stop = True
+            else:
+                lock_p = entry * (1.0 - (0.08 / lev))
+                if lock_p < pos.get("soft_stop", 999999):
+                    pos["soft_stop"] = lock_p
+                    pos["hard_stop"] = lock_p
+                    updated_stop = True
+            print(f">> [TRAILING TIER 2] {symbol} +%14 ROE Görüldü -> Stop +%8.0 Kâra Kilitlendi!")
+
+        # Tier 1: ROE >= +8.0% -> En az +3.5% ROE kilit
         elif current_roe >= 8.0 and not pos.get("_trail_8"):
             pos["_trail_8"] = True
-            pos["trail_status"] = "🛡️ Tier 2 (%3.5 Kâr Korumalı)"
+            pos["trail_status"] = "🛡️ Tier 1 (%3.5 Kâr Korumalı)"
             if side == "LONG":
                 lock_p = entry * (1.0 + (0.035 / lev))
                 if lock_p > pos.get("soft_stop", 0):
@@ -310,10 +331,54 @@ class PaperTrader:
                     pos["soft_stop"] = lock_p
                     pos["hard_stop"] = lock_p
                     updated_stop = True
-            print(f">> [TRAILING TIER 2] {symbol} +%8 ROE Goruldu -> Stop +%3.5 Kâra Kilitlendi!")
+            print(f">> [TRAILING TIER 1] {symbol} +%8 ROE Görüldü -> Stop +%3.5 Kâra Kilitlendi!")
 
         if updated_stop:
             self.save_local_history()
+
+    def add_pyramid_to_position(self, symbol: str, current_price: float, pyramid_pct: float = 0.25):
+        """
+        Kazanan Atı Besleme (Pyramiding):
+        Zararda ekleme ASLA yapılmaz. Sadece ROE >= +8.0% ve Stop kâra kilitliyken (+3.5% ROE),
+        mevcut kâr teminat gösterilerek pozisyona %25 ilave hacim eklenir.
+        Giriş fiyatı ağırlıklı ortalama ile güncellenir, stop seviyesi mutlak kâr bölgesinde kalır.
+        """
+        if symbol not in self.open_positions:
+            return False
+        pos = self.open_positions[symbol]
+        if pos.get("_pyramided", False):
+            return False
+
+        old_margin = float(pos.get("margin", self.margin_per_trade))
+        add_margin = round(old_margin * pyramid_pct, 2)
+        free_bal = self.get_free_balance()
+        if free_bal < add_margin:
+            return False
+
+        side = pos["side"]
+        lev = pos.get("leverage", self.leverage)
+        old_qty = float(pos.get("quantity", 0.0))
+        old_entry = float(pos.get("entry_price", current_price))
+        add_val = add_margin * lev
+        add_qty = add_val / current_price
+
+        new_total_qty = old_qty + add_qty
+        new_entry_price = (old_entry * old_qty + current_price * add_qty) / new_total_qty
+        new_margin = old_margin + add_margin
+        new_pos_value = new_margin * lev
+
+        pos["quantity"] = round(new_total_qty, 6)
+        pos["margin"] = round(new_margin, 2)
+        pos["position_value"] = round(new_pos_value, 2)
+        pos["entry_price"] = round(new_entry_price, 8)
+        pos["_pyramided"] = True
+        pos["pyramid_price"] = current_price
+        pos["pyramid_time"] = datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S")
+        pos["trail_status"] = "🚀 PYRAMID EKLENDİ (+%25 Hacim - Kâr Korumalı)"
+
+        self.save_local_history()
+        print(f">> [PYRAMID EKLENDİ] {symbol} {side} @ {current_price} | +${add_margin} Marjin Eklendi (Yeni Giriş: {new_entry_price:.4f})")
+        return True
 
     def open_position(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None, atr_pct: float = 1.0, trend_regime: str = "YATAY", session: str = "LONDRA", volume_surge: float = 1.0, confluence_score: str = "2/4", htf_alignment: str = "TREND YÖNÜNDE", custom_margin: float = None, rs_vs_btc: float = 0.0, decoupling_status: str = "⚪ NÖTR_TAKİPÇİ", cvd_pct: float = 50.0, candle_velocity: float = 1.0, **kwargs):
         if symbol in self.open_positions:

@@ -1062,6 +1062,17 @@ class MarketDataManager:
 
         spoofing_detected = (top_ratio >= 2.0 and l2_ratio < 0.70)
 
+        # Likidite Boşluğu (Hava Cebi / Liquidity Vacuum) Tespiti:
+        # Önündeki derinlik karşı tarafın %40'ından az veya oran aşırı asimetrikse hava cebi vardır
+        vacuum_detected = False
+        vacuum_side = "NONE"
+        if l2_ratio >= 2.5 and ask_usd_05 <= (bid_usd_05 * 0.40):
+            vacuum_detected = True
+            vacuum_side = "ASK_VACUUM_BULLISH"  # Satıcı tahtası bomboş, yukarı yön roket
+        elif l2_ratio <= 0.40 and bid_usd_05 <= (ask_usd_05 * 0.40):
+            vacuum_detected = True
+            vacuum_side = "BID_VACUUM_BEARISH"  # Alıcı tahtası bomboş, aşağı yön dökülme
+
         return {
             'symbol': symbol,
             'mid_price': mid_price,
@@ -1070,6 +1081,8 @@ class MarketDataManager:
             'l2_ratio': l2_ratio,
             'top_ratio': top_ratio,
             'spoofing_detected': spoofing_detected,
+            'vacuum_detected': vacuum_detected,
+            'vacuum_side': vacuum_side,
             'depth_available': len(bids) > 0,
             'last_update': now_ts
         }

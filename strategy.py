@@ -625,7 +625,7 @@ class StrategyEngine:
                         self._cleanup_tracking(symbol)
                     return
 
-        # ── 2.5 DİNAMİK ROE VE ZAMAN BAZLI KÂR KİLİDİ (%50 KÂR AL & BREAKEVEN) ──
+        # ── 2.5 KAZANAN ATI BESLEME (PYRAMIDING) & ZAMAN BAZLI KÂR KİLİDİ ──
         if symbol in self.paper_trader.open_positions and not self.paper_trader.open_positions[symbol].get("is_half_closed", False):
             pos_cur = self.paper_trader.open_positions[symbol]
             entry_p = pos_cur["entry_price"]
@@ -633,16 +633,14 @@ class StrategyEngine:
             price_pct = ((current_price - entry_p) / entry_p) if side == "LONG" else ((entry_p - current_price) / entry_p)
             current_roe = price_pct * lev * 100.0
 
-            # Kural A: ROE >= +7.0% -> Hedef fiyata bakılmaksızın %50 kâr anında realize edilir!
-            if current_roe >= 7.0:
-                record = await self._safe_close_position(
-                    symbol, current_price,
-                    f"🎯 Dinamik ROE Kâr Kilidi (+%{current_roe:.1f} Kâr Alındı - %50 Kapatıldı)",
-                    is_partial=True
-                )
-                if record:
-                    await self._notify_close(record, levels=levels)
-                    return
+            # 🚀 KAZANAN ATI BESLEME (PYRAMIDING):
+            # Eğer ROE >= +8.0% ise VE stop kâra kilitlenmişse (_trail_8 aktif) VE henüz pyramiding yapılmamışsa:
+            # Sıfır anapara riski ile pozisyona %25 ilave hacim ekle (kâr koşturma)!
+            if current_roe >= 8.0 and pos_cur.get("_trail_8", False) and not pos_cur.get("_pyramided", False):
+                if hasattr(self.paper_trader, "add_pyramid_to_position"):
+                    pyramid_ok = self.paper_trader.add_pyramid_to_position(symbol, current_price, pyramid_pct=0.25)
+                    if pyramid_ok:
+                        print(f">> [STRATEGY PYRAMID TETİKLENDİ] {symbol} {side} @ {current_price} | +%25 Hacim Kâr ile Büyütüldü!")
 
             # Kural B: 90 Dakika Süre Aşımı Kalkanı (Süre >= 90dk ve ROE >= +4.0%)
             hold_sec = time.time() - pos_cur.get("entry_timestamp", time.time())
@@ -1387,7 +1385,17 @@ class StrategyEngine:
         else:
             dyn_margin = 75.0  # Standart dengeli marjin
 
-        dyn_margin = min(100.0, max(25.0, round(dyn_margin * getattr(self, 'margin_multiplier', 1.0), 2)))
+        # 🐋 KURUMSAL BALİNA ONAYLI SEVİYE HÜCUM MARJİNİ (Sniper Sizing)
+        has_whale_flow = (cvd_confirmed or cvd_margin_mult > 1.0) and (obi_confirmed or obi_margin_mult > 1.0)
+        if has_whale_flow:
+            self.margin_multiplier *= 1.30
+            reason += " [🐋 Balina Teyitli Seviye]"
+            if confluence_list is not None and isinstance(confluence_list, list) and "🐋_Balina_Akışı_Teyidi" not in confluence_list:
+                confluence_list.append("🐋_Balina_Akışı_Teyidi")
+
+        c_count = len(confluence_list or [1])
+        max_margin_cap = 120.0 if (has_whale_flow or c_count >= 4) else 100.0
+        dyn_margin = min(max_margin_cap, max(25.0, round(dyn_margin * getattr(self, 'margin_multiplier', 1.0), 2)))
 
         # ── 1c. GERÇEK CVD (TAKER BUY RATIO), İVME VE FİTİL ORANI HESABI ──
         cvd_pct = 50.0
@@ -1451,12 +1459,12 @@ class StrategyEngine:
         stop_dist = entry_price * (effective_stop_pct / 100.0)
         min_allowed_stop_dist = entry_price * 0.0080  # %0.80 mutlak asgari nefes payı
 
-        # TP1 & TP2: Asimetrik Kâr Oranı (R:R >= 1.25x - 2.5x Hedef)
-        # 🎯 MODÜL 6: TP1 Tabanı %1.10'dan %1.35'e, TP2 Tabanı %2.00'dan %2.50'ye yükseltildi
-        min_tp1_dist = max(stop_dist * 1.25, entry_price * 0.0135)
-        adaptive_tp1_dist = entry_price * (max(1.35, safe_atr_pct * 1.5) / 100.0)
+        # TP1 & TP2: Asimetrik Kâr Oranı (R:R >= 2.0x - 3.5x Hedef)
+        # 🎯 KURUMSAL HÜCUM REFORMU: TP1 asgari 2.0x R, TP2 asgari 3.5x R
+        min_tp1_dist = max(stop_dist * 2.0, entry_price * 0.0180)
+        adaptive_tp1_dist = entry_price * (max(1.80, safe_atr_pct * 2.0) / 100.0)
         tp1_dist = max(min_tp1_dist, adaptive_tp1_dist)
-        tp2_dist = max(tp1_dist * 1.85, entry_price * (max(2.50, safe_atr_pct * 2.8) / 100.0))
+        tp2_dist = max(tp1_dist * 1.75, entry_price * (max(3.50, safe_atr_pct * 3.5) / 100.0))
 
         caller_hard_stop = hard_stop
         caller_soft_stop = soft_stop
@@ -1476,17 +1484,17 @@ class StrategyEngine:
             soft_stop = hard_stop  # Dinamik ATR / Yapısal Stop: UI, telemetri ve risk motoru ile tam senkron
 
             actual_stop_dist = abs(entry_price - hard_stop)
-            enforced_min_tp1 = entry_price + max(actual_stop_dist * 1.25, tp1_dist)
+            enforced_min_tp1 = entry_price + max(actual_stop_dist * 2.0, tp1_dist)
             
             atr_tp1 = round(enforced_min_tp1, 6)
             atr_tp2 = round(entry_price + tp2_dist, 6)
             
             macro_target = caller_tp2 if (caller_tp2 and caller_tp2 > entry_price) else (caller_tp1 if (caller_tp1 and caller_tp1 > entry_price) else None)
             
-            # Eğer çağıran setup'ın yapısal hedefi zorunlu 1.25x R:R mesafesini karşılıyorsa kullan, aksi halde hedefe zorunlu genişleme uygula
+            # Eğer çağıran setup'ın yapısal hedefi zorunlu 2.0x R:R mesafesini karşılıyorsa kullan, aksi halde hedefe zorunlu genişleme uygula
             if macro_target and macro_target >= atr_tp1:
                 tp1 = round(macro_target, 6)
-                tp2 = max(atr_tp2, round(tp1 * 1.015, 6))
+                tp2 = max(atr_tp2, round(tp1 * 1.025, 6))
             else:
                 tp1 = atr_tp1
                 tp2 = atr_tp2
@@ -1503,7 +1511,7 @@ class StrategyEngine:
             soft_stop = hard_stop  # Dinamik ATR / Yapısal Stop: UI, telemetri ve risk motoru ile tam senkron
 
             actual_stop_dist = abs(hard_stop - entry_price)
-            enforced_min_tp1 = entry_price - max(actual_stop_dist * 1.25, tp1_dist)
+            enforced_min_tp1 = entry_price - max(actual_stop_dist * 2.0, tp1_dist)
             
             atr_tp1 = round(enforced_min_tp1, 6)
             atr_tp2 = round(entry_price - tp2_dist, 6)
@@ -1512,7 +1520,7 @@ class StrategyEngine:
             
             if macro_target and macro_target <= atr_tp1:
                 tp1 = round(macro_target, 6)
-                tp2 = min(atr_tp2, round(tp1 * 0.985, 6))
+                tp2 = min(atr_tp2, round(tp1 * 0.975, 6))
             else:
                 tp1 = atr_tp1
                 tp2 = atr_tp2
@@ -1594,6 +1602,25 @@ class StrategyEngine:
                     elif side == "SHORT" and l2_ratio <= bonus_l2_short:
                         if confluence_list is not None and isinstance(confluence_list, list):
                             confluence_list.append("L2_Gerçek_Satıcı_Derinliği_Teyitli")
+
+                    # 🌪️ LİKİDİTE BOŞLUĞU (HAVA CEBİ) KÂR GENİŞLEMESİ (Trick 2)
+                    if l2_info.get("vacuum_detected", False):
+                        vac_side = l2_info.get("vacuum_side", "")
+                        if side == "LONG" and vac_side == "ASK_VACUUM_BULLISH":
+                            # Önündeki satıcı kademeleri boş, hedefi 4.5R'a kadar koştur!
+                            actual_stop_dist = abs(entry_price - hard_stop)
+                            tp2 = round(entry_price + max(actual_stop_dist * 4.5, tp2_dist * 1.30), 6)
+                            reason += " [🌪️ Satıcı Likidite Boşluğu (Hava Cebi)]"
+                            if confluence_list is not None and isinstance(confluence_list, list):
+                                confluence_list.append("Likidite_Hava_Cebi_Genişlemesi")
+                            print(f">> [LİKİDİTE HAVA CEBİ] {symbol} LONG: Satıcı tahtası boş, TP2 genişletildi -> ${tp2:.4f}")
+                        elif side == "SHORT" and vac_side == "BID_VACUUM_BEARISH":
+                            actual_stop_dist = abs(hard_stop - entry_price)
+                            tp2 = round(entry_price - max(actual_stop_dist * 4.5, tp2_dist * 1.30), 6)
+                            reason += " [🌪️ Alıcı Likidite Boşluğu (Hava Cebi)]"
+                            if confluence_list is not None and isinstance(confluence_list, list):
+                                confluence_list.append("Likidite_Hava_Cebi_Genişlemesi")
+                            print(f">> [LİKİDİTE HAVA CEBİ] {symbol} SHORT: Alıcı tahtası boş, TP2 genişletildi -> ${tp2:.4f}")
             except Exception as e:
                 print(f">> [JIT L2 HATA] {symbol}: {e}")
 
@@ -1819,8 +1846,11 @@ class StrategyEngine:
             price_pct = ((close_price - entry_p) / entry_p) if side == "LONG" else ((entry_p - close_price) / entry_p)
             current_roe = price_pct * lev * 100.0
 
-            if not is_half and (current_roe >= 7.0 or ((time.time() - pos.get("entry_timestamp", time.time()) >= 5400) and current_roe >= 4.0)):
-                reason_txt = f"🎯 Dinamik ROE Kâr Kilidi (+%{current_roe:.1f} Kâr Alındı - %50 Kapatıldı)" if current_roe >= 7.0 else f"⏳ Zaman Kalkanı Kâr Kilidi (+%{current_roe:.1f} ROE - %50 Kapatıldı)"
+            # 90 Dakika Süre Aşımı Kalkanı (Süre >= 90dk ve ROE >= +4.0%)
+            hold_sec = time.time() - pos.get("entry_timestamp", time.time())
+            if not is_half and hold_sec >= 5400 and current_roe >= 4.0:
+                hold_mins = int(hold_sec // 60)
+                reason_txt = f"⏳ Zaman Kalkanı Kâr Kilidi ({hold_mins}dk Bekleme - +%{current_roe:.1f} ROE - %50 Kapatıldı)"
                 record = await self._safe_close_position(symbol, close_price, reason_txt, is_partial=True)
                 if record:
                     await self._notify_close(record, levels=levels)
