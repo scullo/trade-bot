@@ -1206,10 +1206,29 @@ class StrategyEngine:
         # ── 4. HACIM PATLAMA KATSAYISI (Volume Surge Ratio) ──
         # Zaten yukarida df_5m'den guvenle hesaplandi (varsayilan 1.0x)
 
-        # ── 5. CONFLUENCE (ÇAKIŞMA) SKORU ──
+        # ── 5. CONFLUENCE (ÇAKIŞMA) SKORU & CLAUDE SHANNON ORTOGONAL BOYUT ANALİZİ ──
         c_count = min(4, max(1, len(confluence_list or [1])))
         conf_labels = {1: "1/4 (Tekil Teyit)", 2: "2/4 (Çift Teyit)", 3: "3/4 (Güçlü Confluence)", 4: "4/4 (Maksimum Kurumsal Teyit)"}
         conf_score_str = conf_labels.get(c_count, f"{c_count}/4")
+
+        # 🧠 CLAUDE SHANNON ORTOGONAL CONFLUENCE FİLTRESİ (KOLLİNEARİTE VE SAHTE TEYİT KALKANI)
+        # Teyitler 3 bağımsız boyuta ayrılır:
+        # Boyut A: Fiyat / Seviye Geometrisi (Camarilla, nPOC, AVWAP, mVAH/mVAL)
+        # Boyut B: Pasif Tahta Derinliği (L2 Order Book, Duvar, Likidite Boşluğu)
+        # Boyut C: Aktif Agresyon & Alfa (Mikro-CVD, Hacim Patlaması, Balina Akışı, RS Ayrışması)
+        conf_items = confluence_list or []
+        price_axis = any(any(k in str(ci) for k in ["Breakout", "Breakdown", "Destek", "Direnç", "AVWAP", "nPOC", "mVAH", "mVAL", "Sweep", "Sekmesi", "Reddi", "Flip"]) for ci in conf_items)
+        depth_axis = any(any(k in str(ci) for k in ["Tahta", "L2", "Duvar", "Derinlik", "Hava_Cebi", "Boşluğu"]) for ci in conf_items) or (obi_confirmed)
+        flow_axis = any(any(k in str(ci) for k in ["CVD", "Hacim", "Balina", "ALFA", "Agresyon", "Emilim"]) for ci in conf_items) or (vol_surge >= 1.35) or (cvd_confirmed)
+
+        orthogonal_axes = sum([price_axis, depth_axis, flow_axis])
+
+        # En az 2 bağımsız eksen teyit vermelidir (Tekil boyuttan gelen sahte momentum engellenir!)
+        if orthogonal_axes < 2 and c_count >= 2:
+            rej_msg = f"🧠 Shannon Ortogonal Kalkanı: Teyitler tek bir boyutta kümelenmiş (Fiyat:{price_axis}, Tahta:{depth_axis}, Akış:{flow_axis}). En az 2 bağımsız eksen (Seviye + Tahta veya Seviye + Akış) şartı sağlanamadı."
+            print(f">> [RED - ORTOGONAL CONFLUENCE] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "COLLINEAR_CONFLUENCE_BLOCKED"}
 
         # 🐻 MODÜL 1: AYI REJİMİNDE LONG KALİTE FİLTRESİ (4/4 TAM CONFLUENCE ZORUNLU)
         if side == "LONG" and ("AYI" in trend_regime):
@@ -1330,25 +1349,24 @@ class StrategyEngine:
         if is_macro_volume_setup:
             self.margin_multiplier *= 1.15
 
-        is_meme_coin = any(m in symbol for m in ["PEPE", "WIF", "DOGE", "BONK", "SHIB", "FLOKI", "MEME"])
-        if is_meme_coin or atr_pct >= 2.5:
-            dyn_margin = 50.0  # Yüksek oynaklıkta düşük marjin (sabit risk)
-        elif symbol in ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT"]:
-            dyn_margin = 90.0  # Düşük oynaklıkta yüksek marjin
-        else:
-            dyn_margin = 75.0  # Standart dengeli marjin
+        # ⚖️ RAY DALİO TERS VOLATİLİTE RİSK PARİTESİ (INVERSE VOLATILITY RISK PARITY)
+        # Benchmark volatilite: Medyan kripto ATR = %1.20
+        # Volatilite arttıkça marjin düşürülür (sabit dolar riski); volatilite düştükçe marjin artırılır (kâr maksimizasyonu).
+        clean_atr = max(0.50, min(3.50, atr_pct))
+        base_target_margin = 80.0 * (1.20 / clean_atr)
+        dyn_margin = round(max(45.0, min(115.0, base_target_margin)), 2)
 
         # 🐋 KURUMSAL BALİNA ONAYLI SEVİYE HÜCUM MARJİNİ (Sniper Sizing)
         has_whale_flow = (cvd_confirmed or cvd_margin_mult > 1.0) and (obi_confirmed or obi_margin_mult > 1.0)
         if has_whale_flow:
-            self.margin_multiplier *= 1.30
+            self.margin_multiplier *= 1.25
             reason += " [🐋 Balina Teyitli Seviye]"
             if confluence_list is not None and isinstance(confluence_list, list) and "🐋_Balina_Akışı_Teyidi" not in confluence_list:
                 confluence_list.append("🐋_Balina_Akışı_Teyidi")
 
         c_count = len(confluence_list or [1])
-        max_margin_cap = 120.0 if (has_whale_flow or c_count >= 4) else 100.0
-        dyn_margin = min(max_margin_cap, max(25.0, round(dyn_margin * getattr(self, 'margin_multiplier', 1.0), 2)))
+        max_margin_cap = 130.0 if (has_whale_flow or c_count >= 4) else 115.0
+        dyn_margin = min(max_margin_cap, max(40.0, round(dyn_margin * getattr(self, 'margin_multiplier', 1.0), 2)))
 
         # ── 1c. GERÇEK CVD (TAKER BUY RATIO), İVME VE FİTİL ORANI HESABI ──
         cvd_pct = 50.0
@@ -1526,6 +1544,19 @@ class StrategyEngine:
 
                     # Dinamik Spoofing Tespiti
                     is_dynamic_spoofing = (top_ratio >= spoof_top_thresh and l2_ratio < spoof_l2_min)
+
+                    # 🛡️ KEN GRIFFIN FLASH-SPOOFING KALKANI:
+                    # Piyasa yapıcıların küçük yatırımcıyı tuzağa çekmek için koyup birkaç saniyede çektiği sahte duvarları eler.
+                    if side == "LONG" and (obi_wall_side == "BID_WALL") and (0.0 < obi_wall_duration < 6.0) and (top_ratio >= 1.75):
+                        rej_msg = f"🛡️ Ken Griffin Spoofing Kalkanı [{archetype_label}]: Alıcı duvarı ({top_ratio:.1f}x) henüz {obi_wall_duration:.1f}s önce kondu (asgari 6.0s stabilite şartı). Hızlı iptal (Spoofing) riski, LONG engellendi."
+                        print(f">> [RED - L2 FLASH SPOOFING] {symbol}: {rej_msg}")
+                        self.log_rejection(symbol, reason, rej_msg)
+                        return {"error": "L2_FLASH_SPOOFING_BID_BLOCKED"}
+                    elif side == "SHORT" and (obi_wall_side == "ASK_WALL") and (0.0 < obi_wall_duration < 6.0) and ((1.0 / max(0.01, top_ratio)) >= 1.75):
+                        rej_msg = f"🛡️ Ken Griffin Spoofing Kalkanı [{archetype_label}]: Satıcı duvarı henüz {obi_wall_duration:.1f}s önce kondu (asgari 6.0s stabilite şartı). Hızlı iptal (Spoofing) riski, SHORT engellendi."
+                        print(f">> [RED - L2 FLASH SPOOFING] {symbol}: {rej_msg}")
+                        self.log_rejection(symbol, reason, rej_msg)
+                        return {"error": "L2_FLASH_SPOOFING_ASK_BLOCKED"}
 
                     # Veto 1: Spoofing Tuzağı (1. kademede duvar var ama arkadaki 19 kademe boş)
                     if side == "LONG" and is_dynamic_spoofing:
