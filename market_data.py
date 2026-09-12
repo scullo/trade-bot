@@ -8,7 +8,7 @@ import ccxt.async_support as ccxt
 import pandas as pd
 import numpy as np
 from config import LOOKBACK_DAYS_AVWAP
-from indicators import calculate_camarilla_pivots, calculate_anchored_vwap, calculate_volume_profile, get_tradingview_naked_lines
+from indicators import calculate_camarilla_pivots, calculate_anchored_vwap, calculate_volume_profile, get_tradingview_naked_lines, calculate_session_and_daily_levels
 
 class MarketDataManager:
     def __init__(self, all_symbols, active_symbols=None, timeframe="5m"):
@@ -69,6 +69,15 @@ class MarketDataManager:
             'wall_side': 'BALANCED',
             'wall_duration_sec': 0.0,
             'wall_first_seen': 0.0,
+        } for s in all_symbols}
+        # Açık Pozisyon (Open Interest) Radarı & Delta-OI Takip Veri Yapıları
+        self.symbol_oi = {s: {
+            'symbol': s,
+            'open_interest': 0.0,
+            'oi_5m_ago': 0.0,
+            'delta_oi_pct': 0.0,
+            'price_chg_5m': 0.0,
+            'status': 'BALANCED',
             'last_update': 0.0
         } for s in all_symbols}
         self.on_tick_callback = None
@@ -729,9 +738,10 @@ class MarketDataManager:
             vp_df = df_5m
         vp_result = calculate_volume_profile(vp_df, num_rows=30, value_area_pct=0.68)
 
-        # === NAKED LINES ===
+        # === NAKED LINES & KURUMSAL SEANS SEVİYELERİ ===
         current_p = self.current_prices.get(symbol, float(df_5m['close'].iloc[-1]))
         naked_lines = get_tradingview_naked_lines(df_5m, current_p)
+        session_levels = calculate_session_and_daily_levels(df_5m, df_1d)
 
         self.levels[symbol] = {
             "camarilla": camarilla,
@@ -745,7 +755,12 @@ class MarketDataManager:
             "above_nvah": float(naked_lines.get("above_nvah", current_p * 1.02)),
             "below_nvah": float(naked_lines.get("below_nvah", current_p * 0.98)),
             "above_nval": float(naked_lines.get("above_nval", current_p * 1.025)),
-            "below_nval": float(naked_lines.get("below_nval", current_p * 0.975))
+            "below_nval": float(naked_lines.get("below_nval", current_p * 0.975)),
+            "pdh": float(session_levels.get("pdh", 0.0)),
+            "pdl": float(session_levels.get("pdl", 0.0)),
+            "pdc": float(session_levels.get("pdc", 0.0)),
+            "asia_high": float(session_levels.get("asia_high", 0.0)),
+            "asia_low": float(session_levels.get("asia_low", 0.0))
         }
 
         # === DYNAMIC TELEMETRY & VOLUME METRICS ===
@@ -899,6 +914,165 @@ class MarketDataManager:
             "dynamic_rs_score": 0.0,
             "decoupling_status": "⚪ NÖTR_TAKİPÇİ"
         })
+
+    async def fetch_symbol_open_interest(self, symbol: str) -> dict:
+        """
+        Gerçek Zamanlı Açık Pozisyon (Open Interest) & Delta-OI Takip Motoru:
+        - _clean_symbol() ile 1000PEPE, 1000SHIB ve diğer çarpanlı pariteleri hatasız sorgular.
+        - Multi-exchange resilient: Binance Futures REST -> Gate.io Vadeli Tickers.
+        - delta_oi_pct = ((cur_oi - prev_oi) / prev_oi) * 100
+        """
+        clean = self._clean_symbol(symbol).replace('/', '').replace(':USDT', '')
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        oi_val = 0.0
+        now_ts = time.time()
+
+        try:
+            async with aiohttp.ClientSession(headers=headers) as session:
+                url_binance = f"https://fapi.binance.com/fapi/v1/openInterest?symbol={clean}"
+                try:
+                    async with session.get(url_binance, timeout=aiohttp.ClientTimeout(total=2.5)) as resp:
+                        if resp.status == 200:
+                            d = await resp.json()
+                            oi_val = float(d.get('openInterest', 0.0))
+                except Exception:
+                    pass
+
+                if oi_val == 0.0:
+                    raw = symbol.replace('/USDT', '_USDT')
+                    url_gate = f"https://api.gateio.ws/api/v4/futures/usdt/tickers?contract={raw}"
+                    try:
+                        async with session.get(url_gate, timeout=aiohttp.ClientTimeout(total=2.5)) as resp:
+                            if resp.status == 200:
+                                d = await resp.json()
+                                if isinstance(d, list) and d:
+                                    oi_val = float(d[0].get('total_size', 0.0))
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+        prev_info = self.symbol_oi.get(symbol, {})
+        prev_oi = prev_info.get('open_interest', 0.0)
+        oi_5m_ago = prev_info.get('oi_5m_ago', prev_oi)
+
+        if oi_5m_ago <= 0:
+            oi_5m_ago = oi_val if oi_val > 0 else 1.0
+
+        delta_pct = round(((oi_val - oi_5m_ago) / oi_5m_ago) * 100.0, 2) if (oi_val > 0 and oi_5m_ago > 0) else 0.0
+
+        price_chg_5m = 0.0
+        df = self.candles_5m.get(symbol, pd.DataFrame())
+        if df is not None and len(df) >= 2:
+            try:
+                c_last = float(df['close'].iloc[-1])
+                c_prev = float(df['close'].iloc[-2])
+                if c_prev > 0:
+                    price_chg_5m = round(((c_last - c_prev) / c_prev) * 100.0, 2)
+            except Exception:
+                pass
+
+        status = "BALANCED"
+        if price_chg_5m <= -0.15 and delta_pct >= 0.35:
+            status = "AGGRESSIVE_SHORT_EXPANSION"
+        elif price_chg_5m <= -0.15 and delta_pct <= -0.35:
+            status = "LONG_LIQUIDATION_DRAIN"
+        elif price_chg_5m >= 0.15 and delta_pct >= 0.35:
+            status = "AGGRESSIVE_LONG_EXPANSION"
+        elif price_chg_5m >= 0.15 and delta_pct <= -0.35:
+            status = "SHORT_COVERING_PUMP"
+
+        res = {
+            'symbol': symbol,
+            'open_interest': oi_val,
+            'oi_5m_ago': oi_5m_ago,
+            'delta_oi_pct': delta_pct,
+            'price_chg_5m': price_chg_5m,
+            'status': status,
+            'last_update': now_ts
+        }
+        self.symbol_oi[symbol] = res
+        return res
+
+    def get_symbol_open_interest(self, symbol: str) -> dict:
+        return self.symbol_oi.get(symbol, {
+            'symbol': symbol,
+            'open_interest': 0.0,
+            'oi_5m_ago': 0.0,
+            'delta_oi_pct': 0.0,
+            'price_chg_5m': 0.0,
+            'status': 'BALANCED',
+            'last_update': 0.0
+        })
+
+    async def get_jit_l2_depth(self, symbol: str) -> dict:
+        """
+        15ms Just-In-Time L2 Derinlik Taraması (Depth 20 Snapshot):
+        - Yalnızca işleme girmeden tam 15ms önce çağrılır (Sıfır RAM/soket yükü).
+        - Fiyatın %0.5 altındaki ve üstündeki kümülatif derinliği ($) ölçer.
+        - 1. kademedeki duvar ile arka kademeler arasındaki çelişkiyi (Spoofing) yakalar.
+        """
+        clean = self._clean_symbol(symbol).replace('/', '').replace(':USDT', '')
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        bids = []
+        asks = []
+        now_ts = time.time()
+
+        try:
+            async with aiohttp.ClientSession(headers=headers) as session:
+                url_depth = f"https://fapi.binance.com/fapi/v1/depth?symbol={clean}&limit=20"
+                try:
+                    async with session.get(url_depth, timeout=aiohttp.ClientTimeout(total=2.5)) as resp:
+                        if resp.status == 200:
+                            d = await resp.json()
+                            bids = [(float(p), float(q)) for p, q in d.get('bids', [])]
+                            asks = [(float(p), float(q)) for p, q in d.get('asks', [])]
+                except Exception:
+                    pass
+
+                if not bids:
+                    raw = symbol.replace('/USDT', '_USDT')
+                    url_gate_ob = f"https://api.gateio.ws/api/v4/futures/usdt/order_book?contract={raw}&limit=20"
+                    try:
+                        async with session.get(url_gate_ob, timeout=aiohttp.ClientTimeout(total=2.5)) as resp:
+                            if resp.status == 200:
+                                d = await resp.json()
+                                bids = [(float(item['p']), float(item['s'])) for item in d.get('bids', [])]
+                                asks = [(float(item['p']), float(item['s'])) for item in d.get('asks', [])]
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+        mid_price = (bids[0][0] + asks[0][0]) / 2.0 if bids and asks else 0.0
+        bid_usd_05 = 0.0
+        ask_usd_05 = 0.0
+        if mid_price > 0:
+            for p, q in bids:
+                if p >= mid_price * 0.995:
+                    bid_usd_05 += (p * q)
+            for p, q in asks:
+                if p <= mid_price * 1.005:
+                    ask_usd_05 += (p * q)
+
+        l2_ratio = round(bid_usd_05 / max(1.0, ask_usd_05), 2)
+        top_bid_q = (bids[0][1] * bids[0][0]) if bids else 0.0
+        top_ask_q = (asks[0][1] * asks[0][0]) if asks else 0.0
+        top_ratio = round(top_bid_q / max(1.0, top_ask_q), 2)
+
+        spoofing_detected = (top_ratio >= 2.0 and l2_ratio < 0.70)
+
+        return {
+            'symbol': symbol,
+            'mid_price': mid_price,
+            'bid_usd_05': round(bid_usd_05, 2),
+            'ask_usd_05': round(ask_usd_05, 2),
+            'l2_ratio': l2_ratio,
+            'top_ratio': top_ratio,
+            'spoofing_detected': spoofing_detected,
+            'depth_available': len(bids) > 0,
+            'last_update': now_ts
+        }
 
     async def poll_all_candles_once(self):
         """100 Paritenin son kapanmis 5M mumlarini aninda REST uzerinden paralel tara ve stratejiye ilet."""

@@ -851,6 +851,72 @@ class StrategyEngine:
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "FUNDING_LONG_OVERHEATED_BLOCKED"}
 
+        # ── 1c-2. AÇIK POZİSYON (OPEN INTEREST) & DELTA-OI RADARI (ERKEN VETO & CONFLUENCE) ──
+        oi_data = {}
+        if self.market_data and hasattr(self.market_data, 'get_symbol_open_interest'):
+            oi_data = self.market_data.get_symbol_open_interest(symbol) or {}
+            # Eğer son güncelleme 60s'den eskiyse, Just-in-Time taze OI çek
+            if oi_data.get('open_interest', 0.0) <= 0 or (time.time() - oi_data.get('last_update', 0.0)) > 60.0:
+                if hasattr(self.market_data, 'fetch_symbol_open_interest'):
+                    try:
+                        oi_data = await self.market_data.fetch_symbol_open_interest(symbol)
+                    except Exception:
+                        pass
+
+        oi_status = oi_data.get('status', 'BALANCED')
+        delta_oi_pct = float(oi_data.get('delta_oi_pct', 0.0))
+
+        # Veto 1: Kurumsal Short Baskısı — Fiyat düşerken açık faiz patlıyorsa düşen bıçağa LONG açmak intihardır!
+        if side == "LONG" and oi_status == "AGGRESSIVE_SHORT_EXPANSION":
+            rej_msg = f"🛡️ Açık Faiz (OI) Kalkanı: Paritede açık faiz hızla artarken (%{delta_oi_pct:+.2f}) fiyat düşüyor. Piyasaya taze kurumsal short basılıyor, zayıf LONG engellendi."
+            print(f">> [RED - OI SHORT BASKISI] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "OI_AGGRESSIVE_SHORT_BLOCKED"}
+
+        # Veto 2: Sahte Ralli / Short Kapaması — Fiyat yükselirken açık faiz çöküyorsa tepe kırılımı açılmaz!
+        if side == "LONG" and is_breakout and oi_status == "SHORT_COVERING_PUMP":
+            rej_msg = f"🛡️ Sahte Ralli Kalkanı: Fiyat yükselirken açık faiz düşüyor (%{delta_oi_pct:+.2f}). Hareket taze para girişi değil, short kapamasıyla yürüyor. Tepe kırılımı engellendi."
+            print(f">> [RED - SAHTE RALLİ KALKANI] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "OI_SHORT_COVERING_PUMP_BLOCKED"}
+
+        # OI Confluence Bonusu
+        if side == "LONG" and oi_status == "AGGRESSIVE_LONG_EXPANSION":
+            if confluence_list is not None and isinstance(confluence_list, list):
+                confluence_list.append("Kurumsal_OI_Girişi_Teyitli")
+
+        # ── 1c-3. KURUMSAL SEANS ÇAPALARI & JUDAS SWING LİKİDİTE KALKANI (PDH / PDL / ASYA) ──
+        snaps_early = snapshot_levels or {}
+        pdh_lvl = float(snaps_early.get('pdh', 0.0))
+        pdl_lvl = float(snaps_early.get('pdl', 0.0))
+        asia_high_lvl = float(snaps_early.get('asia_high', 0.0))
+        asia_low_lvl = float(snaps_early.get('asia_low', 0.0))
+
+        # 1. Judas Swing Tepe Tuzağı: Fiyat Asya Tepesini veya PDH'yi delip hemen ardından altına çekilmişse tepe kırılımı VETO!
+        if side == "LONG" and is_breakout:
+            ref_high = max(pdh_lvl, asia_high_lvl)
+            if ref_high > 0 and entry_price >= ref_high * 0.995 and entry_price <= ref_high * 1.008:
+                df_5m_chk = self.market_data.candles_5m.get(symbol, pd.DataFrame()) if self.market_data else pd.DataFrame()
+                if not df_5m_chk.empty and len(df_5m_chk) >= 2:
+                    prev_high = float(df_5m_chk['high'].iloc[-2])
+                    prev_close = float(df_5m_chk['close'].iloc[-2])
+                    if prev_high >= ref_high and prev_close < ref_high:
+                        rej_msg = f"🛡️ Judas Swing Tepe Tuzağı: Asya/PDH zirvesi (${ref_high:.4f}) iğnelenip içeri dönüldü (Bull Trap). Tepe LONG engellendi."
+                        print(f">> [RED - JUDAS SWING] {symbol}: {rej_msg}")
+                        self.log_rejection(symbol, reason, rej_msg)
+                        return {"error": "JUDAS_SWING_HIGH_BLOCKED"}
+
+        # 2. Dip Likidite Süpürmesi Teyidi: Asya Dibi veya PDL delinip fiyata alış geldiyse Sekme LONG'a güçlü teyit ekle!
+        ref_low = min(pdl_lvl, asia_low_lvl) if (pdl_lvl > 0 and asia_low_lvl > 0) else max(pdl_lvl, asia_low_lvl)
+        if side == "LONG" and not is_breakout and ref_low > 0:
+            df_5m_chk = self.market_data.candles_5m.get(symbol, pd.DataFrame()) if self.market_data else pd.DataFrame()
+            if not df_5m_chk.empty and len(df_5m_chk) >= 2:
+                prev_low = float(df_5m_chk['low'].iloc[-2])
+                prev_close = float(df_5m_chk['close'].iloc[-2])
+                if prev_low <= ref_low and prev_close > ref_low:
+                    if confluence_list is not None and isinstance(confluence_list, list):
+                        confluence_list.append("Asya_PDL_Dip_Süpürmesi_Teyitli")
+
         # 1c. GLOBAL LİKİDASYON RADARI & TASFİYE SÜPÜRME TEYİDİ (!forceOrder Confluence)
         liq_stats = {}
         if self.market_data and hasattr(self.market_data, 'get_symbol_liquidation_stats'):
@@ -1366,6 +1432,15 @@ class StrategyEngine:
             except Exception as e:
                 print(f">> [CVD/HIZ HATA] {symbol}: {e}")
 
+        # 🛡️ AŞIRI FİTİL TAVANI KALKANI (WICK CEILING SHIELD)
+        # Eğer mumu kaplayan fitil oranı %85 ve üzerindeyse (COTI %95.3, ZEC %97.6 gibi)
+        # piyasa aşırı kararsız veya manipülatiftir, işleme girmek tuzaktır!
+        if wick_ratio_pct >= 85.0:
+            rej_msg = f"🛡️ Aşırı Fitil Kalkanı: Son 5M mumunun fitil oranı %{wick_ratio_pct:.1f} >= %85.0. Manipülatif iğne / tuzak tespiti, işlem engellendi."
+            print(f">> [RED - FİTİL KALKANI] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "EXCESSIVE_WICK_TRAP_BLOCKED"}
+
         # ── DİNAMİK STOP VE HEDEFLERİ (YAPISAL SEVİYE & ADAPTİF FİTİL KALKANI) ──
         # Kripto piyasasında %0.50 gibi aşırı dar stoplar normal 5M fitillerinde sahte stop-out'lara yol açar.
         # Asgari stop tabanı %0.80'e çıkarılmış olup, coin volatilitesine (ATR) ve persona çarpanına göre dinamik ölçeklenir.
@@ -1442,6 +1517,86 @@ class StrategyEngine:
                 tp1 = atr_tp1
                 tp2 = atr_tp2
 
+        # ── 8b. JUST-IN-TIME (JIT) L2 DERİNLİK & SPOOFING KALKANI (COIN DNA ADAPTİF) ──
+        if self.market_data and hasattr(self.market_data, 'get_jit_l2_depth'):
+            try:
+                l2_info = await self.market_data.get_jit_l2_depth(symbol)
+                l2_ratio = float(l2_info.get('l2_ratio', 1.0))
+                top_ratio = float(l2_info.get('top_ratio', 1.0))
+                depth_ok = bool(l2_info.get('depth_available', False))
+
+                if depth_ok:
+                    # Dinamik Coin DNA Eşik Uyarlaması
+                    persona_l2 = persona if 'persona' in locals() and persona else self.get_coin_dynamic_persona(symbol)
+                    p_class = persona_l2.get("persona_class", "STANDARD")
+                    clean_sym_chk = symbol.replace('/', '').replace(':USDT', '').replace('USDT', '')
+
+                    # 1. KÜME: Fitilli Tuzakçılar (WHIPSAW / Wick Trappers - Sığ Tahtalar)
+                    # Sığ tahtalarda manipülasyon kolaydır, arkadaki 19 kademe çok daha dolu olmak zorundadır!
+                    if p_class == "WHIPSAW":
+                        spoof_top_thresh = 1.80
+                        spoof_l2_min = 0.85
+                        heavy_ask_thresh = 0.40  # Satıcı 2.5 kat fazlaysa bile VETO
+                        heavy_bid_thresh = 2.50
+                        bonus_l2_long = 1.60     # En az 1.60x derinlik şart
+                        bonus_l2_short = 0.60
+                        archetype_label = "⚠️ Wick Trapper (Sığ Tahta Koruması)"
+
+                    # 2. KÜME: Dev Kurumsal Çapalar (BTC, ETH, SOL, BNB - Milyon Dolarlık Derin Tahtalar)
+                    # Tahtalar aşırı derin olduğundan %25 alıcı fazlalığı bile devasa kurumsal paradır.
+                    elif clean_sym_chk in ["BTC", "ETH", "SOL", "BNB"]:
+                        spoof_top_thresh = 1.60  # Derin tahtada 1.6x bile şüphelidir
+                        spoof_l2_min = 0.70
+                        heavy_ask_thresh = 0.33
+                        heavy_bid_thresh = 3.00
+                        bonus_l2_long = 1.25     # 1.25x kurumsal giriş için yeterlidir
+                        bonus_l2_short = 0.80
+                        archetype_label = "🏛️ Kurumsal Çapa (Derin Likidite)"
+
+                    # 3. KÜME: Trend Koşucuları (GOLD) ve Standart Pariteler
+                    else:
+                        spoof_top_thresh = 2.00
+                        spoof_l2_min = 0.70
+                        heavy_ask_thresh = 0.33
+                        heavy_bid_thresh = 3.00
+                        bonus_l2_long = 1.40
+                        bonus_l2_short = 0.70
+                        archetype_label = "👑 Trend Koşucusu / Standart"
+
+                    # Dinamik Spoofing Tespiti
+                    is_dynamic_spoofing = (top_ratio >= spoof_top_thresh and l2_ratio < spoof_l2_min)
+
+                    # Veto 1: Spoofing Tuzağı (1. kademede duvar var ama arkadaki 19 kademe boş)
+                    if side == "LONG" and is_dynamic_spoofing:
+                        rej_msg = f"🛡️ L2 Spoofing Kalkanı [{archetype_label}]: 1. kademedeki alıcı duvarı sahte (1. Kademe: {top_ratio:.1f}x, Kümülatif Derinlik: {l2_ratio:.2f}x < {spoof_l2_min:.2f}x). Arkadaki 19 kademe boş, alıcı tuzağı engellendi."
+                        print(f">> [RED - L2 SPOOFING] {symbol}: {rej_msg}")
+                        self.log_rejection(symbol, reason, rej_msg)
+                        return {"error": "L2_SPOOFING_BID_WALL_BLOCKED"}
+
+                    # Veto 2: Masif Satıcı Baskısı (Derinlikte satıcılar ağır basıyor)
+                    if side == "LONG" and l2_ratio <= heavy_ask_thresh:
+                        rej_msg = f"🛡️ L2 Satıcı Baskısı Kalkanı [{archetype_label}]: Fiyatın %0.5 üstünde {l2_info.get('ask_usd_05', 0):,.0f}$ satıcı yığılması var (L2 Oran: {l2_ratio:.2f}x <= {heavy_ask_thresh:.2f}x). LONG engellendi."
+                        print(f">> [RED - L2 SATICI BASKISI] {symbol}: {rej_msg}")
+                        self.log_rejection(symbol, reason, rej_msg)
+                        return {"error": "L2_HEAVY_ASK_DEPTH_BLOCKED"}
+
+                    # Veto 3: Masif Alıcı Duvarına Karşı SHORT (Fiyatın altında dev alıcılar var)
+                    if side == "SHORT" and l2_ratio >= heavy_bid_thresh:
+                        rej_msg = f"🛡️ L2 Alıcı Desteği Kalkanı [{archetype_label}]: Fiyatın %0.5 altında {l2_info.get('bid_usd_05', 0):,.0f}$ alıcı duvarı var (L2 Oran: {l2_ratio:.2f}x >= {heavy_bid_thresh:.2f}x). SHORT engellendi."
+                        print(f">> [RED - L2 ALICI DESTEĞİ] {symbol}: {rej_msg}")
+                        self.log_rejection(symbol, reason, rej_msg)
+                        return {"error": "L2_HEAVY_BID_DEPTH_BLOCKED"}
+
+                    # Confluence: Gerçek L2 Desteği
+                    if side == "LONG" and l2_ratio >= bonus_l2_long:
+                        if confluence_list is not None and isinstance(confluence_list, list):
+                            confluence_list.append("L2_Gerçek_Alıcı_Derinliği_Teyitli")
+                    elif side == "SHORT" and l2_ratio <= bonus_l2_short:
+                        if confluence_list is not None and isinstance(confluence_list, list):
+                            confluence_list.append("L2_Gerçek_Satıcı_Derinliği_Teyitli")
+            except Exception as e:
+                print(f">> [JIT L2 HATA] {symbol}: {e}")
+
         macro_clim = self.get_macro_climate()
         res = await self._safe_open_position(
             symbol=symbol, side=side, entry_price=entry_price,
@@ -1486,6 +1641,7 @@ class StrategyEngine:
                 self.failed_levels.pop(symbol, None)
             levels = getattr(self.market_data, 'levels', {}).get(symbol) if self.market_data else None
             await self._notify_open(res, levels=levels)
+            return res
 
     # =========================================================================
     # SEVIYE GUNCELLEME — Gun degisiminde acik pozisyon TP/Stop guncelleme

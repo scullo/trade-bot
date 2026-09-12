@@ -237,3 +237,44 @@ def get_tradingview_naked_lines(df_5m: pd.DataFrame, current_price: float) -> di
         "above_nval": float(val if val > current_price else 0.0),
         "below_nval": float(below_nval)
     }
+
+def calculate_session_and_daily_levels(df_5m: pd.DataFrame, df_1d: pd.DataFrame) -> dict:
+    """
+    Kurumsal Seans ve Günlük Seviyeler (Auction & Session Liquidity Framework):
+    - PDH (Previous Day High): Dünün en yüksek fiyatı
+    - PDL (Previous Day Low): Dünün en düşük fiyatı
+    - PDC (Previous Day Close): Dünün kapanış fiyatı
+    - Asia High / Low: 00:00 - 08:00 UTC arasındaki Asya Seansı Zirvesi ve Dibi
+    """
+    res = {
+        "pdh": 0.0,
+        "pdl": 0.0,
+        "pdc": 0.0,
+        "asia_high": 0.0,
+        "asia_low": 0.0
+    }
+    try:
+        if df_1d is not None and not df_1d.empty and len(df_1d) >= 2:
+            prev_row = df_1d.iloc[-2]
+            res["pdh"] = float(prev_row.get('high', 0.0))
+            res["pdl"] = float(prev_row.get('low', 0.0))
+            res["pdc"] = float(prev_row.get('close', 0.0))
+        elif df_1d is not None and not df_1d.empty:
+            prev_row = df_1d.iloc[-1]
+            res["pdh"] = float(prev_row.get('high', 0.0))
+            res["pdl"] = float(prev_row.get('low', 0.0))
+            res["pdc"] = float(prev_row.get('close', 0.0))
+
+        if df_5m is not None and not df_5m.empty and 'timestamp' in df_5m.columns:
+            ts_series = pd.to_datetime(df_5m['timestamp'], unit='ms', utc=True)
+            today_utc = ts_series.iloc[-1].date()
+            asia_mask = (ts_series.dt.date == today_utc) & (ts_series.dt.hour >= 0) & (ts_series.dt.hour < 8)
+            asia_df = df_5m[asia_mask]
+            if not asia_df.empty:
+                res["asia_high"] = float(asia_df['high'].max())
+                res["asia_low"] = float(asia_df['low'].min())
+    except Exception:
+        pass
+
+    return res
+
