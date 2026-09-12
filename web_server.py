@@ -6604,12 +6604,29 @@ async function loadAdminMetrics() {
                 resize();
                 window.addEventListener('resize', resize);
 
-                canvas.addEventListener('mousemove', e => {
+                function handlePointerMove(clientX, clientY) {
                     const rect = canvas.getBoundingClientRect();
-                    mousePos.x = e.clientX - rect.left;
-                    mousePos.y = e.clientY - rect.top;
+                    if (!rect || rect.width <= 0 || rect.height <= 0) return;
+                    mousePos.x = (clientX - rect.left) * (width / rect.width);
+                    mousePos.y = (clientY - rect.top) * (height / rect.height);
                     checkHover();
+                }
+
+                canvas.addEventListener('mousemove', e => {
+                    handlePointerMove(e.clientX, e.clientY);
                 });
+
+                canvas.addEventListener('touchstart', e => {
+                    if (e.touches && e.touches[0]) {
+                        handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+                    }
+                }, { passive: true });
+
+                canvas.addEventListener('touchmove', e => {
+                    if (e.touches && e.touches[0]) {
+                        handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+                    }
+                }, { passive: true });
 
                 canvas.addEventListener('mouseleave', () => {
                     mousePos.x = -1;
@@ -6617,7 +6634,8 @@ async function loadAdminMetrics() {
                     isUserHovering = false;
                 });
 
-                canvas.addEventListener('click', () => {
+                canvas.addEventListener('click', e => {
+                    handlePointerMove(e.clientX, e.clientY);
                     if (selectedTarget) {
                         focusSelectedInFeed();
                     }
@@ -6635,26 +6653,57 @@ async function loadAdminMetrics() {
                 const cy = height / 2;
                 const rMax = Math.min(cx, cy) * 0.88;
 
+                let bestTarget = null;
+                let bestScore = 999999;
+
                 for (let t of radarTargets) {
                     const pos = getTargetCoords(t, cx, cy, rMax);
                     const dx = mousePos.x - pos.x;
                     const dy = mousePos.y - pos.y;
-                    if (Math.hypot(dx, dy) < 16) {
-                        selectedTarget = t;
-                        isUserHovering = true;
-                        updateTelemetryHUD(t);
-                        canvas.style.cursor = 'pointer';
-                        return;
+                    const dotDist = Math.hypot(dx, dy);
+
+                    // Etiket plaka hit-test hesabı
+                    const hasIce = Boolean(t.hasIceberg || (t.icebergRatio && t.icebergRatio >= 3.5));
+                    const extraChars = (hasIce ? 3 : 0) + (t.isAnchorWall || t.isIronWall || t.bookmapBuyerAbsorption ? 3 : 0);
+                    const badgeW = Math.max((t.symbol.length + extraChars) * 8.5 + 16, 50);
+                    const badgeH = 22;
+                    const badgeX = pos.x - badgeW / 2;
+                    const badgeY = (pos.y >= cy) ? (pos.y + 6) : (pos.y - badgeH - 6);
+
+                    // Kullanıcı hem blip noktasına hem de isim etiketine geldiğinde seçilsin
+                    const inBadge = (mousePos.x >= badgeX - 6 && mousePos.x <= badgeX + badgeW + 6 &&
+                                     mousePos.y >= badgeY - 5 && mousePos.y <= badgeY + badgeH + 5);
+
+                    if (dotDist < 26 || inBadge) {
+                        const score = inBadge ? Math.min(dotDist, 12) : dotDist;
+                        if (score < bestScore) {
+                            bestScore = score;
+                            bestTarget = t;
+                        }
                     }
                 }
-                canvas.style.cursor = 'crosshair';
+
+                if (bestTarget) {
+                    selectedTarget = bestTarget;
+                    isUserHovering = true;
+                    try {
+                        updateTelemetryHUD(bestTarget);
+                    } catch (err) {
+                        console.warn('[Radar] Telemetry update warning:', err);
+                    }
+                    canvas.style.cursor = 'pointer';
+                } else {
+                    isUserHovering = false;
+                    canvas.style.cursor = 'crosshair';
+                }
             }
 
             function resize() {
                 if (!canvas) return;
                 const rect = canvas.getBoundingClientRect();
-                width = rect.width || (canvas.parentElement ? canvas.parentElement.clientWidth : 0) || 580;
-                height = rect.height || (canvas.parentElement ? canvas.parentElement.clientHeight : 0) || 520;
+                const parentRect = canvas.parentElement ? canvas.parentElement.getBoundingClientRect() : null;
+                width = Math.floor(rect.width || (parentRect ? parentRect.width : 0) || 580);
+                height = Math.floor(rect.height || (parentRect ? parentRect.height : 0) || 520);
                 if (width <= 0) width = 580;
                 if (height <= 0) height = 520;
                 dpr = window.devicePixelRatio || 1;
@@ -6705,7 +6754,12 @@ async function loadAdminMetrics() {
                 }
                 if (currentRadarMode === 'collapsed') return;
 
-                if (width <= 0 || canvas.width <= 0) resize();
+                const rect = canvas.getBoundingClientRect();
+                const curW = Math.floor(rect.width);
+                const curH = Math.floor(rect.height);
+                if (curW > 0 && curH > 0 && (Math.abs(width - curW) > 1 || Math.abs(height - curH) > 1 || canvas.width <= 0)) {
+                    resize();
+                }
 
                 ctx.clearRect(0, 0, width, height);
                 sweepAngle += 0.022;
