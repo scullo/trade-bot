@@ -1533,30 +1533,79 @@ HTML_PAGE = """
             border-radius: 6px;
             font-weight: 700;
         }
+        .radar-top-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .radar-scope-filters {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 2px 4px;
+            gap: 3px;
+        }
+        .radar-filter-pill {
+            background: transparent;
+            border: 1px solid transparent;
+            color: #94a3b8;
+            font-size: 10.5px;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 3px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+        }
+        .radar-filter-pill:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.06);
+        }
+        .radar-filter-pill.active {
+            background: rgba(0, 242, 254, 0.18);
+            border-color: rgba(0, 242, 254, 0.45);
+            color: var(--cyan);
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.25);
+            font-weight: 700;
+        }
         .tactical-radar-body {
             display: grid;
-            grid-template-columns: 1.3fr 0.85fr;
+            grid-template-columns: 1.4fr 1fr;
             gap: 20px;
             align-items: center;
             margin-top: 14px;
+            transition: all 0.3s ease;
         }
         @media (max-width: 950px) {
             .tactical-radar-body {
                 grid-template-columns: 1fr;
             }
         }
+        .tactical-radar-card.radar-expanded-mode .tactical-radar-body {
+            grid-template-columns: 1fr;
+        }
+        .tactical-radar-card.radar-expanded-mode .radar-canvas-container {
+            height: 640px !important;
+        }
+        .tactical-radar-card.radar-expanded-mode .radar-telemetry-panel {
+            min-height: auto;
+        }
         .radar-canvas-container {
             position: relative;
             width: 100%;
-            height: 460px;
-            background: radial-gradient(circle at center, rgba(16, 24, 40, 0.8) 0%, rgba(8, 12, 22, 0.95) 75%);
+            height: 520px;
+            background: radial-gradient(circle at center, rgba(16, 24, 40, 0.82) 0%, rgba(8, 12, 22, 0.98) 78%);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 16px;
             overflow: hidden;
-            box-shadow: inset 0 0 45px rgba(0, 0, 0, 0.9);
+            box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.95);
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: height 0.3s ease;
         }
         #tactical-radar-canvas {
             position: absolute;
@@ -2776,7 +2825,19 @@ HTML_PAGE = """
                         <span style="font-weight:800; letter-spacing:0.5px;">VALKYRIE TAKTİK LİKİDİTE RADARI & SAVUNMA KALKANI</span>
                         <span class="radar-scope-badge" id="radar-active-count-badge">0 HEDEF TARANIYOR</span>
                     </div>
-                    <div style="display:flex; gap:8px; align-items:center;">
+                    <div class="radar-top-controls">
+                        <!-- Radar Kapsam Filtreleri -->
+                        <div class="radar-scope-filters">
+                            <button class="radar-filter-pill active" id="rf-pill-top15" onclick="setRadarScope('top15')" title="En yüksek öncelikli 15 parite (Feraha kavuşturulmuş net görünüm)">⭐ Odak 15</button>
+                            <button class="radar-filter-pill" id="rf-pill-all" onclick="setRadarScope('all')" title="Taranan tüm pariteler">Tümü</button>
+                            <button class="radar-filter-pill" id="rf-pill-contact" onclick="setRadarScope('contact')" title="Destek / Direnç seviyesine tam temas edenler">🔥 Temas</button>
+                            <button class="radar-filter-pill" id="rf-pill-iceberg" onclick="setRadarScope('iceberg')" title="Gizli balina buzdağı ve emilim tespit edilenler">🧊 Iceberg</button>
+                            <button class="radar-filter-pill" id="rf-pill-ambush" onclick="setRadarScope('ambush')" title="Seviyeye 0.25%-0.60% mesafede pusu kuranlar">🎯 Pusu</button>
+                            <button class="radar-filter-pill" id="rf-pill-blocked" onclick="setRadarScope('blocked')" title="Aegis Kalkanı ve Kuant filtrelerle elenenler">🛡️ Kalkan</button>
+                        </div>
+                        <button id="btn-expand-radar" class="btn-battle-toggle" onclick="toggleRadarExpand()" title="Radarı Tam Genişliğe Büyüt / Küçült">
+                            ⛶ Geniş Radar
+                        </button>
                         <button id="btn-toggle-radar-view" class="btn-battle-toggle" onclick="toggleRadarView()" title="Radar Görünümünü Aç / Kapat">
                             Radarı Gizle
                         </button>
@@ -2789,12 +2850,12 @@ HTML_PAGE = """
                         <canvas id="tactical-radar-canvas"></canvas>
                         <!-- Radar HUD Legend Overlay -->
                         <div class="radar-hud-legend">
-                            <span class="legend-item"><span class="legend-dot contact"></span> Merkez: Seviyede Temas</span>
-                            <span class="legend-item"><span class="legend-dot ambush"></span> Orta: Hacim Bekleyen</span>
-                            <span class="legend-item"><span class="legend-dot approach"></span> Dış: Yaklaşan</span>
-                            <span class="legend-item"><span class="legend-dot blocked"></span> Kalkan: Girecekti / Elendi</span>
-                            <span class="legend-item"><span class="legend-dot" style="background:#00f2fe; box-shadow:0 0 8px #00f2fe;"></span> 🧊 Iceberg Gizli Balina</span>
-                            <span class="legend-item"><span class="legend-dot" style="background:#10b981; box-shadow:0 0 8px #10b981;"></span> 🌊 Bookmap Çapa/Emilim</span>
+                            <span class="legend-item"><span class="legend-dot contact"></span> Merkez: %0.25 Temas</span>
+                            <span class="legend-item"><span class="legend-dot ambush"></span> Orta: %0.60 Pusu</span>
+                            <span class="legend-item"><span class="legend-dot approach"></span> Dış: %2.50 Yaklaşan</span>
+                            <span class="legend-item"><span class="legend-dot blocked"></span> Dış Halka: Kalkan</span>
+                            <span class="legend-item"><span class="legend-dot" style="background:#00f2fe; box-shadow:0 0 8px #00f2fe;"></span> 🧊 Iceberg</span>
+                            <span class="legend-item"><span class="legend-dot" style="background:#10b981; box-shadow:0 0 8px #10b981;"></span> 🌊 Bookmap</span>
                         </div>
                     </div>
 
@@ -6003,6 +6064,8 @@ async function loadAdminMetrics() {
         // 🎯 VALKYRIE 360° TAKTİK LİKİDİTE RADARI & SAVUNMA KALKANI MOTORU
         // =========================================================================
         let currentRadarMode = localStorage.getItem('valkyrie_radar_mode') || 'expanded';
+        let currentRadarSize = localStorage.getItem('valkyrie_radar_size') || 'normal';
+        let currentRadarScope = localStorage.getItem('valkyrie_radar_scope') || 'top15';
 
         function toggleRadarView() {
             currentRadarMode = (currentRadarMode === 'expanded') ? 'collapsed' : 'expanded';
@@ -6023,6 +6086,53 @@ async function loadAdminMetrics() {
             }
         }
 
+        function toggleRadarExpand() {
+            const card = document.getElementById('tactical-radar-wrap');
+            const btn = document.getElementById('btn-expand-radar');
+            if (!card) return;
+            const isExp = card.classList.contains('radar-expanded-mode');
+            if (isExp) {
+                card.classList.remove('radar-expanded-mode');
+                localStorage.setItem('valkyrie_radar_size', 'normal');
+                if (btn) btn.innerHTML = '⛶ Geniş Radar';
+            } else {
+                card.classList.add('radar-expanded-mode');
+                localStorage.setItem('valkyrie_radar_size', 'expanded');
+                if (btn) btn.innerHTML = '🗗 Standart Görünüm';
+            }
+            if (window.ValkyrieTacticalRadarEngine) {
+                setTimeout(() => {
+                    window.ValkyrieTacticalRadarEngine.resize();
+                }, 60);
+            }
+        }
+
+        function applyRadarSizeMode() {
+            const saved = localStorage.getItem('valkyrie_radar_size') || 'normal';
+            const card = document.getElementById('tactical-radar-wrap');
+            const btn = document.getElementById('btn-expand-radar');
+            if (card && saved === 'expanded') {
+                card.classList.add('radar-expanded-mode');
+                if (btn) btn.innerHTML = '🗗 Standart Görünüm';
+            }
+        }
+
+        function setRadarScope(scope) {
+            currentRadarScope = scope;
+            localStorage.setItem('valkyrie_radar_scope', scope);
+            syncFilterPillsUI();
+            if (window.ValkyrieTacticalRadarEngine) {
+                window.ValkyrieTacticalRadarEngine.applyCurrentFilter();
+            }
+        }
+
+        function syncFilterPillsUI() {
+            const pills = document.querySelectorAll('.radar-filter-pill');
+            pills.forEach(p => p.classList.remove('active'));
+            const activePill = document.getElementById(`rf-pill-${currentRadarScope}`);
+            if (activePill) activePill.classList.add('active');
+        }
+
         function focusRadarTargetCard() {
             if (window.ValkyrieTacticalRadarEngine) {
                 window.ValkyrieTacticalRadarEngine.focusSelectedInFeed();
@@ -6037,6 +6147,7 @@ async function loadAdminMetrics() {
             let sweepAngle = 0;
             let isRunning = false;
 
+            let allRawRadarTargets = [];
             let radarTargets = [];
             let selectedTarget = null;
             let selectedIndex = 0;
@@ -6055,6 +6166,99 @@ async function loadAdminMetrics() {
                 return Math.abs(h % 360) * (Math.PI / 180);
             }
 
+            function applyAntiCollision(targets) {
+                if (!targets || targets.length <= 1) return;
+                targets.forEach(t => { t.displayAngle = t.angle; });
+
+                const bands = { contact: [], ambush: [], approach: [], blocked: [] };
+                targets.forEach(t => {
+                    if (bands[t.category]) bands[t.category].push(t);
+                    else bands.approach.push(t);
+                });
+
+                Object.values(bands).forEach(band => {
+                    if (band.length <= 1) return;
+                    band.sort((a, b) => a.displayAngle - b.displayAngle);
+                    const minGap = 0.20; // radyan (~11.5 derece) minimum açısal ferahlık
+                    for (let pass = 0; pass < 3; pass++) {
+                        for (let i = 0; i < band.length; i++) {
+                            const nextIdx = (i + 1) % band.length;
+                            let d = band[nextIdx].displayAngle - band[i].displayAngle;
+                            if (d < 0) d += Math.PI * 2;
+                            if (d < minGap && d > 0.0001) {
+                                const push = (minGap - d) / 2;
+                                band[i].displayAngle = (band[i].displayAngle - push + Math.PI * 2) % (Math.PI * 2);
+                                band[nextIdx].displayAngle = (band[nextIdx].displayAngle + push) % (Math.PI * 2);
+                            }
+                        }
+                    }
+                });
+            }
+
+            function applyCurrentFilter() {
+                if (!allRawRadarTargets || allRawRadarTargets.length === 0) {
+                    radarTargets = [];
+                    return;
+                }
+
+                if (currentRadarScope === 'top15') {
+                    // En kritik 15 pariteyi önceliklendir (Temas > Iceberg/Bookmap > Pusu > Kalkan > Yaklaşan)
+                    const scored = allRawRadarTargets.map(t => {
+                        let score = 0;
+                        if (t.category === 'contact') score += 1000 - Math.min(60, (t.distPct || 0) * 120);
+                        else if (t.hasIceberg || t.icebergRatio >= 3.5) score += 800 - Math.min(60, (t.distPct || 0) * 60);
+                        else if (t.isAnchorWall || t.isIronWall) score += 700 - Math.min(60, (t.distPct || 0) * 60);
+                        else if (t.bookmapBuyerAbsorption || t.bookmapSellerAbsorption) score += 650;
+                        else if (t.category === 'ambush') score += 500 - Math.min(60, (t.distPct || 0) * 60);
+                        else if (t.category === 'blocked') score += 400;
+                        else score += 200 - Math.min(100, (t.distPct || 0) * 20);
+
+                        if (t.volSurge > 1.5) score += Math.min(80, t.volSurge * 20);
+                        return { item: t, score: score };
+                    });
+                    scored.sort((a, b) => b.score - a.score);
+                    let filtered = scored.slice(0, 15).map(s => s.item);
+
+                    if (selectedTarget && !filtered.some(t => t.symbol === selectedTarget.symbol)) {
+                        filtered[filtered.length - 1] = selectedTarget;
+                    }
+                    radarTargets = filtered;
+                } else if (currentRadarScope === 'contact') {
+                    radarTargets = allRawRadarTargets.filter(t => t.category === 'contact');
+                } else if (currentRadarScope === 'iceberg') {
+                    radarTargets = allRawRadarTargets.filter(t => t.hasIceberg || t.icebergRatio >= 3.5 || t.bookmapBuyerAbsorption || t.bookmapSellerAbsorption);
+                } else if (currentRadarScope === 'ambush') {
+                    radarTargets = allRawRadarTargets.filter(t => t.category === 'ambush');
+                } else if (currentRadarScope === 'blocked') {
+                    radarTargets = allRawRadarTargets.filter(t => t.category === 'blocked');
+                } else {
+                    radarTargets = allRawRadarTargets.slice(0, 100);
+                }
+
+                applyAntiCollision(radarTargets);
+
+                const badge = document.getElementById('radar-active-count-badge');
+                if (badge) {
+                    const iceCount = radarTargets.filter(t => t.hasIceberg || t.icebergRatio >= 3.5).length;
+                    const iceTxt = iceCount > 0 ? ` • 🧊 ${iceCount} ICEBERG` : '';
+                    let scopeTitle = 'ODAK 15';
+                    if (currentRadarScope === 'all') scopeTitle = 'TÜMÜ';
+                    else if (currentRadarScope === 'contact') scopeTitle = 'TEMAS';
+                    else if (currentRadarScope === 'iceberg') scopeTitle = 'ICEBERG';
+                    else if (currentRadarScope === 'ambush') scopeTitle = 'PUSU';
+                    else if (currentRadarScope === 'blocked') scopeTitle = 'KALKAN';
+                    badge.innerText = `${radarTargets.length} HEDEF (${scopeTitle})${iceTxt}`;
+                }
+
+                if (!selectedTarget || !radarTargets.some(t => t.symbol === selectedTarget.symbol)) {
+                    selectedTarget = radarTargets.find(t => t.category === 'contact') 
+                        || radarTargets.find(t => t.hasIceberg)
+                        || radarTargets.find(t => t.category === 'ambush') 
+                        || radarTargets[0] || null;
+                    updateTelemetryHUD(selectedTarget);
+                }
+            }
+
             function setRadarData(nearCandidates, rejections) {
                 const list = [];
 
@@ -6070,7 +6274,7 @@ async function loadAdminMetrics() {
 
                         let cat = 'approach';
                         if (isContact) cat = 'contact';
-                        else if (dist <= 0.55) cat = 'ambush';
+                        else if (dist <= 0.60) cat = 'ambush';
 
                         const iceRatio = c.icebergRatio !== undefined ? Number(c.icebergRatio) : 1.0;
                         const askIceRatio = c.askIcebergRatio !== undefined ? Number(c.askIcebergRatio) : 1.0;
@@ -6098,6 +6302,7 @@ async function loadAdminMetrics() {
                                 ? (isVolOk ? 'Seviyede tam temas & Hacim onaylı!' : `Seviyede temas var; ${minSurge.toFixed(1)}x hacim patlaması ve 5M kapanış bekleniyor.`)
                                 : `Fiyat ${c.targetName} seviyesine süzülüyor (Kalan: %${dist.toFixed(2)}).`,
                             angle: getStableAngle(cleanS + '_near'),
+                            displayAngle: getStableAngle(cleanS + '_near'),
                             intensity: 0.25,
                             pulse: 0,
                             icebergRatio: iceRatio,
@@ -6147,6 +6352,7 @@ async function loadAdminMetrics() {
                             rsScore: 0,
                             reason: r.reason || 'Kriterler sağlanamadığı için işlem güvenliği gereği iptal edildi.',
                             angle: getStableAngle(cleanS + '_rej'),
+                            displayAngle: getStableAngle(cleanS + '_rej'),
                             intensity: 0.35,
                             pulse: 0,
                             icebergRatio: iceRatio,
@@ -6167,22 +6373,8 @@ async function loadAdminMetrics() {
                     });
                 }
 
-                radarTargets = list;
-
-                const badge = document.getElementById('radar-active-count-badge');
-                if (badge) {
-                    const iceCount = radarTargets.filter(t => t.hasIceberg || t.icebergRatio >= 3.5).length;
-                    const iceTxt = iceCount > 0 ? ` • 🧊 ${iceCount} ICEBERG` : '';
-                    badge.innerText = `${radarTargets.length} HEDEF TARANIYOR${iceTxt}`;
-                }
-
-                if (!selectedTarget || !radarTargets.some(t => t.symbol === selectedTarget.symbol)) {
-                    selectedTarget = radarTargets.find(t => t.category === 'contact') 
-                        || radarTargets.find(t => t.hasIceberg)
-                        || radarTargets.find(t => t.category === 'ambush') 
-                        || radarTargets[0] || null;
-                    updateTelemetryHUD(selectedTarget);
-                }
+                allRawRadarTargets = list;
+                applyCurrentFilter();
             }
 
             function updateTelemetryHUD(target) {
@@ -6237,7 +6429,7 @@ async function loadAdminMetrics() {
                         distEl.innerText = '🛡️ KALKAN';
                         distEl.style.color = 'var(--red)';
                     } else {
-                        distEl.innerText = `%${target.distPct.toFixed(2)}`;
+                        distEl.innerText = `%${(target.distPct || 0).toFixed(2)}`;
                         distEl.style.color = target.category === 'contact' ? '#10b981' : '#38bdf8';
                     }
                 }
@@ -6248,54 +6440,59 @@ async function loadAdminMetrics() {
                         volEl.innerText = '⛔ İptal';
                         volEl.style.color = 'var(--red)';
                     } else {
-                        volEl.innerText = `${target.volSurge.toFixed(2)}x`;
+                        volEl.innerText = `${(target.volSurge || 1.0).toFixed(2)}x`;
                         volEl.style.color = target.isVolOk ? '#10b981' : '#f59e0b';
                     }
                 }
-                if (volSubEl) volSubEl.innerText = target.category === 'blocked' ? 'Kriter Reddedildi' : `Hedef: Min ${target.minVolSurge.toFixed(1)}x`;
-
-                if (cvdEl) {
-                    if (target.reason && target.reason.includes('%')) {
-                        const m = target.reason.match(/%(\d+)/);
-                        cvdEl.innerText = m ? `%${m[1]} Taker Baskı` : 'Taker Analizi';
+                if (volSubEl) {
+                    if (target.category === 'blocked') {
+                        volSubEl.innerText = 'Kural İhlali';
                     } else {
-                        cvdEl.innerText = target.category === 'contact' ? 'Emilim Teyitli' : 'Dengeli Akış';
+                        volSubEl.innerText = target.isVolOk ? 'Hacim Koşulu Sağlandı' : `Hedef: min ${(target.minVolSurge || 1.5).toFixed(1)}x`;
                     }
                 }
+
+                if (cvdEl) {
+                    const rs = target.rsScore || 0;
+                    cvdEl.innerText = `${rs >= 0 ? '+' : ''}${rs.toFixed(2)}`;
+                    cvdEl.style.color = rs >= 0 ? '#10b981' : 'var(--red)';
+                }
                 if (cvdSubEl) {
-                    if (target.reason && target.reason.includes('-$')) {
-                        const m = target.reason.match(/-\$[\d,]+/);
-                        cvdSubEl.innerText = m ? `Delta: ${m[0]}` : 'Normal Seviye';
-                    } else {
-                        cvdSubEl.innerText = 'Piyasa Emirleri';
-                    }
+                    const rs = target.rsScore || 0;
+                    cvdSubEl.innerText = rs >= 0 ? 'BTC Üzeri Güçlü RS' : 'Zayıf Göreceli Güç';
                 }
 
                 if (statEl) {
-                    if (target.category === 'contact') statEl.innerText = '🔥 Kritik Bölge';
-                    else if (target.category === 'ambush') statEl.innerText = '⏳ Pusu Fazı';
-                    else if (target.category === 'blocked') statEl.innerText = '🛡️ Kalkan Koruması';
-                    else statEl.innerText = '📡 Taktik Radarda';
+                    if (target.category === 'blocked') {
+                        statEl.innerText = 'GİRİŞ REDDİ';
+                        statEl.style.color = 'var(--red)';
+                    } else if (target.category === 'contact') {
+                        statEl.innerText = target.isVolOk ? 'ONAYLANDI' : 'BAR BEKLİYOR';
+                        statEl.style.color = target.isVolOk ? '#10b981' : '#f59e0b';
+                    } else {
+                        statEl.innerText = 'İZLEMEDE';
+                        statEl.style.color = '#38bdf8';
+                    }
                 }
-                if (actEl) actEl.innerText = target.action;
 
-                // 🧊 Box 5: Ken Griffin Iceberg Dedektörü
+                if (actEl) {
+                    actEl.innerText = target.action || 'HAZIRDA';
+                    if (target.action && target.action.includes('SHORT')) actEl.style.color = 'var(--red)';
+                    else if (target.action && target.action.includes('LONG')) actEl.style.color = '#10b981';
+                    else actEl.style.color = '#ffffff';
+                }
+
+                // 🧊 Box 5: Iceberg & Gizli Balina Emilimi
                 if (iceEl) {
                     const iRatio = target.icebergRatio || 1.0;
                     const iSide = target.icebergSide || 'NONE';
-                    
-                    if (target.category === 'blocked' && hasIce) {
-                        iceEl.innerHTML = `<span style="color:#f43f5e; text-shadow:0 0 10px rgba(244,63,94,0.6); font-weight:900;">🧊 Gizli Buzdağı (${iRatio.toFixed(1)}x) ⛔</span>`;
-                        if (iceSubEl) iceSubEl.innerHTML = `<span style="color:#fca5a5;">Kurumsal Duvar: İşlem Engellendi</span>`;
-                    } else if (hasIce && (iSide === 'ICEBERG_ASK_RESISTANCE' || target.askIcebergRatio >= 3.5)) {
-                        iceEl.innerHTML = `<span style="color:#f43f5e; text-shadow:0 0 10px rgba(244,63,94,0.6); font-weight:900;">🧊 Satıcı Buzdağı (${iRatio.toFixed(1)}x) ⚠️</span>`;
-                        if (iceSubEl) iceSubEl.innerHTML = `<span style="color:#fca5a5;">Görünmeyen Direnç Emilimi</span>`;
-                    } else if (hasIce && (iSide === 'ICEBERG_BID_SUPPORT' || target.bidIcebergRatio >= 3.5)) {
-                        iceEl.innerHTML = `<span style="color:#10b981; text-shadow:0 0 10px rgba(16,185,129,0.6); font-weight:900;">🧊 Alıcı Buzdağı (${iRatio.toFixed(1)}x) 🟢</span>`;
-                        if (iceSubEl) iceSubEl.innerHTML = `<span style="color:#86efac;">Görünmeyen Taban Emilimi</span>`;
+                    if (hasIce) {
+                        const sideText = iSide === 'ICEBERG_ASK_RESISTANCE' ? 'Satıcı Emilimi' : 'Alıcı Emilimi';
+                        iceEl.innerHTML = `<span style="color:#00f2fe; text-shadow:0 0 10px rgba(0,242,254,0.6);">🧊 ${iRatio.toFixed(1)}x Buzdağı</span>`;
+                        if (iceSubEl) iceSubEl.innerText = `Aktif Gizli Balina (${sideText})`;
                     } else if (iRatio >= 2.0) {
-                        iceEl.innerHTML = `<span style="color:#38bdf8; font-weight:800;">🧊 Kısmi Emilim (${iRatio.toFixed(1)}x)</span>`;
-                        if (iceSubEl) iceSubEl.innerText = 'Gizli Likidite Isınıyor';
+                        iceEl.innerHTML = `<span style="color:#38bdf8;">🧊 %${Math.round(iRatio*100)} Kısmi</span>`;
+                        if (iceSubEl) iceSubEl.innerText = 'Potansiyel Gizli Likidite';
                     } else {
                         iceEl.innerHTML = `<span style="color:#94a3b8;">⚪ Normal (${iRatio.toFixed(1)}x)</span>`;
                         if (iceSubEl) iceSubEl.innerText = 'Gizli Balina Duvarı Yok';
@@ -6427,6 +6624,8 @@ async function loadAdminMetrics() {
                 });
 
                 applyRadarViewMode();
+                applyRadarSizeMode();
+                syncFilterPillsUI();
                 startLoop();
             }
 
@@ -6440,7 +6639,7 @@ async function loadAdminMetrics() {
                     const pos = getTargetCoords(t, cx, cy, rMax);
                     const dx = mousePos.x - pos.x;
                     const dy = mousePos.y - pos.y;
-                    if (Math.hypot(dx, dy) < 14) {
+                    if (Math.hypot(dx, dy) < 16) {
                         selectedTarget = t;
                         isUserHovering = true;
                         updateTelemetryHUD(t);
@@ -6454,10 +6653,10 @@ async function loadAdminMetrics() {
             function resize() {
                 if (!canvas) return;
                 const rect = canvas.getBoundingClientRect();
-                width = rect.width || (canvas.parentElement ? canvas.parentElement.clientWidth : 0) || 550;
-                height = rect.height || (canvas.parentElement ? canvas.parentElement.clientHeight : 0) || 460;
-                if (width <= 0) width = 550;
-                if (height <= 0) height = 460;
+                width = rect.width || (canvas.parentElement ? canvas.parentElement.clientWidth : 0) || 580;
+                height = rect.height || (canvas.parentElement ? canvas.parentElement.clientHeight : 0) || 520;
+                if (width <= 0) width = 580;
+                if (height <= 0) height = 520;
                 dpr = window.devicePixelRatio || 1;
                 canvas.width = Math.floor(width * dpr);
                 canvas.height = Math.floor(height * dpr);
@@ -6466,18 +6665,26 @@ async function loadAdminMetrics() {
 
             function getTargetCoords(t, cx, cy, rMax) {
                 let r = 0;
+                const ang = t.displayAngle !== undefined ? t.displayAngle : t.angle;
                 if (t.category === 'contact') {
-                    r = rMax * (0.08 + Math.min(0.12, t.distPct * 0.4));
+                    // Merkez: Ferah temas alanı (rMax * 0.20 - 0.36)
+                    const normDist = Math.min(1.0, Math.max(0.0, (t.distPct || 0) / 0.25));
+                    r = rMax * (0.20 + normDist * 0.16);
                 } else if (t.category === 'ambush') {
-                    r = rMax * (0.28 + (t.distPct - 0.25) * 0.4);
+                    // Orta halka: Pusu alanı (rMax * 0.40 - 0.62)
+                    const normDist = Math.min(1.0, Math.max(0.0, ((t.distPct || 0.25) - 0.25) / 0.35));
+                    r = rMax * (0.40 + normDist * 0.22);
                 } else if (t.category === 'approach') {
-                    r = rMax * (0.55 + (t.distPct - 0.55) * 0.35);
+                    // Dış halka: Yaklaşan alanı (rMax * 0.66 - 0.86)
+                    const normDist = Math.min(1.0, Math.max(0.0, ((t.distPct || 0.60) - 0.60) / 1.90));
+                    r = rMax * (0.66 + normDist * 0.20);
                 } else if (t.category === 'blocked') {
+                    // Kalkan perimetresi
                     r = rMax * 0.94;
                 }
                 return {
-                    x: cx + Math.cos(t.angle) * r,
-                    y: cy + Math.sin(t.angle) * r,
+                    x: cx + Math.cos(ang) * r,
+                    y: cy + Math.sin(ang) * r,
                     r: r
                 };
             }
@@ -6501,13 +6708,13 @@ async function loadAdminMetrics() {
                 if (width <= 0 || canvas.width <= 0) resize();
 
                 ctx.clearRect(0, 0, width, height);
-                sweepAngle += 0.024;
+                sweepAngle += 0.022;
 
                 const cx = width / 2;
                 const cy = height / 2;
                 const rMax = Math.min(cx, cy) * 0.88;
 
-                if (!isUserHovering && radarTargets.length > 0 && Date.now() - lastAutoCycleTime > 4000) {
+                if (!isUserHovering && radarTargets.length > 0 && Date.now() - lastAutoCycleTime > 4500) {
                     selectedIndex = (selectedIndex + 1) % radarTargets.length;
                     selectedTarget = radarTargets[selectedIndex];
                     updateTelemetryHUD(selectedTarget);
@@ -6516,10 +6723,12 @@ async function loadAdminMetrics() {
 
                 ctx.save();
 
+                // 🌐 Ergonomik Genişletilmiş Taktik Çemberler
                 const rings = [
-                    { r: rMax * 0.20, col: 'rgba(16, 185, 129, 0.35)', label: '0.0% TEMAS' },
-                    { r: rMax * 0.48, col: 'rgba(245, 158, 11, 0.25)', label: '0.3% PUSU' },
-                    { r: rMax * 0.72, col: 'rgba(56, 189, 248, 0.20)', label: '0.8% YAKLAŞAN' },
+                    { r: rMax * 0.20, col: 'rgba(16, 185, 129, 0.40)', label: '0.00% BOĞA/AYI GÖBEĞİ' },
+                    { r: rMax * 0.36, col: 'rgba(16, 185, 129, 0.25)', label: '0.25% TEMAS ÇEMBERİ' },
+                    { r: rMax * 0.62, col: 'rgba(245, 158, 11, 0.22)', label: '0.60% PUSU ÇEMBERİ' },
+                    { r: rMax * 0.86, col: 'rgba(56, 189, 248, 0.18)', label: '2.50% YAKLAŞAN' },
                     { r: rMax * 0.94, col: 'rgba(244, 63, 94, 0.45)', label: 'AEGIS SAVUNMA KALKANI', isShield: true }
                 ];
 
@@ -6542,13 +6751,15 @@ async function loadAdminMetrics() {
                 });
                 ctx.shadowBlur = 0;
 
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+                // Koordinat Eksenleri
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.07)';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
                 ctx.moveTo(cx - rMax, cy); ctx.lineTo(cx + rMax, cy);
                 ctx.moveTo(cx, cy - rMax); ctx.lineTo(cx, cy + rMax);
                 ctx.stroke();
 
+                // Pusula Çizgileri
                 for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
                     ctx.beginPath();
                     ctx.moveTo(cx + Math.cos(a) * (rMax * 0.90), cy + Math.sin(a) * (rMax * 0.90));
@@ -6556,8 +6767,9 @@ async function loadAdminMetrics() {
                     ctx.stroke();
                 }
 
+                // Dönen Radar Taraması (Sweep Gradient)
                 const sweepGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rMax);
-                sweepGrad.addColorStop(0, 'rgba(0, 242, 254, 0.25)');
+                sweepGrad.addColorStop(0, 'rgba(0, 242, 254, 0.22)');
                 sweepGrad.addColorStop(1, 'rgba(0, 242, 254, 0)');
                 ctx.fillStyle = sweepGrad;
 
@@ -6577,11 +6789,13 @@ async function loadAdminMetrics() {
                 ctx.stroke();
                 ctx.shadowBlur = 0;
 
+                // Hedefleri Çiz
                 for (let t of radarTargets) {
                     const pos = getTargetCoords(t, cx, cy, rMax);
                     const hasIce = Boolean(t.hasIceberg || (t.icebergRatio && t.icebergRatio >= 3.5));
 
-                    let dAngle = (sweepAngle - t.angle) % (Math.PI * 2);
+                    const ang = t.displayAngle !== undefined ? t.displayAngle : t.angle;
+                    let dAngle = (sweepAngle - ang) % (Math.PI * 2);
                     if (dAngle < 0) dAngle += Math.PI * 2;
                     if (dAngle < 0.22) {
                         t.intensity = 1.0;
@@ -6590,8 +6804,8 @@ async function loadAdminMetrics() {
                                 shieldSparks.push({
                                     x: pos.x,
                                     y: pos.y,
-                                    vx: Math.cos(t.angle + (Math.random() - 0.5)) * (1 + Math.random() * 2),
-                                    vy: Math.sin(t.angle + (Math.random() - 0.5)) * (1 + Math.random() * 2),
+                                    vx: Math.cos(ang + (Math.random() - 0.5)) * (1 + Math.random() * 2),
+                                    vy: Math.sin(ang + (Math.random() - 0.5)) * (1 + Math.random() * 2),
                                     life: 1.0,
                                     col: '#f43f5e'
                                 });
@@ -6601,8 +6815,8 @@ async function loadAdminMetrics() {
                                 shieldSparks.push({
                                     x: pos.x,
                                     y: pos.y,
-                                    vx: Math.cos(t.angle + (Math.random() - 0.5)) * (1.2 + Math.random() * 2),
-                                    vy: Math.sin(t.angle + (Math.random() - 0.5)) * (1.2 + Math.random() * 2),
+                                    vx: Math.cos(ang + (Math.random() - 0.5)) * (1.2 + Math.random() * 2),
+                                    vy: Math.sin(ang + (Math.random() - 0.5)) * (1.2 + Math.random() * 2),
                                     life: 1.0,
                                     col: '#00f2fe'
                                 });
@@ -6654,6 +6868,7 @@ async function loadAdminMetrics() {
                         ctx.stroke();
                     }
 
+                    // Hedef Noktası (Blip)
                     ctx.fillStyle = dotColor;
                     ctx.shadowColor = dotColor;
                     ctx.shadowBlur = t.intensity > 0.5 ? 12 : 4;
@@ -6670,14 +6885,57 @@ async function loadAdminMetrics() {
                     ctx.fill();
                     ctx.shadowBlur = 0;
 
-                    ctx.fillStyle = isSelected ? '#ffffff' : (t.intensity > 0.5 ? (hasIce ? '#00f2fe' : dotColor) : '#cbd5e1');
-                    ctx.font = `${isSelected ? 'bold 12px' : '11px'} "JetBrains Mono", monospace`;
-                    const labelY = (pos.y > cy) ? pos.y + 14 : pos.y - 8;
-                    const iceIcon = hasIce ? ' 🧊' : '';
-                    const bmIcon = t.isIronWall ? ' 🧱' : (t.isAnchorWall ? ' ⚓' : (t.bookmapBuyerAbsorption ? ' 🌊' : ''));
-                    ctx.fillText(t.symbol + iceIcon + bmIcon, pos.x - 14, labelY);
+                    // 🏷️ Akıllı Katmanlı Etiketleme & Karartılmış Kapsül Plakası (Çakışma Önleyici & Kristal Okunurluk)
+                    const shouldShowLabel = isSelected || 
+                                          (currentRadarScope === 'top15') || 
+                                          (t.category === 'contact') || 
+                                          (t.category === 'blocked') || 
+                                          hasIce || 
+                                          t.isAnchorWall || 
+                                          t.isIronWall || 
+                                          (isUserHovering && isSelected);
+
+                    if (shouldShowLabel) {
+                        const iceIcon = hasIce ? ' 🧊' : '';
+                        const bmIcon = t.isIronWall ? ' 🧱' : (t.isAnchorWall ? ' ⚓' : (t.bookmapBuyerAbsorption ? ' 🌊' : ''));
+                        const labelText = t.symbol + iceIcon + bmIcon;
+
+                        ctx.font = `${isSelected ? 'bold 11px' : '10px'} "JetBrains Mono", monospace`;
+                        const textWidth = ctx.measureText(labelText).width;
+                        const badgeW = Math.max(textWidth + 10, 36);
+                        const badgeH = isSelected ? 18 : 16;
+                        const badgeX = pos.x - badgeW / 2;
+                        const badgeY = (pos.y >= cy) ? (pos.y + 8) : (pos.y - badgeH - 8);
+
+                        // Karartılmış yarı saydam arka plan plakası
+                        ctx.fillStyle = isSelected ? 'rgba(11, 19, 38, 0.94)' : 'rgba(8, 12, 22, 0.85)';
+                        ctx.strokeStyle = isSelected 
+                            ? 'rgba(0, 242, 254, 0.85)' 
+                            : (hasIce ? 'rgba(0, 242, 254, 0.45)' : (t.category === 'contact' ? 'rgba(16, 185, 129, 0.45)' : 'rgba(255, 255, 255, 0.14)'));
+                        ctx.lineWidth = isSelected ? 1.4 : 0.8;
+
+                        ctx.beginPath();
+                        if (ctx.roundRect) {
+                            ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 4);
+                        } else {
+                            ctx.rect(badgeX, badgeY, badgeW, badgeH);
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+
+                        // Plaka içi metin
+                        ctx.fillStyle = isSelected 
+                            ? '#00f2fe' 
+                            : (hasIce ? '#38bdf8' : (t.category === 'contact' ? '#34d399' : (t.category === 'blocked' ? '#f43f5e' : '#e2e8f0')));
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(labelText, pos.x, badgeY + badgeH / 2 + 0.5);
+                        ctx.textAlign = 'start';
+                        ctx.textBaseline = 'alphabetic';
+                    }
                 }
 
+                // Kalkan ve Iceberg Kıvılcımları
                 for (let i = shieldSparks.length - 1; i >= 0; i--) {
                     const sp = shieldSparks[i];
                     sp.x += sp.vx;
@@ -6698,6 +6956,7 @@ async function loadAdminMetrics() {
                     ctx.globalAlpha = 1.0;
                 }
 
+                // Radar Merkez Çekirdeği
                 ctx.fillStyle = '#ffffff';
                 ctx.shadowColor = '#00f2fe';
                 ctx.shadowBlur = 10;
@@ -6712,11 +6971,14 @@ async function loadAdminMetrics() {
                 init,
                 resize,
                 setRadarData,
+                applyCurrentFilter,
                 focusSelectedInFeed
             };
         })();
         window.ValkyrieTacticalRadarEngine = ValkyrieTacticalRadarEngine;
         window.toggleRadarView = toggleRadarView;
+        window.toggleRadarExpand = toggleRadarExpand;
+        window.setRadarScope = setRadarScope;
         window.focusRadarTargetCard = focusRadarTargetCard;
 
         // =========================================================================
