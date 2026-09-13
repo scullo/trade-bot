@@ -21,6 +21,9 @@ class StrategyEngine:
         self.peak_prices = {}  # symbol -> trailing icin en iyi fiyat
         self.last_trade_times = {}  # (symbol, side) -> timestamp
         self.failed_levels = {}  # symbol -> dict (Yapısal Seviye İptali & Whipsaw Kalkanı)
+        self.symbol_stop_cooldown = {}     # symbol -> float(timestamp) 45dk zarar durdurma soğuma kalkanı
+        self.symbol_daily_loss_count = {}  # symbol -> int (Günde azami 2 stop tavanı)
+        self.symbol_daily_loss_date = None
         self.boot_time = time.time()  # Sunucu baslangic zamani (Isinma Kalkanı)
         self.warmup_seconds = 45.0   # Ilk 45 saniye ani kapatmalari onle
         self.recent_rejections = []  # 🧠 Son elenen / girilmeyen sinyaller ve nedenleri (Canlı Dashboard Zekası)
@@ -70,7 +73,19 @@ class StrategyEngine:
                 "timestamp": time.time(),
                 "reason": close_reason
             }
-            print(f">> [YAPISAL TAKİP] {symbol} seviye kaybı kaydedildi (${record.get('entry_price')}). Fiyat yapısı tazelenene kadar aynı seviyeden giriş kilitlendi.")
+            # 🛡️ 45 Dakika Zarar Durdurma Soğuma Kalkanı (Testere piyasasında intikam/çalkantı koruması)
+            if not hasattr(self, 'symbol_stop_cooldown'):
+                self.symbol_stop_cooldown = {}
+            self.symbol_stop_cooldown[symbol] = time.time() + 2700.0
+
+            # 🛡️ Günlük Parite Başına 2 Stop Tavanı
+            today_str = datetime.now().strftime("%Y-%m-%d")
+            if getattr(self, 'symbol_daily_loss_date', None) != today_str:
+                self.symbol_daily_loss_count = {}
+                self.symbol_daily_loss_date = today_str
+            self.symbol_daily_loss_count[symbol] = self.symbol_daily_loss_count.get(symbol, 0) + 1
+
+            print(f">> [YAPISAL TAKİP] {symbol} seviye kaybı kaydedildi (${record.get('entry_price')}). 45dk soğuma ve seviye tazelenme kilidi devrede (Bugünkü stop sayısı: {self.symbol_daily_loss_count[symbol]}).")
 
     def check_structural_invalidation(self, symbol: str, side: str, current_price: float, levels: dict) -> tuple[bool, str]:
         """
@@ -684,6 +699,27 @@ class StrategyEngine:
     # POZISYON ACMA YARDIMCISI
     # =========================================================================
     async def _handle_open(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None):
+        # ── 0a. ZARAR DURDURMA SONRASI SOĞUMA VE ÇİFTE ZARAR DEVRE KESİCİSİ ──
+        now_ts = time.time()
+        cd_expiry = getattr(self, 'symbol_stop_cooldown', {}).get(symbol, 0.0)
+        if now_ts < cd_expiry:
+            rem_mins = max(1, int((cd_expiry - now_ts) // 60))
+            rej_msg = f"🛡️ Parite Soğuma Kalkanı: {symbol} kısa süre önce zarar durdurdu. Testere piyasası tuzağını önlemek için {rem_mins} dk daha soğumada."
+            print(f">> [RED - SOĞUMA KALKANI] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "SYMBOL_STOP_COOLDOWN_ACTIVE"}
+
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        if getattr(self, 'symbol_daily_loss_date', None) != today_str:
+            self.symbol_daily_loss_count = {}
+            self.symbol_daily_loss_date = today_str
+
+        if getattr(self, 'symbol_daily_loss_count', {}).get(symbol, 0) >= 2:
+            rej_msg = f"🛡️ Çifte Zarar Devre Kesicisi: {symbol} bugün 2 kez zarar durdurdu. Toksik parite kilidi aktif, gün boyu yeni işlem açılmaz."
+            print(f">> [RED - ÇİFTE ZARAR KİLİDİ] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "SYMBOL_DAILY_MAX_LOSSES_REACHED"}
+
         # ── 0. ESNEK PORTFÖY KAPASİTESİ & SERMAYE BÜTÇESİ KONTROLÜ (ELASTIC SLOTS) ──
         open_positions = getattr(self.paper_trader, 'open_positions', {})
         current_open_cnt = len(open_positions)
@@ -1145,7 +1181,6 @@ class StrategyEngine:
                 confluence_list.append(wall_name)
 
         # MADDE 5: TEMAS (TOUCH) TAKIBI VE FAKEOUT KORUMASI
-        from datetime import datetime
         current_date = datetime.now().date()
         if not hasattr(self, 'setup_attempts'):
             self.setup_attempts = {}
@@ -1241,6 +1276,51 @@ class StrategyEngine:
         tepe_av = snaps.get('tepe_avwap', 0.0)
         dip_av = snaps.get('dip_avwap', 0.0)
         p_val = snaps.get('camarilla', {}).get('P', 0.0) if 'camarilla' in snaps else snaps.get('P', 0.0)
+
+        # Fallback to market_data levels if not in snapshot
+        if dip_av <= 0 and self.market_data and hasattr(self.market_data, 'levels'):
+            dip_av = float(self.market_data.levels.get(symbol, {}).get('dip_avwap', 0.0))
+        if tepe_av <= 0 and self.market_data and hasattr(self.market_data, 'levels'):
+            tepe_av = float(self.market_data.levels.get(symbol, {}).get('tepe_avwap', 0.0))
+
+        # ── 2b. DİP AVWAP TABAN KALKANI (DIP AVWAP FLOOR SHORT SHIELD) ──
+        # Kurumsal dip hacim tabanına (-%1.50 altı ile +%0.30 üstü aralığı) SHORT açılması engellenir.
+        # Dip AVWAP 10 günlük kurumsal alıcıların emilim yaptığı yerdir.
+        # Yalnızca aşırı hacimli ve negatif CVD'li gerçek şelale çöküşlerinde (vol_surge >= 3.0x, CVD <= 35%) izin verilir.
+        if side == "SHORT" and dip_av > 0:
+            if (dip_av * 0.985 <= entry_price <= dip_av * 1.003):
+                is_extreme_dump = (is_breakout and vol_surge >= 3.0 and cvd_ratio_60s <= 35.0 and entry_price < dip_av * 0.995)
+                if not is_extreme_dump:
+                    dist_pct = (entry_price - dip_av) / dip_av * 100.0
+                    rej_msg = f"🛡️ Dip AVWAP Taban Kalkanı: Fiyat kurumsal dip hacim tabanında (Dip AVWAP: ${dip_av:.4f}, Fark: %{dist_pct:+.2f}). Kurumsal alış emilimi bölgesine SHORT açılması engellendi."
+                    print(f">> [RED - DİP AVWAP TABAN KALKANI] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg)
+                    return {"error": "DIP_AVWAP_FLOOR_SHORT_BLOCKED"}
+
+        # ── 2c. TEPE AVWAP CLIMAX KALKANI (TEPE AVWAP CLIMAX LONG SHIELD) ──
+        # Kurumsal zirvenin üstünde ve arka arkaya yeşil mumlarla şişmiş climax hareketine tepe LONG kırılımı engellenir.
+        if side == "LONG" and is_breakout and tepe_av > 0 and entry_price >= tepe_av * 1.001:
+            df_climax = self.market_data.candles_5m.get(symbol, pd.DataFrame()) if self.market_data else pd.DataFrame()
+            is_climax_run = False
+            if isinstance(df_climax, pd.DataFrame) and len(df_climax) >= 4:
+                green_candles = sum(1 for i in range(-4, 0) if float(df_climax['close'].iloc[i]) >= float(df_climax['open'].iloc[i]))
+                if green_candles >= 3:
+                    is_climax_run = True
+            if is_climax_run:
+                rej_msg = f"🛡️ Tepe AVWAP Climax Kalkanı: Fiyat kurumsal zirvenin (Tepe AVWAP: ${tepe_av:.4f}) üstünde ve son 4 mumdur kesintisiz yeşil koşu (${entry_price:.4f} >= ${tepe_av*1.001:.4f}). Dağıtım tepesinde LONG kırılımı engellendi (Pullback beklenmeli)."
+                print(f">> [RED - TEPE AVWAP CLIMAX KALKANI] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, reason, rej_msg)
+                return {"error": "TEPE_AVWAP_CLIMAX_LONG_BLOCKED"}
+
+        # ── 2d. ALFA BOĞA PATLAMA KALKANI (ALPHA SURGE SHORT SHIELD) ──
+        # Piyasa genelinden pozitif ayrışan ve yüksek hacim patlaması yaşayan güçlü boğa coinlerine karşı SHORT açmak engellenir!
+        if side == "SHORT":
+            is_alpha_momentum = ("ALFA" in decoupling_status or dynamic_rs_score >= 0.40 or rs_vs_btc >= 1.20)
+            if is_alpha_momentum and vol_surge >= 1.80:
+                rej_msg = f"🛡️ Alfa Boğa Patlama Kalkanı: Parite bağımsız alfa üretiyor (RS Skoru: {dynamic_rs_score:+.2f}, decoupling: {decoupling_status}) ve yüksek hacimle ({vol_surge:.2f}x >= 1.8x) yükseliyor. Ayrışan boğaya karşı tepe SHORT engellendi."
+                print(f">> [RED - ALFA MOMENTUM SHORT KALKANI] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, reason, rej_msg)
+                return {"error": "ALPHA_SURGE_SHORT_BLOCKED"}
         
         if tepe_av > 0 and p_val > 0 and entry_price > tepe_av and entry_price > p_val:
             trend_regime = "🟢 GÜÇLÜ BOĞA (Bullish)"
@@ -1522,12 +1602,13 @@ class StrategyEngine:
         stop_dist = entry_price * (effective_stop_pct / 100.0)
         min_allowed_stop_dist = entry_price * 0.0080  # %0.80 mutlak asgari nefes payı
 
-        # TP1 & TP2: Asimetrik Kâr Oranı (R:R >= 2.0x - 3.5x Hedef)
-        # 🎯 KURUMSAL HÜCUM REFORMU: TP1 asgari 2.0x R, TP2 asgari 3.5x R
-        min_tp1_dist = max(stop_dist * 2.0, entry_price * 0.0180)
-        adaptive_tp1_dist = entry_price * (max(1.80, safe_atr_pct * 2.0) / 100.0)
+        # TP1 & TP2: Asimetrik Kâr Oranı (R:R >= 1.8x - 3.5x Hedef)
+        # 🎯 KURUMSAL HÜCUM REFORMU: Düşük ATR / Dar Bantta gerçekçi TP1 sıkıştırması (MANA vb. testere paritelerinde kârı kilitler)
+        min_tp1_pct = max(1.0, min(1.80, safe_atr_pct * 1.8))
+        min_tp1_dist = max(stop_dist * 1.8, entry_price * (min_tp1_pct / 100.0))
+        adaptive_tp1_dist = entry_price * (max(min_tp1_pct, safe_atr_pct * 2.0) / 100.0)
         tp1_dist = max(min_tp1_dist, adaptive_tp1_dist)
-        tp2_dist = max(tp1_dist * 1.75, entry_price * (max(3.50, safe_atr_pct * 3.5) / 100.0))
+        tp2_dist = max(tp1_dist * 1.75, entry_price * (max(3.0, safe_atr_pct * 3.5) / 100.0))
 
         caller_hard_stop = hard_stop
         caller_soft_stop = soft_stop
