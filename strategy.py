@@ -1053,6 +1053,22 @@ class StrategyEngine:
             if confluence_list is not None and isinstance(confluence_list, list):
                 confluence_list.append("Mikro_CVD_Agresyon_Teyidi")
 
+        # ── 1d-2. HARMONİK AKIŞ GEÇİDİ (HARMONIC FLOW GATE) ──
+        # Taker akışına karşı asla pozisyon açılamaz!
+        # Taker alıcılar üstünken (CVD > %52.0) SHORT açılması,
+        # Taker satıcılar üstünken (CVD < %48.0) LONG açılması KESİNLİKLE ENGELLENİR!
+        if side == "SHORT" and cvd_ratio_60s > 52.0:
+            rej_msg = f"🛡️ Harmonik Akış Kalkanı: Taker piyasa alıcıların kontrolünde (Alıcı CVD: %{cvd_ratio_60s:.1f} > %52.0). Yükselen taker akışına karşı SHORT engellendi."
+            print(f">> [RED - HARMONİK AKIŞ KALKANI] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "HARMONIC_FLOW_CVD_BUYER_DOMINANT"}
+
+        if side == "LONG" and cvd_ratio_60s < 48.0:
+            rej_msg = f"🛡️ Harmonik Akış Kalkanı: Taker piyasa satıcıların kontrolünde (Alıcı CVD: %{cvd_ratio_60s:.1f} < %48.0). Düşen taker akışına karşı LONG engellendi."
+            print(f">> [RED - HARMONİK AKIŞ KALKANI] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "HARMONIC_FLOW_CVD_SELLER_DOMINANT"}
+
         # 1e. ORDER BOOK IMBALANCE (OBI) & TAHTA DERİNLİK DUVARI KALKANI
         obi_data = {}
         if self.market_data and hasattr(self.market_data, 'get_orderbook_depth'):
@@ -2084,17 +2100,10 @@ class StrategyEngine:
                 is_mean_rev = any(k in pos_setup_id for k in ["NPOC", "S3", "R3", "BOUNCE", "SWEEP", "REJECTION"]) or (pos_trade_type == "SCALP")
                 has_absorb_support = bool(pos.get("is_anchor_wall") or pos.get("bookmap_buyer_absorption") or pos.get("bookmap_seller_absorption") or "Balina" in pos_reason or "Emilimi" in pos_reason)
 
-                early_stag_thresh = 3.0 if is_breakout else (6.0 if (is_mean_rev or has_absorb_support) else 4.0)
-
-                if hold_candles >= early_stag_thresh and -1.8 <= roe_raw <= 0.8 and cvd_exhausted:
-                    record = await self._safe_close_position(
-                        symbol, close_price,
-                        f"⏱️ Erken Momentum Kaybı / CVD Çürümesi ({int(hold_candles)} mum, ROE: %{roe_raw:+.1f}, CVD: %{cvd_ratio:.0f})"
-                    )
-                    if record:
-                        await self._notify_close(record, levels=levels)
-                        self._cleanup_tracking(symbol)
-                    return
+                # 🛡️ 3-Mum Erken CVD Panik Çıkışı Devre Dışı Bırakıldı:
+                # 60s CVD gürültüsüyle kâra gidecek pozisyonların erken (-%0.5 ROE) kesilip komisyon yakması engellendi.
+                # Pozisyon planlı dinamik stop, +%1.8 Breakeven koruması veya TP ile yönetilir.
+                # (Eski 3-mum erken CVD çıkışı kaldırıldı)
 
                 if pos.get("trade_type") == "SCALP":
                     is_meme_or_high_beta = coin_atr >= 0.70 or any(m in symbol for m in ["PEPE", "WIF", "DOGE", "BONK", "SHIB", "MEME"])
@@ -2742,7 +2751,7 @@ class StrategyEngine:
                     c_range = c_high - c_low
                     upper_wick = (c_high - max(c_open, close_price)) if c_range > 0 else 0
                     upper_wick_ratio = (upper_wick / c_range) if c_range > 0 else 0
-                    is_seller_rejection = (upper_wick_ratio >= 0.18) or (close_price < c_open)
+                    is_seller_rejection = (upper_wick_ratio >= 0.22) or (upper_wick_ratio >= 0.15 and close_price < c_open)
 
                     cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
                     cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
@@ -2750,11 +2759,11 @@ class StrategyEngine:
                     obi_data = self.market_data.get_orderbook_depth(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_orderbook_depth')) else {}
                     obi_imbalance = float(obi_data.get('imbalance', 0.0))
                     obi_ratio = float(obi_data.get('ratio', 1.0))
-                    has_seller_flow = (cvd_ratio <= 48.0) or (obi_imbalance <= -0.15) or (obi_ratio <= 0.75)
+                    has_seller_flow = (cvd_ratio <= 50.0) and ((obi_imbalance <= -0.10) or (obi_ratio <= 0.85))
 
                     if not is_seller_rejection:
-                        self.log_rejection(symbol, f"SETUP 11 {resist_tag} Retest Reddi", f"Direnç retestinde satıcı reddi (üst fitil veya kırmızı gövde) yetersiz (Fitil: %{upper_wick_ratio*100:.1f})")
-                    elif not has_seller_flow and vol_surge < 1.2:
+                        self.log_rejection(symbol, f"SETUP 11 {resist_tag} Retest Reddi", f"Direnç retestinde satıcı reddi (üst fitil) yetersiz (Fitil: %{upper_wick_ratio*100:.1f})")
+                    elif not has_seller_flow:
                         self.log_rejection(symbol, f"SETUP 11 {resist_tag} Retest Reddi", f"Direnç retestinde satıcı akışı yetersiz (CVD: %{cvd_ratio:.1f}, OBI: %{obi_imbalance*100:.1f})")
                     else:
                         down_targets = [

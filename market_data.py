@@ -432,9 +432,71 @@ class MarketDataManager:
         }
 
     def get_symbol_cvd(self, symbol: str) -> dict:
-        data = getattr(self, 'symbol_cvd', {}).get(symbol, None)
+        clean = self._clean_symbol(symbol)
+        data = getattr(self, 'symbol_cvd', {}).get(symbol) or getattr(self, 'symbol_cvd', {}).get(clean)
+        now_ts = time.time()
+        
+        # 1. Eğer WebSocket verisi taze ise (son 120s içinde) ve nötr (50.0) değilse doğrudan kullan
+        if data and (now_ts - data.get('last_update', 0) <= 120.0) and abs(data.get('ratio_60s', 50.0) - 50.0) > 0.1:
+            return data
+
+        # 2. WebSocket akışı yoksa veya 50.0 default kalmışsa -> Resmi 5M Mum Taker Hacimlerinden Gerçek CVD Hesapla!
+        df_5m = None
+        c_map = getattr(self, 'candles_5m', {})
+        candidates = [symbol, clean, symbol.replace('/', ''), clean.replace('/', ''), f"{clean}/USDT" if '/' not in clean else clean, f"{symbol}/USDT" if '/' not in symbol else symbol]
+        for c in candidates:
+            if c in c_map and isinstance(c_map[c], pd.DataFrame) and not c_map[c].empty:
+                df_5m = c_map[c]
+                break
+
+        if df_5m is not None and isinstance(df_5m, pd.DataFrame) and not df_5m.empty:
+            try:
+                last_k = df_5m.iloc[-1]
+                t_buy = float(last_k.get('taker_quote', 0.0))
+                tot_q = float(last_k.get('quote_volume', 0.0) or last_k.get('qav', 0.0))
+
+                # Eğer son mum henüz yeni açıldıysa (< $15,000 hacim veya t_buy <= 0) ve önceki mum varsa, 2 mumun kümülatif taker hacmine bak
+                if (tot_q < 15000.0 or t_buy <= 0) and len(df_5m) >= 2:
+                    prev_k = df_5m.iloc[-2]
+                    prev_t_buy = float(prev_k.get('taker_quote', 0.0))
+                    prev_tot_q = float(prev_k.get('quote_volume', 0.0) or prev_k.get('qav', 0.0))
+                    if prev_tot_q > 0:
+                        t_buy += prev_t_buy
+                        tot_q += prev_tot_q
+
+                if tot_q > 0:
+                    t_sell = max(0.0, tot_q - t_buy)
+                    delta = t_buy - t_sell
+                    ratio = round((t_buy / tot_q) * 100.0, 1)
+                    bias = "NEUTRAL"
+                    if ratio >= 60.0: bias = "STRONG_BUY_SURGE"
+                    elif ratio <= 40.0: bias = "STRONG_SELL_PRESSURE"
+                    elif ratio >= 53.0: bias = "MODERATE_BUY"
+                    elif ratio <= 47.0: bias = "MODERATE_SELL"
+
+                    res = {
+                        'symbol': symbol,
+                        'taker_buy_usd': round(t_buy, 2),
+                        'taker_sell_usd': round(t_sell, 2),
+                        'delta_usd': round(delta, 2),
+                        'cvd_pct': ratio,
+                        'delta_60s': round(delta, 2),
+                        'ratio_60s': ratio,
+                        'bias': bias,
+                        'last_price': float(last_k.get('close', 0.0)),
+                        'last_update': now_ts,
+                        'source': 'OFFICIAL_5M_KLINE_TAKER'
+                    }
+                    if not hasattr(self, 'symbol_cvd'):
+                        self.symbol_cvd = {}
+                    self.symbol_cvd[symbol] = res
+                    return res
+            except Exception:
+                pass
+
         if data:
             return data
+
         return {
             'symbol': symbol,
             'taker_buy_usd': 0.0,
@@ -1165,13 +1227,6 @@ class MarketDataManager:
             'last_update': 0.0
         })
 
-    def get_symbol_cvd(self, symbol: str) -> dict:
-        clean = self._clean_symbol(symbol)
-        return self.symbol_cvd.get(clean, self.symbol_cvd.get(symbol, {}))
-
-    def get_orderbook_depth(self, symbol: str) -> dict:
-        clean = self._clean_symbol(symbol)
-        return self.orderbook_depth.get(clean, self.orderbook_depth.get(symbol, {}))
 
     async def get_jit_l2_depth(self, symbol: str) -> dict:
         """

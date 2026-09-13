@@ -334,23 +334,23 @@ class PaperTrader:
                     updated_stop = True
             print(f">> [TRAILING TIER 1] {symbol} +%8 ROE Görüldü -> Stop +%3.5 Kâra Kilitlendi!")
 
-        # Breakeven Koruması: ROE >= +3.5% -> Giriş + Komisyon Kalkanı (+%0.30 fiyat)
-        elif current_roe >= 3.5 and not pos.get("_trail_be"):
+        # Breakeven Koruması: ROE >= +1.8% -> Giriş + Komisyon Kalkanı (+%0.20 fiyat)
+        elif current_roe >= 1.8 and not pos.get("_trail_be"):
             pos["_trail_be"] = True
             pos["trail_status"] = "🛡️ BREAKEVEN KORUMA AKTİF"
             if side == "LONG":
-                be_p = round(entry * 1.003, 8)
+                be_p = round(entry * 1.002, 8)
                 if be_p > pos.get("soft_stop", 0):
                     pos["soft_stop"] = be_p
                     pos["hard_stop"] = be_p
                     updated_stop = True
             else:
-                be_p = round(entry * 0.997, 8)
+                be_p = round(entry * 0.998, 8)
                 if be_p < pos.get("soft_stop", 999999):
                     pos["soft_stop"] = be_p
                     pos["hard_stop"] = be_p
                     updated_stop = True
-            print(f">> [TRAILING BREAKEVEN] {symbol} +%3.5 ROE Görüldü -> Stop Breakeven (+%0.30) Korumasına Alındı!")
+            print(f">> [TRAILING BREAKEVEN] {symbol} +%1.8 ROE Görüldü -> Stop Breakeven (+%0.20) Korumasına Alındı!")
 
         if updated_stop:
             self.save_local_history()

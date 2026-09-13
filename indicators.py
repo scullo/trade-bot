@@ -388,12 +388,15 @@ def detect_iceberg_orders(executed_buy_usd: float, executed_sell_usd: float, top
     """
     3. KEN GRIFFIN — Gizli Likidite (Iceberg / Buzdağı) Radarı:
     - Son 60s gerçekleşen agresif taker hacmini tahtada görünen anlık derinliğe oranlar.
-    - Ask Iceberg (Satıcı Buzdağı): executed_buy_usd / top_ask_usd >= 3.5x
-    - Bid Iceberg (Alıcı Buzdağı): executed_sell_usd / top_bid_usd >= 3.5x
+    - Ask Iceberg (Satıcı Buzdağı): executed_buy_usd / effective_ask_depth >= 3.5x
+    - Bid Iceberg (Alıcı Buzdağı): executed_sell_usd / effective_bid_depth >= 3.5x
     """
     try:
-        ask_ratio = round(float(executed_buy_usd / max(100.0, top_ask_usd)), 2)
-        bid_ratio = round(float(executed_sell_usd / max(100.0, top_bid_usd)), 2)
+        effective_ask_depth = max(2500.0, top_ask_usd * 3.0)
+        effective_bid_depth = max(2500.0, top_bid_usd * 3.0)
+
+        ask_ratio = round(min(50.0, float(executed_buy_usd / effective_ask_depth)), 2)
+        bid_ratio = round(min(50.0, float(executed_sell_usd / effective_bid_depth)), 2)
 
         has_ask_iceberg = (ask_ratio >= 3.5 and executed_buy_usd >= 5000.0)
         has_bid_iceberg = (bid_ratio >= 3.5 and executed_sell_usd >= 5000.0)
@@ -407,6 +410,7 @@ def detect_iceberg_orders(executed_buy_usd: float, executed_sell_usd: float, top
         return {
             "ask_iceberg_ratio": ask_ratio,
             "bid_iceberg_ratio": bid_ratio,
+            "iceberg_ratio": max(ask_ratio, bid_ratio),
             "iceberg_side": iceberg_side,
             "has_seller_iceberg": has_ask_iceberg,
             "has_buyer_iceberg": has_bid_iceberg
@@ -415,6 +419,7 @@ def detect_iceberg_orders(executed_buy_usd: float, executed_sell_usd: float, top
         return {
             "ask_iceberg_ratio": 1.0,
             "bid_iceberg_ratio": 1.0,
+            "iceberg_ratio": 1.0,
             "iceberg_side": "NONE",
             "has_seller_iceberg": False,
             "has_buyer_iceberg": False
