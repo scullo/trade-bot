@@ -2731,6 +2731,9 @@ HTML_PAGE = """
             </div>
         </div>
 
+        <!-- DİNAMİK AÇIK POZİSYONLAR BÖLÜMÜ -->
+        <div id="cockpit-open-positions-container" style="margin: 20px 0; display:none;"></div>
+
         <!-- AI PİYASA & PUSU AKIŞI -->
         <div class="ai-quant-room">
             <div class="ai-room-head">
@@ -7371,6 +7374,137 @@ async function loadAdminMetrics() {
             }
         };
 
+        function renderCockpitOpenPositions() {
+            const container = document.getElementById('cockpit-open-positions-container');
+            if (!container || !appState) return;
+            
+            const openPositions = appState.open_positions || {};
+            const posKeys = Object.keys(openPositions);
+            
+            if (posKeys.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+            
+            container.style.display = 'block';
+            
+            const existingGrid = document.getElementById('open-positions-grid');
+            const isHidden = existingGrid && existingGrid.style.display === 'none';
+            
+            let html = `
+                <div style="background: rgba(15,23,42,0.6); border: 1px solid rgba(56,189,248,0.2); border-radius: 12px; overflow: hidden;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding: 12px 20px; background: rgba(56,189,248,0.1); border-bottom: 1px solid rgba(56,189,248,0.15); cursor:pointer;" onclick="toggleOpenPositions()">
+                        <div style="display:flex; align-items:center; gap: 10px;">
+                            <div class="ai-pulse-dot" style="background:#38bdf8; box-shadow:0 0 8px #38bdf8;"></div>
+                            <span style="color:#38bdf8; font-weight:700; font-family:'JetBrains Mono', monospace; font-size:14px;">⚡ AKTİF POZİSYONLAR (${posKeys.length})</span>
+                        </div>
+                        <div id="open-positions-toggle-icon" style="color:#38bdf8; font-size:12px; font-weight:700;">${isHidden ? '▶ Göster' : '▼ Gizle'}</div>
+                    </div>
+                    <div id="open-positions-grid" style="display:${isHidden ? 'none' : 'grid'}; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; padding: 20px;">
+            `;
+            
+            posKeys.forEach(sym => {
+                const pos = openPositions[sym];
+                const side = pos.side || 'LONG';
+                const isLong = side.toUpperCase() === 'LONG';
+                const sideColor = isLong ? '#22c55e' : '#ef4444';
+                const sideBg = isLong ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)';
+                
+                const curP = Number(livePrices[sym] || (appState.symbols[sym] ? appState.symbols[sym].price : pos.entry_price));
+                const entry = Number(pos.entry_price);
+                
+                let roe = 0.0;
+                let netPnl = 0.0;
+                
+                if (curP > 0 && entry > 0) {
+                    const priceDiff = isLong ? (curP - entry) : (entry - curP);
+                    const qty = Number(pos.quantity) || 0;
+                    const margin = Number(pos.margin) || 0;
+                    
+                    netPnl = priceDiff * qty;
+                    if (margin > 0) {
+                        roe = (netPnl / margin) * 100.0;
+                    }
+                }
+                
+                const isProfit = netPnl >= 0;
+                const pnlColor = isProfit ? '#22c55e' : '#ef4444';
+                const pnlSign = isProfit ? '+' : '';
+                
+                const tp1 = Number(pos.tp1) || 0;
+                let progressHtml = '';
+                
+                if (tp1 > 0 && entry > 0) {
+                    const totalDist = Math.abs(tp1 - entry);
+                    const curDist = isLong ? (curP - entry) : (entry - curP);
+                    let pct = 0;
+                    if (curDist > 0) {
+                        pct = (curDist / totalDist) * 100;
+                        if (pct > 100) pct = 100;
+                    }
+                    progressHtml = `
+                        <div style="margin-top:14px;">
+                            <div style="display:flex; justify-content:space-between; font-size:10px; color:#94a3b8; margin-bottom:5px; font-family:'JetBrains Mono';">
+                                <span>Giriş: ${entry.toFixed(4)}</span>
+                                <span style="color:#38bdf8;">TP: ${tp1.toFixed(4)}</span>
+                            </div>
+                            <div style="width:100%; height:4px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden;">
+                                <div style="height:100%; width:${pct.toFixed(1)}%; background:linear-gradient(90deg, ${sideColor}, #38bdf8); box-shadow:0 0 6px ${sideColor}; transition:width 0.5s ease;"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                html += `
+                    <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:16px; position:relative; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.2);">
+                        <div style="position:absolute; top:0; left:0; width:4px; height:100%; background:${sideColor}; box-shadow:0 0 8px ${sideColor};"></div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                            <div>
+                                <div style="font-size:16px; font-weight:800; color:#fff; display:flex; align-items:center; gap:8px;">
+                                    ${sym.replace('USDT','')} <span style="font-size:10px; font-weight:700; padding:3px 6px; border-radius:6px; background:${sideBg}; color:${sideColor}; border:1px solid ${sideColor};">${side} ${pos.leverage}x</span>
+                                </div>
+                                <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono', monospace; margin-top:4px;">
+                                    ${pos.setup_id || 'AI_SETUP'}
+                                </div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size:18px; font-weight:800; color:${pnlColor}; font-family:'JetBrains Mono', monospace; text-shadow:0 0 8px ${pnlColor}40;">
+                                    ${pnlSign}$${Math.abs(netPnl).toFixed(2)}
+                                </div>
+                                <div style="font-size:12px; color:${pnlColor}; font-weight:700; margin-top:2px;">
+                                    ${pnlSign}${Math.abs(roe).toFixed(2)}% ROE
+                                </div>
+                            </div>
+                        </div>
+                        ${progressHtml}
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            if (!window.toggleOpenPositions) {
+                window.toggleOpenPositions = function() {
+                    const grid = document.getElementById('open-positions-grid');
+                    const icon = document.getElementById('open-positions-toggle-icon');
+                    if (grid) {
+                        if (grid.style.display === 'none') {
+                            grid.style.display = 'grid';
+                            if (icon) icon.innerText = '▼ Gizle';
+                        } else {
+                            grid.style.display = 'none';
+                            if (icon) icon.innerText = '▶ Göster';
+                        }
+                    }
+                };
+            }
+            
+            container.innerHTML = html;
+        }
+
         function renderCockpitView() {
             if (!appState) return;
 
@@ -9904,6 +10038,7 @@ function downloadExcelReport() {
                     renderCards();
                 }
                 renderCockpitView();
+                renderCockpitOpenPositions();
                 updateSystemHealthBadge();
 
                 // 4. Only re-render Open Positions if position IDs or count changed
