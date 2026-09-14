@@ -1327,22 +1327,11 @@ class StrategyEngine:
                 return {"error": "TEPE_AVWAP_CLIMAX_LONG_BLOCKED"}
 
         # ── 2d. ALFA BOĞA PATLAMA KALKANI (ALPHA SURGE SHORT SHIELD) ──
-        # 🛡️ 1b. ZAYIF TAKİPÇİ SHORT KALKANI (SMART SHORT SHIELD)
-        # Piyasa genelinden pozitif ayrışan (ALFA / DİRENÇLİ) ve RS skoru yüksek olan güçlü boğa coinlerine SHORT açmak intihardır.
+        # Piyasa genelinden pozitif ayrışan ve yüksek hacim patlaması yaşayan güçlü boğa coinlerine karşı SHORT açmak engellenir!
         if side == "SHORT":
-            is_alpha_or_bull = ("ALFA" in decoupling_status or "DİRENÇLİ" in decoupling_status or dynamic_rs_score >= 0.20 or rs_vs_btc >= 0.30)
-            
-            # Eğer coin güçlü bir ALFA ise SHORT kesinlikle yasak!
-            if is_alpha_or_bull:
-                rej_msg = f"🛡️ Zayıf Takipçi Short Kalkanı: {symbol} piyasadan pozitif ayrışıyor ve çok güçlü ({decoupling_status}, RS Skoru: {dynamic_rs_score:+.2f}). Güçlü (Alfa) coinlere dirençte SHORT açmak trende karşı çıkmaktır, engellendi."
-                print(f">> [RED - ZAYIF TAKİPÇİ SHORT KALKANI] {symbol}: {rej_msg}")
-                self.log_rejection(symbol, reason, rej_msg)
-                return {"error": "ALPHA_STRONG_SHORT_BLOCKED"}
-                
-            # Alfa Patlama Hacim Kalkanı (Ekstra güvenlik)
-            is_alpha_momentum = (dynamic_rs_score >= 0.15)
+            is_alpha_momentum = ("ALFA" in decoupling_status or dynamic_rs_score >= 0.40 or rs_vs_btc >= 1.20)
             if is_alpha_momentum and vol_surge >= 1.80:
-                rej_msg = f"🛡️ Alfa Boğa Patlama Kalkanı: Parite hacim patlamasıyla ({vol_surge:.2f}x) yükseliyor. Momentuma karşı tepe SHORT engellendi."
+                rej_msg = f"🛡️ Alfa Boğa Patlama Kalkanı: Parite bağımsız alfa üretiyor (RS Skoru: {dynamic_rs_score:+.2f}, decoupling: {decoupling_status}) ve yüksek hacimle ({vol_surge:.2f}x >= 1.8x) yükseliyor. Ayrışan boğaya karşı tepe SHORT engellendi."
                 print(f">> [RED - ALFA MOMENTUM SHORT KALKANI] {symbol}: {rej_msg}")
                 self.log_rejection(symbol, reason, rej_msg)
                 return {"error": "ALPHA_SURGE_SHORT_BLOCKED"}
