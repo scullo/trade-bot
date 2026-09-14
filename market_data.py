@@ -269,14 +269,18 @@ class MarketDataManager:
             raw_rates = []
             for s in self.all_symbols:
                 clean = self._clean_symbol(s).replace('/', '').replace(':USDT', '').upper()
-                clean_no_mult = clean.replace('1000000', '').replace('1000', '')
+                base = clean.replace('USDT', '')
+                base_no_mult = base.replace('1000000', '').replace('1000', '')
                 candidates = [
                     clean,
-                    clean + 'USDT',
-                    clean_no_mult + 'USDT',
-                    '1000' + clean_no_mult + 'USDT',
-                    clean + '_USDT',
-                    clean.replace('NEIRO', 'NEIROCTO') + 'USDT'
+                    base + 'USDT',
+                    base + '_USDT',
+                    base_no_mult + 'USDT',
+                    '1000' + base_no_mult + 'USDT',
+                    '1000' + base_no_mult + '_USDT',
+                    '1000000' + base_no_mult + 'USDT',
+                    base.replace('NEIRO', 'NEIROCTO') + 'USDT',
+                    base.replace('NEIRO', 'NEIROCTO') + '_USDT'
                 ]
                 found = None
                 for c in candidates:
@@ -295,14 +299,18 @@ class MarketDataManager:
 
             for s in self.all_symbols:
                 clean = self._clean_symbol(s).replace('/', '').replace(':USDT', '').upper()
-                clean_no_mult = clean.replace('1000000', '').replace('1000', '')
+                base = clean.replace('USDT', '')
+                base_no_mult = base.replace('1000000', '').replace('1000', '')
                 candidates = [
                     clean,
-                    clean + 'USDT',
-                    clean_no_mult + 'USDT',
-                    '1000' + clean_no_mult + 'USDT',
-                    clean + '_USDT',
-                    clean.replace('NEIRO', 'NEIROCTO') + 'USDT'
+                    base + 'USDT',
+                    base + '_USDT',
+                    base_no_mult + 'USDT',
+                    '1000' + base_no_mult + 'USDT',
+                    '1000' + base_no_mult + '_USDT',
+                    '1000000' + base_no_mult + 'USDT',
+                    base.replace('NEIRO', 'NEIROCTO') + 'USDT',
+                    base.replace('NEIRO', 'NEIROCTO') + '_USDT'
                 ]
                 found = None
                 for c in candidates:
