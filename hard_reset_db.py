@@ -10,6 +10,8 @@ pt.balance = 10000.0
 pt.open_positions = {}
 pt.history = []
 
+pt.save_local_history()
+
 print("Overwriting GitHub state...")
 pt._push_to_github({
     "balance": pt.balance,

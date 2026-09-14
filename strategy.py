@@ -1271,6 +1271,17 @@ class StrategyEngine:
                 rs_vs_btc = 0.0
                 dynamic_rs_score = 0.0
 
+        # ── 1b-2. BETA / NÖTR TAKİPÇİ COİNLERDE LONG KALKANI (BETA FOLLOWER LONG SHIELD) ──
+        # Piyasadan bağımsız pozitif güç (Alfa veya Dirençli Boğa) üretmeyen, BTC düştüğünde düşüşe öncülük eden
+        # Beta takipçi coinlerde düşüş/yatay piyasada dip sekmesi aramak toksiktir (Zararların %87'si buradan kaynaklandı).
+        if side == "LONG":
+            is_alpha_or_bull = ("ALFA" in decoupling_status or "DİRENÇLİ" in decoupling_status or dynamic_rs_score >= 0.20 or rs_vs_btc >= 0.30)
+            if not is_alpha_or_bull:
+                rej_msg = f"🛡️ Beta Takipçi Long Kalkanı: {symbol} piyasadan pozitif ayrışmıyor ({decoupling_status}, RS Skoru: {dynamic_rs_score:+.2f}, BTC Farkı: %{rs_vs_btc:+.2f}). Bağımsız alfa üretmeyen zayıf coinlerde LONG engellendi."
+                print(f">> [RED - BETA TAKİPÇİ LONG KALKANI] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, reason, rej_msg)
+                return {"error": "BETA_FOLLOWER_LONG_BLOCKED"}
+
         # ── 2. TREND REJIMI HESABI ──
         snaps = snapshot_levels or {}
         tepe_av = snaps.get('tepe_avwap', 0.0)
@@ -1297,17 +1308,20 @@ class StrategyEngine:
                     self.log_rejection(symbol, reason, rej_msg)
                     return {"error": "DIP_AVWAP_FLOOR_SHORT_BLOCKED"}
 
-        # ── 2c. TEPE AVWAP CLIMAX KALKANI (TEPE AVWAP CLIMAX LONG SHIELD) ──
-        # Kurumsal zirvenin üstünde ve arka arkaya yeşil mumlarla şişmiş climax hareketine tepe LONG kırılımı engellenir.
-        if side == "LONG" and is_breakout and tepe_av > 0 and entry_price >= tepe_av * 1.001:
+        # ── 2c. TEPE AVWAP & PARABOLİK CLIMAX RETEST KALKANI (CLIMAX EXHAUSTION LONG SHIELD) ──
+        # Kurumsal zirvenin üstünde ve arka arkaya yeşil mumlarla şişmiş climax hareketine tepe LONG kırılımı
+        # veya soluksuz dikine pump sonrası ilk geri çekilmede (pullback) tepe Retest LONG açılması engellenir (CAKE Tuzağı).
+        if side == "LONG" and tepe_av > 0 and entry_price >= tepe_av * 0.998:
             df_climax = self.market_data.candles_5m.get(symbol, pd.DataFrame()) if self.market_data else pd.DataFrame()
             is_climax_run = False
+            green_candles = 0
             if isinstance(df_climax, pd.DataFrame) and len(df_climax) >= 4:
                 green_candles = sum(1 for i in range(-4, 0) if float(df_climax['close'].iloc[i]) >= float(df_climax['open'].iloc[i]))
                 if green_candles >= 3:
                     is_climax_run = True
             if is_climax_run:
-                rej_msg = f"🛡️ Tepe AVWAP Climax Kalkanı: Fiyat kurumsal zirvenin (Tepe AVWAP: ${tepe_av:.4f}) üstünde ve son 4 mumdur kesintisiz yeşil koşu (${entry_price:.4f} >= ${tepe_av*1.001:.4f}). Dağıtım tepesinde LONG kırılımı engellendi (Pullback beklenmeli)."
+                action_name = "kırılımı" if is_breakout else "retest sekmesi"
+                rej_msg = f"🛡️ Tepe AVWAP Climax Kalkanı: Fiyat kurumsal zirvede (Tepe AVWAP: ${tepe_av:.4f}, Giriş: ${entry_price:.4f}) ve son 4 mumdur kesintisiz yeşil ralli ({green_candles}/4 yeşil mum). Dağıtım tepesinde LONG {action_name} engellendi (Konsolidasyon tabanı beklenmeli)."
                 print(f">> [RED - TEPE AVWAP CLIMAX KALKANI] {symbol}: {rej_msg}")
                 self.log_rejection(symbol, reason, rej_msg)
                 return {"error": "TEPE_AVWAP_CLIMAX_LONG_BLOCKED"}
@@ -1341,6 +1355,25 @@ class StrategyEngine:
             session_str = "🏛️ LONDRA (Avrupa)"
         else:
             session_str = "🗽 NEW YORK (ABD)"
+
+        # ── 3b. AKILLI ASYA SEANSI LONG FİLTRESİ (SMART ASIA REGIME & CONFIRMATION SHIELD) ──
+        # Asya seansı tamamen engellenmez (gece patlayan alfa coinleri kaçırılmaz).
+        # Ancak sığ gece likiditesinde ayı trendinde nPOC dip sekmesi aramak veya zayıf alıcı akışına girmek engellenir.
+        if session_str == "🌏 ASYA (Tokyo/Singapur)" and side == "LONG":
+            # 1. Ayı Trendi Dip Sekmesi Kalkanı: Ayı rejiminde sığ Asya tahtasında nPOC sekmesi tutunamaz
+            if ("AYI" in trend_regime or (p_val > 0 and entry_price < p_val)) and ("nPOC" in reason or "Sekmesi" in reason or "Destek" in reason):
+                rej_msg = f"🛡️ Asya Ayı Trendi Dip Kalkanı: Gece Asya seansında ayı trendinde ({trend_regime}, Fiyat < Pivot P) dip sekmesi tutunamaz. Gece düşen bıçağa karşı LONG engellendi."
+                print(f">> [RED - ASYA AYI DİP KALKANI] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, reason, rej_msg)
+                return {"error": "ASIA_BEAR_BOUNCE_BLOCKED"}
+            
+            # 2. Alıcı Akışı & Tahta Duvarı Teyidi: Asya'da LONG için gerçek alıcı üstünlüğü (%55+ CVD veya Alıcı Duvarı veya Hacim Patlaması) şarttır
+            has_asia_buyer = (cvd_ratio_60s >= 55.0 or "ALICI DUVARI" in obi_wall_side or "BID_WALL" in obi_wall_side or vol_surge >= 2.0)
+            if not has_asia_buyer:
+                rej_msg = f"🛡️ Asya Alıcı Teyidi Kalkanı: Gece sığ piyasasında alıcı üstünlüğü (Alıcı CVD: %{cvd_ratio_60s:.0f} < %55) veya tahta alıcı duvarı ({obi_wall_side}) yok. Hacimsiz gece tuzağına karşı LONG engellendi."
+                print(f">> [RED - ASYA ALICI TEYİT KALKANI] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, reason, rej_msg)
+                return {"error": "ASIA_LOW_BUYER_CONFIRMATION_BLOCKED"}
 
         # ── 4. HACIM PATLAMA KATSAYISI (Volume Surge Ratio) ──
         # Zaten yukarida df_5m'den guvenle hesaplandi (varsayilan 1.0x)
