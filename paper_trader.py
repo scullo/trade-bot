@@ -276,12 +276,14 @@ class PaperTrader:
         # ── KADEMELİ İZSÜREN KÂR KİLİDİ (TIERED TRAILING PROFIT LOCK) ──
         updated_stop = False
 
-        # Tier 3: ROE >= +20.0% -> En az +14.0% ROE kilit
+        # Tier 4: ROE >= +20.0% -> En az +14.0% ROE kilit
         if current_roe >= 20.0 and not pos.get("_trail_20"):
             pos["_trail_20"] = True
             pos["_trail_14"] = True
             pos["_trail_8"] = True
-            pos["trail_status"] = "🛡️ Tier 3 (%14.0 Kâr Korumalı)"
+            pos["_trail_3"] = True
+            pos["_trail_be"] = True
+            pos["trail_status"] = "🛡️ Tier 4 (%14.0 Kâr Korumalı)"
             if side == "LONG":
                 lock_p = round(entry * (1.0 + (0.14 / lev)), 8)
                 if lock_p > pos.get("soft_stop", 0):
@@ -294,13 +296,15 @@ class PaperTrader:
                     pos["soft_stop"] = lock_p
                     pos["hard_stop"] = lock_p
                     updated_stop = True
-            print(f">> [TRAILING TIER 3] {symbol} +%20 ROE Görüldü -> Stop +%14.0 Kâra Kilitlendi!")
+            print(f">> [TRAILING TIER 4] {symbol} +%20 ROE Görüldü -> Stop +%14.0 Kâra Kilitlendi!")
 
-        # Tier 2: ROE >= +14.0% -> En az +8.0% ROE kilit
+        # Tier 3: ROE >= +14.0% -> En az +8.0% ROE kilit
         elif current_roe >= 14.0 and not pos.get("_trail_14"):
             pos["_trail_14"] = True
             pos["_trail_8"] = True
-            pos["trail_status"] = "🛡️ Tier 2 (%8.0 Kâr Korumalı)"
+            pos["_trail_3"] = True
+            pos["_trail_be"] = True
+            pos["trail_status"] = "🛡️ Tier 3 (%8.0 Kâr Korumalı)"
             if side == "LONG":
                 lock_p = round(entry * (1.0 + (0.08 / lev)), 8)
                 if lock_p > pos.get("soft_stop", 0):
@@ -313,44 +317,64 @@ class PaperTrader:
                     pos["soft_stop"] = lock_p
                     pos["hard_stop"] = lock_p
                     updated_stop = True
-            print(f">> [TRAILING TIER 2] {symbol} +%14 ROE Görüldü -> Stop +%8.0 Kâra Kilitlendi!")
+            print(f">> [TRAILING TIER 3] {symbol} +%14 ROE Görüldü -> Stop +%8.0 Kâra Kilitlendi!")
 
-        # Tier 1: ROE >= +8.0% -> En az +3.5% ROE kilit
+        # Tier 2: ROE >= +8.0% -> En az +4.0% ROE kilit
         elif current_roe >= 8.0 and not pos.get("_trail_8"):
             pos["_trail_8"] = True
+            pos["_trail_3"] = True
             pos["_trail_be"] = True
-            pos["trail_status"] = "🛡️ Tier 1 (%3.5 Kâr Korumalı)"
+            pos["trail_status"] = "🛡️ Tier 2 (%4.0 Kâr Korumalı)"
             if side == "LONG":
-                lock_p = round(entry * (1.0 + (0.035 / lev)), 8)
+                lock_p = round(entry * (1.0 + (0.04 / lev)), 8)
                 if lock_p > pos.get("soft_stop", 0):
                     pos["soft_stop"] = lock_p
                     pos["hard_stop"] = lock_p
                     updated_stop = True
             else:
-                lock_p = round(entry * (1.0 - (0.035 / lev)), 8)
+                lock_p = round(entry * (1.0 - (0.04 / lev)), 8)
                 if lock_p < pos.get("soft_stop", 999999):
                     pos["soft_stop"] = lock_p
                     pos["hard_stop"] = lock_p
                     updated_stop = True
-            print(f">> [TRAILING TIER 1] {symbol} +%8 ROE Görüldü -> Stop +%3.5 Kâra Kilitlendi!")
+            print(f">> [TRAILING TIER 2] {symbol} +%8 ROE Görüldü -> Stop +%4.0 Kâra Kilitlendi!")
 
-        # Breakeven Koruması: ROE >= +1.8% -> Giriş + Komisyon Kalkanı (+%0.20 fiyat)
-        elif current_roe >= 1.8 and not pos.get("_trail_be"):
+        # Tier 1: ROE >= +3.0% -> En az +1.5% ROE kilit (Mikro-Kâr Güvencesi)
+        elif current_roe >= 3.0 and not pos.get("_trail_3"):
+            pos["_trail_3"] = True
             pos["_trail_be"] = True
-            pos["trail_status"] = "🛡️ BREAKEVEN KORUMA AKTİF"
+            pos["trail_status"] = "🛡️ Tier 1 (%1.5 Kâr Korumalı)"
             if side == "LONG":
-                be_p = round(entry * 1.002, 8)
+                lock_p = round(entry * (1.0 + (0.015 / lev)), 8)
+                if lock_p > pos.get("soft_stop", 0):
+                    pos["soft_stop"] = lock_p
+                    pos["hard_stop"] = lock_p
+                    updated_stop = True
+            else:
+                lock_p = round(entry * (1.0 - (0.015 / lev)), 8)
+                if lock_p < pos.get("soft_stop", 999999):
+                    pos["soft_stop"] = lock_p
+                    pos["hard_stop"] = lock_p
+                    updated_stop = True
+            print(f">> [TRAILING TIER 1] {symbol} +%3.0 ROE Görüldü -> Stop +%1.5 Kâra Kilitlendi!")
+
+        # Tier 0 (Erken Breakeven & Komisyon Kalkanı): ROE >= +1.20% -> Giriş + Komisyon Tamponu (+%0.15 fiyat)
+        elif current_roe >= 1.20 and not pos.get("_trail_be"):
+            pos["_trail_be"] = True
+            pos["trail_status"] = "🛡️ TIER 0 BREAKEVEN KORUMA AKTİF"
+            if side == "LONG":
+                be_p = round(entry * 1.0015, 8)
                 if be_p > pos.get("soft_stop", 0):
                     pos["soft_stop"] = be_p
                     pos["hard_stop"] = be_p
                     updated_stop = True
             else:
-                be_p = round(entry * 0.998, 8)
+                be_p = round(entry * 0.9985, 8)
                 if be_p < pos.get("soft_stop", 999999):
                     pos["soft_stop"] = be_p
                     pos["hard_stop"] = be_p
                     updated_stop = True
-            print(f">> [TRAILING BREAKEVEN] {symbol} +%1.8 ROE Görüldü -> Stop Breakeven (+%0.20) Korumasına Alındı!")
+            print(f">> [TRAILING TIER 0] {symbol} +%1.20 ROE Görüldü -> Stop Komisyon Korumalı Breakeven (+%0.15) Seviyesine Alındı!")
 
         if updated_stop:
             self.save_local_history()

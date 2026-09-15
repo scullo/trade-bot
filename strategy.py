@@ -1959,85 +1959,58 @@ class StrategyEngine:
         # Trailing aktifse stop seviyelerini zayiflatma
         trail_active = pos.get("_trail_be", False)
 
-        # ── SCALP SHORT (R3 Direnc Tepkisi → hedef Pivot P) ─────────────────
-        if "R3 Direnc" in reason and side == "SHORT":
-            if p > 0 and abs(old_tp1 - p) > 0.0001:
-                if close_price <= p:
-                    # Fiyat yeni Pivot'un altinda → hedef coktan asildi → kapat
-                    record = await self._safe_close_position(
-                        symbol, close_price,
-                        f"Pivot Kayma — Hedef Asildi (Yeni P: ${p:.4f}, Eski TP: ${old_tp1:.4f})")
-                    if record:
-                        await self._notify_close(record, levels=levels)
-                        self._cleanup_tracking(symbol)
-                    return True
-                else:
-                    # Yeni hedefe guncelle
-                    pos["tp1"] = p
-                    print(f">> [SEVIYE GUNCELLEME] {symbol} SHORT TP1: {old_tp1:.4f} → {p:.4f}")
-            # Stop guncelle (trailing yoksa)
-            # [STOP GÜNCELLEMESİ KALDIRILDI - 1.5 ATR SERT STOP KORUNDU]
-
-        # ── SCALP LONG (S3 Destek Sekmesi → hedef Pivot P) ──────────────────
-        elif "S3 Destek" in reason and side == "LONG":
-            if p > 0 and abs(old_tp1 - p) > 0.0001:
-                if close_price >= p:
-                    record = await self._safe_close_position(
-                        symbol, close_price,
-                        f"Pivot Kayma — Hedef Asildi (Yeni P: ${p:.4f}, Eski TP: ${old_tp1:.4f})")
-                    if record:
-                        await self._notify_close(record, levels=levels)
-                        self._cleanup_tracking(symbol)
-                    return True
-                else:
-                    pos["tp1"] = p
-                    print(f">> [SEVIYE GUNCELLEME] {symbol} LONG TP1: {old_tp1:.4f} → {p:.4f}")
-            # [STOP GÜNCELLEMESİ KALDIRILDI - 1.5 ATR SERT STOP KORUNDU]
-
-        # ── BREAKOUT LONG (R4 Breakout) ──────────────────────────────────────
-        elif "R4 Breakout" in reason and side == "LONG":
-            if r5 > 0 and abs(old_tp1 - r5) > 0.0001:
+        # ── 0. KIRILIM & ÇÖKÜŞ İŞLEMLERİ (BREAKOUT / BREAKDOWN) ───────────
+        # Kırılım/çöküş işlemlerinde hedef S3/S4/R4/R5 veya mVAL/mVAH'tır;
+        # Pivot P ile hiçbir ilgisi yoktur. Asla Pivot Kayması ile erken kapatılamaz!
+        is_breakout_or_down = (
+            any(k in reason for k in ["Breakdown", "Breakout", "Çöküş", "Kirilimi"]) or
+            (pos.get("trade_type") == "BREAKOUT") or
+            ("BREAK" in pos.get("setup_id", "").upper()) or
+            ("ÇÖKÜŞ" in pos.get("setup_id", "").upper())
+        )
+        if is_breakout_or_down:
+            if "R4 Breakout" in reason and side == "LONG" and r5 > 0 and abs(old_tp1 - r5) > 0.0001:
                 pos["tp1"] = r5
-                print(f">> [SEVIYE GUNCELLEME] {symbol} LONG TP1: {old_tp1:.4f} → {r5:.4f}")
-            # [STOP GÜNCELLEMESİ KALDIRILDI - 1.5 ATR SERT STOP KORUNDU]
-
-        # ── BREAKOUT SHORT (S4 Breakdown) ────────────────────────────────────
-        elif "S4 Breakdown" in reason and side == "SHORT":
-            if s5 > 0 and abs(old_tp1 - s5) > 0.0001:
+            elif "S4 Breakdown" in reason and side == "SHORT" and s5 > 0 and abs(old_tp1 - s5) > 0.0001:
                 pos["tp1"] = s5
-                print(f">> [SEVIYE GUNCELLEME] {symbol} SHORT TP1: {old_tp1:.4f} → {s5:.4f}")
-            # [STOP GÜNCELLEMESİ KALDIRILDI - 1.5 ATR SERT STOP KORUNDU]
+            self.paper_trader.save_history()
+            return False
 
-        # ── R4 Destek Retest LONG ────────────────────────────────────────────
-        elif "R4 Destek Retest" in reason and side == "LONG":
-            if r5 > 0 and abs(old_tp1 - r5) > 0.0001:
-                pos["tp1"] = r5
-            # [STOP GÜNCELLEMESİ KALDIRILDI - 1.5 ATR SERT STOP KORUNDU]
-
-        # ── S4 Direnc Retest SHORT ───────────────────────────────────────────
-        elif "S4 Direnc Retest" in reason and side == "SHORT":
-            if s5 > 0 and abs(old_tp1 - s5) > 0.0001:
-                pos["tp1"] = s5
-            # [STOP GÜNCELLEMESİ KALDIRILDI - 1.5 ATR SERT STOP KORUNDU]
-
-        # ── nPOC SCALP POZISYONLAR (Hedef Pivot P) ─────────────────────────
-        elif "nPOC" in reason or "Likidite" in reason:
-            if p > 0 and abs(old_tp1 - p) > 0.0001:
-                if (side == "SHORT" and close_price <= p) or (side == "LONG" and close_price >= p):
-                    record = await self._safe_close_position(
-                        symbol, close_price,
-                        f"Pivot Kayma — Hedef Asildi (Yeni P: ${p:.4f}, Eski TP: ${old_tp1:.4f})")
-                    if record:
-                        await self._notify_close(record, levels=levels)
-                        self._cleanup_tracking(symbol)
-                    return True
-                else:
+        # ── 1. SADECE HEDEFİ PİVOT P OLAN FADE / SCALP İŞLEMLERİ ───────────
+        is_targeting_pivot_p = (
+            ("İlk Hedef Pivot P" in reason) or
+            ("Hedef Pivot P" in reason) or
+            ("Target_Pivot P" in str(pos.get("confluence_list", [])))
+        )
+        if is_targeting_pivot_p and p > 0:
+            # SHORT: Giriş Pivot P'nin belirgin üstündeydi ve fiyat Pivot P'ye ulaştı -> Hedef Alındı
+            if side == "SHORT" and entry > p * 1.001 and close_price <= p:
+                record = await self._safe_close_position(
+                    symbol, close_price,
+                    f"🎯 Pivot Hedefine Ulaşıldı (Pivot P: ${p:.4f})")
+                if record:
+                    await self._notify_close(record, levels=levels)
+                    self._cleanup_tracking(symbol)
+                return True
+            # LONG: Giriş Pivot P'nin belirgin altındaydı ve fiyat Pivot P'ye ulaştı -> Hedef Alındı
+            elif side == "LONG" and entry < p * 0.999 and close_price >= p:
+                record = await self._safe_close_position(
+                    symbol, close_price,
+                    f"🎯 Pivot Hedefine Ulaşıldı (Pivot P: ${p:.4f})")
+                if record:
+                    await self._notify_close(record, levels=levels)
+                    self._cleanup_tracking(symbol)
+                return True
+            else:
+                # Pivot P kaydıysa hedefi güncelle, fakat erken kapatma yapma
+                if abs(old_tp1 - p) > 0.0001:
                     pos["tp1"] = p
-                    print(f">> [SEVIYE GUNCELLEME] {symbol} nPOC {side} TP1: {old_tp1:.4f} → {p:.4f}")
 
-        # ── mVAH / mVAL Macro pozisyonlar ───────────────────────────────────
-        # Bu pozisyonlarin hedefleri nPOC/nVAH bazli, Camarilla'ya bagli degil
-        # Guncelleme gerekmez
+        # ── 2. RETEST İŞLEMLERİ (R4 Destek Retest / S4 Direnç Retest) ─────
+        elif "R4 Destek Retest" in reason and side == "LONG" and r5 > 0 and abs(old_tp1 - r5) > 0.0001:
+            pos["tp1"] = r5
+        elif "S4 Direnc Retest" in reason and side == "SHORT" and s5 > 0 and abs(old_tp1 - s5) > 0.0001:
+            pos["tp1"] = s5
 
         self.paper_trader.save_history()
         return False
@@ -2469,6 +2442,17 @@ class StrategyEngine:
                 )
                 return
 
+            # 🛡️ AYI PİYASASI SEKMESİ KALKANI: Piyasa Ayı rejimindeyken S3 desteğinden tepki alımı için güçlü alıcı teyidi şarttır
+            if "AYI" in trend_regime:
+                cvd_data_s3 = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+                cvd_ratio_s3 = float(cvd_data_s3.get('ratio_60s', 50.0))
+                if cvd_ratio_s3 < 58.0 or coin_rs_score < 0.20:
+                    self.log_rejection(
+                        symbol, "SETUP 3 S3 Destek",
+                        f"Ayı Rejimi Kalkanı: Piyasa {trend_regime} rejimindeyken S3 desteğinden sekme için güçlü alıcı akışı (CVD: %{cvd_ratio_s3:.1f} < %58, RS: {coin_rs_score:+.2f} < 0.20) bulunamadı. Düşen bıçak engellendi."
+                    )
+                    return
+
             # 🛡️ ALICI EMİLİM MUMU ŞARTI
             c_open = current_candle.get('open', close_price)
             c_low = current_candle.get('low', close_price)
@@ -2481,10 +2465,10 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 3 S3 Destek", f"S3 desteğinde alıcı emilimi (min %25 alt fitil veya yeşil kapanış) yok (Fitil: %{lower_wick_ratio*100:.1f})")
                 return
 
-            buffer = (s3 - s4) * BUFFER_RATIO if (s3 > s4) else (s3 * 0.004)
-            soft_stop = max(s3 - buffer, close_price * 0.992)
-            # 🛡️ SERT STOP TAVAN KORUMASI: Maksimum %1.2 risk sınırı
-            hard_stop = max(s4 if s4 > 0 else (s3 - buffer * 2.0), close_price * 0.988)
+            buffer = (s3 - s4) * BUFFER_RATIO if (s3 > s4) else (s3 * 0.003)
+            soft_stop = max(s3 - buffer, close_price * 0.994)
+            # 🛡️ SERT STOP TAVAN KORUMASI: Maksimum %0.9 risk sınırı (R:R Dengelemesi)
+            hard_stop = max(s4 if s4 > 0 else (s3 - buffer * 2.0), close_price * 0.991)
             up_targets = [lvl for lvl in [dip_avwap, tepe_avwap, mpoc, p, r3] if lvl and lvl > close_price * 1.008]
             up_targets.sort()
             tp1 = up_targets[0] if up_targets else (close_price * 1.012)
@@ -2725,13 +2709,13 @@ class StrategyEngine:
                 )
                 return
 
-            if "GÜÇLÜ AYI" in trend_regime:
+            if "AYI" in trend_regime:
                 cvd_data_npoc = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
                 cvd_ratio_npoc = float(cvd_data_npoc.get('ratio_60s', 50.0))
                 if cvd_ratio_npoc < 58.0 or coin_rs_score < 0.20:
                     self.log_rejection(
                         symbol, "SETUP 9 nPOC Sekmesi",
-                        f"Güçlü Ayı Rejimi Kalkanı: Genel piyasa düşüşteyken nPOC sekmesi için güçlü alıcı akışı (CVD: %{cvd_ratio_npoc:.1f} < %58, RS: {coin_rs_score:+.2f} < 0.20) bulunamadı. Düşen bıçak engellendi."
+                        f"Ayı Rejimi Kalkanı: Piyasa {trend_regime} rejimindeyken nPOC sekmesi için güçlü alıcı akışı (CVD: %{cvd_ratio_npoc:.1f} < %58, RS: {coin_rs_score:+.2f} < 0.20) bulunamadı. Düşen bıçak engellendi."
                     )
                     return
 
@@ -2755,11 +2739,11 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 9 nPOC Sekmesi", f"Aşırı Zayıf Parite: Aşağı nPOC desteğinde alıcı emilimi (min %25 alt fitil veya yeşil kapanış) yok (Fitil: %{lower_wick_ratio*100:.1f})")
                 return
 
-            buffer = (p - support_npoc) * BUFFER_RATIO if (p > support_npoc) else (support_npoc * 0.004)
-            soft_stop = max(support_npoc - buffer, close_price * 0.992)
+            buffer = (p - support_npoc) * BUFFER_RATIO if (p > support_npoc) else (support_npoc * 0.003)
+            soft_stop = max(support_npoc - buffer, close_price * 0.994)
             raw_hard_stop = s4 if (s4 > 0 and s4 < support_npoc) else (support_npoc - buffer * 2)
-            # 🛡️ SERT STOP TAVAN KORUMASI: Stop mesafesi maksimum %1.2 ile sınırlandırılır
-            hard_stop = max(raw_hard_stop, close_price * 0.988)
+            # 🛡️ SERT STOP TAVAN KORUMASI: Maksimum %0.9 risk sınırı (R:R Dengelemesi)
+            hard_stop = max(raw_hard_stop, close_price * 0.991)
 
             # Smart Multi-Target: En yakin ilk direnci TP1, nihai hedefi TP2 yap
             up_targets = [
@@ -2812,11 +2796,11 @@ class StrategyEngine:
                     self.log_rejection(symbol, "Yukarı nPOC Reddi", f"Üst fitil oranı %{upper_wick_ratio*100:.1f} (en az %28 satıcı iğnesi aranıyor, dolu mumla girilmedi)")
                     return
 
-            buffer = (resist_npoc - p) * BUFFER_RATIO if (resist_npoc > p) else (resist_npoc * 0.004)
-            soft_stop = min(resist_npoc + buffer, close_price * 1.008)
+            buffer = (resist_npoc - p) * BUFFER_RATIO if (resist_npoc > p) else (resist_npoc * 0.003)
+            soft_stop = min(resist_npoc + buffer, close_price * 1.006)
             raw_hard_stop = r4 if (r4 > 0 and r4 > resist_npoc) else (resist_npoc + buffer * 2)
-            # 🛡️ SERT STOP TAVAN KORUMASI: Stop mesafesi maksimum %1.2 ile sınırlandırılır
-            hard_stop = min(raw_hard_stop, close_price * 1.012)
+            # 🛡️ SERT STOP TAVAN KORUMASI: Maksimum %0.9 risk sınırı (R:R Dengelemesi)
+            hard_stop = min(raw_hard_stop, close_price * 1.009)
 
             # Smart Multi-Target: En yakin ilk destegi TP1, nihai hedefi TP2 yap
             down_targets = [
@@ -2888,9 +2872,10 @@ class StrategyEngine:
                         tp1_target = down_targets[0] if down_targets else close_price * 0.985
                         tp2_target = down_targets[-1] if len(down_targets) > 1 else (s4 if (s4 > 0 and s4 < tp1_target) else None)
 
-                        buffer = resist_lvl * 0.003
-                        soft_stop = min(resist_lvl + buffer, close_price * 1.008)
-                        hard_stop = min(resist_lvl + buffer * 2.0, close_price * 1.012)
+                        buffer = resist_lvl * 0.0025
+                        soft_stop = min(resist_lvl + buffer, close_price * 1.006)
+                        # 🛡️ SERT STOP TAVAN KORUMASI: Maksimum %0.9 risk sınırı (R:R Dengelemesi)
+                        hard_stop = min(resist_lvl + buffer * 2.0, close_price * 1.009)
 
                         await self._handle_open(
                             symbol=symbol, side="SHORT", entry_price=close_price,
@@ -2940,9 +2925,10 @@ class StrategyEngine:
                     tp1_target = down_targets[0] if down_targets else close_price * 0.985
                     tp2_target = down_targets[-1] if len(down_targets) > 1 else None
 
-                    buffer = break_support * 0.004
-                    soft_stop = min(break_support + buffer, close_price * 1.008)
-                    hard_stop = min(break_support + buffer * 2.0, close_price * 1.012)
+                    buffer = break_support * 0.003
+                    soft_stop = min(break_support + buffer, close_price * 1.006)
+                    # 🛡️ SERT STOP TAVAN KORUMASI: Maksimum %1.0 risk sınırı (R:R Dengelemesi)
+                    hard_stop = min(break_support + buffer * 2.0, close_price * 1.010)
 
                     await self._handle_open(
                         symbol=symbol, side="SHORT", entry_price=close_price,
