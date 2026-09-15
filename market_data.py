@@ -752,6 +752,7 @@ class MarketDataManager:
                 "camarilla": camarilla,
                 "tepe_avwap": current_p * 1.02,
                 "dip_avwap": current_p * 0.98,
+                "daily_avwap": current_p,
                 "mpoc": current_p,
                 "mvah": current_p * 1.01,
                 "mval": current_p * 0.99,
@@ -813,6 +814,20 @@ class MarketDataManager:
             tepe_avwap = float(calculate_anchored_vwap(df_5m, high_idx))
             dip_avwap = float(calculate_anchored_vwap(df_5m, low_idx))
 
+        # === GÜNLÜK SEANS ÇAPALI AVWAP (00:00 UTC Daily Anchor) ===
+        try:
+            now_utc = datetime.now(timezone.utc)
+            start_day_utc = datetime(now_utc.year, now_utc.month, now_utc.day, 0, 0, 0, tzinfo=timezone.utc)
+            start_ts_ms = int(start_day_utc.timestamp() * 1000)
+            day_mask = df_5m['timestamp'] >= start_ts_ms
+            if day_mask.any():
+                day_start_idx = df_5m[day_mask].index[0]
+                daily_avwap = float(calculate_anchored_vwap(df_5m, day_start_idx))
+            else:
+                daily_avwap = float(calculate_anchored_vwap(df_5m, 0))
+        except Exception:
+            daily_avwap = float(current_p)
+
         # === VOLUME PROFILE (Son 30 Günlük Makro Profil: mPOC, mVAH, mVAL) ===
         if df_1d is not None and not df_1d.empty and len(df_1d) >= 5:
             vp_df = df_1d.iloc[-min(30, len(df_1d)):]
@@ -829,6 +844,7 @@ class MarketDataManager:
             "camarilla": camarilla,
             "tepe_avwap": float(tepe_avwap),
             "dip_avwap": float(dip_avwap),
+            "daily_avwap": float(daily_avwap),
             "mpoc": float(vp_result.get("POC", current_p)),
             "mvah": float(vp_result.get("VAH", current_p * 1.01)),
             "mval": float(vp_result.get("VAL", current_p * 0.99)),

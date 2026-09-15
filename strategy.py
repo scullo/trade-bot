@@ -2297,12 +2297,21 @@ class StrategyEngine:
         coin_decoupling = sym_met.get("decoupling_status", "")
         is_severely_weak = ("AŞIRI_ZAYIF" in coin_decoupling) or (coin_rs_score <= -1.0)
 
+        # Kurumsal Açık Faiz (OI) ve Günlük Seans AVWAP Verisi
+        daily_avwap = levels.get("daily_avwap") or 0.0
+        oi_data = self.market_data.get_symbol_open_interest(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_open_interest')) else {}
+        oi_status = oi_data.get('status', 'BALANCED')
+        delta_oi_pct = float(oi_data.get('delta_oi_pct', 0.0))
+
         # ─────────────────────────────────────────────────────────────────
-        # SETUP 1: TAZE R4 BREAKOUT LONG
-        # Onceki mum R4 altinda, simdiki mum R4 ustunde kapanir
-        # Tepe AVWAP filtresini gecer → Guclu boga teyidi
+        # SETUP 1: TAZE R4 BREAKOUT / OI BOĞA TAARRUZU LONG
+        # Onceki mum R4 altinda, simdiki mum R4 ustunde kapanir VEYA
+        # Kurumsal para akışı (OI Expansion) ile R4 üstünde hacimli taarruz başlar
         # ─────────────────────────────────────────────────────────────────
-        if prev_close <= r4 and close_price > r4:
+        is_fresh_r4_breakout = (prev_close <= r4 and close_price > r4)
+        is_oi_bull_expansion = (close_price > r4 and (r5 == 0 or close_price < r5 * 0.995) and oi_status == "AGGRESSIVE_LONG_EXPANSION" and delta_oi_pct >= 0.35)
+
+        if is_fresh_r4_breakout or is_oi_bull_expansion:
             struct_ok, struct_reason = self.check_structural_invalidation(symbol, "LONG", close_price, levels)
             if not struct_ok:
                 self.log_rejection(symbol, "SETUP 1 R4 Breakout", struct_reason)
@@ -2317,7 +2326,7 @@ class StrategyEngine:
                 return
 
             min_breakout_vol = 1.25 if eth_leading else (1.8 if is_range_regime else 1.35)
-            if vol_surge < min_breakout_vol:
+            if not is_oi_bull_expansion and vol_surge < min_breakout_vol:
                 self.log_rejection(symbol, "SETUP 1 R4 Breakout", f"{'Yatay piyasada sahte kırılım kalkanı: ' if is_range_regime else ''}Hacim patlaması {vol_surge:.2f}x yetersiz (en az {min_breakout_vol:.2f}x patlama aranıyor)")
                 return
 
@@ -2341,22 +2350,31 @@ class StrategyEngine:
                 soft_stop = r4 - buffer
                 hard_stop = r3 if (r3 > 0 and r3 < r4) else (r4 - buffer * 2.0)
 
+                setup_label = "SETUP_1_OI_LONG_EXPANSION" if is_oi_bull_expansion else "SETUP_1_R4_BREAKOUT"
+                reason_label = "Kurumsal OI Boğa Taarruzu (Taze Long Akışı + R4 Üstü)" if is_oi_bull_expansion else "Taze R4 Breakout + Tepe AVWAP Ustu Onay"
+                c_list = ["R4_Breakout", "OI_Long_Expansion" if is_oi_bull_expansion else "Tepe_AVWAP_Ustu"]
+                if daily_avwap > 0 and close_price > daily_avwap:
+                    c_list.append("Daily_AVWAP_Bull")
+
                 await self._handle_open(
                     symbol=symbol, side="LONG", entry_price=close_price,
-                    reason="Taze R4 Breakout + Tepe AVWAP Ustu Onay",
+                    reason=reason_label,
                     soft_stop=soft_stop, hard_stop=hard_stop,
                     tp1=tp1, tp2=tp2, trade_type="BREAKOUT",
-                    snapshot_levels=levels, setup_id="SETUP_1_R4_BREAKOUT",
-                    confluence_list=["R4_Breakout", "Tepe_AVWAP_Ustu"]
+                    snapshot_levels=levels, setup_id=setup_label,
+                    confluence_list=c_list
                 )
                 return
 
         # ─────────────────────────────────────────────────────────────────
-        # SETUP 2: TAZE S4 BREAKDOWN SHORT
-        # Onceki mum S4 ustunde, simdiki mum S4 altinda kapanir
-        # Dip AVWAP filtresini gecer → Guclu ayi teyidi
+        # SETUP 2: TAZE S4 BREAKDOWN / OI AYI TAARRUZU SHORT
+        # Onceki mum S4 ustunde, simdiki mum S4 altinda kapanir VEYA
+        # Kurumsal satış akışı (OI Expansion) ile S4 altında şelale taarruzu başlar
         # ─────────────────────────────────────────────────────────────────
-        if prev_close >= s4 and close_price < s4:
+        is_fresh_s4_breakdown = (prev_close >= s4 and close_price < s4)
+        is_oi_bear_expansion = (close_price < s4 and (s5 == 0 or close_price > s5 * 1.005) and oi_status == "AGGRESSIVE_SHORT_EXPANSION" and delta_oi_pct >= 0.35)
+
+        if is_fresh_s4_breakdown or is_oi_bear_expansion:
             struct_ok, struct_reason = self.check_structural_invalidation(symbol, "SHORT", close_price, levels)
             if not struct_ok:
                 self.log_rejection(symbol, "SETUP 2 S4 Breakdown", struct_reason)
@@ -2369,8 +2387,8 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 2 S4 Breakdown", f"Ayı Tuzağı Kalkanı: Fiyat S4'ü aşağı kırdı fakat mikro-CVD alıcı ağırlıklı (%{cvd_ratio:.1f} alıcı). Sahte çöküş elendi.")
                 return
 
-            if is_bear_dump:
-                min_breakout_vol = 1.05  # Makro dökülmede breakdown shortları trend yönünde ödüllendirilir
+            if is_bear_dump or is_oi_bear_expansion:
+                min_breakout_vol = 1.05  # Makro dökülmede veya OI taarruzunda breakdown shortları trend yönünde ödüllendirilir
             elif eth_leading:
                 min_breakout_vol = 1.20
             elif is_range_regime:
@@ -2394,13 +2412,19 @@ class StrategyEngine:
                 soft_stop = s4 + buffer
                 hard_stop = s3 if (s3 > 0 and s3 > s4) else (s4 + buffer * 2.0)
 
+                setup_label = "SETUP_2_OI_SHORT_EXPANSION" if is_oi_bear_expansion else "SETUP_2_S4_BREAKDOWN"
+                reason_label = "Kurumsal OI Ayı Taarruzu (Taze Short Akışı + S4 Altı)" if is_oi_bear_expansion else "Taze S4 Breakdown + Ayı İvmesi Onayı"
+                c_list = ["S4_Breakdown", "OI_Short_Expansion" if is_oi_bear_expansion else "Tepe_AVWAP_Alti"]
+                if daily_avwap > 0 and close_price < daily_avwap:
+                    c_list.append("Daily_AVWAP_Bear")
+
                 await self._handle_open(
                     symbol=symbol, side="SHORT", entry_price=close_price,
-                    reason="Taze S4 Breakdown + Ayı İvmesi Onayı",
+                    reason=reason_label,
                     soft_stop=soft_stop, hard_stop=hard_stop,
                     tp1=tp1, tp2=tp2, trade_type="BREAKOUT",
-                    snapshot_levels=levels, setup_id="SETUP_2_S4_BREAKDOWN",
-                    confluence_list=["S4_Breakdown", "Tepe_AVWAP_Alti"]
+                    snapshot_levels=levels, setup_id=setup_label,
+                    confluence_list=c_list
                 )
                 return
 
@@ -2465,6 +2489,13 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 3 S3 Destek", f"S3 desteğinde alıcı emilimi (min %25 alt fitil veya yeşil kapanış) yok (Fitil: %{lower_wick_ratio*100:.1f})")
                 return
 
+            # 🛡️ CVD DELTA EMİLİMİ ŞARTI (Taker Satıcı Tükeniş Teyidi)
+            cvd_data_s3_abs = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+            cvd_ratio_s3_abs = float(cvd_data_s3_abs.get('ratio_60s', 50.0))
+            if cvd_ratio_s3_abs < 38.0:
+                self.log_rejection(symbol, "SETUP 3 S3 Destek", f"CVD Emilim Kalkanı: S3 desteğinde taker satıcı baskısı (%{100-cvd_ratio_s3_abs:.1f} satıcı) aşırı agresif. Akıllı para emilimi görülmedi.")
+                return
+
             buffer = (s3 - s4) * BUFFER_RATIO if (s3 > s4) else (s3 * 0.003)
             soft_stop = max(s3 - buffer, close_price * 0.994)
             # 🛡️ SERT STOP TAVAN KORUMASI: Maksimum %0.9 risk sınırı (R:R Dengelemesi)
@@ -2474,13 +2505,17 @@ class StrategyEngine:
             tp1 = up_targets[0] if up_targets else (close_price * 1.012)
             tp2 = up_targets[-1] if len(up_targets) > 1 else (r3 if (r3 > tp1 * 1.005) else None)
             target_name = "AVWAP" if (tp1 in [dip_avwap, tepe_avwap]) else ("mPOC" if tp1 == mpoc else "Pivot P")
+            c_list = ["S3_Support", f"Target_{target_name}"]
+            if daily_avwap > 0 and close_price > daily_avwap:
+                c_list.append("Daily_AVWAP_Bull")
+
             await self._handle_open(
                 symbol=symbol, side="LONG", entry_price=close_price,
                 reason=f"S3 Destek Sekmesi (İlk Hedef {target_name}: ${tp1:.4f})",
                 soft_stop=soft_stop, hard_stop=hard_stop,
                 tp1=tp1, tp2=tp2, trade_type="SCALP",
                 snapshot_levels=levels, setup_id="SETUP_3_S3_BOUNCE",
-                confluence_list=["S3_Support", f"Target_{target_name}"]
+                confluence_list=c_list
             )
             return
 
@@ -2499,6 +2534,13 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 4 R3 Direnç", "Piyasa Güçlü Boğa rejimindeyken R3 direncinden SHORT açılmadı (Short Squeeze Koruması)")
                 return
 
+            # 🛡️ CVD BOĞA İTİŞİ KALKANI (Taker Alıcı Aşırılığı)
+            cvd_data_r3 = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+            cvd_ratio_r3 = float(cvd_data_r3.get('ratio_60s', 50.0))
+            if cvd_ratio_r3 > 65.0:
+                self.log_rejection(symbol, "SETUP 4 R3 Direnç", f"CVD Boğa İtişi Kalkanı: R3 test ediliyor fakat taker alıcı baskısı (%{cvd_ratio_r3:.1f} alıcı) aşırı agresif. Tepeye kafa atılmadı.")
+                return
+
             buffer = (r4 - r3) * BUFFER_RATIO if (r4 > r3) else (r3 * 0.004)
             soft_stop = min(r3 + buffer, close_price * 1.008)
             hard_stop = min(r4 if r4 > 0 else (r3 + buffer * 2.0), close_price * 1.012)
@@ -2507,13 +2549,17 @@ class StrategyEngine:
             tp1 = down_targets[0] if down_targets else (close_price * 0.988)
             tp2 = down_targets[-1] if len(down_targets) > 1 else (s3 if (s3 > 0 and s3 < tp1 * 0.995) else None)
             target_name = "AVWAP" if (tp1 in [tepe_avwap, dip_avwap]) else ("mPOC" if tp1 == mpoc else "Pivot P")
+            c_list = ["R3_Resistance", f"Target_{target_name}"]
+            if daily_avwap > 0 and close_price < daily_avwap:
+                c_list.append("Daily_AVWAP_Bear")
+
             await self._handle_open(
                 symbol=symbol, side="SHORT", entry_price=close_price,
                 reason=f"R3 Direnc Tepkisi (İlk Hedef {target_name}: ${tp1:.4f})",
                 soft_stop=soft_stop, hard_stop=hard_stop,
                 tp1=tp1, tp2=tp2, trade_type="SCALP",
                 snapshot_levels=levels, setup_id="SETUP_4_R3_REJECTION",
-                confluence_list=["R3_Resistance", f"Target_{target_name}"]
+                confluence_list=c_list
             )
             return
 
@@ -2739,6 +2785,13 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 9 nPOC Sekmesi", f"Aşırı Zayıf Parite: Aşağı nPOC desteğinde alıcı emilimi (min %25 alt fitil veya yeşil kapanış) yok (Fitil: %{lower_wick_ratio*100:.1f})")
                 return
 
+            # 🛡️ CVD DELTA EMİLİMİ ŞARTI (Taker Satıcı Tükeniş Teyidi)
+            cvd_data_npoc_abs = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+            cvd_ratio_npoc_abs = float(cvd_data_npoc_abs.get('ratio_60s', 50.0))
+            if cvd_ratio_npoc_abs < 38.0:
+                self.log_rejection(symbol, "SETUP 9 nPOC Sekmesi", f"CVD Emilim Kalkanı: nPOC seviyesinde taker satıcı baskısı (%{100-cvd_ratio_npoc_abs:.1f} satıcı) aşırı agresif. Akıllı para emilimi görülmedi.")
+                return
+
             buffer = (p - support_npoc) * BUFFER_RATIO if (p > support_npoc) else (support_npoc * 0.003)
             soft_stop = max(support_npoc - buffer, close_price * 0.994)
             raw_hard_stop = s4 if (s4 > 0 and s4 < support_npoc) else (support_npoc - buffer * 2)
@@ -2756,6 +2809,9 @@ class StrategyEngine:
 
             target_name = "mVAL" if tp1_target == mval else ("S4" if tp1_target == s4 else ("AVWAP" if (tp1_target in [dip_avwap, tepe_avwap]) else ("mPOC" if tp1_target == mpoc else ("S3" if tp1_target == s3 else "Pivot P"))))
             reason_text = f"Aşağı nPOC (${support_npoc:.4f}) Sekmesi (İlk Hedef {target_name}: ${tp1_target:.4f})"
+            c_list = ["nPOC_Sweep", f"Target_{target_name}"]
+            if daily_avwap > 0 and close_price > daily_avwap:
+                c_list.append("Daily_AVWAP_Bull")
 
             await self._handle_open(
                 symbol=symbol, side="LONG", entry_price=close_price,
@@ -2763,7 +2819,7 @@ class StrategyEngine:
                 soft_stop=soft_stop, hard_stop=hard_stop,
                 tp1=tp1_target, tp2=tp2_target, trade_type="SCALP",
                 snapshot_levels=levels, setup_id="SETUP_9_BELOW_NPOC_BOUNCE",
-                confluence_list=["nPOC_Sweep", f"Target_{target_name}"]
+                confluence_list=c_list
             )
             return
 
@@ -2781,6 +2837,13 @@ class StrategyEngine:
             # 🛡️ YUKARI nPOC REJECTION KALKANI: Güçlü Boğa trendinde yukarı nPOC'ye kafa atılmaz
             if "GÜÇLÜ BOĞA" in trend_regime:
                 self.log_rejection(symbol, "Yukarı nPOC Reddi", "Piyasa Güçlü Boğa rejimindeyken Yukarı nPOC'den SHORT açılmadı (Short Squeeze Koruması)")
+                return
+
+            # 🛡️ CVD BOĞA İTİŞİ KALKANI (Taker Alıcı Aşırılığı)
+            cvd_data_npoc_r = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+            cvd_ratio_npoc_r = float(cvd_data_npoc_r.get('ratio_60s', 50.0))
+            if cvd_ratio_npoc_r > 65.0:
+                self.log_rejection(symbol, "SETUP 10 nPOC Reddi", f"CVD Boğa İtişi Kalkanı: nPOC test ediliyor fakat taker alıcı baskısı (%{cvd_ratio_npoc_r:.1f} alıcı) aşırı agresif. Tepeye kafa atılmadı.")
                 return
 
             # 🛡️ PİNBAS / ÜST FİTİL ŞARTI: Mum tepeden gerçek bir satış baskısıyla reddedilmeli
@@ -2813,6 +2876,9 @@ class StrategyEngine:
 
             target_name = "mVAH" if tp1_target == mvah else ("R4" if tp1_target == r4 else ("AVWAP" if (tp1_target in [tepe_avwap, dip_avwap]) else ("mPOC" if tp1_target == mpoc else ("R3" if tp1_target == r3 else "Pivot P"))))
             reason_text = f"Yukarı nPOC (${resist_npoc:.4f}) Reddi (İlk Hedef {target_name}: ${tp1_target:.4f})"
+            c_list = ["nPOC_Rejection", f"Target_{target_name}"]
+            if daily_avwap > 0 and close_price < daily_avwap:
+                c_list.append("Daily_AVWAP_Bear")
 
             await self._handle_open(
                 symbol=symbol, side="SHORT", entry_price=close_price,
@@ -2820,7 +2886,7 @@ class StrategyEngine:
                 soft_stop=soft_stop, hard_stop=hard_stop,
                 tp1=tp1_target, tp2=tp2_target, trade_type="SCALP",
                 snapshot_levels=levels, setup_id="SETUP_10_ABOVE_NPOC_REJECTION",
-                confluence_list=["nPOC_Rejection", f"Target_{target_name}"]
+                confluence_list=c_list
             )
             return
 

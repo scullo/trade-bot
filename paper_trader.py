@@ -54,6 +54,15 @@ class PaperTrader:
         self._push_lock = threading.Lock()
         self.load_history()
 
+    def reset_state(self):
+        """Kasa, açık ve kapalı pozisyonları sıfırlar ve hem yerel hem GitHub state'e kaydeder."""
+        self.balance = float(self.initial_balance)
+        self.open_positions = {}
+        self.history = []
+        self._pending_state = None
+        self.save_history(critical=True)
+        print(f">> [RESET] Kasa ${self.balance:.2f} USDT olarak sıfırlandı. Tüm pozisyonlar ve geçmiş temizlendi.")
+
     def load_history(self):
         """Önce GitHub'dan yükle, başarısız olursa lokal dosyadan yükle."""
         loaded = False
@@ -442,8 +451,24 @@ class PaperTrader:
         if symbol in self.open_positions:
             return None
 
-        # Marjin ve Serbest Kasa Kontrolu (Dinamik ATR Boyutlandirma Destegi)
-        margin = float(custom_margin) if custom_margin is not None else float(self.margin_per_trade)
+        # Risk hesabı (1R değeri) ve Kurumsal Risk Paritesi (Volatility Targeting / Normalized Dollar Risk)
+        stop_level = hard_stop if (hard_stop and hard_stop > 0) else (soft_stop if (soft_stop and soft_stop > 0) else 0)
+        risk_dist = abs(entry_price - stop_level) if stop_level > 0 else (entry_price * 0.015)
+        stop_dist_pct = (risk_dist / entry_price) if entry_price > 0 else 0.015
+
+        # Kurumsal Risk Paritesi: Her pozisyondaki mutlak dolar riski $15.00'e eşitlenir
+        # Oynaklığı yüksek paritede marjin kısılır ($30-70), stabil paritede artırılır ($150-250)
+        if custom_margin is not None:
+            margin = float(custom_margin)
+        else:
+            TARGET_DOLLAR_RISK = 15.0
+            if stop_dist_pct > 0.002:
+                desired_pos_val = TARGET_DOLLAR_RISK / stop_dist_pct
+                desired_margin = desired_pos_val / float(self.leverage)
+                margin = round(max(30.0, min(250.0, desired_margin)), 2)
+            else:
+                margin = float(self.margin_per_trade)
+
         free_bal = self.get_free_balance()
         if free_bal < margin:
             print(f">> [YETERSIZ BAKIYE] Kasa: {self.balance:.2f} USDT, Serbest Kasa: {free_bal:.2f} USDT, Gereken Marjin: {margin} USDT")
@@ -458,10 +483,6 @@ class PaperTrader:
         entry_fee = position_value * self.commission_rate
         entry_timestamp = time.time()
         entry_time_str = datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S")
-
-        # Risk hesabi (1R degeri)
-        stop_level = hard_stop if (hard_stop and hard_stop > 0) else (soft_stop if (soft_stop and soft_stop > 0) else 0)
-        risk_dist = abs(entry_price - stop_level) if stop_level > 0 else (entry_price * 0.015)
         initial_risk_usdt = round((risk_dist / entry_price) * position_value, 4)
 
         # Snapshot temizleme (JSON uyumlu hale getirme)
@@ -473,6 +494,7 @@ class PaperTrader:
                 "S3": cam.get("S3", 0.0), "S4": cam.get("S4", 0.0), "S5": cam.get("S5", 0.0),
                 "tepe_avwap": snapshot_levels.get("tepe_avwap", 0.0),
                 "dip_avwap": snapshot_levels.get("dip_avwap", 0.0),
+                "daily_avwap": snapshot_levels.get("daily_avwap", 0.0),
                 "mpoc": snapshot_levels.get("mpoc", 0.0),
                 "mval": snapshot_levels.get("mval", 0.0),
                 "mvah": snapshot_levels.get("mvah", 0.0),
