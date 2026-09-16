@@ -818,6 +818,39 @@ class StrategyEngine:
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "WHIPSAW_BREAKOUT_BLOCKED"}
 
+        # 2. Geç Kovalama (Breakout Chase) & Likidasyon İğnesi Kalkanı (PEPE, LINK, GALA Koruması)
+        if self.market_data and symbol in self.market_data.candles_5m:
+            df_sym = self.market_data.candles_5m[symbol]
+            if isinstance(df_sym, pd.DataFrame) and not df_sym.empty and len(df_sym) >= 2:
+                last_bar = df_sym.iloc[-1]
+                bar_o = float(last_bar.get('open', entry_price))
+                bar_h = float(last_bar.get('high', entry_price))
+                bar_l = float(last_bar.get('low', entry_price))
+                bar_c = float(last_bar.get('close', entry_price))
+                bar_rng = max(bar_h - bar_l, 1e-8)
+
+                # SHORT Kırılım Koruması: Fiyatın en dibinde kırmızı mum kovalamayı engelle (PEPE / LINK hatası)
+                if side == "SHORT" and is_breakout:
+                    lower_wick = min(bar_o, bar_c) - bar_l
+                    lower_wick_pct = (lower_wick / bar_rng) * 100.0
+                    # Eğer mumun alt tarafında %45'ten fazla fitil/tepki oluşmuşsa dipte satıcı tükenmiştir
+                    if lower_wick_pct >= 45.0:
+                        rej_msg = f"🛡️ Dip Kovalama Kalkanı: Son mumda %{lower_wick_pct:.1f} alt alıcı fitili belirdi. Satıcı tükenişi sebebiyle en dipten SHORT engellendi (Retest bekleniyor)."
+                        print(f">> [RED - DİP KOVALAMA KALKANI] {symbol}: {rej_msg}")
+                        self.log_rejection(symbol, reason, rej_msg)
+                        return {"error": "BREAKOUT_EXHAUSTION_LOWER_WICK"}
+
+                # LONG Likidasyon / Tepe İğnesi Koruması: Şişen yeşil mumun tepesinde almayı engelle (GALA hatası)
+                elif side == "LONG":
+                    upper_wick = bar_h - max(bar_o, bar_c)
+                    upper_wick_pct = (upper_wick / bar_rng) * 100.0
+                    # Eğer mumun tepesinde %40'tan fazla satış iğnesi varsa FOMO tepesidir
+                    if upper_wick_pct >= 40.0 and ("Tasfiye" in reason or "Breakout" in reason or is_breakout):
+                        rej_msg = f"🛡️ Tepe İğne / Likidasyon Tuzağı Kalkanı: Üst fitil %{upper_wick_pct:.1f} ile tepe reddi gösteriyor. İğne tepesinden LONG engellendi."
+                        print(f">> [RED - TEPE İĞNE KALKANI] {symbol}: {rej_msg}")
+                        self.log_rejection(symbol, reason, rej_msg)
+                        return {"error": "LONG_UPPER_WICK_EXHAUSTION"}
+
         # ── 1c. DİNAMİK FONLAMA ORANI (FUNDING RATE) VE SQUEEZE KALKANI (ERKEN VETO) ──
         funding_info = {}
         if self.market_data and hasattr(self.market_data, 'get_funding_info'):
@@ -1661,20 +1694,31 @@ class StrategyEngine:
             soft_stop = hard_stop  # Dinamik ATR / Yapısal Stop: UI, telemetri ve risk motoru ile tam senkron
 
             actual_stop_dist = abs(entry_price - hard_stop)
-            enforced_min_tp1 = entry_price + max(actual_stop_dist * 2.0, tp1_dist)
-            
-            atr_tp1 = round(enforced_min_tp1, 6)
-            atr_tp2 = round(entry_price + tp2_dist, 6)
-            
-            macro_target = caller_tp2 if (caller_tp2 and caller_tp2 > entry_price) else (caller_tp1 if (caller_tp1 and caller_tp1 > entry_price) else None)
-            
-            # Eğer çağıran setup'ın yapısal hedefi zorunlu 2.0x R:R mesafesini karşılıyorsa kullan, aksi halde hedefe zorunlu genişleme uygula
-            if macro_target and macro_target >= atr_tp1:
-                tp1 = round(macro_target, 6)
-                tp2 = max(atr_tp2, round(tp1 * 1.025, 6))
+            # TP1: İlk kurumsal tepki seviyesi (Pivot P, S3/R3, AVWAP, nPOC) ve 1.0x-1.5x R:R nefesi
+            min_tp1_dist = max(actual_stop_dist * 1.0, entry_price * 0.0050)
+            max_tp1_dist = entry_price * min(0.040, max(0.020, safe_atr_pct * 2.5 / 100.0))  # 5m Scalp Tavan Sınırı
+
+            # Çağıran setup'ın birincil hedefi (caller_tp1) ve ikincil koşucu hedefi (caller_tp2)
+            first_target = caller_tp1 if (caller_tp1 and caller_tp1 > entry_price) else None
+            second_target = caller_tp2 if (caller_tp2 and caller_tp2 > entry_price) else None
+
+            # TP1 Belirleme (Öncelik birincil kurumsal tepki seviyesindedir):
+            if first_target:
+                f_dist = first_target - entry_price
+                if min_tp1_dist <= f_dist <= max_tp1_dist:
+                    tp1 = round(first_target, 6)
+                elif f_dist < min_tp1_dist:
+                    tp1 = round(entry_price + min_tp1_dist, 6)
+                else: # Aşırı uzak hedefse scalp tavan sınırına çek (DASH hatasını önler)
+                    tp1 = round(entry_price + max_tp1_dist, 6)
             else:
-                tp1 = atr_tp1
-                tp2 = atr_tp2
+                tp1 = round(entry_price + max(actual_stop_dist * 1.2, tp1_dist), 6)
+
+            # TP2 (Runner) Belirleme:
+            if second_target and second_target > tp1:
+                tp2 = round(second_target, 6)
+            else:
+                tp2 = round(max(tp1 * 1.015, entry_price + tp2_dist), 6)
         else:
             atr_hard_stop = round(entry_price + stop_dist, 6)
             # Eğer çağıran setup yapısal bir stop belirlediyse ve en az %0.80 nefes payına sahipse koru
@@ -1688,19 +1732,30 @@ class StrategyEngine:
             soft_stop = hard_stop  # Dinamik ATR / Yapısal Stop: UI, telemetri ve risk motoru ile tam senkron
 
             actual_stop_dist = abs(hard_stop - entry_price)
-            enforced_min_tp1 = entry_price - max(actual_stop_dist * 2.0, tp1_dist)
-            
-            atr_tp1 = round(enforced_min_tp1, 6)
-            atr_tp2 = round(entry_price - tp2_dist, 6)
-            
-            macro_target = caller_tp2 if (caller_tp2 and caller_tp2 < entry_price) else (caller_tp1 if (caller_tp1 and caller_tp1 < entry_price) else None)
-            
-            if macro_target and macro_target <= atr_tp1:
-                tp1 = round(macro_target, 6)
-                tp2 = min(atr_tp2, round(tp1 * 0.975, 6))
+            # TP1: İlk kurumsal tepki seviyesi (Pivot P, S3/R3, AVWAP, nPOC) ve 1.0x-1.5x R:R nefesi
+            min_tp1_dist = max(actual_stop_dist * 1.0, entry_price * 0.0050)
+            max_tp1_dist = entry_price * min(0.040, max(0.020, safe_atr_pct * 2.5 / 100.0))  # 5m Scalp Tavan Sınırı
+
+            first_target = caller_tp1 if (caller_tp1 and caller_tp1 < entry_price) else None
+            second_target = caller_tp2 if (caller_tp2 and caller_tp2 < entry_price) else None
+
+            # TP1 Belirleme (Öncelik birincil kurumsal tepki seviyesindedir):
+            if first_target:
+                f_dist = entry_price - first_target
+                if min_tp1_dist <= f_dist <= max_tp1_dist:
+                    tp1 = round(first_target, 6)
+                elif f_dist < min_tp1_dist:
+                    tp1 = round(entry_price - min_tp1_dist, 6)
+                else: # Aşırı uzak hedefse scalp tavan sınırına çek (DASH hatasını önler)
+                    tp1 = round(entry_price - max_tp1_dist, 6)
             else:
-                tp1 = atr_tp1
-                tp2 = atr_tp2
+                tp1 = round(entry_price - max(actual_stop_dist * 1.2, tp1_dist), 6)
+
+            # TP2 (Runner) Belirleme:
+            if second_target and second_target < tp1:
+                tp2 = round(second_target, 6)
+            else:
+                tp2 = round(min(tp1 * 0.985, entry_price - tp2_dist), 6)
 
         # ── 8b. JUST-IN-TIME (JIT) L2 DERİNLİK & SPOOFING KALKANI (COIN DNA ADAPTİF) ──
         if self.market_data and hasattr(self.market_data, 'get_jit_l2_depth'):
@@ -2192,33 +2247,56 @@ class StrategyEngine:
                 # Pozisyon planlı dinamik stop, +%1.8 Breakeven koruması veya TP ile yönetilir.
                 # (Eski 3-mum erken CVD çıkışı kaldırıldı)
 
-                if pos.get("trade_type") == "SCALP":
-                    is_meme_or_high_beta = coin_atr >= 0.70 or any(m in symbol for m in ["PEPE", "WIF", "DOGE", "BONK", "SHIB", "MEME"])
-                    stag_limit_candles = STAGNATION_CANDLES_MEME if is_meme_or_high_beta else STAGNATION_CANDLES_MAJOR
+                # ── 1e. COIN DNA VE HIZINA UYARLI ZAMAN & İVMESİZLİK KALKANI ──
+                max_mfe_seen = float(pos.get("max_mfe_roe", 0.0))
 
-                    # Eğer pozisyon belirlenen mum sayısını aştıysa VE
-                    # kâr/zarar -%2.5 ile +%1.5 arasında sıkışıp kaldıysa (ölü bölge) VE
-                    # CVD ivmesi tersine döndüyse:
-                    if hold_candles >= stag_limit_candles and -2.5 <= roe_raw <= 1.5 and cvd_exhausted:
+                # Kural A: Kırılımlar (BREAKOUT) İçin 3-Mum (15dk) İvme Zorunluluğu
+                # Breakout ya hemen patlamalıdır ya da terk edilmelidir. 15dk'da kâra geçemeyip negatif sürüklenen kırılımları erken kes:
+                if is_breakout and hold_candles >= 3.0:
+                    if max_mfe_seen < 1.20 and roe_raw <= -0.80:
                         record = await self._safe_close_position(
                             symbol, close_price,
-                            f"⏱️ Adaptif Zaman Stopu / İvme Kaybı ({int(hold_candles)} mum, ROE: %{roe_raw:+.1f}, CVD Çürümesi)")
+                            f"⏱️ Kırılım İvmesizlik Kalkanı (15dk İvmelenmedi, ROE: %{roe_raw:+.1f})")
                         if record:
                             await self._notify_close(record, levels=levels)
                             self._cleanup_tracking(symbol)
                         return
 
-                    # Normal azami tavan (4 saat)
-                    max_seconds = SCALP_MAX_HOLD_CANDLES * 300  # candle sayisi x 5dk
-                    if hold_seconds > max_seconds:
-                        hours = hold_seconds / 3600.0
-                        record = await self._safe_close_position(
-                            symbol, close_price,
-                            f"Scalp Zaman Asimi ({hours:.1f} saat)")
-                        if record:
-                            await self._notify_close(record, levels=levels)
-                            self._cleanup_tracking(symbol)
-                        return
+                # Kural B: Scalp & Mean-Reversion İçin 4-Mum (20dk) Erken İvmesizlik Kontrolü
+                is_meme_or_high_beta = coin_atr >= 0.70 or any(m in symbol for m in ["PEPE", "WIF", "DOGE", "BONK", "SHIB", "MEME"])
+                stag_limit_candles = STAGNATION_CANDLES_MEME if is_meme_or_high_beta else STAGNATION_CANDLES_MAJOR
+
+                # 4 Mum (20dk) Boyunca Hiç Kâra Geçemeyen ve Eksi Sürüklenen Pozisyon Koruması (DASH / PEPE Kalkanı):
+                if hold_candles >= 4.0 and max_mfe_seen < 1.20 and roe_raw <= -0.80:
+                    record = await self._safe_close_position(
+                        symbol, close_price,
+                        f"⏱️ Erken İvmesizlik Kalkanı (20dk Kâr Üretemedi, ROE: %{roe_raw:+.1f})")
+                    if record:
+                        await self._notify_close(record, levels=levels)
+                        self._cleanup_tracking(symbol)
+                    return
+
+                # Standart Stagnation / CVD Çürüme Çıkışı:
+                if hold_candles >= stag_limit_candles and -2.5 <= roe_raw <= 1.5 and cvd_exhausted:
+                    record = await self._safe_close_position(
+                        symbol, close_price,
+                        f"⏱️ Adaptif Zaman Stopu / İvme Kaybı ({int(hold_candles)} mum, ROE: %{roe_raw:+.1f}, CVD Çürümesi)")
+                    if record:
+                        await self._notify_close(record, levels=levels)
+                        self._cleanup_tracking(symbol)
+                    return
+
+                # Normal azami tavan (4 saat)
+                max_seconds = SCALP_MAX_HOLD_CANDLES * 300  # candle sayisi x 5dk
+                if hold_seconds > max_seconds:
+                    hours = hold_seconds / 3600.0
+                    record = await self._safe_close_position(
+                        symbol, close_price,
+                        f"Scalp Zaman Asimi ({hours:.1f} saat)")
+                    if record:
+                        await self._notify_close(record, levels=levels)
+                        self._cleanup_tracking(symbol)
+                    return
             return
 
         # ═══════════════════════════════════════════════════════════════════

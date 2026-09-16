@@ -135,15 +135,20 @@ LOOKBACK_DAYS_AVWAP = 10         # Son 10 gunluk tepe/dip AVWAP referansi
 BUFFER_RATIO = 0.25              # %25 akilli stop tampon payi
 BREAKOUT_HOLD_SECONDS = 60       # Kirilim tutunma teyit suresi (60 saniye)
 
-# 4. Trailing Stop / Kar Koruma Esikleri
-TRAILING_BREAKEVEN_ROE = 1.8     # %1.8 ROE'de soft stop -> breakeven (+%0.20 komisyon korumali)
-TRAILING_LOCK_30_ROE = 12.0      # %12 ROE'de karin %30'unu kilitleyen seviyeye tasir
-TRAILING_LOCK_50_ROE = 20.0      # %20 ROE'de hard stop ile karin %50'sini kilitle
+# 4. Trailing Stop / Kar Koruma Esikleri (Dense Tiered Trailing Engine)
+TRAILING_BREAKEVEN_ROE = 1.2     # %1.2 ROE'de Tier 0 breakeven (+%0.20 komisyon korumali)
+TRAILING_LOCK_TIER1_ROE = 2.5    # %2.5 ROE'de Tier 1: +%1.6 ROE net kâr kilit
+TRAILING_LOCK_TIER2_ROE = 4.5    # %4.5 ROE'de Tier 2: +%2.8 ROE orta dalga kilit (Giveback Kalkanı)
+TRAILING_LOCK_TIER3_ROE = 7.0    # %7.0 ROE'de Tier 3: +%4.5 ROE trend kilit
+TRAILING_LOCK_TIER4_ROE = 12.0   # %12.0 ROE'de Tier 4: +%8.0 ROE trend runner kilit
+TRAILING_LOCK_TIER5_ROE = 18.0   # %18.0 ROE'de Tier 5: +%13.0 ROE moonbag kilit
+TRAILING_LOCK_30_ROE = 12.0      # Geriye dönük uyumluluk alias
+TRAILING_LOCK_50_ROE = 18.0      # Geriye dönük uyumluluk alias
 
 # 5. Scalp & Stagnation Zaman Sinirlari
 SCALP_MAX_HOLD_CANDLES = 48      # Azami tutma: 48 mum (4 saat)
-STAGNATION_CANDLES_MEME = 6      # Yüksek beta / meme paritelerde ivme bekleme süresi: 6 mum (30 dk)
-STAGNATION_CANDLES_MAJOR = 12    # Majör ve DeFi paritelerde ivme bekleme süresi: 12 mum (60 dk)
+STAGNATION_CANDLES_MEME = 4      # Yüksek beta / meme paritelerde ivme bekleme süresi: 4 mum (20 dk)
+STAGNATION_CANDLES_MAJOR = 8     # Majör ve DeFi paritelerde ivme bekleme süresi: 8 mum (40 dk)
 
 # 6. Veri Fetch Ayarlari
 CANDLE_5M_FETCH_DAYS = 15       # 5m mum verisi icin ~15 gun (paginated, ~4300 mum)
