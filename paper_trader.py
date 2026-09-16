@@ -683,9 +683,16 @@ class PaperTrader:
                 "orderbook_entropy": pos.get("orderbook_entropy", 0.70),
                 "hurst_exponent": pos.get("hurst_exponent", 0.50),
                 "iceberg_ratio": pos.get("iceberg_ratio", 1.0),
-                "hmm_market_phase": pos.get("hmm_market_phase", "ACCUMULATION")
+                "hmm_market_phase": pos.get("hmm_market_phase", "ACCUMULATION"),
+                "spot_basis_bps": pos.get("spot_basis_bps", 0.0),
+                "wall_age_sec": pos.get("wall_age_sec", 0.0),
+                "entry_spread_pct": pos.get("entry_spread_pct", 0.0),
+                "entry_slippage_pct": pos.get("entry_slippage_pct", 0.0),
+                "btc_velocity_60s": pos.get("btc_velocity_60s", 0.0),
+                "calculated_dollar_risk": pos.get("calculated_dollar_risk", 10.0)
             }
             self.history.append(record)
+
             self.save_history(critical=True)
             print(f">> [TP1 %50 KAPATILDI] {symbol} Net: {net_pnl:+.2f}$ ({roe_pct:+.1f}%) | Kasa: {self.balance:.2f}$")
             return record
@@ -776,9 +783,16 @@ class PaperTrader:
                 "orderbook_entropy": pos.get("orderbook_entropy", 0.70),
                 "hurst_exponent": pos.get("hurst_exponent", 0.50),
                 "iceberg_ratio": pos.get("iceberg_ratio", 1.0),
-                "hmm_market_phase": pos.get("hmm_market_phase", "ACCUMULATION")
+                "hmm_market_phase": pos.get("hmm_market_phase", "ACCUMULATION"),
+                "spot_basis_bps": pos.get("spot_basis_bps", 0.0),
+                "wall_age_sec": pos.get("wall_age_sec", 0.0),
+                "entry_spread_pct": pos.get("entry_spread_pct", 0.0),
+                "entry_slippage_pct": pos.get("entry_slippage_pct", 0.0),
+                "btc_velocity_60s": pos.get("btc_velocity_60s", 0.0),
+                "calculated_dollar_risk": pos.get("calculated_dollar_risk", 10.0)
             }
             self.history.append(record)
+
             del self.open_positions[symbol]
             self.save_history(critical=True)
             print(f">> [POZISYON KAPANDI] {symbol} Net: {net_pnl:+.2f}$ ({roe_pct:+.1f}%) | Kasa: {self.balance:.2f}$")

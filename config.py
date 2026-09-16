@@ -153,7 +153,33 @@ STAGNATION_CANDLES_MAJOR = 8     # Majör ve DeFi paritelerde ivme bekleme süre
 # 6. Veri Fetch Ayarlari
 CANDLE_5M_FETCH_DAYS = 15       # 5m mum verisi icin ~15 gun (paginated, ~4300 mum)
 
-# 7. Telegram Bildirim Ayarlari
+# 7. 5 Kurumsal Omurga Parametreleri (Institutional Quantitative Pillars)
+# 1. Volatiliteye Uyarlı Eşit Dolar Riski (Inverse-ATR Fixed Dollar Risk Parity)
+FIXED_DOLLAR_RISK = 10.0         # İşlem başına hedeflenen net azami stop riski (10.0 USDT)
+MIN_POSITION_MARGIN = 35.0       # Asgari pozisyon marjini (Binance min notional koruması)
+MAX_POSITION_MARGIN = 110.0      # Azami pozisyon marjini (Asimetrik portföy tavanı)
+
+# 2. BTC Ani Mikro-Şok Kalkanı (BTC 60s Flush / Spike Gate)
+BTC_SHOCK_60S_PCT = 0.28         # BTC 60 saniyede %0.28 ve üzeri ani hareket yaparsa şok geçidi devreye girer
+BTC_SHOCK_COOLDOWN_SEC = 180.0   # Şok sonrası altcoin dondurma süresi: 3 dakika (180s)
+
+# 3. Tahta Duvarı Yaşlanma & Sahtecilik Teyidi (Wall Aging & Spoofing Guard)
+WALL_MIN_AGE_SEC = 15.0          # Duvarın gerçek emir sayılması için asgari yaşlanma süresi (15 saniye)
+WALL_ANCHOR_AGE_SEC = 45.0       # Kurumsal çapa duvarı (Anchor Wall) seviyesi (45 saniye)
+
+# 4. Spot vs Vadeli Ayrışması (Spot-Perp Basis & Divergence)
+BASIS_BUBBLE_BPS = 25.0          # Vadeli prim balonu eşiği (+25 bps üstü: Boğa Tuzağı)
+BASIS_ABSORPTION_BPS = -15.0     # Spot kurumsal emilim tabanı eşiği (-15 bps altı: Güçlü Sekme Teyidi)
+
+# 5. Likidite Boşluğu ve Makas (Spread / Slippage) Koruması
+MAX_ALLOWED_SPREAD_MAJORS = 0.05 # BTC, ETH, SOL için azami alış-satış makası (%0.05)
+MAX_ALLOWED_SPREAD_ALTS = 0.12   # Standart altcoinler için azami makas (%0.12)
+MAX_ALLOWED_SPREAD_MEME = 0.20   # Meme/Beta pariteler için azami makas (%0.20)
+MAX_ENTRY_SLIPPAGE_PCT = 0.10    # Hedef lot büyüklüğünde azami kabul edilebilir kayma (%0.10)
+MIN_L2_DEPTH_USD_03 = 12000.0    # Fiyatın %0.3 derinliğinde bulunması gereken asgari tahta likiditesi ($12,000)
+
+# 8. Telegram Bildirim Ayarlari
 TELEGRAM_ENABLED = True
 TELEGRAM_BOT_TOKEN = "8893395987:AAGKAzD4sUg5LwMLLWHSt5U1VRRS7JE-m9c"
 TELEGRAM_CHAT_ID = "829687700"
+

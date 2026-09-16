@@ -365,8 +365,15 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ('Fraktal Rejim (Hurst H)', 22),
         ('Gizli Likidite (Iceberg Oranı)', 24),
         ('Piyasa Fazı (Simons HMM)', 26),
-        ('Bookmap Sipariş Akışı & Çapa', 28)
+        ('Bookmap Sipariş Akışı & Çapa', 28),
+        ('Spot-Perp Basis (bps)', 20),
+        ('Tahta Duvar Yaşı (s)', 18),
+        ('Giriş Makası (Spread %)', 20),
+        ('Giriş Kayması (Slippage %)', 22),
+        ('BTC 60s Mikro-Hız (%)', 20),
+        ('Hesaplanan Dolar Riski ($)', 22)
     ]
+
 
     def _get_coin_persona(sym, st):
         if st['trades'] < 3:
@@ -570,7 +577,23 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
             bm_str = f"🧱 Çapa Duvarı ({bm_dur:.0f}s)"
         ws.write(r_idx, 74, bm_str, cell_roe_green if (bm_buyer or bm_anchor) else (cell_roe_red if bm_seller else cell_center))
 
+        # 5 Kurumsal Omurga Sütunları (75, 76, 77, 78, 79, 80)
+        basis_v = _safe_float(h.get('spot_basis_bps', 0.0))
+        wall_age = _safe_float(h.get('wall_age_sec', 0.0))
+        spread_v = _safe_float(h.get('entry_spread_pct', 0.0))
+        slip_v = _safe_float(h.get('entry_slippage_pct', 0.0))
+        btc_v = _safe_float(h.get('btc_velocity_60s', 0.0))
+        calc_risk = _safe_float(h.get('calculated_dollar_risk', 10.0))
+
+        ws.write(r_idx, 75, f"{basis_v:+.1f} bps", cell_roe_green if basis_v <= -15 else (cell_roe_red if basis_v >= 25 else cell_center))
+        ws.write(r_idx, 76, f"{wall_age:.1f}s", cell_roe_green if wall_age >= 45 else (cell_roe_red if wall_age < 15 else cell_center))
+        ws.write(r_idx, 77, f"%{spread_v:.3f}", cell_roe_green if spread_v <= 0.08 else (cell_roe_red if spread_v >= 0.18 else cell_center))
+        ws.write(r_idx, 78, f"%{slip_v:.3f}", cell_roe_green if slip_v <= 0.05 else (cell_roe_red if slip_v >= 0.10 else cell_center))
+        ws.write(r_idx, 79, f"%{btc_v:+.2f}", cell_roe_green if btc_v >= 0 else cell_roe_red)
+        ws.write(r_idx, 80, f"${calc_risk:.2f}", cell_currency_2d)
+
     def render_table_sheet(ws_obj, t_list):
+
         for col_idx, (h_name, width) in enumerate(headers_granular):
             ws_obj.set_column(col_idx, col_idx, width)
             ws_obj.write(0, col_idx, h_name, th_fmt)

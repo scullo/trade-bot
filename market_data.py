@@ -7,7 +7,14 @@ import aiohttp
 import ccxt.async_support as ccxt
 import pandas as pd
 import numpy as np
-from config import LOOKBACK_DAYS_AVWAP
+from config import (
+    LOOKBACK_DAYS_AVWAP,
+    BTC_SHOCK_60S_PCT, BTC_SHOCK_COOLDOWN_SEC,
+    WALL_MIN_AGE_SEC, WALL_ANCHOR_AGE_SEC,
+    BASIS_BUBBLE_BPS, BASIS_ABSORPTION_BPS,
+    MAX_ALLOWED_SPREAD_MAJORS, MAX_ALLOWED_SPREAD_ALTS, MAX_ALLOWED_SPREAD_MEME,
+    MAX_ENTRY_SLIPPAGE_PCT, MIN_L2_DEPTH_USD_03
+)
 from indicators import calculate_camarilla_pivots, calculate_anchored_vwap, calculate_volume_profile, get_tradingview_naked_lines, calculate_session_and_daily_levels
 
 class MarketDataManager:
@@ -19,6 +26,7 @@ class MarketDataManager:
             'enableRateLimit': True
         })
         self.semaphore = asyncio.Semaphore(25)
+
         self.candles_5m = {s: pd.DataFrame() for s in all_symbols}
         self.candles_1d = {s: pd.DataFrame() for s in all_symbols}
         self.levels = {s: {} for s in all_symbols}
@@ -68,8 +76,11 @@ class MarketDataManager:
             'imbalance': 0.0,
             'ratio': 1.0,
             'wall_side': 'BALANCED',
+            'wall_price': 0.0,
             'wall_duration_sec': 0.0,
             'wall_first_seen': 0.0,
+            'spread_pct': 0.0,
+            'is_spoof_risk': False,
         } for s in all_symbols}
         # Açık Pozisyon (Open Interest) Radarı & Delta-OI Takip Veri Yapıları
         self.symbol_oi = {s: {
@@ -81,8 +92,23 @@ class MarketDataManager:
             'status': 'BALANCED',
             'last_update': 0.0
         } for s in all_symbols}
+
+        # ⚡ 1. BTC Ani Mikro-Şok Kalkanı Veri Yapıları (60s Flush / Spike Gate)
+        self.btc_price_60s_deque = deque(maxlen=120)
+        self.btc_velocity_60s = 0.0
+        self.btc_shock_gate_active = False
+        self.btc_shock_gate_expiry = 0.0
+        self.btc_shock_pct = 0.0
+
+        # ⚖️ 4. Spot vs Vadeli Ayrışması Veri Yapıları (Spot-Perp Basis)
+        self.spot_prices = {}
+        self.spot_hist_3m = {s: deque(maxlen=60) for s in all_symbols}
+        self.perp_hist_3m = {s: deque(maxlen=60) for s in all_symbols}
+        self.last_spot_update_ts = 0.0
+
         self.on_tick_callback = None
         self.on_candle_close_callback = None
+
 
     def _clean_symbol(self, symbol: str) -> str:
         clean = symbol.replace(':USDT', '')
@@ -532,8 +558,70 @@ class MarketDataManager:
             'imbalance': 0.0,
             'ratio': 1.0,
             'wall_side': 'BALANCED',
+            'wall_price': cur_p,
+            'wall_duration_sec': 0.0,
+            'spread_pct': 0.0,
+            'is_spoof_risk': False,
             'last_update': 0.0
         }
+
+    def is_btc_shock_active(self) -> tuple:
+        """
+        BTC 60s Ani Mikro-Şok Kalkanı Durumu:
+        Döner: (is_active: bool, shock_pct: float, remaining_sec: float)
+        """
+        now_ts = time.time()
+        if getattr(self, 'btc_shock_gate_active', False):
+            if now_ts < getattr(self, 'btc_shock_gate_expiry', 0.0):
+                remaining = round(self.btc_shock_gate_expiry - now_ts, 1)
+                return True, getattr(self, 'btc_shock_pct', 0.0), remaining
+            else:
+                self.btc_shock_gate_active = False
+                self.btc_shock_pct = 0.0
+        return False, 0.0, 0.0
+
+    def get_btc_velocity_60s(self) -> float:
+        """BTC son 60 saniyelik yüzdesel fiyat hızı."""
+        return getattr(self, 'btc_velocity_60s', 0.0)
+
+    def get_spot_perp_basis(self, symbol: str) -> dict:
+        """
+        Spot vs Vadeli Ayrışması & Basis Hesabı (Spot-Perp Basis in BPS):
+        Basis (bps) = ((Perp_Price - Spot_Price) / Spot_Price) * 10,000
+        Divergence = %Delta_Spot_3m - %Delta_Perp_3m
+        """
+        perp_p = float(getattr(self, 'current_prices', {}).get(symbol, 0.0))
+        spot_p = float(getattr(self, 'spot_prices', {}).get(symbol, 0.0))
+        if perp_p <= 0 or spot_p <= 0:
+            return {
+                "basis_bps": 0.0,
+                "spot_price": spot_p,
+                "perp_price": perp_p,
+                "spot_perp_divergence": 0.0,
+                "is_available": False
+            }
+        basis_bps = round(((perp_p - spot_p) / spot_p) * 10000.0, 2)
+
+        # 3 Dakikalık Divergence Hesabı
+        spot_div = 0.0
+        s_dq = getattr(self, 'spot_hist_3m', {}).get(symbol)
+        p_dq = getattr(self, 'perp_hist_3m', {}).get(symbol)
+        if s_dq and len(s_dq) >= 2 and p_dq and len(p_dq) >= 2:
+            s_old = s_dq[0][1]
+            p_old = p_dq[0][1]
+            if s_old > 0 and p_old > 0:
+                s_chg = (spot_p - s_old) / s_old * 100.0
+                p_chg = (perp_p - p_old) / p_old * 100.0
+                spot_div = round(s_chg - p_chg, 3)
+
+        return {
+            "basis_bps": basis_bps,
+            "spot_price": spot_p,
+            "perp_price": perp_p,
+            "spot_perp_divergence": spot_div,
+            "is_available": True
+        }
+
 
     def get_market_cvd_summary(self) -> dict:
         cvds = getattr(self, 'symbol_cvd', {})
@@ -1364,6 +1452,54 @@ class MarketDataManager:
             vacuum_detected = True
             vacuum_side = "BID_VACUUM_BEARISH"  # Alıcı tahtası bomboş, aşağı yön dökülme
 
+        # 💧 5. Makas (Spread %) & Gerçek Zamanlı Kayma (Slippage) Simülasyonu
+        best_bid = bids[0][0] if bids else 0.0
+        best_ask = asks[0][0] if asks else 0.0
+        spread_pct = round(((best_ask - best_bid) / mid_price * 100.0), 4) if (mid_price > 0 and best_ask > best_bid) else 0.0
+
+        # Fiyatın %0.3 derinliğindeki toplam likidite
+        bid_usd_03 = sum(p * q for p, q in bids if p >= mid_price * 0.997) if mid_price > 0 else 0.0
+        ask_usd_03 = sum(p * q for p, q in asks if p <= mid_price * 1.003) if mid_price > 0 else 0.0
+        depth_usd_03 = round(bid_usd_03 + ask_usd_03, 2)
+
+        # $500 standart emir için tahtada yürüme (walk the book) kayma simülasyonu
+        target_slip_n = 500.0
+        sim_slip_long = 0.0
+        rem_n = target_slip_n
+        sum_p = 0.0
+        for p, q in asks:
+            lvl_val = p * q
+            if lvl_val <= 0: continue
+            fill_n = min(rem_n, lvl_val)
+            sum_p += fill_n * p
+            rem_n -= fill_n
+            if rem_n <= 0: break
+        if rem_n > 0:
+            sim_slip_long = 0.50  # Tahta $500'ü bile karşılayamıyor (Hava cebi)
+        else:
+            avg_p = sum_p / target_slip_n
+            sim_slip_long = round(abs(avg_p - mid_price) / mid_price * 100.0, 4)
+
+        sim_slip_short = 0.0
+        rem_n = target_slip_n
+        sum_p = 0.0
+        for p, q in bids:
+            lvl_val = p * q
+            if lvl_val <= 0: continue
+            fill_n = min(rem_n, lvl_val)
+            sum_p += fill_n * p
+            rem_n -= fill_n
+            if rem_n <= 0: break
+        if rem_n > 0:
+            sim_slip_short = 0.50
+        else:
+            avg_p = sum_p / target_slip_n
+            sim_slip_short = round(abs(avg_p - mid_price) / mid_price * 100.0, 4)
+
+        # 🧱 3. Tahta Duvarı Yaşlanma Durumu (Wall Aging Status)
+        is_anchor_aged = (wall_dur_sec >= WALL_ANCHOR_AGE_SEC)
+        is_unverified_wall = (wall_dur_sec < WALL_MIN_AGE_SEC)
+
         res_depth = {
             'symbol': symbol,
             'mid_price': mid_price,
@@ -1392,9 +1528,16 @@ class MarketDataManager:
             'is_anchor_wall': bool(bm_data.get('is_anchor_wall', False)),
             'is_iron_wall': bool(bm_data.get('is_iron_wall', False)),
             'wall_duration_sec': float(wall_dur_sec),
+            'is_anchor_aged': bool(is_anchor_aged),
+            'is_unverified_wall': bool(is_unverified_wall),
+            'spread_pct': float(spread_pct),
+            'depth_usd_03': float(depth_usd_03),
+            'sim_slip_long': float(sim_slip_long),
+            'sim_slip_short': float(sim_slip_short),
             'price_change_pct_60s': float(price_chg_60s),
             'last_update': now_ts
         }
+
 
         if not hasattr(self, 'jit_l2_cache'):
             self.jit_l2_cache = {}
@@ -1567,8 +1710,13 @@ class MarketDataManager:
                                                 prev_depth = self.orderbook_depth.get(norm_s, {})
                                                 prev_wall = prev_depth.get('wall_side', 'BALANCED')
                                                 first_seen = prev_depth.get('wall_first_seen', 0.0)
+                                                prev_wall_p = prev_depth.get('wall_price', 0.0)
 
-                                                if wall_side != 'BALANCED' and wall_side == prev_wall:
+                                                current_wall_p = bid if wall_side == 'BID_WALL' else (ask if wall_side == 'ASK_WALL' else 0.0)
+                                                p_shift = abs(current_wall_p - prev_wall_p) / prev_wall_p if (prev_wall_p > 0 and current_wall_p > 0) else 0.0
+
+                                                # Fiyata Sabit (Price-Anchored) Duvar Yaşlanması: Duvar yönü aynı ve fiyat kayması <= %0.08 olmalı
+                                                if wall_side != 'BALANCED' and wall_side == prev_wall and p_shift <= 0.0008:
                                                     duration_sec = (now_ts - first_seen) if first_seen > 0 else 0.0
                                                 elif wall_side != 'BALANCED':
                                                     first_seen = now_ts
@@ -1576,6 +1724,15 @@ class MarketDataManager:
                                                 else:
                                                     first_seen = 0.0
                                                     duration_sec = 0.0
+
+                                                # Makas (Spread %) Hesabı
+                                                mid_p = (bid + ask) / 2.0 if (bid and ask) else price
+                                                spread_p = round(((ask - bid) / mid_p * 100.0), 4) if mid_p > 0 and ask > bid else 0.0
+
+                                                # Sahte Duvar (Spoofing) Hızlı Kaçış Tespiti:
+                                                is_spoof = False
+                                                if prev_wall != 'BALANCED' and wall_side == 'BALANCED' and prev_depth.get('wall_duration_sec', 0.0) < WALL_MIN_AGE_SEC:
+                                                    is_spoof = True
 
                                                 self.orderbook_depth[norm_s] = {
                                                     'symbol': norm_s,
@@ -1586,13 +1743,33 @@ class MarketDataManager:
                                                     'imbalance': round(imbalance, 4),
                                                     'ratio': round(ratio, 4),
                                                     'wall_side': wall_side,
+                                                    'wall_price': current_wall_p,
                                                     'wall_duration_sec': round(duration_sec, 2),
                                                     'wall_first_seen': first_seen,
+                                                    'spread_pct': spread_p,
+                                                    'is_spoof_risk': is_spoof,
                                                     'last_update': now_ts
                                                 }
 
+                                                # ⚡ BTC 60s Mikro-Şok Takibi (BTC 60s Velocity & Shock Gate)
+                                                if norm_s == "BTC/USDT":
+                                                    self.btc_price_60s_deque.append((now_ts, price))
+                                                    while self.btc_price_60s_deque and (now_ts - self.btc_price_60s_deque[0][0] > 60.0):
+                                                        self.btc_price_60s_deque.popleft()
+                                                    if len(self.btc_price_60s_deque) >= 2:
+                                                        oldest_p = self.btc_price_60s_deque[0][1]
+                                                        if oldest_p > 0:
+                                                            self.btc_velocity_60s = round(((price - oldest_p) / oldest_p) * 100.0, 3)
+                                                            if abs(self.btc_velocity_60s) >= BTC_SHOCK_60S_PCT:
+                                                                if not self.btc_shock_gate_active:
+                                                                    print(f">> [⚡ BTC MİKRO-ŞOK GEÇİDİ DEVREDE] BTC 60s Hız: %{self.btc_velocity_60s:+.2f} -> Altcoinler {BTC_SHOCK_COOLDOWN_SEC:.0f}s donduruldu!")
+                                                                self.btc_shock_gate_active = True
+                                                                self.btc_shock_gate_expiry = now_ts + BTC_SHOCK_COOLDOWN_SEC
+                                                                self.btc_shock_pct = self.btc_velocity_60s
+
                                             if self.on_tick_callback:
                                                 await self.on_tick_callback(norm_s, price)
+
                                 elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
                                     break
                 except Exception as e:
@@ -1848,6 +2025,40 @@ class MarketDataManager:
                     print(f">> [LİKİDASYON RADARI UYARI] Yeniden bağlanılıyor: {e}")
                     await asyncio.sleep(3)
 
+        # Worker 7: Spot vs Vadeli Ayrışması & Basis Nöbetçisi (Spot-Perp Basis Worker)
+        async def spot_basis_worker():
+            url = "https://data-api.binance.vision/api/v3/ticker/price"
+            headers = {'User-Agent': 'Mozilla/5.0'}
+            while True:
+                try:
+                    async with aiohttp.ClientSession(headers=headers) as session:
+                        async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as resp:
+                            if resp.status == 200:
+                                data = await resp.json()
+                                spot_map = {item['symbol']: float(item['price']) for item in data if 'symbol' in item and 'price' in item}
+                                now_ts = time.time()
+                                for s in self.all_symbols:
+                                    clean_raw = s.replace('/', '').replace(':USDT', '').replace('USDT', '')
+                                    clean_base = clean_raw.replace('1000000', '').replace('1000', '')
+                                    spot_sym = f"{clean_base}USDT"
+                                    if spot_sym in spot_map:
+                                        mult = self._get_spot_multiplier(s)
+                                        adj_spot = spot_map[spot_sym] * mult
+                                        self.spot_prices[s] = adj_spot
+                                        if s not in self.spot_hist_3m:
+                                            self.spot_hist_3m[s] = deque(maxlen=60)
+                                        self.spot_hist_3m[s].append((now_ts, adj_spot))
+
+                                        cur_perp = self.current_prices.get(s, 0.0)
+                                        if cur_perp > 0:
+                                            if s not in self.perp_hist_3m:
+                                                self.perp_hist_3m[s] = deque(maxlen=60)
+                                            self.perp_hist_3m[s].append((now_ts, cur_perp))
+                                self.last_spot_update_ts = now_ts
+                except Exception:
+                    pass
+                await asyncio.sleep(15)  # 15 saniyede bir spot baz fiyatlarını tazele
+
         # Her worker'ı crash-proof saran koruyucu (bir worker çökerse diğerlerini öldürmez, otomatik yeniden başlatır)
         async def resilient_worker(name, coro_fn, *args):
             backoff = 2
@@ -1868,8 +2079,10 @@ class MarketDataManager:
             resilient_worker("HourlyFuturesWatchdog", hourly_futures_watchdog_worker),
             resilient_worker("FundingWorker", funding_worker),
             resilient_worker("ForceOrderRadar", forceorder_worker),
+            resilient_worker("SpotBasisWorker", spot_basis_worker),
         ] + [resilient_worker(f"KLine-Chunk-{i}", kline_worker, c) for i, c in enumerate(kline_chunks)]
         await asyncio.gather(*tasks)
+
 
     async def close(self):
         await self.exchange.close()

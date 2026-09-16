@@ -9,8 +9,15 @@ from config import (
     TRAILING_BREAKEVEN_ROE, TRAILING_LOCK_30_ROE, TRAILING_LOCK_50_ROE,
     SCALP_MAX_HOLD_CANDLES, MAX_PORTFOLIO_MARGIN_PCT,
     ELITE_SLOT_BASE, ELITE_SLOT_MAX,
-    STAGNATION_CANDLES_MEME, STAGNATION_CANDLES_MAJOR
+    STAGNATION_CANDLES_MEME, STAGNATION_CANDLES_MAJOR,
+    FIXED_DOLLAR_RISK, MIN_POSITION_MARGIN, MAX_POSITION_MARGIN,
+    BTC_SHOCK_60S_PCT, BTC_SHOCK_COOLDOWN_SEC,
+    WALL_MIN_AGE_SEC, WALL_ANCHOR_AGE_SEC,
+    BASIS_BUBBLE_BPS, BASIS_ABSORPTION_BPS,
+    MAX_ALLOWED_SPREAD_MAJORS, MAX_ALLOWED_SPREAD_ALTS, MAX_ALLOWED_SPREAD_MEME,
+    MAX_ENTRY_SLIPPAGE_PCT, MIN_L2_DEPTH_USD_03
 )
+
 
 class StrategyEngine:
     def __init__(self, paper_trader, notifier, market_data=None):
@@ -1481,6 +1488,50 @@ class StrategyEngine:
                 self.log_rejection(symbol, reason, rej_msg)
                 return {"error": "DIRECTIONAL_BIAS_LIMIT"}
 
+        # ── ⚡ 2. BTC ANİ MİKRO-ŞOK KALKANI (60s Flush / Spike Gate) ──
+        btc_velocity_60s = 0.0
+        if self.market_data and hasattr(self.market_data, 'is_btc_shock_active'):
+            is_shock, shock_pct, rem_sec = self.market_data.is_btc_shock_active()
+            btc_velocity_60s = self.market_data.get_btc_velocity_60s()
+            if is_shock:
+                if shock_pct <= -BTC_SHOCK_60S_PCT and side == "LONG":
+                    rej_msg = f"⚡ BTC 60s Mikro-Çöküş Kalkanı: Bitcoin son 60 saniyede %{shock_pct:+.2f} ani tasfiye şoku üretti ({rem_sec:.0f}s soğuma kaldı). Altcoin LONG engellendi."
+                    print(f">> [RED - BTC 60S ŞOK] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg, btcShockPct=shock_pct, remainingSec=rem_sec)
+                    return {"error": "BTC_60S_MICRO_FLUSH_BLOCKED"}
+                elif shock_pct >= BTC_SHOCK_60S_PCT and side == "SHORT":
+                    rej_msg = f"⚡ BTC 60s Mikro-Squeeze Kalkanı: Bitcoin son 60 saniyede %{shock_pct:+.2f} ani yukarı patlama üretti ({rem_sec:.0f}s soğuma kaldı). Altcoin SHORT engellendi."
+                    print(f">> [RED - BTC 60S ŞOK] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg, btcShockPct=shock_pct, remainingSec=rem_sec)
+                    return {"error": "BTC_60S_MICRO_SQUEEZE_BLOCKED"}
+
+        # ── ⚖️ 4. SPOT VS VADELİ AYRIŞMASI & BASIS KALKANI (Spot-Perp Basis & Absorption) ──
+        spot_basis_bps = 0.0
+        if self.market_data and hasattr(self.market_data, 'get_spot_perp_basis'):
+            sp_info = self.market_data.get_spot_perp_basis(symbol)
+            if sp_info.get("is_available", False):
+                spot_basis_bps = float(sp_info.get("basis_bps", 0.0))
+                s_div = float(sp_info.get("spot_perp_divergence", 0.0))
+
+                # Kural 1: Vadeli Kaldıraç Balonu & Boğa Tuzağı Vetosu (Perp şişmiş, Spot alıcı yok)
+                if side == "LONG" and spot_basis_bps >= BASIS_BUBBLE_BPS and s_div <= -0.30:
+                    rej_msg = f"⚖️ Vadeli Kaldıraç Balonu Kalkanı: Vadeli fiyatta suni kaldıraç köpüğü var (Basis: +{spot_basis_bps:.1f} bps), spot geride kaldı (Ayrışma: %{s_div:+.2f}). Boğa tuzağı riski, LONG engellendi."
+                    print(f">> [RED - SPOT BASIS BALONU] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg, basisBps=spot_basis_bps, spotDiv=s_div)
+                    return {"error": "SPOT_PERP_BUBBLE_LONG_BLOCKED"}
+
+                # Kural 2: Vadeli Ayı Tuzağı & Squeeze Öncesi Çöküş Vetosu (Perp ezilmiş, Spot taş gibi)
+                if side == "SHORT" and spot_basis_bps <= -30.0 and s_div >= 0.30:
+                    rej_msg = f"⚖️ Vadeli Ayı Tuzağı Kalkanı: Vadeli fiyatta aşırı panik tasfiye var (Basis: {spot_basis_bps:.1f} bps) ancak spot düşmüyor (Ayrışma: %{s_div:+.2f}). Short squeeze riski, SHORT engellendi."
+                    print(f">> [RED - SPOT BASIS AYI TUZAĞI] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg, basisBps=spot_basis_bps, spotDiv=s_div)
+                    return {"error": "SPOT_PERP_BEAR_TRAP_SHORT_BLOCKED"}
+
+                # Teyit 1: Kurumsal Spot Tabanı & Emilim Teyidi
+                if side == "LONG" and spot_basis_bps <= BASIS_ABSORPTION_BPS and s_div >= 0.15:
+                    if confluence_list is not None and isinstance(confluence_list, list) and "🏛️_Kurumsal_Spot_Akümülasyon_Teyidi" not in confluence_list:
+                        confluence_list.append("🏛️_Kurumsal_Spot_Akümülasyon_Teyidi")
+
         # ── DİNAMİK BTC HIZ & MAKRO YÖN VALİSİ (3 BOYUTLU AKILLI KALKAN) ──
         macro_clim = self.get_macro_climate()
         btc_chg_5m = macro_clim.get("btc_chg_5m", 0.0)
@@ -1492,6 +1543,7 @@ class StrategyEngine:
             rej_msg = f"🛡️ 5M BTC Panik Kalkanı: Bitcoin son 5 dakikada %{btc_chg_5m:+.2f} sert çöküş mumu atıyor. Düşen bıçak tutulmadı."
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "BTC_5M_PANIC_DUMP_BLOCKED"}
+
 
         # 2. Makro Ayı Karşı-Trend Kalkanı: BTC 1S trendi belirgin düşüşteyken (%-0.40 altı veya BEAR_DUMP)
         #    altcoin sekme LONG'ları yalnızca pozitif göreceli güç (RS >= +0.80) veya yüksek kurumsal CVD emilimi (>= %65) varsa açılabilir!
@@ -1554,31 +1606,44 @@ class StrategyEngine:
         if is_macro_volume_setup:
             self.margin_multiplier *= 1.15
 
-        # ⚖️ RAY DALİO TERS VOLATİLİTE RİSK PARİTESİ (INVERSE VOLATILITY RISK PARITY)
-        # Benchmark volatilite: Medyan kripto ATR = %1.20
-        # Volatilite arttıkça marjin düşürülür (sabit dolar riski); volatilite düştükçe marjin artırılır (kâr maksimizasyonu).
-        clean_atr = max(0.50, min(3.50, atr_pct))
-        base_target_margin = 80.0 * (1.20 / clean_atr)
-        dyn_margin = round(max(45.0, min(115.0, base_target_margin)), 2)
+        # ⚖️ 1. VOLATİLİTEYE UYARLI EŞİT DOLAR RİSKİ (INVERSE-ATR EQUAL DOLLAR RISK PARITY)
+        # Her işlemde stop olunduğunda kasadan çıkacak dolar riski tam FIXED_DOLLAR_RISK ($10.00) hedeflenir.
+        actual_stop_dist = abs(entry_price - hard_stop)
+        stop_dist_pct = (actual_stop_dist / entry_price) if entry_price > 0 else 0.02
+
+        # Gürültüye karşı asgari stop mesafesi tabanı (0.6 x ATR):
+        clean_atr = max(0.40, min(4.00, atr_pct))
+        min_stop_floor_pct = max(0.006, 0.6 * (clean_atr / 100.0))
+        effective_stop_pct = max(stop_dist_pct, min_stop_floor_pct)
+
+        # Hedef Nominal Pozisyon Büyüklüğü (Notional USD) = Hedef Risk ($) / Stop Yüzdesi
+        target_risk_usd = float(FIXED_DOLLAR_RISK)
+        target_notional_usd = target_risk_usd / effective_stop_pct
+
+        # Kaldıraç (5x) bazında gereken taban marjin:
+        base_calc_margin = target_notional_usd / float(getattr(self.paper_trader, 'leverage', 5))
 
         # 🐋 KURUMSAL BALİNA ONAYLI SEVİYE HÜCUM MARJİNİ (Sniper Sizing)
         has_whale_flow = (cvd_confirmed or cvd_margin_mult > 1.0) and (obi_confirmed or obi_margin_mult > 1.0)
         if has_whale_flow:
-            self.margin_multiplier *= 1.25
+            self.margin_multiplier *= 1.15
             reason += " [🐋 Balina Teyitli Seviye]"
             if confluence_list is not None and isinstance(confluence_list, list) and "🐋_Balina_Akışı_Teyidi" not in confluence_list:
                 confluence_list.append("🐋_Balina_Akışı_Teyidi")
 
         c_count = len(confluence_list or [1])
-        # 🛡️ ASİMETRİK RİSK TAVANI: Hiçbir pozisyonda marjinin $100'ü aşmasına izin verilmez (ONG/BICO -$6 stop facialarını engeller)
-        max_margin_cap = 100.0 if (has_whale_flow or c_count >= 4) else 85.0
-        dyn_margin = min(max_margin_cap, max(40.0, round(dyn_margin * getattr(self, 'margin_multiplier', 1.0), 2)))
 
         # 🎲 ED THORP FRAKSİYONEL KELLY KRİTERİ İLE MARJİN MODÜLASYONU
         from indicators import calculate_fractional_kelly
         est_win_rate = 72.0 if (has_whale_flow or c_count >= 4) else (60.0 if c_count >= 3 else 52.0)
         kelly_mult = calculate_fractional_kelly(win_rate_pct=est_win_rate, reward_risk_ratio=2.0, fraction=0.25)
-        dyn_margin = min(max_margin_cap, max(40.0, round(dyn_margin * kelly_mult, 2)))
+
+        # Asgari ($35) ve Azami ($110) sınırlar içine kitle (Portföy Risk Paritesi Kalkanı):
+        max_margin_cap = MAX_POSITION_MARGIN if (has_whale_flow or c_count >= 4) else (MAX_POSITION_MARGIN * 0.85)
+        dyn_margin = round(max(MIN_POSITION_MARGIN, min(max_margin_cap, base_calc_margin * kelly_mult * getattr(self, 'margin_multiplier', 1.0))), 2)
+
+        calculated_dollar_risk = round(dyn_margin * float(getattr(self.paper_trader, 'leverage', 5)) * effective_stop_pct, 2)
+
 
         # ── 1c. GERÇEK CVD (TAKER BUY RATIO), İVME VE FİTİL ORANI HESABI ──
         cvd_pct = 50.0
@@ -1806,18 +1871,61 @@ class StrategyEngine:
                     # Dinamik Spoofing Tespiti
                     is_dynamic_spoofing = (top_ratio >= spoof_top_thresh and l2_ratio < spoof_l2_min)
 
-                    # 🛡️ KEN GRIFFIN FLASH-SPOOFING KALKANI:
+                    # 💧 5. LİKİDİTE BOŞLUĞU VE MAKAS (SPREAD / SLIPPAGE) KORUMASI
+                    spread_p = float(l2_info.get('spread_pct', 0.0))
+                    depth_03 = float(l2_info.get('depth_usd_03', 99999.0))
+                    sim_slip = float(l2_info.get('sim_slip_long' if side == 'LONG' else 'sim_slip_short', 0.0))
+
+                    if clean_sym_chk in ["BTC", "ETH", "SOL", "BNB"]:
+                        max_allowed_spread = MAX_ALLOWED_SPREAD_MAJORS
+                    elif p_class == "WHIPSAW":
+                        max_allowed_spread = MAX_ALLOWED_SPREAD_MEME
+                    else:
+                        max_allowed_spread = MAX_ALLOWED_SPREAD_ALTS
+
+                    if spread_p > max_allowed_spread:
+                        rej_msg = f"💧 Makas Kalkanı [{archetype_label}]: Alış-satış makası %{spread_p:.3f} > azami %{max_allowed_spread:.3f}. Aşırı spread sürtünmesi, işlem engellendi."
+                        print(f">> [RED - MAKAS/SPREAD] {symbol}: {rej_msg}")
+                        self.log_rejection(symbol, reason, rej_msg, spreadPct=spread_p)
+                        return {"error": "EXCESSIVE_SPREAD_BLOCKED"}
+
+                    if sim_slip > MAX_ENTRY_SLIPPAGE_PCT:
+                        rej_msg = f"💧 Kayma (Slippage) Kalkanı [{archetype_label}]: $500 pozisyon için simüle kayma %{sim_slip:.3f} > %{MAX_ENTRY_SLIPPAGE_PCT:.2f}. İşlem engellendi."
+                        print(f">> [RED - KAYMA/SLIPPAGE] {symbol}: {rej_msg}")
+                        self.log_rejection(symbol, reason, rej_msg, slippagePct=sim_slip)
+                        return {"error": "EXCESSIVE_SLIPPAGE_BLOCKED"}
+
+                    if depth_03 < MIN_L2_DEPTH_USD_03:
+                        rej_msg = f"💧 Likidite Boşluğu Kalkanı [{archetype_label}]: %0.3 tahta derinliği (${depth_03:,.0f}) < asgari ${MIN_L2_DEPTH_USD_03:,.0f}. Sığ tahta boşluğu, işlem engellendi."
+                        print(f">> [RED - LİKİDİTE BOŞLUĞU] {symbol}: {rej_msg}")
+                        self.log_rejection(symbol, reason, rej_msg, depth03=depth_03)
+                        return {"error": "LIQUIDITY_VOID_DEPTH_BLOCKED"}
+
+                    # 🧱 3. TAHTA DUVARI YAŞLANMA & SAHTECİLİK TEYİDİ (WALL AGING & SPOOFING GUARD)
+                    wall_dur_sec = float(l2_info.get('wall_duration_sec', 0.0))
+                    is_anchor_aged = bool(l2_info.get('is_anchor_aged', False))
+                    is_unverified = bool(l2_info.get('is_unverified_wall', False))
+
                     # Piyasa yapıcıların küçük yatırımcıyı tuzağa çekmek için koyup birkaç saniyede çektiği sahte duvarları eler.
-                    if side == "LONG" and (obi_wall_side == "BID_WALL") and (0.0 < obi_wall_duration < 6.0) and (top_ratio >= 1.75):
-                        rej_msg = f"🛡️ Ken Griffin Spoofing Kalkanı [{archetype_label}]: Alıcı duvarı ({top_ratio:.1f}x) henüz {obi_wall_duration:.1f}s önce kondu (asgari 6.0s stabilite şartı). Hızlı iptal (Spoofing) riski, LONG engellendi."
+                    if side == "LONG" and (obi_wall_side == "BID_WALL") and is_unverified and (top_ratio >= 1.75):
+                        rej_msg = f"🛡️ Ken Griffin Spoofing Kalkanı [{archetype_label}]: Alıcı duvarı ({top_ratio:.1f}x) henüz {wall_dur_sec:.1f}s önce kondu (asgari {WALL_MIN_AGE_SEC:.0f}s stabilite şartı). Hızlı iptal (Spoofing) riski, LONG engellendi."
                         print(f">> [RED - L2 FLASH SPOOFING] {symbol}: {rej_msg}")
-                        self.log_rejection(symbol, reason, rej_msg)
+                        self.log_rejection(symbol, reason, rej_msg, wallDurSec=wall_dur_sec)
                         return {"error": "L2_FLASH_SPOOFING_BID_BLOCKED"}
-                    elif side == "SHORT" and (obi_wall_side == "ASK_WALL") and (0.0 < obi_wall_duration < 6.0) and ((1.0 / max(0.01, top_ratio)) >= 1.75):
-                        rej_msg = f"🛡️ Ken Griffin Spoofing Kalkanı [{archetype_label}]: Satıcı duvarı henüz {obi_wall_duration:.1f}s önce kondu (asgari 6.0s stabilite şartı). Hızlı iptal (Spoofing) riski, SHORT engellendi."
+                    elif side == "SHORT" and (obi_wall_side == "ASK_WALL") and is_unverified and ((1.0 / max(0.01, top_ratio)) >= 1.75):
+                        rej_msg = f"🛡️ Ken Griffin Spoofing Kalkanı [{archetype_label}]: Satıcı duvarı henüz {wall_dur_sec:.1f}s önce kondu (asgari {WALL_MIN_AGE_SEC:.0f}s stabilite şartı). Hızlı iptal (Spoofing) riski, SHORT engellendi."
                         print(f">> [RED - L2 FLASH SPOOFING] {symbol}: {rej_msg}")
-                        self.log_rejection(symbol, reason, rej_msg)
+                        self.log_rejection(symbol, reason, rej_msg, wallDurSec=wall_dur_sec)
                         return {"error": "L2_FLASH_SPOOFING_ASK_BLOCKED"}
+
+                    if is_anchor_aged:
+                        if side == "LONG" and obi_wall_side == "BID_WALL":
+                            if confluence_list is not None and isinstance(confluence_list, list) and "🧱_Yaşlanmış_Kurumsal_Çapa_Duvarı" not in confluence_list:
+                                confluence_list.append("🧱_Yaşlanmış_Kurumsal_Çapa_Duvarı")
+                        elif side == "SHORT" and obi_wall_side == "ASK_WALL":
+                            if confluence_list is not None and isinstance(confluence_list, list) and "🧱_Yaşlanmış_Kurumsal_Çapa_Duvarı" not in confluence_list:
+                                confluence_list.append("🧱_Yaşlanmış_Kurumsal_Çapa_Duvarı")
+
 
                     # 🌡️ LUDWIG BOLTZMANN EMİR DEFTERİ ENTROPİ KALKANI:
                     # L2 tahtasındaki likidite dağılımının kaotik mi yoksa kristalleşmiş kurumsal blokaj mı olduğunu ölçer.
@@ -1973,8 +2081,15 @@ class StrategyEngine:
             bookmap_buyer_absorption=bool(l2_info.get('bookmap_buyer_absorption', False)) if 'l2_info' in locals() and l2_info else False,
             bookmap_absorption_type=str(l2_info.get('bookmap_absorption_type', 'NONE')) if 'l2_info' in locals() and l2_info else 'NONE',
             is_anchor_wall=bool(l2_info.get('is_anchor_wall', False)) if 'l2_info' in locals() and l2_info else False,
-            wall_duration_sec=float(l2_info.get('wall_duration_sec', 0.0)) if 'l2_info' in locals() and l2_info else 0.0
+            wall_duration_sec=float(l2_info.get('wall_duration_sec', 0.0)) if 'l2_info' in locals() and l2_info else 0.0,
+            spot_basis_bps=spot_basis_bps,
+            wall_age_sec=float(l2_info.get('wall_duration_sec', 0.0)) if 'l2_info' in locals() and l2_info else 0.0,
+            entry_spread_pct=float(l2_info.get('spread_pct', 0.0)) if 'l2_info' in locals() and l2_info else 0.0,
+            entry_slippage_pct=float(l2_info.get('sim_slip_long' if side == 'LONG' else 'sim_slip_short', 0.0)) if 'l2_info' in locals() and l2_info else 0.0,
+            btc_velocity_60s=btc_velocity_60s,
+            calculated_dollar_risk=calculated_dollar_risk if 'calculated_dollar_risk' in locals() else 10.0
         )
+
         if isinstance(res, dict) and res.get("error") == "INSUFFICIENT_BALANCE":
             await self.notifier.notify_insufficient_balance(
                 symbol=symbol,
