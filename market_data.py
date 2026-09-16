@@ -132,9 +132,11 @@ class MarketDataManager:
     def _get_spot_multiplier(self, symbol: str) -> float:
         """Spot API (data-api.binance.vision) yedek olarak kullanildiginda 1000x ve 1M carpanlari uygular."""
         clean = symbol.replace(':USDT', '')
-        if clean in ['PEPE/USDT', 'SHIB/USDT', 'BONK/USDT', 'FLOKI/USDT', 'SATS/USDT', 'RATS/USDT', 'LUNC/USDT', 'XEC/USDT', 'CHEEMS/USDT', 'WHY/USDT', 'CAT/USDT']:
+        clean_base = clean.replace('1000000', '').replace('1000', '')
+        target_1000 = ['PEPE/USDT', 'SHIB/USDT', 'BONK/USDT', 'FLOKI/USDT', 'SATS/USDT', 'RATS/USDT', 'LUNC/USDT', 'XEC/USDT', 'CHEEMS/USDT', 'WHY/USDT', 'CAT/USDT']
+        if clean in target_1000 or clean_base in target_1000:
             return 1000.0
-        elif clean in ['MOG/USDT']:
+        elif clean in ['MOG/USDT'] or clean_base in ['MOG/USDT']:
             return 1000000.0
         return 1.0
 
