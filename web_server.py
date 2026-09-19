@@ -2657,7 +2657,7 @@ HTML_PAGE = """
         </button>
         <button class="nav-tab-btn" id="tab-btn-health" onclick="switchMainTab('health')">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
-            8. Sağlık & Telemetri
+            8. Sağlık
             <span class="tab-badge-sub" id="nav-health-tab-badge" style="background:rgba(14,203,129,0.15); color:#22c55e; border:1px solid rgba(14,203,129,0.3);">10/10 Kusursuz</span>
         </button>
         <button class="nav-tab-btn" id="tab-btn-admin" onclick="switchMainTab('admin'); loadAdminMetrics();" style="border-color:rgba(0,242,254,0.35); display:none;">
