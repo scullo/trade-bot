@@ -4541,6 +4541,10 @@ async function loadAdminMetrics() {
                 </div>
             `;
 
+            const liqAmount = Number(liq.total_usd_24h || 0).toLocaleString();
+            const btcV = Number(btcShock.velocity_60s || 0);
+            const btcVStr = (btcV >= 0 ? '+' : '') + btcV.toFixed(2);
+
             container.innerHTML = `
                 <!-- ÜST HERO DURUM AFİŞİ -->
                 <div style="background:linear-gradient(135deg, rgba(14, 19, 31, 0.95), rgba(17, 24, 39, 0.95)); border:1.5px solid ${borderCol}; box-shadow:0 4px 24px rgba(0,0,0,0.4); border-radius:14px; padding:20px 24px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
@@ -4626,12 +4630,12 @@ async function loadAdminMetrics() {
                             <div style="font-size:11px; color:#64748b; margin-top:3px;">Binance Futures milisaniyelik soketler ve sipariş akışları</div>
                         </div>
 
-                        ${itemRow('⚡', 'Binance WebSocket Canlı Fiyat', '100 paritede milisaniyelik anlık en iyi alış/satış (bid/ask) fiyat akışı', `${ws.count || 100} / ${ws.total || 100} Parite`, pill(ws.count >= 80 ? 'CANLI AKIYOR' : 'GECİKME', ws.count >= 80 ? 'var(--green)' : 'var(--yellow)'))}
-                        ${itemRow('🧱', 'L2 Tahta Derinliği & OBI Duvarları', 'Emir defteri alıcı/satıcı dengesizliği (OBI) ve anlık likidite duvarları', `${obi.count || 100} Canlı Tahta`, pill(`${obi.bid_walls || 0}B / ${obi.ask_walls || 0}A`, 'var(--cyan)'))}
-                        ${itemRow('🌊', 'Anlık Mikro-CVD & Taker Emilim', 'Gerçek zamanlı piyasa alıcı/satıcı hacim farkı ve kurumsal emir emilimi', `${cvd.count || 100} Parite (60s)`, pill('DELTA TAKİPTE', 'var(--green)'))}
-                        ${itemRow('💀', 'Global Tasfiye Radarı (!forceOrder)', 'Son 24 saatlik long/short likidasyon patlamaları ve piyasa yönü', `$${(liq.total_usd_24h || 0).toLocaleString()} (Son: ${liq.last_event_time || '-'})`, pill('7/24 SOKET', 'var(--green)'))}
-                        ${itemRow('⚖️', 'Spot vs Vadeli Basis Senkronu', 'Vadeli ile spot piyasa arasındaki arbitraj primi ve kurumsal sapma radarı', `${spot.count || 100} Parite (15s)`, pill('SENKRON', 'var(--cyan)'))}
-                        ${itemRow('⏱️', '5M Mum Senkronizasyonu & Dedup', '5 dakikalık mum kapanışları ve REST/WebSocket çift tetik engelleme motoru', `Son Mum: ${poller.last_scan_time || 'Şimdi'}`, pill('DEDUP KORUMASI', 'var(--green)'))}
+                        ${itemRow('⚡', 'Binance WebSocket Canlı Fiyat', '100 paritede milisaniyelik anlık en iyi alış/satış (bid/ask) fiyat akışı', (ws.count || 100) + ' / ' + (ws.total || 100) + ' Parite', pill(ws.count >= 80 ? 'CANLI AKIYOR' : 'GECİKME', ws.count >= 80 ? 'var(--green)' : 'var(--yellow)'))}
+                        ${itemRow('🧱', 'L2 Tahta Derinliği & OBI Duvarları', 'Emir defteri alıcı/satıcı dengesizliği (OBI) ve anlık likidite duvarları', (obi.count || 100) + ' Canlı Tahta', pill((obi.bid_walls || 0) + 'B / ' + (obi.ask_walls || 0) + 'A', 'var(--cyan)'))}
+                        ${itemRow('🌊', 'Anlık Mikro-CVD & Taker Emilim', 'Gerçek zamanlı piyasa alıcı/satıcı hacim farkı ve kurumsal emir emilimi', (cvd.count || 100) + ' Parite (60s)', pill('DELTA TAKİPTE', 'var(--green)'))}
+                        ${itemRow('💀', 'Global Tasfiye Radarı (!forceOrder)', 'Son 24 saatlik long/short likidasyon patlamaları ve piyasa yönü', '$' + liqAmount + ' (Son: ' + (liq.last_event_time || '-') + ')', pill('7/24 SOKET', 'var(--green)'))}
+                        ${itemRow('⚖️', 'Spot vs Vadeli Basis Senkronu', 'Vadeli ile spot piyasa arasındaki arbitraj primi ve kurumsal sapma radarı', (spot.count || 100) + ' Parite (15s)', pill('SENKRON', 'var(--cyan)'))}
+                        ${itemRow('⏱️', '5M Mum Senkronizasyonu & Dedup', '5 dakikalık mum kapanışları ve REST/WebSocket çift tetik engelleme motoru', 'Son Mum: ' + (poller.last_scan_time || 'Şimdi'), pill('DEDUP KORUMASI', 'var(--green)'))}
                     </div>
 
                     <!-- KOLON 2: KUANT MOTORU VE ANALİTİK SENSÖRLER -->
@@ -4643,10 +4647,10 @@ async function loadAdminMetrics() {
                             <div style="font-size:11px; color:#64748b; margin-top:3px;">Sinyal üretimi, piyasa rejimi ve mikro-şok devre kesicileri</div>
                         </div>
 
-                        ${itemRow('⚡', 'BTC 60s Mikro-Şok Kalkanı', 'Bitcoin ani 60 saniyelik mikro çöküş ve sıçrama devre kesicisi', `BTC Hız: %${(btcShock.velocity_60s >= 0 ? '+' : '') + (btcShock.velocity_60s || 0).toFixed(2)} (±%0.28)`, pill(btcShock.is_active ? 'ŞOK DEVREDE' : 'GÜVENLİ', btcShock.is_active ? 'var(--red)' : 'var(--green)'))}
-                        ${itemRow('💰', 'Fonlama Oranı & Squeeze Radarı', '8 saatlik fonlama maliyetleri ve short/long sıkışma fırsat/tuzak kalkanı', `100 Parite Taranıyor`, pill(funding.last_update || '60s PERİYOT', 'var(--green)'))}
-                        ${itemRow('📊', 'Dinamik Seviye & Rejim Matrisi', 'Camarilla pivot seviyeleri, ATR %, Hurst üssü ve kaos/kristal faz tespiti', `${lev.count || 100} / ${lev.total || 100} Parite Tam Uyumlu`, pill('0 SAPMA', 'var(--cyan)'))}
-                        ${itemRow('🧬', '100 Parite Kuant DNA Profilleri', 'Pariteye özel volatilite sınıflaması, hacim eşikleri ve karakter profilleme', `${dna.count || 100} Parite Hafızada`, pill('YÜKLENDİ', 'var(--green)'))}
+                        ${itemRow('⚡', 'BTC 60s Mikro-Şok Kalkanı', 'Bitcoin ani 60 saniyelik mikro çöküş ve sıçrama devre kesicisi', 'BTC Hız: %' + btcVStr + ' (±%0.28)', pill(btcShock.is_active ? 'ŞOK DEVREDE' : 'GÜVENLİ', btcShock.is_active ? 'var(--red)' : 'var(--green)'))}
+                        ${itemRow('💰', 'Fonlama Oranı & Squeeze Radarı', '8 saatlik fonlama maliyetleri ve short/long sıkışma fırsat/tuzak kalkanı', '100 Parite Taranıyor', pill(funding.last_update || '60s PERİYOT', 'var(--green)'))}
+                        ${itemRow('📊', 'Dinamik Seviye & Rejim Matrisi', 'Camarilla pivot seviyeleri, ATR %, Hurst üssü ve kaos/kristal faz tespiti', (lev.count || 100) + ' / ' + (lev.total || 100) + ' Parite Tam Uyumlu', pill('0 SAPMA', 'var(--cyan)'))}
+                        ${itemRow('🧬', '100 Parite Kuant DNA Profilleri', 'Pariteye özel volatilite sınıflaması, hacim eşikleri ve karakter profilleme', (dna.count || 100) + ' Parite Hafızada', pill('YÜKLENDİ', 'var(--green)'))}
                         ${itemRow('🌀', 'Shannon Confluence & Entropi Kalkanı', '3-Eksen bağımsız confluence doğrulaması ve Boltzmann L2 gürültü filtresi', 'JIT Anlık Doğrulama', pill('AKTİF', 'var(--cyan)'))}
                     </div>
 
@@ -4659,8 +4663,8 @@ async function loadAdminMetrics() {
                             <div style="font-size:11px; color:#64748b; margin-top:3px;">Render bulut dayanıklılığı, bellek bekçisi ve otonom yedekler</div>
                         </div>
 
-                        ${itemRow('🛡️', 'GitHub Bulut Kasa Senkronu', 'Kasa bakiyesi ve işlemlerin state branch\'ine otonom commit & senkronu', `'${gh.branch || 'state'}' Dalı (Commit: ${gh.sha || '-'})`, pill('SENKRONİZE', 'var(--green)'))}
-                        ${itemRow('🧹', 'Otonom Bellek (RAM) Watchdog', 'Bellek şişmesini önleyen 150 mumluk dinamik tavan ve Render 512MB RAM kalkanı', `Max ${ram.limit || 150} Mum + 60s GC`, pill('512MB GÜVENLİ', 'var(--green)'))}
+                        ${itemRow('🛡️', 'GitHub Bulut Kasa Senkronu', 'Kasa bakiyesi ve islemlerin state dalina otonom commit ve senkronu', (gh.branch || 'state') + ' Dali (Commit: ' + (gh.sha || '-') + ')', pill('SENKRONİZE', 'var(--green)'))}
+                        ${itemRow('🧹', 'Otonom Bellek (RAM) Watchdog', 'Bellek şişmesini önleyen 150 mumluk dinamik tavan ve Render 512MB RAM kalkanı', 'Max ' + (ram.limit || 150) + ' Mum + 60s GC', pill('512MB GÜVENLİ', 'var(--green)'))}
                         ${itemRow('⏱️', 'Render Keep-Alive Uyku Kalkanı', 'Render Free Tier 15 dakika inaktivite uykusunu engelleyen 3 dakikalık self-ping', 'Her 3 Dakika (200 OK)', pill('7/24 UYANIK', 'var(--green)'))}
                         ${itemRow('📱', 'Telegram Saatlik VIP Raporlayıcı', 'Saat başı :00 otomatik kasa raporu ve /kasa interaktif komut dinleyici', 'Saat Başı :00 Rapor', pill('AKTİF', 'var(--cyan)'))}
                         ${itemRow('⚙️', 'Aegis Sentinel Otonom Denetim', 'Tüm alt kuant servislerinin kesintisiz çalışmasını denetleyen nöronal bekçi', 'Sıfır Hata / Tam Sağlıklı', pill('TAM KORUMA', 'var(--green)'))}
