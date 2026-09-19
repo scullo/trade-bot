@@ -1023,67 +1023,207 @@ HTML_PAGE = """
         /* =========================================================================
            VALKYRIE QUANT COCKPIT 3.0 - TAB NAVIGATION & AI QUANT DESK STYLES
            ========================================================================= */
-        .nav-tab-strip {
+        /* =========================================================================
+           VALKYRIE QUANT COCKPIT 3.0 - VERTICAL SIDEBAR DESK & APP LAYOUT
+           ========================================================================= */
+        .dashboard-main-layout {
             display: flex;
-            align-items: center;
-            gap: 10px;
-            background: rgba(13, 18, 30, 0.95);
-            border: 1px solid var(--border);
-            padding: 8px 12px;
-            border-radius: 16px;
-            margin-bottom: 24px;
-            overflow-x: auto;
-            backdrop-filter: blur(16px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+            align-items: flex-start;
+            gap: 24px;
+            width: 100%;
+            position: relative;
         }
-        .nav-tab-btn {
-            background: transparent;
-            border: 1px solid transparent;
-            color: #94a3b8;
-            padding: 10px 20px;
-            border-radius: 12px;
-            font-size: 13.5px;
+
+        .dashboard-sidebar {
+            width: 255px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: width 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+            z-index: 40;
+        }
+
+        .dashboard-sidebar.is-collapsed {
+            width: 72px;
+        }
+
+        .dashboard-content-area {
+            flex: 1 1 0%;
+            min-width: 0;
+        }
+
+        .sidebar-header-box {
+            background: rgba(13, 18, 30, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 12px 14px;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+        }
+
+        .sidebar-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-section-title {
+            font-size: 11px;
             font-weight: 800;
+            color: #64748b;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
             font-family: 'JetBrains Mono', monospace;
+        }
+
+        .sidebar-subtitle {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 2px;
+            font-weight: 600;
+        }
+
+        .sidebar-toggle-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            transition: all 0.2s ease;
-            white-space: nowrap;
-        }
-        .nav-tab-btn:hover {
-            color: #ffffff;
-            background: rgba(255, 255, 255, 0.05);
-            border-color: rgba(255, 255, 255, 0.1);
-        }
-        .nav-tab-btn.active {
-            background: linear-gradient(135deg, rgba(0, 242, 254, 0.15), rgba(79, 172, 254, 0.25));
-            border-color: #00f2fe;
-            color: #ffffff;
-            box-shadow: 0 0 20px rgba(0, 242, 254, 0.25);
-        }
-        .tab-badge {
+            justify-content: center;
             font-size: 11px;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-toggle-btn:hover {
+            color: var(--cyan, #00f2fe);
+            border-color: var(--cyan, #00f2fe);
+            background: rgba(0, 242, 254, 0.1);
+        }
+
+        .dashboard-sidebar.is-collapsed .sidebar-subtitle,
+        .dashboard-sidebar.is-collapsed .sidebar-section-title {
+            display: none !important;
+        }
+
+        .dashboard-sidebar.is-collapsed .sidebar-header-box {
+            padding: 8px;
+            text-align: center;
+        }
+
+        .dashboard-sidebar.is-collapsed .sidebar-title-row {
+            justify-content: center;
+        }
+
+        /* SIDEBAR VERTICAL NAV STRIP */
+        .dashboard-sidebar .nav-tab-strip {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 5px;
+            background: rgba(13, 18, 30, 0.9);
+            border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+            padding: 8px;
+            border-radius: 16px;
+            margin-bottom: 0;
+            overflow: visible;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+        }
+
+        .dashboard-sidebar .nav-tab-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            border-left: 3px solid transparent;
+            color: #94a3b8;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+            width: 100%;
+            text-align: left;
+            position: relative;
+        }
+
+        .dashboard-sidebar .nav-tab-btn:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.07);
+            border-left-color: rgba(0, 242, 254, 0.5);
+            transform: translateX(2px);
+        }
+
+        .dashboard-sidebar .nav-tab-btn.active {
+            background: linear-gradient(90deg, rgba(0, 242, 254, 0.15) 0%, rgba(0, 242, 254, 0.02) 100%);
+            border-color: rgba(0, 242, 254, 0.25);
+            border-left: 3.5px solid var(--cyan, #00f2fe);
+            color: #ffffff;
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.12);
             font-weight: 800;
-            padding: 2px 8px;
-            border-radius: 12px;
-            margin-left: 8px;
+        }
+
+        .tab-btn-icon {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-width: 20px;
+            width: 20px;
+            height: 20px;
+            color: inherit;
+            flex-shrink: 0;
+            transition: color 0.15s ease, filter 0.15s ease;
+        }
+
+        .dashboard-sidebar .nav-tab-btn.active .tab-btn-icon {
+            color: var(--cyan, #00f2fe);
+            filter: drop-shadow(0 0 6px rgba(0, 242, 254, 0.6));
+        }
+
+        .tab-btn-text {
+            flex: 1 1 auto;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            letter-spacing: -0.2px;
+        }
+
+        .tab-badge {
+            font-size: 10.5px;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 10px;
+            margin-left: auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 18px;
             height: 18px;
             font-family: 'JetBrains Mono', monospace;
             vertical-align: middle;
             transition: all 0.3s ease;
+            flex-shrink: 0;
         }
+
         .tab-badge.active-pulse {
             background: linear-gradient(135deg, #ef4444, #dc2626);
             color: #ffffff;
-            box-shadow: 0 0 12px rgba(239, 68, 68, 0.85);
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.85);
             animation: pulseBadge 1.2s infinite ease-in-out;
         }
+
         .tab-badge.zero-idle {
             background: rgba(148, 163, 184, 0.12);
             color: #94a3b8;
@@ -1091,6 +1231,7 @@ HTML_PAGE = """
             box-shadow: none;
             animation: none;
         }
+
         @keyframes pulseBadge {
             0%, 100% {
                 opacity: 1;
@@ -1103,15 +1244,143 @@ HTML_PAGE = """
                 box-shadow: 0 0 18px rgba(239, 68, 68, 1);
             }
         }
+
         .tab-badge-sub {
             background: rgba(14, 203, 129, 0.15);
-            color: var(--green);
-            border: 1px solid var(--green);
-            font-size: 11px;
+            color: var(--green, #10b981);
+            border: 1px solid var(--green, #10b981);
+            font-size: 10px;
             font-weight: 800;
-            padding: 2px 7px;
-            border-radius: 10px;
-            margin-left: 4px;
+            padding: 2px 6px;
+            border-radius: 8px;
+            margin-left: auto;
+            font-family: 'JetBrains Mono', monospace;
+            flex-shrink: 0;
+        }
+
+        /* COLLAPSED SIDEBAR MODES */
+        .dashboard-sidebar.is-collapsed .tab-btn-text,
+        .dashboard-sidebar.is-collapsed .tab-badge,
+        .dashboard-sidebar.is-collapsed .tab-badge-sub,
+        .dashboard-sidebar.is-collapsed .sidebar-status-card {
+            display: none !important;
+        }
+
+        .dashboard-sidebar.is-collapsed .nav-tab-btn {
+            justify-content: center;
+            padding: 12px 0;
+            gap: 0;
+            border-left-width: 3px;
+        }
+
+        .dashboard-sidebar.is-collapsed .tab-btn-icon {
+            margin-right: 0;
+            width: 24px;
+            height: 24px;
+        }
+
+        /* SIDEBAR TELEMETRİ KARTI */
+        .sidebar-status-card {
+            background: rgba(13, 18, 30, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 14px;
+            padding: 12px 14px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
+        }
+
+        .sidebar-status-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .sidebar-status-beacon {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sidebar-status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--green, #10b981);
+            box-shadow: 0 0 8px var(--green, #10b981);
+            animation: pulse 1.2s infinite;
+        }
+
+        .sidebar-status-title {
+            font-size: 10.5px;
+            font-weight: 800;
+            color: #cbd5e1;
+            letter-spacing: 0.6px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .sidebar-status-state {
+            font-size: 9.5px;
+            font-weight: 800;
+            color: var(--green, #10b981);
+            background: rgba(14, 203, 129, 0.12);
+            border: 1px solid rgba(14, 203, 129, 0.3);
+            padding: 2px 5px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .sidebar-status-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .sidebar-status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10.5px;
+            color: #64748b;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .sidebar-status-row b {
+            color: #cbd5e1;
+            font-weight: 700;
+        }
+
+        /* RESPONSIVE LAYOUT FOR SCREENS < 1024px */
+        @media (max-width: 1024px) {
+            .dashboard-main-layout {
+                flex-direction: column;
+                gap: 16px;
+            }
+            .dashboard-sidebar {
+                width: 100% !important;
+                position: static;
+            }
+            .dashboard-sidebar .nav-tab-strip {
+                flex-direction: row;
+                overflow-x: auto;
+                padding: 6px 8px;
+            }
+            .dashboard-sidebar .nav-tab-btn {
+                width: auto;
+                white-space: nowrap;
+                border-left: 1px solid transparent;
+                border-bottom: 3px solid transparent;
+            }
+            .dashboard-sidebar .nav-tab-btn.active {
+                border-left-color: transparent;
+                border-bottom: 3.5px solid var(--cyan, #00f2fe);
+            }
+            .sidebar-header-box,
+            .sidebar-status-card {
+                display: none !important;
+            }
         }
 
         /* 1. COCKPIT HERO FINANSAL KPI GRID */
@@ -2619,52 +2888,91 @@ HTML_PAGE = """
     </div>
 
     <!-- =========================================================================
-         VALKYRIE QUANT COCKPIT 3.0 - MODULER SEKME SERIDI (NAVIGATION BAR)
+         VALKYRIE QUANT COCKPIT 3.0 - MODULER DİKEY SIDEBAR & DESK LAYOUT
          ========================================================================= -->
-    <div class="nav-tab-strip">
-        <button class="nav-tab-btn active" id="tab-btn-cockpit" onclick="switchMainTab('cockpit')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-            1. Kokpit
-        </button>
-        <button class="nav-tab-btn" id="tab-btn-positions" onclick="switchMainTab('positions')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-            2. Pozisyonlar
-            <span class="tab-badge zero-idle" id="nav-pos-count-badge">0</span>
-        </button>
-        <button class="nav-tab-btn" id="tab-btn-radar" onclick="switchMainTab('radar')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
-            3. Pusu Radarı
-            <span class="tab-badge-sub" id="nav-active-coins-badge">100/100</span>
-        </button>
-        <button class="nav-tab-btn" id="tab-btn-ledger" onclick="switchMainTab('ledger')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-            4. İşlem Geçmişi
-        </button>
-        <button class="nav-tab-btn" id="tab-btn-persona" onclick="switchMainTab('persona')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
-            5. DNA
-            <span class="tab-badge-sub" id="nav-persona-badge" style="background:rgba(0,242,254,0.12); color:var(--cyan); border:1px solid rgba(0,242,254,0.3);">100 Parite</span>
-        </button>
-        <button class="nav-tab-btn" id="tab-btn-funding" onclick="switchMainTab('funding')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-            6. Fonlama
-            <span class="tab-badge-sub" id="nav-funding-badge" style="background:rgba(255,107,107,0.15); color:var(--red); border:1px solid rgba(255,107,107,0.3);">0 Squeeze</span>
-        </button>
-        <button class="nav-tab-btn" id="tab-btn-cvd" onclick="switchMainTab('cvd')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-            7. CVD
-            <span class="tab-badge-sub" id="nav-cvd-badge" style="background:rgba(34,197,94,0.15); color:#22c55e; border:1px solid rgba(34,197,94,0.3);">Canlı</span>
-        </button>
-        <button class="nav-tab-btn" id="tab-btn-health" onclick="switchMainTab('health')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
-            8. Sağlık
-            <span class="tab-badge-sub" id="nav-health-tab-badge" style="background:rgba(14,203,129,0.15); color:#22c55e; border:1px solid rgba(14,203,129,0.3);">10/10 Kusursuz</span>
-        </button>
-        <button class="nav-tab-btn" id="tab-btn-admin" onclick="switchMainTab('admin'); loadAdminMetrics();" style="border-color:rgba(0,242,254,0.35); display:none;">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" style="margin-right:6px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-            9. Yönetim
-        </button>
-    </div>
+    <div class="dashboard-main-layout">
+        <!-- SOL SIDEBAR: DİKEY NAVİGASYON DESKİ -->
+        <aside class="dashboard-sidebar" id="dashboard-sidebar">
+            <div class="sidebar-header-box">
+                <div class="sidebar-title-row">
+                    <span class="sidebar-section-title">KONTROL MASASI</span>
+                    <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" onclick="toggleSidebarCollapse()" title="Kenar Çubuğunu Daralt / Genişlet">◀</button>
+                </div>
+                <div class="sidebar-subtitle">Kurumsal Algoritmik Terminal</div>
+            </div>
+
+            <div class="nav-tab-strip">
+                <button class="nav-tab-btn active" id="tab-btn-cockpit" onclick="switchMainTab('cockpit')" title="1. Kokpit (Ana Göstergeler)">
+                    <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span>
+                    <span class="tab-btn-text">1. Kokpit</span>
+                </button>
+
+                <button class="nav-tab-btn" id="tab-btn-positions" onclick="switchMainTab('positions')" title="2. Canlı Açık Pozisyonlar">
+                    <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg></span>
+                    <span class="tab-btn-text">2. Pozisyonlar</span>
+                    <span class="tab-badge zero-idle" id="nav-pos-count-badge">0</span>
+                </button>
+
+                <button class="nav-tab-btn" id="tab-btn-radar" onclick="switchMainTab('radar')" title="3. Pusu Radarı (100 Parite)">
+                    <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg></span>
+                    <span class="tab-btn-text">3. Pusu Radarı</span>
+                    <span class="tab-badge-sub" id="nav-active-coins-badge">100/100</span>
+                </button>
+
+                <button class="nav-tab-btn" id="tab-btn-ledger" onclick="switchMainTab('ledger')" title="4. İşlem Geçmişi (Adli Defter)">
+                    <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg></span>
+                    <span class="tab-btn-text">4. İşlem Geçmişi</span>
+                </button>
+
+                <button class="nav-tab-btn" id="tab-btn-persona" onclick="switchMainTab('persona')" title="5. Coin DNA & Persona Matrisi">
+                    <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg></span>
+                    <span class="tab-btn-text">5. DNA</span>
+                    <span class="tab-badge-sub" id="nav-persona-badge" style="background:rgba(0,242,254,0.12); color:var(--cyan); border:1px solid rgba(0,242,254,0.3);">100 Parite</span>
+                </button>
+
+                <button class="nav-tab-btn" id="tab-btn-funding" onclick="switchMainTab('funding')" title="6. Fonlama & Squeeze Radarı">
+                    <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></span>
+                    <span class="tab-btn-text">6. Fonlama</span>
+                    <span class="tab-badge-sub" id="nav-funding-badge" style="background:rgba(255,107,107,0.15); color:var(--red); border:1px solid rgba(255,107,107,0.3);">0 Squeeze</span>
+                </button>
+
+                <button class="nav-tab-btn" id="tab-btn-cvd" onclick="switchMainTab('cvd')" title="7. Mikro-CVD & Taker Hacim Akışı">
+                    <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></span>
+                    <span class="tab-btn-text">7. CVD</span>
+                    <span class="tab-badge-sub" id="nav-cvd-badge" style="background:rgba(34,197,94,0.15); color:#22c55e; border:1px solid rgba(34,197,94,0.3);">Canlı</span>
+                </button>
+
+                <button class="nav-tab-btn" id="tab-btn-health" onclick="switchMainTab('health')" title="8. Aegis Sentinel Sistem Sağlığı">
+                    <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg></span>
+                    <span class="tab-btn-text">8. Sağlık</span>
+                    <span class="tab-badge-sub" id="nav-health-tab-badge" style="background:rgba(14,203,129,0.15); color:#22c55e; border:1px solid rgba(14,203,129,0.3);">8/8 Kusursuz</span>
+                </button>
+
+                <button class="nav-tab-btn" id="tab-btn-admin" onclick="switchMainTab('admin'); loadAdminMetrics();" style="border-color:rgba(0,242,254,0.35); display:none;" title="9. Yönetim Masası">
+                    <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span>
+                    <span class="tab-btn-text">9. Yönetim</span>
+                </button>
+            </div>
+
+            <!-- SIDEBAR TELEMETRİ KARTI -->
+            <div class="sidebar-status-card">
+                <div class="sidebar-status-top">
+                    <div class="sidebar-status-beacon">
+                        <span class="sidebar-status-dot"></span>
+                        <span class="sidebar-status-title">AEGIS SENTINEL</span>
+                    </div>
+                    <span class="sidebar-status-state">AKTİF</span>
+                </div>
+                <div class="sidebar-status-meta">
+                    <div class="sidebar-status-row"><span>Parite Akışı:</span> <b>100 / 100</b></div>
+                    <div class="sidebar-status-row"><span>RAM Kalkanı:</span> <b>512MB RAM</b></div>
+                    <div class="sidebar-status-row"><span>Bulut:</span> <b>Render Linux</b></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- SAĞ ANA İÇERİK ALANI -->
+        <main class="dashboard-content-area">
 
     <!-- =========================================================================
          1. SEKME: KOKPİT (ANA SAYFA)
@@ -3675,6 +3983,9 @@ HTML_PAGE = """
             <!-- Dynamically populated by renderHealthTabView() -->
         </div>
     </div>
+
+        </main>
+    </div><!-- END DASHBOARD-MAIN-LAYOUT -->
 
     </div><!-- END DASHBOARD-APP-VIEW -->
 
@@ -5305,6 +5616,35 @@ async function loadAdminMetrics() {
             } catch (err) {
                 console.error("renderCvdView error:", err);
             }
+        }
+
+        function toggleSidebarCollapse() {
+            const sb = document.getElementById("dashboard-sidebar");
+            const btn = document.getElementById("sidebar-toggle-btn");
+            if (!sb) return;
+            const isCollapsed = sb.classList.toggle("is-collapsed");
+            if (btn) {
+                btn.innerHTML = isCollapsed ? "▶" : "◀";
+            }
+            try {
+                localStorage.setItem("valkyrie_sidebar_collapsed", isCollapsed ? "1" : "0");
+            } catch (e) {}
+            setTimeout(() => {
+                if (window.ValkyrieBattleEngine) ValkyrieBattleEngine.resize();
+                if (window.ValkyrieKpiSimEngine) window.ValkyrieKpiSimEngine.resize();
+                if (window.ValkyrieTacticalRadarEngine) window.ValkyrieTacticalRadarEngine.resize();
+            }, 260);
+        }
+
+        function restoreSidebarPreference() {
+            try {
+                if (localStorage.getItem("valkyrie_sidebar_collapsed") === "1") {
+                    const sb = document.getElementById("dashboard-sidebar");
+                    const btn = document.getElementById("sidebar-toggle-btn");
+                    if (sb) sb.classList.add("is-collapsed");
+                    if (btn) btn.innerHTML = "▶";
+                }
+            } catch (e) {}
         }
 
         function switchMainTab(tabName) {
@@ -10834,6 +11174,7 @@ function downloadExcelReport() {
             try {
                 restorePersistedSession();
                 restoreBattleViewPreference();
+                restoreSidebarPreference();
                 if (window.ValkyrieBattleEngine) ValkyrieBattleEngine.init();
                 if (window.ValkyrieKpiSimEngine) ValkyrieKpiSimEngine.init();
                 if (window.ValkyrieTacticalRadarEngine) ValkyrieTacticalRadarEngine.init();
