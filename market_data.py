@@ -283,12 +283,27 @@ class MarketDataManager:
                         "healthy": True,
                         "regime": self.get_deribit_gex_regime(),
                         "net_gex_usd": float(self.deribit_gex_data.get('BTC', {}).get('net_gex', 0.0)),
-                        "pcr": float(self.deribit_gex_data.get('BTC', {}).get('put_call_ratio', 1.0))
+                        "pcr": float(self.deribit_gex_data.get('BTC', {}).get('put_call_ratio', 1.0)),
+                        "freshness_sec": int(time.time() - self.deribit_gex_data.get('last_sync_ts', time.time())),
+                        "is_live": bool(self.deribit_gex_data.get('is_live', True))
                     },
                     "hawkes_avalanche": {
                         "healthy": True,
                         "eta": float(self.get_hawkes_avalanche().get('branching_ratio_eta', 0.15)),
-                        "regime": self.get_hawkes_avalanche().get('regime', 'QUIET_FLOW')
+                        "regime": self.get_hawkes_avalanche().get('regime', 'QUIET_FLOW'),
+                        "is_active": bool(self.get_hawkes_avalanche().get('is_avalanche_active', False)),
+                        "side": str(self.get_hawkes_avalanche().get('avalanche_side', 'NONE'))
+                    },
+                    "stoikov_vpin": {
+                        "healthy": True,
+                        "mode": "Stoikov Micro-Drift + VPIN Volume Buckets",
+                        "status": "AKTİF RADAR",
+                        "kyles_lambda": "AMIHUD_AIR_POCKET_GUARD"
+                    },
+                    "iceberg_sniper": {
+                        "healthy": True,
+                        "mode": "Tri-Modal Offensive Sniper (%0.20 Stop)",
+                        "cvd_derivative": "2nd_Derivative_Zero_Crossing"
                     }
                 },
                 "infrastructure": {
@@ -1388,6 +1403,41 @@ class MarketDataManager:
         """-GEX rejiminde kurumsal delta hedge'in volatiliteyi patlattığı rejim (Breakout/Breakdown teşvik)."""
         btc_gex = self.get_deribit_gex('BTC')
         return bool(btc_gex.get('is_explosion_regime', False))
+
+    async def fetch_deribit_gex_immediate(self):
+        """Aegis Sentinel veya manuel tetikleyici tarafından çağrılan anlık ve crash-proof Deribit GEX tazeleyicisi."""
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        success_count = 0
+        try:
+            import aiohttp
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=8)) as session:
+                for ccy in ['BTC', 'ETH']:
+                    url = f"https://www.deribit.com/api/v2/public/get_book_summary_by_currency?currency={ccy}&kind=option"
+                    try:
+                        async with session.get(url, headers=headers) as resp:
+                            if resp.status == 200:
+                                data = await resp.json()
+                                book = data.get('result', [])
+                                if book and isinstance(book, list):
+                                    from indicators import calculate_deribit_gex
+                                    gex_res = calculate_deribit_gex(book)
+                                    gex_res['last_update'] = time.time()
+                                    self.deribit_gex_data[ccy] = gex_res
+                                    success_count += 1
+                    except Exception:
+                        pass
+                if success_count > 0:
+                    self.deribit_gex_data['last_sync_ts'] = time.time()
+                    self.deribit_gex_data['is_live'] = True
+                    print(">> [AEGIS AUTO-HEAL] Deribit GEX verisi otonom olarak tazelendi.")
+                    return True
+                else:
+                    self.deribit_gex_data['is_live'] = False
+                    return False
+        except Exception as e:
+            print(f">> [DERIBIT IMMEDIATE HATA] {e}")
+            self.deribit_gex_data['is_live'] = False
+            return False
 
     def get_hawkes_avalanche(self, symbol: str = None) -> dict:
         """

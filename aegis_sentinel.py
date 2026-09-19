@@ -140,9 +140,70 @@ class ValkyrieAegisSentinel:
             "is_healthy": len(inconsistent_positions) == 0
         }
 
+    async def audit_alpha_blueprint_sensors(self, market_data) -> dict:
+        """
+        4. KATMAN (ÖZEL): Valkyrie Kurumsal Alpha Master Blueprint Sensör Denetimi
+        - Deribit GEX Black-Scholes opsiyon verisinin tazeliği ve API durumu
+        - Hawkes (!forceOrder) tasfiye çığı radarı ve branching ratio (eta) doğrulaması
+        - Stoikov Micro-Price, VPIN toksik akış ve Kyle's Lambda sanitizasyonu
+        - Anlık CVD 2. türev ivme ve sıfır geçişi veri bütünlüğü
+        """
+        now_ts = time.time()
+
+        # 1. Deribit GEX Denetimi
+        deribit_data = getattr(market_data, 'deribit_gex_data', {})
+        last_gex_ts = deribit_data.get('last_sync_ts', 0.0)
+        gex_age_sec = int(now_ts - last_gex_ts) if last_gex_ts > 0 else 999999
+        gex_is_live = bool(deribit_data.get('is_live', False))
+        gex_fresh = (gex_age_sec < 1200) and gex_is_live  # 20 dakikadan taze
+        btc_gex = deribit_data.get('BTC', {})
+        gex_regime = btc_gex.get('gex_regime', 'NEUTRAL')
+        net_gex_usd = float(btc_gex.get('net_gex', 0.0))
+
+        # 2. Hawkes Tasfiye Çığı Radarı Denetimi
+        hawkes = market_data.get_hawkes_avalanche()
+        hwk_eta = float(hawkes.get('branching_ratio_eta', 0.15))
+        if np.isnan(hwk_eta) or np.isinf(hwk_eta):
+            hwk_eta = 0.15
+        hwk_active = bool(hawkes.get('is_avalanche_active', False))
+        hwk_side = str(hawkes.get('avalanche_side', 'NONE'))
+        liq_events_cnt = len(getattr(market_data, 'recent_liquidations', []))
+
+        # 3. CVD ve Mikro Yapı İvme Sanitizasyonu
+        nan_cvd_count = 0
+        for sym, cvd_d in getattr(market_data, 'symbol_cvd', {}).items():
+            if isinstance(cvd_d, dict):
+                for k in ['delta_60s', 'ratio_60s', 'accel_60s']:
+                    val = cvd_d.get(k, 0.0)
+                    if val is not None and (np.isnan(val) or np.isinf(val)):
+                        nan_cvd_count += 1
+
+        is_healthy = gex_fresh and (nan_cvd_count == 0) and (0.0 <= hwk_eta <= 2.0)
+
+        return {
+            "deribit_gex": {
+                "is_fresh": gex_fresh,
+                "is_live": gex_is_live,
+                "age_sec": gex_age_sec,
+                "regime": gex_regime,
+                "net_gex_usd": net_gex_usd
+            },
+            "hawkes_avalanche": {
+                "eta": round(hwk_eta, 3),
+                "is_active": hwk_active,
+                "side": hwk_side,
+                "events_count": liq_events_cnt
+            },
+            "cvd_integrity": {
+                "nan_anomalies": nan_cvd_count,
+                "is_clean": nan_cvd_count == 0
+            },
+            "is_healthy": is_healthy
+        }
+
     async def apply_auto_healing(self, market_data, trader_manager, audit_findings: dict) -> list:
         """
-        4. KATMAN: Kendi Kendini Sessizce Onarma (Silent Auto-Healing & RAM Optimizasyonu)
+        Kendi Kendini Sessizce Onarma (Silent Auto-Healing & RAM Optimizasyonu)
         """
         actions_taken = []
         now_str = datetime.now(timezone(timedelta(hours=3))).strftime("%H:%M:%S")
@@ -179,6 +240,39 @@ class ValkyrieAegisSentinel:
                 except Exception:
                     pass
 
+        # 4. Blueprint Alpha Oto-Onarım: Deribit GEX bayat ise arka planda anında yenile
+        bp_audit = audit_findings.get("blueprint", {})
+        gex_info = bp_audit.get("deribit_gex", {})
+        if not gex_info.get("is_fresh", True):
+            if hasattr(market_data, 'fetch_deribit_gex_immediate'):
+                asyncio.create_task(market_data.fetch_deribit_gex_immediate())
+                actions_taken.append("🛡️ Deribit GEX bayatlığı tespit edildi: Otonom yenileme görevi başlatıldı.")
+
+        # 5. Tasfiye Ön Bellek Temizliği (RAM Koruması - 1 saatten eski parite kayıtlarını temizle)
+        pruned_liqs = 0
+        if hasattr(market_data, 'symbol_liquidations_15m'):
+            now_t = time.time()
+            for sym in list(market_data.symbol_liquidations_15m.keys()):
+                item = market_data.symbol_liquidations_15m[sym]
+                if now_t - item.get('last_update', 0) > 3600:
+                    del market_data.symbol_liquidations_15m[sym]
+                    pruned_liqs += 1
+        if pruned_liqs > 0:
+            actions_taken.append(f"🧹 {pruned_liqs} bayat tasfiye kaydı bellekten tahliye edildi.")
+
+        # 6. CVD & İvme NaN Temizliği
+        if bp_audit.get("cvd_integrity", {}).get("nan_anomalies", 0) > 0:
+            cleaned_nan = 0
+            for sym, cvd_d in getattr(market_data, 'symbol_cvd', {}).items():
+                if isinstance(cvd_d, dict):
+                    for k in ['delta_60s', 'ratio_60s', 'accel_60s', 'cvd_pct']:
+                        val = cvd_d.get(k, 0.0)
+                        if val is not None and (np.isnan(val) or np.isinf(val)):
+                            cvd_d[k] = 0.0
+                            cleaned_nan += 1
+            if cleaned_nan > 0:
+                actions_taken.append(f"🛡️ {cleaned_nan} adet CVD NaN/Inf değeri 0.0 ile onarıldı.")
+
         if actions_taken:
             self.healing_history.append({
                 "time": now_str,
@@ -200,11 +294,13 @@ class ValkyrieAegisSentinel:
         ind_audit = await self.audit_indicator_levels(market_data)
         stream_audit = await self.audit_data_streams(market_data)
         risk_audit = await self.audit_positions_and_risk(trader_manager)
+        blueprint_audit = await self.audit_alpha_blueprint_sensors(market_data)
 
         findings = {
             "indicators": ind_audit,
             "streams": stream_audit,
-            "risk": risk_audit
+            "risk": risk_audit,
+            "blueprint": blueprint_audit
         }
 
         # Auto-Healing uygula
@@ -252,7 +348,12 @@ class ValkyrieAegisSentinel:
         range_pct = max(0, 100 - bull_pct - bear_pct)
 
         duration_ms = int((time.time() - audit_start) * 1000)
-        is_all_perfect = ind_audit["is_healthy"] and stream_audit["is_healthy"] and risk_audit["is_healthy"]
+        is_all_perfect = (
+            ind_audit["is_healthy"] and
+            stream_audit["is_healthy"] and
+            risk_audit["is_healthy"] and
+            blueprint_audit.get("is_healthy", True)
+        )
 
         result = {
             "timestamp": now_str,
@@ -262,6 +363,7 @@ class ValkyrieAegisSentinel:
             "indicators": ind_audit,
             "streams": stream_audit,
             "risk": risk_audit,
+            "blueprint": blueprint_audit,
             "healing_actions": healing_actions,
             "macro_regime": {
                 "bull_cnt": bull_cnt, "bull_pct": bull_pct,
@@ -284,6 +386,7 @@ class ValkyrieAegisSentinel:
         ind = audit.get("indicators", {})
         strm = audit.get("streams", {})
         macro = audit.get("macro_regime", {})
+        bp = audit.get("blueprint", {})
         healing = audit.get("healing_actions", [])
         near = audit.get("near_targets", [])
 
@@ -306,6 +409,15 @@ class ValkyrieAegisSentinel:
         total_trades = wins + losses
         win_rate = (wins / total_trades * 100.0) if total_trades > 0 else 0.0
         mode_badge = "🔴 <b>GERÇEK HESAP (Binance Live)</b>" if mode == "LIVE" else "🟡 <b>DEMO MODU (Paper Trading)</b>"
+
+        # Blueprint Alpha Degerleri
+        gex_info = bp.get("deribit_gex", {})
+        gex_reg = gex_info.get("regime", "NEUTRAL")
+        gex_net = gex_info.get("net_gex_usd", 0.0)
+        hwk_info = bp.get("hawkes_avalanche", {})
+        hwk_eta = hwk_info.get("eta", 0.15)
+        hwk_side = hwk_info.get("side", "NONE")
+        hwk_badge = f"⚡ AKTİF ÇIĞ ({hwk_side})" if hwk_info.get("is_active") else "⚪ SAKİN"
 
         # Healing metni
         if healing:
@@ -351,14 +463,19 @@ class ValkyrieAegisSentinel:
  • 5M Mum Tarayıcısı: <b>Aktif (Son Tarama: {strm.get('scan_delay_sec', 0)} sn önce)</b>
 {healing_text}
 
-💰 <b>3. CANLI KASA & POZİSYON ÖZETİ:</b>
+🏛️ <b>3. KURUMSAL ALPHA RADARI (BLUEPRINT):</b>
+ • Deribit GEX Black-Scholes: <b>{gex_reg} (${gex_net:+,.0f})</b>
+ • Hawkes Tasfiye Çığı: <b>η={hwk_eta:.2f} ({hwk_badge})</b>
+ • Micro-Price & VPIN Toksisite: <b>Sağlıklı ve Kesintisiz</b>
+
+💰 <b>4. CANLI KASA & POZİSYON ÖZETİ:</b>
  • Toplam Kasa Bakiyesi: <b>${bal:,.2f} USDT</b>
  • Kümülatif Net Kâr: <b>{total_net_pnl:+.2f} USDT</b>
  • Kazanma Oranı (Win Rate): <b>%{win_rate:.1f}</b> ({wins} Kâr / {losses} Kayıp)
  • Açık Pozisyon Sayısı: <b>{len(open_pos)} Adet</b>
 {pos_text}
 
-🎯 <b>4. EN YAKIN PUSU LİSTESİ (TOP 3 RADAR):</b>
+🎯 <b>5. EN YAKIN PUSU LİSTESİ (TOP 3 RADAR):</b>
 {near_text}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━

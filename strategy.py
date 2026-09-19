@@ -2240,11 +2240,21 @@ class StrategyEngine:
             is_anchor_wall=bool(l2_info.get('is_anchor_wall', False)) if 'l2_info' in locals() and l2_info else False,
             wall_duration_sec=float(l2_info.get('wall_duration_sec', 0.0)) if 'l2_info' in locals() and l2_info else 0.0,
             spot_basis_bps=spot_basis_bps,
-            wall_age_sec=float(l2_info.get('wall_duration_sec', 0.0)) if 'l2_info' in locals() and l2_info else 0.0,
             entry_spread_pct=float(l2_info.get('spread_pct', 0.0)) if 'l2_info' in locals() and l2_info else 0.0,
             entry_slippage_pct=float(l2_info.get('sim_slip_long' if side == 'LONG' else 'sim_slip_short', 0.0)) if 'l2_info' in locals() and l2_info else 0.0,
             btc_velocity_60s=btc_velocity_60s,
-            calculated_dollar_risk=calculated_dollar_risk if 'calculated_dollar_risk' in locals() else 10.0
+            calculated_dollar_risk=calculated_dollar_risk if 'calculated_dollar_risk' in locals() else 10.0,
+            stoikov_micro_price=float(l2_info.get('stoikov_micro_price', entry_price)) if 'l2_info' in locals() and l2_info else entry_price,
+            stoikov_drift_bps=float(l2_info.get('stoikov_drift_bps', 0.0)) if 'l2_info' in locals() and l2_info else 0.0,
+            vpin_score=float(l2_info.get('vpin_score', 0.30)) if 'l2_info' in locals() and l2_info else 0.30,
+            vpin_toxicity=str(l2_info.get('vpin_toxicity', 'LOW')) if 'l2_info' in locals() and l2_info else 'LOW',
+            kyles_lambda_ratio=float(l2_info.get('kyles_lambda_ratio', 1.0)) if 'l2_info' in locals() and l2_info else 1.0,
+            deribit_gex_regime=str(l2_info.get('deribit_gex_regime', 'NEUTRAL')) if 'l2_info' in locals() and l2_info else 'NEUTRAL',
+            deribit_net_gex=float(l2_info.get('deribit_net_gex', 0.0)) if 'l2_info' in locals() and l2_info else 0.0,
+            hawkes_eta=float(l2_info.get('hawkes_eta', 0.15)) if 'l2_info' in locals() and l2_info else 0.15,
+            is_avalanche_active=bool(l2_info.get('is_avalanche_active', False)) if 'l2_info' in locals() and l2_info else False,
+            cvd_accel_60s=float(cvd_info.get('accel_60s', 0.0)) if 'cvd_info' in locals() and cvd_info else 0.0,
+            tri_modal_regime=str(getattr(self, 'current_market_regime', 'RANGING_PINGPONG'))
         )
 
         if isinstance(res, dict) and res.get("error") == "INSUFFICIENT_BALANCE":

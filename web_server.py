@@ -4816,6 +4816,10 @@ async function loadAdminMetrics() {
             // Quant Engine Data
             const lev = qEngine.levels || { count: sys.healthy_symbols || 100, total: sys.total_symbols || 100, pct: 100 };
             const dna = qEngine.coin_dna || { count: 100, total: 100 };
+            const deribit = qEngine.deribit_gex || { freshness_sec: 120, is_live: true, regime: 'NEUTRAL', net_gex_usd: 0, pcr: 0.85 };
+            const hawkes = qEngine.hawkes_avalanche || { eta: 0.15, is_active: false, side: 'NONE' };
+            const stoikov = qEngine.stoikov_vpin || { healthy: true, mode: 'Stoikov Micro-Drift + VPIN', kyles_lambda: 'AMIHUD_AIR_POCKET_GUARD' };
+            const iceberg = qEngine.iceberg_sniper || { healthy: true, mode: 'Tri-Modal Offensive Sniper', cvd_derivative: '2nd_Derivative_Zero_Crossing' };
 
             // Infra Data
             const gh = infra.github_persistence || { branch: 'state', sha: '-' };
@@ -4959,6 +4963,10 @@ async function loadAdminMetrics() {
                         </div>
 
                         ${itemRow('⚡', 'BTC 60s Mikro-Şok Kalkanı', 'Bitcoin ani 60 saniyelik mikro çöküş ve sıçrama devre kesicisi', 'BTC Hız: %' + btcVStr + ' (±%0.28)', pill(btcShock.is_active ? 'ŞOK DEVREDE' : 'GÜVENLİ', btcShock.is_active ? 'var(--red)' : 'var(--green)'))}
+                        ${itemRow('🏛️', 'Deribit GEX Black-Scholes Rejimi', 'Kurumsal opsiyon gamma maruziyeti, volatilite pini (+GEX) ve patlama (-GEX) radarı', (deribit.regime || 'NEUTRAL') + ' ($' + Number(deribit.net_gex_usd || 0).toLocaleString() + ')', pill(deribit.regime === 'POSITIVE_GAMMA_PIN' ? '+GEX MIKNATIS' : (deribit.regime === 'NEGATIVE_GAMMA_EXPLOSION' ? '-GEX PATLAMA' : 'GEX DENGELİ'), deribit.regime === 'POSITIVE_GAMMA_PIN' ? 'var(--cyan)' : (deribit.regime === 'NEGATIVE_GAMMA_EXPLOSION' ? 'var(--red)' : 'var(--green)')))}
+                        ${itemRow('⚡', 'Hawkes Tasfiye Çığı Radarı (!forceOrder)', 'Tasfiyelerin kendi kendini besleyen zincirleme patlama şiddeti (Branching Ratio η)', 'η: ' + Number(hawkes.eta || 0.15).toFixed(2) + (hawkes.is_active ? ' (' + (hawkes.side || 'ÇIĞ') + ')' : ''), pill(hawkes.is_active ? '⚡ ÇIĞ AKTİF' : 'SAKİN AKIŞ', hawkes.is_active ? 'var(--red)' : 'var(--green)'))}
+                        ${itemRow('🎯', 'Stoikov Micro-Price & VPIN Toksik Akış', 'Order book derinlik ağırlıklı mikrofiyat sapması ve hacim dilimli toksik akış radarı', 'Stoikov + VPIN Filtresi', pill('RANGE VETO KORUMASI', 'var(--cyan)'))}
+                        ${itemRow('🧊', 'Tri-Modal Iceberg & CVD 2. Türev', '3-Modlu rejim uyumlu iceberg gizli likidite avcısı ve ivme sıfır geçişi dedektörü', 'İvme ve Sıkışma Radarı', pill('%0.20 STOP AVCI', 'var(--green)'))}
                         ${itemRow('💰', 'Fonlama Oranı & Squeeze Radarı', '8 saatlik fonlama maliyetleri ve short/long sıkışma fırsat/tuzak kalkanı', '100 Parite Taranıyor', pill(funding.last_update || '60s PERİYOT', 'var(--green)'))}
                         ${itemRow('📊', 'Dinamik Seviye & Rejim Matrisi', 'Camarilla pivot seviyeleri, ATR %, Hurst üssü ve kaos/kristal faz tespiti', (lev.count || 100) + ' / ' + (lev.total || 100) + ' Parite Tam Uyumlu', pill('0 SAPMA', 'var(--cyan)'))}
                         ${itemRow('🧬', '100 Parite Kuant DNA Profilleri', 'Pariteye özel volatilite sınıflaması, hacim eşikleri ve karakter profilleme', (dna.count || 100) + ' Parite Hafızada', pill('YÜKLENDİ', 'var(--green)'))}
@@ -11147,6 +11155,35 @@ function downloadExcelReport() {
                             <b>• Kademeli TP1 Durumu:</b> <span style="color:#86efac; font-weight:700;">${item.tp1_hit || (item.id && item.id.includes('TP1') ? 'EVET (%50 Kilitlendi)' : 'HAYIR')}</span> | <b>Çıkış Verimliliği:</b> %${effVal.toFixed(1)}<br>
                             <b>• Giriş / Çıkış Fiyatı:</b> $${formatSmartPrice(item.entry_price)} ➔ $${formatSmartPrice(item.exit_price)} | <b>Komisyon:</b> $${feesVal.toFixed(4)}<br>
                             <b>• Planlanan Hedef (TP1):</b> ${item.tp1 ? '$' + formatSmartPrice(item.tp1) : 'Yok'} | <b>Planlanan Stop:</b> ${(item.hard_stop || item.soft_stop) ? '$' + formatSmartPrice(item.hard_stop || item.soft_stop) : 'Yok'}
+                        </div>
+                    </div>
+
+                    <!-- VALKYRIE ALPHA MASTER BLUEPRINT TELEMETRİSİ -->
+                    <div style="background:rgba(0,242,254,0.03); border:1px solid rgba(0,242,254,0.2); border-radius:12px; padding:14px; margin-bottom:18px;">
+                        <div style="font-size:13px; font-weight:800; color:var(--cyan); margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                            <span>🏛️</span> VALKYRIE KURUMSAL ALPHA MASTER BLUEPRINT TELEMETRİSİ
+                        </div>
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap:10px;">
+                            <div style="background:rgba(255,255,255,0.02); border-radius:8px; padding:8px 12px; border:1px solid rgba(255,255,255,0.05);">
+                                <div style="font-size:10px; color:#94a3b8; margin-bottom:3px;">Deribit GEX Rejimi</div>
+                                <div style="font-size:12.5px; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono',monospace;">${item.deribit_gex_regime || 'NEUTRAL'}</div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.02); border-radius:8px; padding:8px 12px; border:1px solid rgba(255,255,255,0.05);">
+                                <div style="font-size:10px; color:#94a3b8; margin-bottom:3px;">Hawkes Çığı (η)</div>
+                                <div style="font-size:12.5px; font-weight:800; color:${item.is_avalanche_active ? '#ef4444' : '#10b981'}; font-family:'JetBrains Mono',monospace;">η: ${Number(item.hawkes_eta || 0.15).toFixed(2)} ${item.is_avalanche_active ? '⚡ ÇIĞ' : '⚪ SAKİN'}</div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.02); border-radius:8px; padding:8px 12px; border:1px solid rgba(255,255,255,0.05);">
+                                <div style="font-size:10px; color:#94a3b8; margin-bottom:3px;">Stoikov Drift / Micro</div>
+                                <div style="font-size:12.5px; font-weight:800; color:#fbbf24; font-family:'JetBrains Mono',monospace;">${Number(item.stoikov_drift_bps || 0).toFixed(1)} bps</div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.02); border-radius:8px; padding:8px 12px; border:1px solid rgba(255,255,255,0.05);">
+                                <div style="font-size:10px; color:#94a3b8; margin-bottom:3px;">VPIN Toksisite & Kyle</div>
+                                <div style="font-size:12.5px; font-weight:800; color:#c084fc; font-family:'JetBrains Mono',monospace;">${item.vpin_toxicity || 'LOW'} (${Number(item.vpin_score || 0.30).toFixed(2)}) • ${Number(item.kyles_lambda_ratio || 1.0).toFixed(1)}x</div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.02); border-radius:8px; padding:8px 12px; border:1px solid rgba(255,255,255,0.05);">
+                                <div style="font-size:10px; color:#94a3b8; margin-bottom:3px;">Tri-Modal & CVD İvme</div>
+                                <div style="font-size:12.5px; font-weight:800; color:#4ade80; font-family:'JetBrains Mono',monospace;">${item.tri_modal_regime || 'RANGING'} (${Number(item.cvd_accel_60s || 0).toFixed(1)})</div>
+                            </div>
                         </div>
                     </div>
 

@@ -690,8 +690,18 @@ class PaperTrader:
                 "wall_age_sec": pos.get("wall_age_sec", 0.0),
                 "entry_spread_pct": pos.get("entry_spread_pct", 0.0),
                 "entry_slippage_pct": pos.get("entry_slippage_pct", 0.0),
-                "btc_velocity_60s": pos.get("btc_velocity_60s", 0.0),
-                "calculated_dollar_risk": pos.get("calculated_dollar_risk", 10.0)
+                "calculated_dollar_risk": pos.get("calculated_dollar_risk", 10.0),
+                "stoikov_micro_price": pos.get("stoikov_micro_price", entry_p),
+                "stoikov_drift_bps": pos.get("stoikov_drift_bps", 0.0),
+                "vpin_score": pos.get("vpin_score", 0.30),
+                "vpin_toxicity": pos.get("vpin_toxicity", "LOW"),
+                "kyles_lambda_ratio": pos.get("kyles_lambda_ratio", 1.0),
+                "deribit_gex_regime": pos.get("deribit_gex_regime", "NEUTRAL"),
+                "deribit_net_gex": pos.get("deribit_net_gex", 0.0),
+                "hawkes_eta": pos.get("hawkes_eta", 0.15),
+                "is_avalanche_active": pos.get("is_avalanche_active", False),
+                "cvd_accel_60s": pos.get("cvd_accel_60s", 0.0),
+                "tri_modal_regime": pos.get("tri_modal_regime", "RANGING_PINGPONG")
             }
             self.history.append(record)
 
@@ -790,8 +800,18 @@ class PaperTrader:
                 "wall_age_sec": pos.get("wall_age_sec", 0.0),
                 "entry_spread_pct": pos.get("entry_spread_pct", 0.0),
                 "entry_slippage_pct": pos.get("entry_slippage_pct", 0.0),
-                "btc_velocity_60s": pos.get("btc_velocity_60s", 0.0),
-                "calculated_dollar_risk": pos.get("calculated_dollar_risk", 10.0)
+                "calculated_dollar_risk": pos.get("calculated_dollar_risk", 10.0),
+                "stoikov_micro_price": pos.get("stoikov_micro_price", entry_p),
+                "stoikov_drift_bps": pos.get("stoikov_drift_bps", 0.0),
+                "vpin_score": pos.get("vpin_score", 0.30),
+                "vpin_toxicity": pos.get("vpin_toxicity", "LOW"),
+                "kyles_lambda_ratio": pos.get("kyles_lambda_ratio", 1.0),
+                "deribit_gex_regime": pos.get("deribit_gex_regime", "NEUTRAL"),
+                "deribit_net_gex": pos.get("deribit_net_gex", 0.0),
+                "hawkes_eta": pos.get("hawkes_eta", 0.15),
+                "is_avalanche_active": pos.get("is_avalanche_active", False),
+                "cvd_accel_60s": pos.get("cvd_accel_60s", 0.0),
+                "tri_modal_regime": pos.get("tri_modal_regime", "RANGING_PINGPONG")
             }
             self.history.append(record)
 

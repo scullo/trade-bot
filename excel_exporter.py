@@ -13,6 +13,96 @@ def _safe_float(val, default=0.0):
 import os
 import tempfile
 
+HEADERS_GRANULAR = [
+    ('İşlem ID', 12),
+    ('Parite', 12),
+    ('Yön', 8),
+    ('Kaldıraç', 9),
+    ('İşlem Tipi', 18),
+    ('Giriş Zamanı', 17),
+    ('Çıkış Zamanı', 17),
+    ('Süre', 11),
+    ('Mum Sayısı', 10),
+    ('Piyasa Seansı', 18),
+    ('Trend Rejimi', 22),
+    ('Volatilite ATR (%)', 15),
+    ('Hacim Patlaması', 15),
+    ('Giriş Fitil Oranı (%)', 18),
+    ('Tuzak / Sahte Kırılım Teşhisi', 26),
+    ('Kâr Kilit Tipi', 22),
+    ('Confluence Skoru', 18),
+    ('Makro Uyum (1H/4H)', 24),
+    ('TP1 Alındı mı?', 18),
+    ('İzsüren Kâr Kilidi', 22),
+    ('Dinamik Marjin ($)', 14),
+    ('Giriş Fiyatı ($)', 14),
+    ('Zirve Fiyat ($)', 14),
+    ('Dip Fiyat ($)', 14),
+    ('Çıkış Fiyatı ($)', 14),
+    ('Planlanan TP1 ($)', 15),
+    ('Planlanan TP2 ($)', 15),
+    ('Planlanan Stop ($)', 15),
+    ('Brüt Kâr ($)', 13),
+    ('Komisyon ($)', 13),
+    ('Net Kâr ($)', 13),
+    ('ROE (%)', 11),
+    ('1R Katı', 10),
+    ('Zirve MFE (%)', 13),
+    ('Maks MAE (%)', 13),
+    ('Çıkış Verimliliği (%)', 16),
+    ('Kasa ($)', 13),
+    ('Giriş Stratejisi / Formasyon', 38),
+    ('Kapanış Nedeni / Tetikleyici', 36),
+    ('Giriş Pivot P ($)', 14),
+    ('Giriş S3 ($)', 13),
+    ('Giriş S4 ($)', 13),
+    ('Giriş R3 ($)', 13),
+    ('Giriş R4 ($)', 13),
+    ('Tepe AVWAP ($)', 14),
+    ('Dip AVWAP ($)', 14),
+    ('mPOC ($)', 13),
+    ('mVAL ($)', 13),
+    ('mVAH ($)', 13),
+    ('Yukarı nPOC ($)', 14),
+    ('Aşağı nPOC ($)', 14),
+    ('Coin Persona Sınıfı', 24),
+    ('Seviye Temas Sayısı', 18),
+    ('Eşzamanlı Yön Yığılması', 20),
+    ('Volatilite Sıkışması (Chop)', 22),
+    ('CVD Taker Alım (%)', 18),
+    ('Breakout İvmesi (Hız xATR)', 22),
+    ('Göreceli Güç (RS vs BTC %)', 22),
+    ('Ayrışma (Decoupling) Durumu', 26),
+    ('Giriş Fonlama Oranı (%)', 20),
+    ('Fonlama Squeeze Durumu', 24),
+    ('Giriş Öncesi Tasfiye Hacmi ($)', 24),
+    ('Tasfiye Teyit Durumu', 26),
+    ('Giriş Mikro-CVD Alıcı Oranı (%)', 24),
+    ('Mikro Agresyon & Emilim Teyidi', 28),
+    ('Kayan 60s Net Delta ($)', 22),
+    ('Tahta Dengesizlik (OBI %)', 22),
+    ('Tahta Derinlik Oranı (Bid/Ask)', 24),
+    ('Tahta Likidite Duvarı', 24),
+    ('En İyi Alış/Satış Derinliği', 24),
+    ('Tahta Entropisi (Boltzmann %)', 24),
+    ('Fraktal Rejim (Hurst H)', 22),
+    ('Gizli Likidite (Iceberg Oranı)', 24),
+    ('Piyasa Fazı (Simons HMM)', 26),
+    ('Bookmap Sipariş Akışı & Çapa', 28),
+    ('Spot-Perp Basis (bps)', 20),
+    ('Tahta Duvar Yaşı (s)', 18),
+    ('Giriş Makası (Spread %)', 20),
+    ('Giriş Kayması (Slippage %)', 22),
+    ('BTC 60s Mikro-Hız (%)', 20),
+    ('Hesaplanan Dolar Riski ($)', 22),
+    ('Stoikov Drift (bps)', 20),
+    ('VPIN Toksisite Skoru', 22),
+    ('Kyle’s Lambda Oranı', 20),
+    ('Deribit GEX Rejimi', 22),
+    ('Hawkes Tasfiye Çığı (η)', 22)
+]
+headers_granular = HEADERS_GRANULAR
+
 def create_styled_excel_report(history_data: list, current_balance: float = 10000.0, initial_balance: float = 10000.0) -> io.BytesIO:
     with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp:
         tmp_path = tmp.name
@@ -290,89 +380,7 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
 
     # ==================== SHEET 2: DETAYLI İŞLEM DEFTERİ (52 KOLON) ====================
     ws2 = workbook.add_worksheet('📜 DETAYLI İŞLEM DEFTERİ')
-    headers_granular = [
-        ('İşlem ID', 12),
-        ('Parite', 12),
-        ('Yön', 8),
-        ('Kaldıraç', 9),
-        ('İşlem Tipi', 18),
-        ('Giriş Zamanı', 17),
-        ('Çıkış Zamanı', 17),
-        ('Süre', 11),
-        ('Mum Sayısı', 10),
-        ('Piyasa Seansı', 18),
-        ('Trend Rejimi', 22),
-        ('Volatilite ATR (%)', 15),
-        ('Hacim Patlaması', 15),
-        ('Giriş Fitil Oranı (%)', 18),
-        ('Tuzak / Sahte Kırılım Teşhisi', 26),
-        ('Kâr Kilit Tipi', 22),
-        ('Confluence Skoru', 18),
-        ('Makro Uyum (1H/4H)', 24),
-        ('TP1 Alındı mı?', 18),
-        ('İzsüren Kâr Kilidi', 22),
-        ('Dinamik Marjin ($)', 14),
-        ('Giriş Fiyatı ($)', 14),
-        ('Zirve Fiyat ($)', 14),
-        ('Dip Fiyat ($)', 14),
-        ('Çıkış Fiyatı ($)', 14),
-        ('Planlanan TP1 ($)', 15),
-        ('Planlanan TP2 ($)', 15),
-        ('Planlanan Stop ($)', 15),
-        ('Brüt Kâr ($)', 13),
-        ('Komisyon ($)', 13),
-        ('Net Kâr ($)', 13),
-        ('ROE (%)', 11),
-        ('1R Katı', 10),
-        ('Zirve MFE (%)', 13),
-        ('Maks MAE (%)', 13),
-        ('Çıkış Verimliliği (%)', 16),
-        ('Kasa ($)', 13),
-        ('Giriş Stratejisi / Formasyon', 38),
-        ('Kapanış Nedeni / Tetikleyici', 36),
-        ('Giriş Pivot P ($)', 14),
-        ('Giriş S3 ($)', 13),
-        ('Giriş S4 ($)', 13),
-        ('Giriş R3 ($)', 13),
-        ('Giriş R4 ($)', 13),
-        ('Tepe AVWAP ($)', 14),
-        ('Dip AVWAP ($)', 14),
-        ('mPOC ($)', 13),
-        ('mVAL ($)', 13),
-        ('mVAH ($)', 13),
-        ('Yukarı nPOC ($)', 14),
-        ('Aşağı nPOC ($)', 14),
-        ('Coin Persona Sınıfı', 24),
-        ('Seviye Temas Sayısı', 18),
-        ('Eşzamanlı Yön Yığılması', 20),
-        ('Volatilite Sıkışması (Chop)', 22),
-        ('CVD Taker Alım (%)', 18),
-        ('Breakout İvmesi (Hız xATR)', 22),
-        ('Göreceli Güç (RS vs BTC %)', 22),
-        ('Ayrışma (Decoupling) Durumu', 26),
-        ('Giriş Fonlama Oranı (%)', 20),
-        ('Fonlama Squeeze Durumu', 24),
-        ('Giriş Öncesi Tasfiye Hacmi ($)', 24),
-        ('Tasfiye Teyit Durumu', 26),
-        ('Giriş Mikro-CVD Alıcı Oranı (%)', 24),
-        ('Mikro Agresyon & Emilim Teyidi', 28),
-        ('Kayan 60s Net Delta ($)', 22),
-        ('Tahta Dengesizlik (OBI %)', 22),
-        ('Tahta Derinlik Oranı (Bid/Ask)', 24),
-        ('Tahta Likidite Duvarı', 24),
-        ('En İyi Alış/Satış Derinliği', 24),
-        ('Tahta Entropisi (Boltzmann %)', 24),
-        ('Fraktal Rejim (Hurst H)', 22),
-        ('Gizli Likidite (Iceberg Oranı)', 24),
-        ('Piyasa Fazı (Simons HMM)', 26),
-        ('Bookmap Sipariş Akışı & Çapa', 28),
-        ('Spot-Perp Basis (bps)', 20),
-        ('Tahta Duvar Yaşı (s)', 18),
-        ('Giriş Makası (Spread %)', 20),
-        ('Giriş Kayması (Slippage %)', 22),
-        ('BTC 60s Mikro-Hız (%)', 20),
-        ('Hesaplanan Dolar Riski ($)', 22)
-    ]
+    headers_granular = HEADERS_GRANULAR
 
 
     def _get_coin_persona(sym, st):
@@ -591,6 +599,21 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ws.write(r_idx, 78, f"%{slip_v:.3f}", cell_roe_green if slip_v <= 0.05 else (cell_roe_red if slip_v >= 0.10 else cell_center))
         ws.write(r_idx, 79, f"%{btc_v:+.2f}", cell_roe_green if btc_v >= 0 else cell_roe_red)
         ws.write(r_idx, 80, f"${calc_risk:.2f}", cell_currency_2d)
+
+        # Blueprint Alpha Sütunları (81, 82, 83, 84, 85)
+        stoikov_drift = _safe_float(h.get('stoikov_drift_bps', 0.0))
+        vpin_sc = _safe_float(h.get('vpin_score', 0.30))
+        vpin_tox = str(h.get('vpin_toxicity', 'LOW'))
+        kyles_l = _safe_float(h.get('kyles_lambda_ratio', 1.0))
+        gex_reg = str(h.get('deribit_gex_regime', 'NEUTRAL'))
+        hwk_eta = _safe_float(h.get('hawkes_eta', 0.15))
+        hwk_act = bool(h.get('is_avalanche_active', False))
+
+        ws.write(r_idx, 81, f"{stoikov_drift:+.1f} bps", cell_roe_green if stoikov_drift > 0 else (cell_roe_red if stoikov_drift < 0 else cell_center))
+        ws.write(r_idx, 82, f"{vpin_sc:.2f} ({vpin_tox})", cell_center)
+        ws.write(r_idx, 83, f"{kyles_l:.2f}x", cell_center)
+        ws.write(r_idx, 84, gex_reg, cell_center)
+        ws.write(r_idx, 85, f"η={hwk_eta:.2f}" + (" (ÇIĞ)" if hwk_act else ""), cell_roe_red if hwk_act else cell_center)
 
     def render_table_sheet(ws_obj, t_list):
 
