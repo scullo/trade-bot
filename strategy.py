@@ -1483,7 +1483,23 @@ class StrategyEngine:
                 print(f">> [RED - HAWKES PUMP AVALANCHE] {symbol}: {rej_msg}")
                 self.log_rejection(symbol, reason, rej_msg, hawkesEta=hawkes_eta)
                 return {"error": "HAWKES_AVALANCHE_SHORT_SCALP_BLOCKED"}
-        
+
+        # ── 2h. CVD 2. TÜREVİ & SIFIR GEÇİŞİ TEPE DÖNÜŞ KALKANI (ZERO-CROSSING EXHAUSTION SHIELD) ──
+        # Fiyat tepeye giderken CVD ivmesi negatife dönüp sıfırı kesmişse (Zero-Crossing Bear),
+        # akıllı para alım ivmesi tükenmiş, tepe dönüşü başlamıştır. Tepeye kafa atmayı %100 önler!
+        is_zc_bear = bool(sym_met.get('is_zero_crossing_bear', False)) if sym_met else False
+        is_zc_bull = bool(sym_met.get('is_zero_crossing_bull', False)) if sym_met else False
+        if is_breakout and side == "LONG" and is_zc_bear:
+            rej_msg = f"🛡️ CVD 2. Türev Sıfır Geçişi Kalkanı: Fiyat tepedeyken CVD ivmesi negatife döndü (Zero-Crossing Bear). Akıllı para ivmesi tükendi, tepeye kafa atma engellendi."
+            print(f">> [RED - CVD ZERO CROSSING BEAR] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "CVD_ZERO_CROSSING_EXHAUSTION_LONG"}
+        elif is_breakout and side == "SHORT" and is_zc_bull:
+            rej_msg = f"🛡️ CVD 2. Türev Sıfır Geçişi Kalkanı: Fiyat dipteyken CVD ivmesi pozitife döndü (Zero-Crossing Bull). Satış ivmesi tükendi, dipten short engellendi."
+            print(f">> [RED - CVD ZERO CROSSING BULL] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "CVD_ZERO_CROSSING_EXHAUSTION_SHORT"}
+
         if tepe_av > 0 and p_val > 0 and entry_price > tepe_av and entry_price > p_val:
             trend_regime = "🟢 GÜÇLÜ BOĞA (Bullish)"
         elif dip_av > 0 and p_val > 0 and entry_price < dip_av and entry_price < p_val:
@@ -1770,6 +1786,14 @@ class StrategyEngine:
             reason += " [🐋 Balina Teyitli Seviye]"
             if confluence_list is not None and isinstance(confluence_list, list) and "🐋_Balina_Akışı_Teyidi" not in confluence_list:
                 confluence_list.append("🐋_Balina_Akışı_Teyidi")
+
+        # 🏛️ +GEX PINNING & ICEBERG HÜCUM MARJİN TEŞVİKİ (+GEX günlerinde ve buzdağı arkasında marjin ölçekleme)
+        is_gex_pin = bool(sym_met.get("is_gex_pinning", False)) if sym_met else False
+        is_ice_sniper_active = bool(sym_met.get("is_iceberg_sniper_buy", False) or sym_met.get("is_iceberg_sniper_sell", False)) if sym_met else False
+        if is_gex_pin and trade_type == "SCALP":
+            self.margin_multiplier *= 1.25
+        if is_ice_sniper_active:
+            self.margin_multiplier *= 1.20
 
         c_count = len(confluence_list or [1])
 
@@ -2684,15 +2708,6 @@ class StrategyEngine:
 
         trend_regime = regime_desc
 
-        # ── 3 BOYUTLU TRİ-MODAL REJİM HAKEMİ (BOĞA TRENDİ, AYI TRENDİ, YATAY PİNG-PONG) ──
-        if "BOĞA" in regime_desc or macro_regime == "BOĞA" or macro_regime in ["BULL_PUMP", "EXTREME_BULL"]:
-            tri_modal_regime = "REGIME_BULL_TREND"
-        elif "AYI" in regime_desc or macro_regime == "BEAR_DUMP" or macro_regime in ["EXTREME_BEAR"]:
-            tri_modal_regime = "REGIME_BEAR_TREND"
-        else:
-            tri_modal_regime = "REGIME_RANGING_PINGPONG"
-            is_range_regime = True
-
         # Parite Bazlı Alfa ve Hacim Metrikleri (Dinamik Ayrışma)
         sym_met = self.market_data.get_symbol_metrics(symbol) if (self.market_data and hasattr(self.market_data, 'get_symbol_metrics')) else {}
         coin_rs_score = sym_met.get("dynamic_rs_score", 0.0)
@@ -2705,6 +2720,31 @@ class StrategyEngine:
         is_decoupled_bear = (coin_rs_score <= -1.2 and coin_vol_surge >= 2.0 and coin_is_top80)
         coin_decoupling = sym_met.get("decoupling_status", "")
         is_severely_weak = ("AŞIRI_ZAYIF" in coin_decoupling) or (coin_rs_score <= -1.0)
+
+        # ── 3 BOYUTLU TRİ-MODAL REJİM HAKEMİ (BOĞA TRENDİ, AYI TRENDİ, YATAY PİNG-PONG) ──
+        # Deribit GEX + Makro + Lokal Fiyat Hiyerarşisi
+        is_gex_pin = bool(sym_met.get('is_gex_pinning', False))
+        is_gex_exp = bool(sym_met.get('is_gex_exploding', False))
+
+        if is_gex_pin:
+            # +GEX Rejiminde kurumsal gamma volatiliteyi baskılar -> %100 YATAY PİNG-PONG
+            tri_modal_regime = "REGIME_RANGING_PINGPONG"
+            is_range_regime = True
+        elif is_gex_exp:
+            # -GEX Rejiminde kurumsal gamma patlaması -> Trend Breakout / Breakdown
+            if "AYI" in regime_desc or macro_regime in ["BEAR_DUMP", "EXTREME_BEAR"]:
+                tri_modal_regime = "REGIME_BEAR_TREND"
+            else:
+                tri_modal_regime = "REGIME_BULL_TREND"
+        elif "BOĞA" in regime_desc or macro_regime == "BOĞA" or macro_regime in ["BULL_PUMP", "EXTREME_BULL"]:
+            tri_modal_regime = "REGIME_BULL_TREND"
+        elif "AYI" in regime_desc or macro_regime == "BEAR_DUMP" or macro_regime in ["EXTREME_BEAR"]:
+            tri_modal_regime = "REGIME_BEAR_TREND"
+        else:
+            tri_modal_regime = "REGIME_RANGING_PINGPONG"
+            is_range_regime = True
+
+        self.current_market_regime = tri_modal_regime
 
         # Kurumsal Açık Faiz (OI) ve Günlük Seans AVWAP Verisi
         daily_avwap = levels.get("daily_avwap") or 0.0
@@ -3143,14 +3183,31 @@ class StrategyEngine:
             dyn_stop_pct = max(0.008, min(0.025, coin_atr * 1.0))
             buffer = mvah * dyn_stop_pct
             soft_stop = mvah - buffer
-            hard_stop = mvah - buffer * 1.5
+            reason_lbl6 = "mVAH Aylik Direnc Kirilimi (Macro Breakout)"
+            c_list6 = ["mVAH_Breakout", "Volume_Profile_Expansion"]
+            if sym_met.get("is_stoikov_bull", False):
+                s_drift6 = sym_met.get("stoikov_drift_bps", 0.0)
+                c_list6.append("Stoikov_Micro_Bull_Drift")
+                reason_lbl6 += f" [🎯 Stoikov +{s_drift6:.1f}bps]"
+            vpin_val6 = sym_met.get("vpin_score", 0.30)
+            if vpin_val6 >= 0.50:
+                c_list6.append("VPIN_Toxic_Expansion_Confirmed")
+                reason_lbl6 += f" [🌊 VPIN %{vpin_val6*100:.0f}]"
+            if sym_met.get("is_gex_exploding", False):
+                c_list6.append("Deribit_-GEX_Volatility_Explosion")
+                reason_lbl6 += " [🌋 Deribit -GEX]"
+            if sym_met.get("is_avalanche_active", False):
+                h_eta6 = sym_met.get("hawkes_eta", 0.85)
+                c_list6.append("Hawkes_Liquidation_Avalanche")
+                reason_lbl6 += f" [⚡ Hawkes eta={h_eta6:.2f}]"
+
             await self._handle_open(
                 symbol=symbol, side="LONG", entry_price=close_price,
-                reason="mVAH Aylik Direnc Kirilimi (Macro Breakout)",
+                reason=reason_lbl6,
                 soft_stop=soft_stop, hard_stop=hard_stop,
                 tp1=target, trade_type="BREAKOUT",
                 snapshot_levels=levels, setup_id="SETUP_6_MVAH_MACRO_BREAKOUT",
-                confluence_list=["mVAH_Breakout", "Volume_Profile_Expansion"]
+                confluence_list=c_list6
             )
             return
 
@@ -3224,15 +3281,31 @@ class StrategyEngine:
             coin_atr = self.get_symbol_atr_pct(symbol)
             dyn_stop_pct = max(0.008, min(0.025, coin_atr * 1.0))
             buffer = mval * dyn_stop_pct
-            soft_stop = mval + buffer
-            hard_stop = mval + buffer * 1.5
+            reason_lbl8 = "mVAL Aylik Destek Kirilimi (Macro Breakdown)"
+            c_list8 = ["mVAL_Breakdown", "Volume_Profile_Collapse"]
+            if sym_met.get("is_stoikov_bear", False):
+                s_drift8 = sym_met.get("stoikov_drift_bps", 0.0)
+                c_list8.append("Stoikov_Micro_Bear_Drift")
+                reason_lbl8 += f" [🎯 Stoikov {s_drift8:.1f}bps]"
+            vpin_val8 = sym_met.get("vpin_score", 0.30)
+            if vpin_val8 >= 0.50:
+                c_list8.append("VPIN_Toxic_Expansion_Confirmed")
+                reason_lbl8 += f" [🌊 VPIN %{vpin_val8*100:.0f}]"
+            if sym_met.get("is_gex_exploding", False):
+                c_list8.append("Deribit_-GEX_Volatility_Explosion")
+                reason_lbl8 += " [🌋 Deribit -GEX]"
+            if sym_met.get("is_avalanche_active", False):
+                h_eta8 = sym_met.get("hawkes_eta", 0.85)
+                c_list8.append("Hawkes_Liquidation_Avalanche")
+                reason_lbl8 += f" [⚡ Hawkes eta={h_eta8:.2f}]"
+
             await self._handle_open(
                 symbol=symbol, side="SHORT", entry_price=close_price,
-                reason="mVAL Aylik Destek Kirilimi (Macro Breakdown)",
+                reason=reason_lbl8,
                 soft_stop=soft_stop, hard_stop=hard_stop,
                 tp1=target, trade_type="BREAKOUT",
                 snapshot_levels=levels, setup_id="SETUP_8_MVAL_MACRO_BREAKDOWN",
-                confluence_list=["mVAL_Breakdown", "Volume_Profile_Collapse"]
+                confluence_list=c_list8
             )
             return
 
