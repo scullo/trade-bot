@@ -1435,6 +1435,26 @@ class StrategyEngine:
             print(f">> [RED - KYLE'S LAMBDA AIR POCKET] {symbol}: {rej_msg}")
             self.log_rejection(symbol, reason, rej_msg, lambdaRatio=lambda_r)
             return {"error": "KYLE_LAMBDA_VACUUM_TRAP"}
+
+        # ── 2g. DERIBIT GEX & HAWKES TASFİYE ÇIĞI KALKANI (AVALANCHE KNIFE-CATCH SHIELD) ──
+        # Negatif Gamma Patlaması (-GEX) ve zincirleme tasfiye çığı (Hawkes eta >= 0.80) varken
+        # karşı-trend bıçak tutma (SCALP) işlemleri engellenir!
+        is_gex_exploding = bool(sym_met.get('is_gex_exploding', False)) if sym_met else False
+        is_avalanche_active = bool(sym_met.get('is_avalanche_active', False)) if sym_met else False
+        avalanche_side = str(sym_met.get('avalanche_side', 'NONE')) if sym_met else 'NONE'
+        hawkes_eta = float(sym_met.get('hawkes_eta', 0.15)) if sym_met else 0.15
+
+        if trade_type == "SCALP" and (is_gex_exploding or is_avalanche_active):
+            if side == "LONG" and ("DUMP" in avalanche_side or is_gex_exploding):
+                rej_msg = f"⚡ Hawkes & GEX Çığ Kalkanı: Piyasada negatif gamma patlaması ve tasfiye çığı aktif ({avalanche_side}, eta={hawkes_eta:.2f}). Düşen bıçağa karşı LONG sekmesi engellendi."
+                print(f">> [RED - HAWKES DUMP AVALANCHE] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, reason, rej_msg, hawkesEta=hawkes_eta)
+                return {"error": "HAWKES_AVALANCHE_LONG_SCALP_BLOCKED"}
+            elif side == "SHORT" and ("PUMP" in avalanche_side or "SQUEEZE" in avalanche_side or is_gex_exploding):
+                rej_msg = f"⚡ Hawkes & GEX Squeeze Kalkanı: Piyasada negatif gamma patlaması ve short squeeze çığı aktif ({avalanche_side}, eta={hawkes_eta:.2f}). Rokete karşı tepe SHORT sekmesi engellendi."
+                print(f">> [RED - HAWKES PUMP AVALANCHE] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, reason, rej_msg, hawkesEta=hawkes_eta)
+                return {"error": "HAWKES_AVALANCHE_SHORT_SCALP_BLOCKED"}
         
         if tepe_av > 0 and p_val > 0 and entry_price > tepe_av and entry_price > p_val:
             trend_regime = "🟢 GÜÇLÜ BOĞA (Bullish)"
@@ -2395,14 +2415,43 @@ class StrategyEngine:
                             self._cleanup_tracking(symbol)
                         return
 
-            # 1b. NİHAİ KÂR ALMA (TP2 - Kalan %50 Kapatma)
+            # 1b. NİHAİ KÂR ALMA (TP2 - Kalan %50 Kapatma & Hawkes Koşucu Kilidi)
             if is_half and tp2_target > 0:
                 if (side == "LONG" and close_price >= tp2_target) or (side == "SHORT" and close_price <= tp2_target):
-                    lvl_tag2 = self._get_level_name_by_price(tp2_target, levels)
-                    lvl_str2 = f" [{lvl_tag2}]" if lvl_tag2 else ""
+                    sym_met_close = self.market_data.get_symbol_metrics(symbol) if (self.market_data and hasattr(self.market_data, 'get_symbol_metrics')) else {}
+                    is_avalanche_running = bool(sym_met_close.get('is_avalanche_active', False))
+                    eta_val = float(sym_met_close.get('hawkes_eta', 0.15))
+                    trade_t = pos.get('trade_type', 'SCALP')
+
+                    # ⚡ HAWKES ÇIĞ KOŞUCU MODU: Eğer kırılım işleminde zincirleme tasfiye çığı devam ediyorsa (eta >= 0.80),
+                    # TP2'de kapatma, hedefi %3 ileri taşı ve stop'u TP1'e çekerek kârı sonuna kadar sür!
+                    if trade_t == "BREAKOUT" and is_avalanche_running and eta_val >= 0.80 and not pos.get('hawkes_runner_active', False):
+                        pos['hard_stop'] = tp1_target
+                        pos['soft_stop'] = tp1_target
+                        pos['tp2'] = tp2_target * (1.03 if side == "LONG" else 0.97)
+                        pos['hawkes_runner_active'] = True
+                        print(f">> [HAWKES RUNNER ACTIVE] {symbol}: ⚡ Tasfiye Çığı Aktif (eta={eta_val:.2f}) -> TP2 uzatıldı, Stop ${tp1_target:.4f}'e kilitlendi!")
+                    else:
+                        lvl_tag2 = self._get_level_name_by_price(tp2_target, levels)
+                        lvl_str2 = f" [{lvl_tag2}]" if lvl_tag2 else ""
+                        record = await self._safe_close_position(
+                            symbol, tp2_target,
+                            f"🚀 TP2 Nihai Hedefe Ulaşıldı{lvl_str2} (Kalan %50 Kapatıldı)",
+                            is_partial=False
+                        )
+                        if record:
+                            await self._notify_close(record, levels=levels)
+                            self._cleanup_tracking(symbol)
+                        return
+
+            # Hawkes Koşucu Sönümlenme Çıkışı: Çığ bittiğinde kârı zirvede kilitle
+            if is_half and pos.get('hawkes_runner_active', False):
+                sym_met_close = self.market_data.get_symbol_metrics(symbol) if (self.market_data and hasattr(self.market_data, 'get_symbol_metrics')) else {}
+                if sym_met_close.get('is_avalanche_exhausted', False) or float(sym_met_close.get('hawkes_eta', 0.5)) < 0.40:
+                    eta_val = float(sym_met_close.get('hawkes_eta', 0.35))
                     record = await self._safe_close_position(
-                        symbol, tp2_target,
-                        f"🚀 TP2 Nihai Hedefe Ulaşıldı{lvl_str2} (Kalan %50 Kapatıldı)",
+                        symbol, close_price,
+                        f"🛑 Hawkes Çığı Sönümlendi (eta={eta_val:.2f}) - Koşucu Kârı Zirvede Kilitlendi",
                         is_partial=False
                     )
                     if record:
@@ -2673,6 +2722,17 @@ class StrategyEngine:
                     c_list.append("VPIN_Toxic_Expansion_Confirmed")
                     reason_label += f" [🌊 VPIN %{vpin_val*100:.0f}]"
 
+                # 🏛️ Deribit -GEX Volatilite Patlaması Teyidi
+                if sym_met.get("is_gex_exploding", False):
+                    c_list.append("Deribit_-GEX_Volatility_Explosion")
+                    reason_label += " [🌋 Deribit -GEX]"
+
+                # ⚡ Hawkes Tasfiye Çığı Teyidi
+                if sym_met.get("is_avalanche_active", False):
+                    h_eta = sym_met.get("hawkes_eta", 0.85)
+                    c_list.append("Hawkes_Liquidation_Avalanche")
+                    reason_label += f" [⚡ Hawkes eta={h_eta:.2f}]"
+
                 await self._handle_open(
                     symbol=symbol, side="LONG", entry_price=close_price,
                     reason=reason_label,
@@ -2746,6 +2806,17 @@ class StrategyEngine:
                 if vpin_val >= 0.50:
                     c_list.append("VPIN_Toxic_Expansion_Confirmed")
                     reason_label += f" [🌊 VPIN %{vpin_val*100:.0f}]"
+
+                # 🏛️ Deribit -GEX Volatilite Patlaması Teyidi
+                if sym_met.get("is_gex_exploding", False):
+                    c_list.append("Deribit_-GEX_Volatility_Explosion")
+                    reason_label += " [🌋 Deribit -GEX]"
+
+                # ⚡ Hawkes Tasfiye Çığı Teyidi
+                if sym_met.get("is_avalanche_active", False):
+                    h_eta = sym_met.get("hawkes_eta", 0.85)
+                    c_list.append("Hawkes_Liquidation_Avalanche")
+                    reason_label += f" [⚡ Hawkes eta={h_eta:.2f}]"
 
                 await self._handle_open(
                     symbol=symbol, side="SHORT", entry_price=close_price,
@@ -2856,6 +2927,11 @@ class StrategyEngine:
                 c_list.append("Stoikov_S3_Magnet_Rebound")
                 reason_label += " [🧲 Stoikov Destek Mıknatısı]"
 
+            # 🏛️ DERIBIT +GEX DESTEK MIKNATISI TEYİDİ
+            if sym_met.get("is_gex_pinning", False):
+                c_list.append("Deribit_+GEX_Pinning_Support")
+                reason_label += " [🧲 Deribit +GEX Mıknatıs]"
+
             await self._handle_open(
                 symbol=symbol, side="LONG", entry_price=close_price,
                 reason=reason_label,
@@ -2917,6 +2993,11 @@ class StrategyEngine:
             if stoikov_magnet == "R3_MAGNET_REJECTION" or sym_met.get("is_stoikov_bear", False):
                 c_list.append("Stoikov_R3_Magnet_Rejection")
                 reason_label += " [🧲 Stoikov Direnç Mıknatısı]"
+
+            # 🏛️ DERIBIT +GEX DİRENÇ MIKNATISI TEYİDİ
+            if sym_met.get("is_gex_pinning", False):
+                c_list.append("Deribit_+GEX_Pinning_Resistance")
+                reason_label += " [🧲 Deribit +GEX Mıknatıs]"
 
             await self._handle_open(
                 symbol=symbol, side="SHORT", entry_price=close_price,

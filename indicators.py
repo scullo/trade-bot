@@ -1030,5 +1030,259 @@ def calculate_kyles_lambda(df_candles: pd.DataFrame, current_candle: dict = None
         return res
 
 
+def calculate_deribit_gex(options_book: list, spot_price: float = None) -> dict:
+    """
+    13. DERIBIT GEX (GAMMA EXPOSURE) & OPSİYON REJİM HAKEMİ
+    - Deribit kurumsal BTC/ETH opsiyon tahtasından Call ve Put GEX hesaplar.
+    - Black-Scholes Gamma:
+        d1 = [ln(S/K) + (0.5 * sigma^2 * tau)] / (sigma * sqrt(tau))
+        Gamma = exp(-0.5 * d1^2) / (S * sigma * sqrt(2*pi*tau))
+    - GEX ($ per 1% price move):
+        Call GEX = +Gamma * S^2 * OI * 0.01
+        Put GEX  = -Gamma * S^2 * OI * 0.01
+        Net GEX  = Sum(Call GEX) - Sum(Put GEX)
+    - Rejimler:
+        * Net GEX > 0: POSITIVE_GAMMA_PIN (Volatilite Sönümleyici / Yatay Mıknatıs)
+        * Net GEX < 0: NEGATIVE_GAMMA_EXPLOSION (Volatilite Hızlandırıcı / Trend Kırılımı)
+    """
+    res = {
+        'net_gex': 0.0,
+        'call_gex': 0.0,
+        'put_gex': 0.0,
+        'put_call_ratio': 1.0,
+        'gex_regime': 'NEUTRAL',
+        'is_pinning_regime': False,
+        'is_explosion_regime': False,
+        'gamma_flip_strike': 0.0,
+        'desc': '⚪ Nötr Gamma Rejimi'
+    }
+    if not options_book or not isinstance(options_book, list):
+        return res
+
+    try:
+        from datetime import datetime, timezone
+        now_time = datetime.now(timezone.utc)
+
+        # 1. Spot fiyat tespiti
+        if not spot_price or spot_price <= 0:
+            underlying_prices = [float(item.get('underlying_price', 0)) for item in options_book if item.get('underlying_price')]
+            spot_price = float(np.median(underlying_prices)) if underlying_prices else 0.0
+
+        if spot_price <= 0:
+            return res
+
+        calls_gex = 0.0
+        puts_gex = 0.0
+        total_call_oi = 0.0
+        total_put_oi = 0.0
+        strikes_gex = {}
+
+        for item in options_book:
+            name = item.get('instrument_name', '')
+            parts = name.split('-')
+            if len(parts) < 4:
+                continue
+
+            strike = float(parts[2])
+            opt_type = parts[3].upper()
+            oi = float(item.get('open_interest', 0.0))
+            if oi <= 0:
+                continue
+
+            iv_pct = float(item.get('mark_iv', 50.0))
+            sigma = max(0.10, iv_pct / 100.0)
+
+            # Vadeye kalan süre (yıl)
+            expiry_str = parts[1]
+            try:
+                expiry_dt = datetime.strptime(expiry_str, '%d%b%y').replace(tzinfo=timezone.utc)
+                diff_sec = (expiry_dt - now_time).total_seconds()
+                tau = max(1.0 / 365.25, diff_sec / (365.25 * 86400.0))
+            except Exception:
+                tau = 30.0 / 365.25
+
+            # Black-Scholes d1 ve Gamma
+            denom = sigma * np.sqrt(tau)
+            if denom <= 0:
+                continue
+            d1 = (np.log(spot_price / strike) + 0.5 * (sigma ** 2) * tau) / denom
+            gamma = (np.exp(-0.5 * (d1 ** 2)) / (spot_price * denom * np.sqrt(2.0 * np.pi)))
+
+            # GEX (USD / %1 fiyat hareketi)
+            dollar_gamma = gamma * (spot_price ** 2) * oi * 0.01
+
+            if strike not in strikes_gex:
+                strikes_gex[strike] = 0.0
+
+            if opt_type == 'C':
+                calls_gex += dollar_gamma
+                total_call_oi += oi
+                strikes_gex[strike] += dollar_gamma
+            elif opt_type == 'P':
+                puts_gex += dollar_gamma
+                total_put_oi += oi
+                strikes_gex[strike] -= dollar_gamma
+
+        net_gex = calls_gex - puts_gex
+        pcr = round(total_put_oi / total_call_oi, 3) if total_call_oi > 0 else 1.0
+
+        # Gamma Flip Seviyesi (Net Gamma'nın sıfırı kestiği kullanım fiyatı)
+        sorted_strikes = sorted(strikes_gex.items(), key=lambda x: x[0])
+        cum_gex = 0.0
+        flip_strike = spot_price
+        for st, g_val in sorted_strikes:
+            cum_gex += g_val
+            if cum_gex >= 0:
+                flip_strike = st
+                break
+
+        tot_abs = (calls_gex + puts_gex)
+        rel_bias = net_gex / tot_abs if tot_abs > 0 else 0.0
+
+        if rel_bias > 0.05:
+            regime = 'POSITIVE_GAMMA_PIN'
+            is_pinning = True
+            is_exploding = False
+            desc = f"🟩 Pozitif GEX (+${net_gex/1e6:.1f}M, PCR: {pcr:.2f}): Volatilite sönümlü, piyasa yapıcılar yatay mıknatıs modunda (S3/R3 & nPOC Scalp Desteklenir)."
+        elif rel_bias < -0.05:
+            regime = 'NEGATIVE_GAMMA_EXPLOSION'
+            is_pinning = False
+            is_exploding = True
+            desc = f"🟥 Negatif GEX (-${abs(net_gex)/1e6:.1f}M, PCR: {pcr:.2f}): Volatilite hızlandırıcı, kurumsal delta-hedge trend kırılımını besliyor (Breakout Teşvik Edilir)."
+        else:
+            regime = 'NEUTRAL_GAMMA'
+            is_pinning = False
+            is_exploding = False
+            desc = f"⚪ Dengeli Gamma ($0.0M, PCR: {pcr:.2f}): Normal piyasa dengesi."
+
+        return {
+            'net_gex': round(net_gex, 2),
+            'call_gex': round(calls_gex, 2),
+            'put_gex': round(puts_gex, 2),
+            'put_call_ratio': pcr,
+            'gex_regime': regime,
+            'is_pinning_regime': is_pinning,
+            'is_explosion_regime': is_exploding,
+            'gamma_flip_strike': float(flip_strike),
+            'desc': desc
+        }
+    except Exception as e:
+        res['desc'] = f'⚪ GEX Hesaplama İstisnası: {e}'
+        return res
+
+
+def calculate_hawkes_avalanche(
+    liquidations: list,
+    current_time: float = None,
+    alpha: float = 0.85,
+    beta: float = 0.12,
+    lookback_sec: float = 120.0
+) -> dict:
+    """
+    14. HAWKES KENDİ KENDİNİ BESLEYEN TASFİYE ÇIĞI (SELF-EXCITING LIQUIDATION AVALANCHE)
+    - Finansal mikro-yapıda kaldıraç tasfiyelerinin zincirleme patlamasını modeller.
+    - Yoğunluk Fonksiyonu:
+        lambda(t) = mu + sum_{t_i < t} alpha * w_i * exp(-beta * (t - t_i))
+    - Dallanma Oranı (Branching Ratio) eta = alpha / beta:
+        * eta >= 0.80 -> AVALANCHE_RUNNER_ACTIVE: Tasfiye çığı devam ediyor, TP2'de çıkma, kârı sür!
+        * eta < 0.40  -> AVALANCHE_EXHAUSTED: Çığ durdu, tasfiye yakıtı tükendi, tepe fitilde kârı kilitle.
+        * eta < 0.30  -> QUIET_FLOW: Çığ yok, standart scalp.
+    """
+    res = {
+        'branching_ratio_eta': 0.15,
+        'intensity': 0.05,
+        'regime': 'QUIET_FLOW',
+        'is_avalanche_active': False,
+        'is_avalanche_exhausted': False,
+        'avalanche_side': 'NONE',
+        'long_liq_usd': 0.0,
+        'short_liq_usd': 0.0,
+        'desc': '⚪ Durgun Tasfiye Akışı'
+    }
+    if not liquidations:
+        return res
+
+    try:
+        now_ts = float(current_time if current_time is not None else time.time())
+        cutoff = now_ts - lookback_sec
+
+        valid_events = []
+        long_usd = 0.0
+        short_usd = 0.0
+
+        for item in liquidations:
+            if isinstance(item, dict):
+                t = float(item.get('timestamp', 0.0))
+                usd = float(item.get('usd_size', 1000.0))
+                side = item.get('side', 'LONG')
+            elif isinstance(item, (int, float)):
+                t = float(item)
+                usd = 1000.0
+                side = 'LONG'
+            else:
+                continue
+
+            if t >= cutoff and t <= now_ts:
+                valid_events.append((t, usd, side))
+                if side == 'LONG':
+                    long_usd += usd
+                else:
+                    short_usd += usd
+
+        cnt = len(valid_events)
+        if cnt == 0:
+            return res
+
+        mu = 0.05
+        decay_sum = 0.0
+
+        for t, usd, _ in valid_events:
+            dt = max(0.0, now_ts - t)
+            w = float(np.clip(np.sqrt(usd / 10000.0), 0.5, 3.0))
+            decay_sum += alpha * w * np.exp(-beta * dt)
+
+        cur_intensity = mu + decay_sum
+
+        eta = float(np.clip((alpha / (beta * 10.0)) * (cur_intensity / max(mu, 0.01)) * 0.15, 0.05, 1.45))
+
+        if long_usd >= short_usd * 1.5 and long_usd > 5000.0:
+            av_side = 'LONG_LIQ_DUMP_CASCADE'
+        elif short_usd >= long_usd * 1.5 and short_usd > 5000.0:
+            av_side = 'SHORT_SQUEEZE_PUMP_CASCADE'
+        elif cnt >= 3:
+            av_side = 'DUAL_VOLATILITY_BURST'
+        else:
+            av_side = 'NONE'
+
+        is_active = (eta >= 0.80 and cur_intensity >= 0.35)
+        is_exhausted = (not is_active and cnt >= 5 and eta < 0.40)
+
+        if is_active:
+            regime = 'AVALANCHE_RUNNER_ACTIVE'
+            desc = f"⚡ Hawkes Tasfiye Çığı Aktif (eta={eta:.2f}, Yoğunluk={cur_intensity:.2f}): Zincirleme tasfiyeler trendi besliyor ({av_side}). TP2 sonrası kârı sür!"
+        elif is_exhausted:
+            regime = 'AVALANCHE_EXHAUSTED'
+            desc = f"🛑 Hawkes Çığı Sönümlendi (eta={eta:.2f}): Tasfiye yakıtı tükendi. Dönüş fitilinde acil kâr kilitle!"
+        else:
+            regime = 'QUIET_FLOW'
+            desc = f"⚪ Standart Tasfiye Akışı (eta={eta:.2f}, Yoğunluk={cur_intensity:.2f})"
+
+        return {
+            'branching_ratio_eta': round(eta, 2),
+            'intensity': round(cur_intensity, 3),
+            'regime': regime,
+            'is_avalanche_active': is_active,
+            'is_avalanche_exhausted': is_exhausted,
+            'avalanche_side': av_side,
+            'long_liq_usd': round(long_usd, 2),
+            'short_liq_usd': round(short_usd, 2),
+            'desc': desc
+        }
+    except Exception as e:
+        res['desc'] = f'⚪ Hawkes Hesaplama İstisnası: {e}'
+        return res
+
+
+
 
 

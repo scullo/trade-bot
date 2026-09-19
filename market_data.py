@@ -106,6 +106,26 @@ class MarketDataManager:
         self.perp_hist_3m = {s: deque(maxlen=60) for s in all_symbols}
         self.last_spot_update_ts = 0.0
 
+        # 🏛️ Faz 3: Deribit GEX (Gamma Exposure) & Hawkes Tasfiye Çığı Veri Yapıları
+        self.deribit_gex_data = {
+            'BTC': {'net_gex': 0.0, 'call_gex': 0.0, 'put_gex': 0.0, 'put_call_ratio': 1.0, 'gex_regime': 'NEUTRAL', 'is_pinning_regime': False, 'is_explosion_regime': False, 'gamma_flip_strike': 0.0, 'desc': '⚪ Deribit BTC GEX Başlatılıyor...', 'last_update': 0.0},
+            'ETH': {'net_gex': 0.0, 'call_gex': 0.0, 'put_gex': 0.0, 'put_call_ratio': 1.0, 'gex_regime': 'NEUTRAL', 'is_pinning_regime': False, 'is_explosion_regime': False, 'gamma_flip_strike': 0.0, 'desc': '⚪ Deribit ETH GEX Başlatılıyor...', 'last_update': 0.0},
+            'last_sync_ts': 0.0,
+            'is_live': False
+        }
+        self.global_hawkes_avalanche = {
+            'branching_ratio_eta': 0.15,
+            'intensity': 0.05,
+            'regime': 'QUIET_FLOW',
+            'is_avalanche_active': False,
+            'is_avalanche_exhausted': False,
+            'avalanche_side': 'NONE',
+            'long_liq_usd': 0.0,
+            'short_liq_usd': 0.0,
+            'desc': '⚪ Durgun Tasfiye Akışı',
+            'last_update': 0.0
+        }
+
         self.on_tick_callback = None
         self.on_candle_close_callback = None
         self.last_candle_callback_ts = {}  # norm_s -> int(candle timestamp) mükerrer mum tetikleme önleyici
@@ -258,7 +278,18 @@ class MarketDataManager:
                 "quant_engine": {
                     "levels": {"healthy": levels_ok, "count": healthy_levs, "total": total_syms, "pct": levels_pct},
                     "coin_dna": {"healthy": dna_loaded, "count": dna_count, "total": total_syms},
-                    "confluence": {"healthy": True, "mode": "Shannon Ortogonal 3-Eksen JIT"}
+                    "confluence": {"healthy": True, "mode": "Shannon Ortogonal 3-Eksen JIT"},
+                    "deribit_gex": {
+                        "healthy": True,
+                        "regime": self.get_deribit_gex_regime(),
+                        "net_gex_usd": float(self.deribit_gex_data.get('BTC', {}).get('net_gex', 0.0)),
+                        "pcr": float(self.deribit_gex_data.get('BTC', {}).get('put_call_ratio', 1.0))
+                    },
+                    "hawkes_avalanche": {
+                        "healthy": True,
+                        "eta": float(self.get_hawkes_avalanche().get('branching_ratio_eta', 0.15)),
+                        "regime": self.get_hawkes_avalanche().get('regime', 'QUIET_FLOW')
+                    }
                 },
                 "infrastructure": {
                     "github_persistence": {"healthy": gh_synced, "branch": gh_branch, "sha": gh_sha or "-"},
@@ -1263,6 +1294,9 @@ class MarketDataManager:
         # 8. Kyle's Lambda (İllikitlik & Fiyat Etki Oranı)
         lambda_info = calculate_kyles_lambda(df_5m)
 
+        # 9. Hawkes Kendi Kendini Besleyen Tasfiye Çığı Modeli
+        hawkes_info = self.get_hawkes_avalanche(symbol)
+
         # JIT L2 önbelleği varsa oradaki derin entropiyi al, yoksa varsayılan
         cached_l2 = getattr(self, 'jit_l2_cache', {}).get(symbol, {})
         entropy_norm = float(cached_l2.get('entropy_norm', 0.65))
@@ -1322,8 +1356,67 @@ class MarketDataManager:
             "kyles_lambda_ratio": float(lambda_info.get('lambda_ratio', 1.0)),
             "is_vacuum_trap": bool(lambda_info.get('is_vacuum_trap', False)),
             "is_liquid_expansion": bool(lambda_info.get('is_liquid_expansion', False)),
-            "lambda_desc": str(lambda_info.get('desc', ''))
+            "lambda_desc": str(lambda_info.get('desc', '')),
+            "deribit_gex_regime": str(self.get_deribit_gex_regime()),
+            "deribit_net_gex": float(self.deribit_gex_data.get('BTC', {}).get('net_gex', 0.0)),
+            "is_gex_pinning": bool(self.is_gex_pinning()),
+            "is_gex_exploding": bool(self.is_gex_exploding()),
+            "hawkes_eta": float(hawkes_info.get('branching_ratio_eta', 0.15)),
+            "is_avalanche_active": bool(hawkes_info.get('is_avalanche_active', False)),
+            "is_avalanche_exhausted": bool(hawkes_info.get('is_avalanche_exhausted', False)),
+            "avalanche_side": str(hawkes_info.get('avalanche_side', 'NONE')),
+            "avalanche_desc": str(hawkes_info.get('desc', ''))
         }
+
+    def get_deribit_gex(self, currency: str = 'BTC') -> dict:
+        """Deribit kurumsal opsiyon GEX ve Gamma verisini döndürür."""
+        if not hasattr(self, 'deribit_gex_data'):
+            return {}
+        return self.deribit_gex_data.get(currency.upper(), {})
+
+    def get_deribit_gex_regime(self) -> str:
+        """Global opsiyon gamma rejimini döndürür (POSITIVE_GAMMA_PIN, NEGATIVE_GAMMA_EXPLOSION, NEUTRAL)."""
+        btc_gex = self.get_deribit_gex('BTC')
+        return btc_gex.get('gex_regime', 'NEUTRAL')
+
+    def is_gex_pinning(self) -> bool:
+        """+GEX rejiminde piyasa yapıcıların volatiliteyi baskılayıp fiyatı kilitlediği rejim (S3/R3 Scalp ve nPOC teşvik)."""
+        btc_gex = self.get_deribit_gex('BTC')
+        return bool(btc_gex.get('is_pinning_regime', False))
+
+    def is_gex_exploding(self) -> bool:
+        """-GEX rejiminde kurumsal delta hedge'in volatiliteyi patlattığı rejim (Breakout/Breakdown teşvik)."""
+        btc_gex = self.get_deribit_gex('BTC')
+        return bool(btc_gex.get('is_explosion_regime', False))
+
+    def get_hawkes_avalanche(self, symbol: str = None) -> dict:
+        """
+        Kaldıraç tasfiye akışından (!forceOrder) Hawkes kendi kendini besleyen çığ analizi.
+        Pariteye özel tasfiye azsa global borsa tasfiyelerine bakar.
+        """
+        from indicators import calculate_hawkes_avalanche
+        if not hasattr(self, 'recent_liquidations') or not self.recent_liquidations:
+            return {
+                'branching_ratio_eta': 0.15,
+                'intensity': 0.05,
+                'regime': 'QUIET_FLOW',
+                'is_avalanche_active': False,
+                'is_avalanche_exhausted': False,
+                'avalanche_side': 'NONE',
+                'long_liq_usd': 0.0,
+                'short_liq_usd': 0.0,
+                'desc': '⚪ Durgun Tasfiye Akışı'
+            }
+
+        # Eğer parite belirtilmişse, o paritenin tasfiyelerini filtrele
+        if symbol:
+            clean_s = symbol.upper().replace('/', '').replace(':USDT', '').replace('USDT', '')
+            sym_liqs = [liq for liq in self.recent_liquidations if clean_s in liq.get('symbol', '').upper() or clean_s in liq.get('raw_symbol', '').upper()]
+            if len(sym_liqs) >= 2:
+                return calculate_hawkes_avalanche(sym_liqs)
+
+        # Global tasfiye çığı analizi
+        return calculate_hawkes_avalanche(list(self.recent_liquidations))
 
     def get_symbol_metrics(self, symbol: str) -> dict:
         if not hasattr(self, 'symbol_metrics'):
@@ -1738,6 +1831,15 @@ class MarketDataManager:
             'is_vacuum_trap': bool(lambda_info.get('is_vacuum_trap', False)),
             'is_liquid_expansion': bool(lambda_info.get('is_liquid_expansion', False)),
             'lambda_desc': str(lambda_info.get('desc', '')),
+            'deribit_gex_regime': str(self.get_deribit_gex_regime()),
+            'deribit_net_gex': float(self.deribit_gex_data.get('BTC', {}).get('net_gex', 0.0)),
+            'is_gex_pinning': bool(self.is_gex_pinning()),
+            'is_gex_exploding': bool(self.is_gex_exploding()),
+            'hawkes_eta': float(hawkes_info.get('branching_ratio_eta', 0.15)),
+            'is_avalanche_active': bool(hawkes_info.get('is_avalanche_active', False)),
+            'is_avalanche_exhausted': bool(hawkes_info.get('is_avalanche_exhausted', False)),
+            'avalanche_side': str(hawkes_info.get('avalanche_side', 'NONE')),
+            'avalanche_desc': str(hawkes_info.get('desc', '')),
             'last_update': now_ts
         }
 
@@ -1794,7 +1896,16 @@ class MarketDataManager:
                 'kyles_lambda_ratio': res_depth['kyles_lambda_ratio'],
                 'is_vacuum_trap': res_depth['is_vacuum_trap'],
                 'is_liquid_expansion': res_depth['is_liquid_expansion'],
-                'lambda_desc': res_depth['lambda_desc']
+                'lambda_desc': res_depth['lambda_desc'],
+                'deribit_gex_regime': res_depth['deribit_gex_regime'],
+                'deribit_net_gex': res_depth['deribit_net_gex'],
+                'is_gex_pinning': res_depth['is_gex_pinning'],
+                'is_gex_exploding': res_depth['is_gex_exploding'],
+                'hawkes_eta': res_depth['hawkes_eta'],
+                'is_avalanche_active': res_depth['is_avalanche_active'],
+                'is_avalanche_exhausted': res_depth['is_avalanche_exhausted'],
+                'avalanche_side': res_depth['avalanche_side'],
+                'avalanche_desc': res_depth['avalanche_desc']
             })
 
         return res_depth
@@ -2295,6 +2406,35 @@ class MarketDataManager:
                     pass
                 await asyncio.sleep(15)  # 15 saniyede bir spot baz fiyatlarını tazele
 
+        # Worker 7: Kurumsal Deribit GEX (Gamma Exposure) Radarı
+        async def deribit_gex_worker():
+            print(">> [DERIBIT GEX RADARI] Kurumsal Opsiyon Gamma Radarı Başlatılıyor...")
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+            while True:
+                try:
+                    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=12)) as session:
+                        for ccy in ['BTC', 'ETH']:
+                            url = f"https://www.deribit.com/api/v2/public/get_book_summary_by_currency?currency={ccy}&kind=option"
+                            try:
+                                async with session.get(url, headers=headers) as resp:
+                                    if resp.status == 200:
+                                        data = await resp.json()
+                                        book = data.get('result', [])
+                                        if book and isinstance(book, list):
+                                            from indicators import calculate_deribit_gex
+                                            gex_res = calculate_deribit_gex(book)
+                                            gex_res['last_update'] = time.time()
+                                            self.deribit_gex_data[ccy] = gex_res
+                            except Exception as ccy_err:
+                                print(f">> [DERIBIT GEX {ccy} HATA] {ccy_err}")
+                        self.deribit_gex_data['last_sync_ts'] = time.time()
+                        self.deribit_gex_data['is_live'] = True
+                        btc_res = self.deribit_gex_data.get('BTC', {})
+                        print(f">> [DERIBIT GEX GÜNCELLENDİ] BTC Rejim: {btc_res.get('gex_regime')} (Net: ${btc_res.get('net_gex', 0)/1e6:.1f}M, PCR: {btc_res.get('put_call_ratio'):.2f})")
+                except Exception as e:
+                    print(f">> [DERIBIT GEX RADAR UYARI] {e} (Mevcut GEX önbelleği korunuyor)")
+                await asyncio.sleep(900)  # Her 15 dakikada bir güncelle
+
         # Her worker'ı crash-proof saran koruyucu (bir worker çökerse diğerlerini öldürmez, otomatik yeniden başlatır)
         async def resilient_worker(name, coro_fn, *args):
             backoff = 2
@@ -2316,6 +2456,7 @@ class MarketDataManager:
             resilient_worker("FundingWorker", funding_worker),
             resilient_worker("ForceOrderRadar", forceorder_worker),
             resilient_worker("SpotBasisWorker", spot_basis_worker),
+            resilient_worker("DeribitGexRadar", deribit_gex_worker),
         ] + [resilient_worker(f"KLine-Chunk-{i}", kline_worker, c) for i, c in enumerate(kline_chunks)]
         await asyncio.gather(*tasks)
 
