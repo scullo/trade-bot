@@ -1,4 +1,4 @@
-import io, sys, os
+import io, sys, os, re
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -6,6 +6,15 @@ import matplotlib.patches as patches
 import numpy as np
 import pandas as pd
 from datetime import datetime, timezone, timedelta
+
+def _clean_reason(r: str) -> str:
+    if not r:
+        return "Teknik Seviye Sinyali"
+    s = re.sub(r'\[.*?\]', '', str(r)).strip()
+    s = re.sub(r'\(İlk Hedef.*?\)', '', s, flags=re.IGNORECASE).strip()
+    s = re.sub(r'[💥🛡️🎯🔬📌⚡🕹️🔴🟢💎🚀🧠💵🛑★]', '', s).strip()
+    s = re.sub(r'\s+', ' ', s).strip()
+    return s[:40] if s else "Teknik Seviye Sinyali"
 
 def fmt_p(p) -> str:
     if p is None or np.isnan(p) or p == 0:
@@ -274,30 +283,35 @@ def generate_trade_chart_image(
 
     # 6. Üst Başlık ve HUD Bilgi Paneli
     clean_sym = symbol.replace('/USDT', '')
-    side_text = "LONG (Alış)" if side == "LONG" else "SHORT (Satış)"
+    side_text = "LONG" if side == "LONG" else "SHORT"
 
     if is_actually_closed:
         pnl_str = f" | Net PnL: {net_pnl:+.2f}$ ({roe_pct:+.1f}%)" if (net_pnl is not None and roe_pct is not None) else ""
-        title_str = f"VALKYRIE QUANT DESK -- #{clean_sym}/USDT (5M) | [POZİSYON KAPANDI {side_text}]{pnl_str}"
+        title_str = f"VALKYRIE QUANT DESK -- #{clean_sym}/USDT (5M) | [{side_text} KAPANDI]{pnl_str}"
         ax.set_title(title_str, color='#ffffff', fontsize=11.0, fontweight='bold', pad=26, loc='left')
 
         is_profit = (net_pnl is not None and net_pnl >= 0)
         banner_border = '#10b981' if is_profit else '#f43f5e'
-        banner_tag = '>> KÂRLI KAPANIŞ' if is_profit else '>> STOP / KORUMALI ÇIKIŞ'
-        banner_text = f"{banner_tag}: {reason} | Giriş: {fmt_p(entry_price)} ➔ Çıkış: {fmt_p(exit_p)}" if 'exit_p' in locals() else f"{banner_tag}: {reason} | Giriş: {fmt_p(entry_price)} ➔ Çıkış: {fmt_p(exit_price)}"
+        banner_tag = f'>> KÂRLI KAPANIŞ ({roe_pct:+.1f}% ROE)' if is_profit else f'>> STOP KORUMASI ({roe_pct:+.1f}% ROE)'
+        clean_r = _clean_reason(reason)
+        actual_exit_p = exit_p if 'exit_p' in locals() else exit_price
+        banner_text = f"{banner_tag} | {clean_r} | Giriş: {fmt_p(entry_price)} ➔ Çıkış: {fmt_p(actual_exit_p)}"
         ax.text(0.02, 0.94, banner_text, transform=ax.transAxes,
                 color='#ffffff', fontsize=9.2, fontweight='bold',
                 bbox=dict(boxstyle='round,pad=0.35', facecolor='#090d16', edgecolor=banner_border, linewidth=1.5, alpha=0.95),
                 zorder=10)
     else:
-        title_str = f"VALKYRIE QUANT DESK -- #{clean_sym}/USDT (5M) | [{side_text}] | Anlık: {fmt_p(cur_p)}"
+        title_str = f"VALKYRIE QUANT DESK -- #{clean_sym}/USDT (5M) | [{side_text} (5x)] | Anlık: {fmt_p(cur_p)}"
         ax.set_title(title_str, color='#ffffff', fontsize=11.0, fontweight='bold', pad=26, loc='left')
 
         if reason:
-            banner_text = f">> GİRİŞ NEDENİ: {reason} | Giriş Seviyesi: {fmt_p(entry_price)}"
+            border_col = '#10b981' if side == "LONG" else '#f43f5e'
+            side_arrow = "▲ LONG GİRİŞ" if side == "LONG" else "▼ SHORT GİRİŞ"
+            clean_r = _clean_reason(reason)
+            banner_text = f">> {side_arrow}: {clean_r} | Giriş: {fmt_p(entry_price)}"
             ax.text(0.02, 0.94, banner_text, transform=ax.transAxes,
-                    color='#f8fafc', fontsize=9.2, fontweight='bold',
-                    bbox=dict(boxstyle='round,pad=0.35', facecolor='#090d16', edgecolor='#3b82f6', linewidth=1.5, alpha=0.95),
+                    color='#ffffff', fontsize=9.2, fontweight='bold',
+                    bbox=dict(boxstyle='round,pad=0.35', facecolor='#090d16', edgecolor=border_col, linewidth=1.5, alpha=0.95),
                     zorder=10)
 
     ax.set_ylim(padded_min, padded_max)

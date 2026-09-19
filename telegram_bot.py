@@ -62,38 +62,23 @@ class TelegramNotifier:
                 return
 
             # Telegram fotoğraf açıklama (caption) limiti 1024 karakterdir.
-            # 1024 karakteri aştığında fotoğraf kısa başlıkla, tam detaylı quant raporu ise hemen ardından mesaj olarak iletilir.
-            if len(caption) <= 1000:
-                data = aiohttp.FormData()
-                data.add_field('chat_id', str(self.chat_id))
-                data.add_field('caption', caption)
-                data.add_field('parse_mode', 'HTML')
-                data.add_field('photo', buf, filename='trade_chart.png', content_type='image/png')
+            # Caption 1000 karakterden uzun ise güvenli şekilde kısaltarak daima TEK ve kompakt mesaj olarak gönder
+            safe_caption = caption
+            if len(safe_caption) > 1000:
+                safe_caption = safe_caption[:990] + "\n..."
 
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(self.photo_url, data=data, timeout=15) as resp:
-                        if resp.status != 200:
-                            err_text = await resp.text()
-                            print(f">> Telegram sendPhoto Hatasi (HTTP {resp.status}): {err_text}, metin olarak iletiliyor...")
-                            await self.send_message(caption)
-            else:
-                # Başlık 1024 karakterden uzun: Fotoğrafı özet başlıkla gönder, ardından tüm detaylı metni ilet
-                lines = [l.strip() for l in caption.strip().splitlines() if l.strip() and "━━" not in l]
-                headline = "\n".join(lines[:4]) if lines else "📊 <b>Valkyrie Quant Pozisyon Grafiği</b>"
+            data = aiohttp.FormData()
+            data.add_field('chat_id', str(self.chat_id))
+            data.add_field('caption', safe_caption)
+            data.add_field('parse_mode', 'HTML')
+            data.add_field('photo', buf, filename='trade_chart.png', content_type='image/png')
 
-                data = aiohttp.FormData()
-                data.add_field('chat_id', str(self.chat_id))
-                data.add_field('caption', headline)
-                data.add_field('parse_mode', 'HTML')
-                data.add_field('photo', buf, filename='trade_chart.png', content_type='image/png')
-
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(self.photo_url, data=data, timeout=15) as resp:
-                        if resp.status != 200:
-                            err_text = await resp.text()
-                            print(f">> Telegram sendPhoto (Uzun) Hatasi (HTTP {resp.status}): {err_text}")
-                # Tüm detaylı metni mesaj olarak gönder (4096 karakter kapasitesi)
-                await self.send_message(caption)
+            async with aiohttp.ClientSession() as session:
+                async with session.post(self.photo_url, data=data, timeout=15) as resp:
+                    if resp.status != 200:
+                        err_text = await resp.text()
+                        print(f">> Telegram sendPhoto Hatasi (HTTP {resp.status}): {err_text}, metin olarak iletiliyor...")
+                        await self.send_message(safe_caption)
         except Exception as e:
             print(f">> Telegram sendPhoto istisnasi: {e}, metin gonderiliyor...")
             await self.send_message(caption)
@@ -117,137 +102,80 @@ class TelegramNotifier:
         except Exception as e:
             print(f">> Telegram sendDocument istisnasi: {e}")
 
-    def _generate_quant_entry_briefing(self, pos: dict, vol_val: float, rs_score: float, macro_str: str) -> str:
-        trade_type = str(pos.get("trade_type", ""))
-        reason = str(pos.get("reason", ""))
-        decouple = str(pos.get("decoupling_status", ""))
-        symbol = pos.get("symbol", "")
-        seed_str = f"{symbol}_{pos.get('entry_time', '')}_{trade_type}_{vol_val:.1f}"
-        idx = int(hashlib.md5(seed_str.encode('utf-8')).hexdigest(), 16)
+    @staticmethod
+    def _clean_signal_title(raw_reason: str) -> str:
+        """Teknik ve karmaşık sinyal metnini sade, kompakt ve şık hale getirir."""
+        if not raw_reason:
+            return "Teknik Seviye Sinyali"
+        s = str(raw_reason)
+        # Köşeli parantezli karmaşık metrikleri temizle: [💥 ...] [🛡️ ...]
+        s = re.sub(r'\[.*?\]', '', s).strip()
+        # Hedef parantezlerini temizle: (İlk Hedef ...)
+        s = re.sub(r'\(İlk Hedef.*?\)', '', s, flags=re.IGNORECASE).strip()
+        # Emojileri ve özel sembolleri temizle
+        s = re.sub(r'[💥🛡️🎯🔬📌⚡🕹️🔴🟢💎🚀🧠💵🛑★]', '', s).strip()
+        s = re.sub(r'\s+', ' ', s).strip()
+        return html.escape(s[:48] if s else "Teknik Seviye Sinyali", quote=False)
 
-        # 1. ALFA AYRIŞMA & YÜKSEK HACİMLİ BREAKOUT (vol_val >= 2.0 veya ALFA)
-        if "ALFA" in decouple or (vol_val >= 2.0 and "Breakout" in trade_type):
-            pool = [
-                f"Parite genel piyasadan bağımsız kurumsal hacimle ({vol_val:.1f}x) ayrıştı! Rüzgar arkamızda; TP1'de ilk kâr kilitlenip koruma kalkanına geçilecek.",
-                f"Akıllı para akışı netleşti ({vol_val:.1f}x Hacim, RS: {rs_score:+.2f}). Beta baskısını kıran paritede kurumsal alım dalgası değerlendiriliyor.",
-                f"Emir defterinde agresif likidite emilimi gerçekleşti ({vol_val:.1f}x). Parite piyasa yönünden bağımsız pozitif ivme yakaladı; TP1 hedefte.",
-                f"Kurumsal emir blokları seviyeyi hacimle ({vol_val:.1f}x) deldi. İlk hedefte risk sıfırlanarak trend koşusu planlandı.",
-                f"Yüksek hacimli konsolidasyon kırılımı teyit edildi. Göreceli güç katsayısı ({rs_score:+.2f}) güçlü momentumu doğruluyor.",
-                f"Büyük montanlı alıcı baskısı emir akışına yansıdı. Matematiksel disiplinle TP1 seviyesinde anapara emniyete alınacak."
-            ]
-            chosen = pool[idx % len(pool)]
-            return f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>{chosen}</i>\n"
-
-        # 2. STANDART BREAKOUT / MOMENTUM
-        elif "Breakout" in trade_type:
-            pool = [
-                "Kilit direnç eşiği aşıldı. 5M mum kapanışı seviye üzerinde teyit edildi; TP1'de %50 kâr kilidi ve ardından Breakeven zırhı işletilecek.",
-                "Volatilite genişlemesiyle birlikte yapısal kırılım onaylandı. 1.5 ATR dinamik tamponla işlem sağlama alındı.",
-                "Kurumsal değer alanı dışına yönlü patlama gerçekleşti. TP1 istasyonuna kadar ivme korunacak, ardından sıfır risk zırhına geçilecek.",
-                "Piyasa yapıcı direnç duvarı aşıldı. Disiplinli risk-getiri oranıyla ilk likidite havuzuna odaklanıldı.",
-                "Düşük zaman dilimi sıkışması yukarı kırıldı. Kural gereği TP1'de yarım kâr realizasyonu yapılarak sermaye korunacak."
-            ]
-            chosen = pool[idx % len(pool)]
-            return f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>{chosen}</i>\n"
-
-        # 3. MEAN REVERSION / nPOC / LİKİDİTE SEKMESİ
-        elif "SCALP" in trade_type or "nPOC" in reason or "Likidite" in reason or "Sekme" in reason:
-            pool = [
-                "Dokunulmamış kurumsal hacim bloğundan (nPOC) beklenen likidite sekmesi yakalandı. Yatay bant dengesinde kâr cebe alınacak.",
-                "İstatistiksel aşırı sapma kurumsal seviyede emildi. Fiyatın değer alanı eksenine (Mean Reversion) dönüşü hedefleniyor.",
-                "Fiyat kurumsal likidite havuzunu süpürüp seviye içine geri döndü. Düşük riskli, yüksek olasılıklı pivot tepkisi işleme alındı.",
-                "Piyasa dengesizliği (imbalance) nPOC istasyonunda karşılandı. 1.5 ATR koruma stopuyla mikro dalga değerlendiriliyor.",
-                "Kurumsal emir blokları seviyeyi savundu. Kısa vadeli sermaye korumalı scalp taktiği işletimde."
-            ]
-            chosen = pool[idx % len(pool)]
-            return f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>{chosen}</i>\n"
-
-        # 4. DESTEK / DİRENÇ / CAMARILLA REAKSİYONU
-        elif "S3" in reason or "R3" in reason or "Pivot" in reason:
-            pool = [
-                "Camarilla istatistiksel sınırında güçlü reaksiyon fitili onaylandı. Ortalama dönüş istikametinde disiplinli pozisyon başlatıldı.",
-                "Kritik dönüş seviyesinde alıcı/satıcı dengesi lehimize evrildi. 1.5 ATR dinamik stopla risk kontrol altında.",
-                "Aşırı uzamış fiyat hareketi destek/direnç bandında kurumsal taleple karşılaştı. Hedef pivot seviyesine doğru kontrollü kâr takibi.",
-                "Piyasa yapıcı denge eksenine doğru geri çekilme dalgası taranıyor. Matematiksel hedef seviyesinde kâr kilitlenecek."
-            ]
-            chosen = pool[idx % len(pool)]
-            return f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>{chosen}</i>\n"
-
-        # 5. RETEST / TREND DEVAM
-        elif "Retest" in reason or "Devam" in reason:
-            pool = [
-                "Trend yönünde sağlıklı geri çekilme (Retest) başarıyla tamamlandı. Düşük maliyetli kurumsal ekleme bölgesinde pozisyon tetiklendi.",
-                "Kırılan seviye yeni destek olarak test edildi ve korundu. Trend takip algoritması en uygun risk-getiri noktasından pozisyona girdi.",
-                "Momentum dinlenmesinin ardından trend yönünde yeni dalga teyidi. Dinamik takip stopu ile adım adım pozisyon sürülecek."
-            ]
-            chosen = pool[idx % len(pool)]
-            return f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>{chosen}</i>\n"
-
-        # 6. GENEL / DENGELİ QUANT KURALI
+    @staticmethod
+    def _fmt_price(p: float) -> str:
+        """Fiyatı büyüklüğüne göre en net ve şık formatta döndürür."""
+        if p is None or p == 0:
+            return "$0.00"
+        p = float(p)
+        abs_p = abs(p)
+        if abs_p >= 1000:
+            return f"${p:,.2f}"
+        elif abs_p >= 1:
+            return f"${p:.4f}"
+        elif abs_p >= 0.01:
+            return f"${p:.5f}"
+        elif abs_p >= 0.0001:
+            return f"${p:.6f}"
         else:
-            pool = [
-                "Matematiksel kural seti tam teyit verdi. Risk sermayesi koruma kalkanıyla kontrol altında.",
-                "Beklenen Değer (EV) pozitif bölgede hesaplandı. Dinamik kâr kilidi ve sert stop bariyeriyle işlem devrede.",
-                "Kurumsal pusu stratejisi seviyeyi onayladı. Önceden belirlenmiş para yönetimi kuralları harfiyen uygulanıyor."
-            ]
-            chosen = pool[idx % len(pool)]
-            return f"🧠 <b>Yapay Zeka Taktik Notu:</b> <i>{chosen}</i>\n"
+            return f"${p:.8f}"
 
     async def notify_position_opened(self, pos: dict, free_balance: float = None, df_5m = None, levels: dict = None):
-        side_emoji = "🟢 <b>LONG</b>" if pos["side"] == "LONG" else "🔴 <b>SHORT</b>"
         clean_sym = pos["symbol"].replace("/USDT", "")
+        side = pos.get("side", "LONG")
+        lev = pos.get("leverage", 5)
+        entry_p = float(pos.get("entry_price", 0.0))
+        margin = float(pos.get("margin_usdt", pos.get("margin", 100.0)))
+        stop_p = float(pos.get("hard_stop", pos.get("soft_stop", 0.0)))
+        tp1_p = float(pos.get("tp1", 0.0))
+        tp2_p = float(pos.get("tp2", 0.0)) if pos.get("tp2") else None
+
+        # Yüzde mesafeleri
+        stop_pct = abs((stop_p - entry_p) / entry_p * 100.0) if (entry_p > 0 and stop_p > 0) else 0.0
+        tp1_pct = abs((tp1_p - entry_p) / entry_p * 100.0) if (entry_p > 0 and tp1_p > 0) else 0.0
+
+        if side == "LONG":
+            header = "🟢🟢🟢 <b>LONG POZİSYON AÇILDI</b> 🟢🟢🟢"
+            side_tag = "🟢 <b>LONG</b>"
+        else:
+            header = "🔴🔴🔴 <b>SHORT POZİSYON AÇILDI</b> 🔴🔴🔴"
+            side_tag = "🔴 <b>SHORT</b>"
+
+        tp2_str = ""
+        if tp2_p and tp2_p > 0:
+            tp2_pct = abs((tp2_p - entry_p) / entry_p * 100.0) if entry_p > 0 else 0.0
+            tp2_str = f"\n🚀 <b>TP2:</b>  <code>{self._fmt_price(tp2_p)}</code> <i>(+%{tp2_pct:.2f})</i>"
+
+        clean_sig = self._clean_signal_title(pos.get("reason", ""))
+        bal_str = f"<code>${free_balance:,.2f} USDT</code>" if free_balance is not None else "<code>Aktif</code>"
         
-        atr_val = pos.get('atr_pct', 1.2)
-        vol_val = pos.get('volume_surge', 1.0)
-        bal_line = f"💼 <b>Serbest Kasa:</b> <code>${free_balance:.2f} USDT</code>\n" if free_balance is not None else ""
-        tp2_line = f"🚀 <b>TP2 Final:</b> <code>${pos['tp2']:.6f}</code>\n" if pos.get("tp2") else ""
+        t_raw = str(pos.get('entry_time', ''))
+        t_disp = t_raw.split()[-1] if ' ' in t_raw else t_raw
 
-        macro_str = str(pos.get('macro_climate', '⚪ Nötr / Dengeli Piyasa'))
-        decouple_str = str(pos.get('decoupling_status', '⚪ Nötr_Takipçi (Beta)'))
-        rs_score = pos.get('dynamic_rs_score', pos.get('rs_vs_btc', 0.0))
-
-        f_rate = pos.get('entry_funding_rate', 0.0100)
-        f_status = pos.get('funding_status', 'BALANCED')
-        f_status_label = "🟢 Dengeli" if f_status == "BALANCED" else ("⚠️ Short Squeeze Korumalı" if f_status == "SHORT_SQUEEZE_RISK" else "🔥 Aşırı Long")
-        funding_line = f"⚡ <b>Fonlama Oranı:</b> <code>%{f_rate:+.4f} ({f_status_label})</code>\n"
-
-        liq_vol = float(pos.get('entry_liq_volume_usd', 0.0))
-        liq_conf = pos.get('liq_confirmed', False)
-        liq_line = f"💥 <b>Tasfiye Teyidi:</b> <code>${liq_vol:,.0f} Perakende Tasfiyesi Süpürüldü 🎯</code>\n" if (liq_conf and liq_vol > 0) else ""
-
-        cvd_val = float(pos.get('entry_cvd_pct', 50.0))
-        cvd_stat = str(pos.get('cvd_status', 'DENGELİ'))
-        cvd_d = float(pos.get('entry_cvd_delta', 0.0))
-        cvd_line = ""
-        if cvd_val != 50.0 or cvd_stat != "DENGELİ":
-            d_str = f"{cvd_d/1000:+.0f}K" if abs(cvd_d) >= 1000 else f"{cvd_d:+.0f}"
-            safe_cvd_stat = html.escape(cvd_stat, quote=False)
-            cvd_line = f"🔬 <b>Mikro-CVD:</b> <code>%{cvd_val:.1f} Alıcı (Delta: ${d_str}) — {safe_cvd_stat}</code>\n"
-
-        # 🧠 Yapay Zeka Dinamik Taktik Brifingi
-        ai_tactic_note = self._generate_quant_entry_briefing(pos, vol_val, rs_score, macro_str)
-
-        # HTML injection/parse hatasını önlemek için dinamik metinleri sanitize et
-        safe_reason = html.escape(str(pos.get('reason', 'Strateji Sinyali')), quote=False)
-        safe_macro = html.escape(macro_str, quote=False)
-        safe_decouple = html.escape(decouple_str, quote=False)
-
-        msg = f"""💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎
-⚡ <b>YENİ POZİSYON AÇILDI</b> ⚡
-━━━━━━━━━━━━━━━━━━━━━━━━
-Parite: <b>#{clean_sym}/USDT</b> | {side_emoji} <b>({pos['leverage']}x)</b>
-Giriş: <code>${pos['entry_price']:.6f}</code> | Marjin: <b>${pos.get('margin_usdt', pos.get('margin', 100.0)):.1f}</b>
-━━━━━━━━━━━━━━━━━━━━━━━━
-🛑 <b>Stop:</b> <code>${pos.get('hard_stop', pos.get('soft_stop', 0.0)):.6f}</code>
-🎯 <b>TP1 Hedefi:</b> <code>${pos.get('tp1', 0.0):.6f}</code>
-{tp2_line}🛡️ <b>Kâr Zırhı:</b> <code>+%7 ROE veya 90dk (%50 Kilit)</code>
-📊 <b>ATR / Hacim:</b> <code>%{atr_val:.2f} | {vol_val:.2f}x</code>
-🌐 <b>Makro İklim:</b> <code>{safe_macro}</code>
-⚡ <b>Alfa/Beta Gücü:</b> <code>{safe_decouple} (RS: {rs_score:+.2f})</code>
-{funding_line}{liq_line}{cvd_line}{bal_line}━━━━━━━━━━━━━━━━━━━━━━━━
-📌 <b>Setup:</b> <i>{safe_reason}</i>
-{ai_tactic_note}⏰ <b>Zaman:</b> <code>{pos.get('entry_time', '')}</code>
-💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎"""
+        msg = f"""{header}
+🪙 <b>#{clean_sym}/USDT</b> │ {side_tag} <b>({lev}x)</b>
+━━━━━━━━━━━━━━━━━━━━
+💵 <b>Giriş:</b> <code>{self._fmt_price(entry_p)}</code> │ <b>Marjin:</b> <code>${margin:.1f}</code>
+🛑 <b>Stop:</b> <code>{self._fmt_price(stop_p)}</code> <i>(-%{stop_pct:.2f})</i>
+🎯 <b>TP1:</b>  <code>{self._fmt_price(tp1_p)}</code> <i>(+%{tp1_pct:.2f})</i>{tp2_str}
+────────────────────
+⚡ <b>Sinyal:</b> <i>{clean_sig}</i>
+💼 <b>Kasa:</b> {bal_str} │ ⏰ <code>{t_disp}</code>"""
 
         # Grafik Fotograf Olustur
         chart_buf = None
@@ -273,118 +201,62 @@ Giriş: <code>${pos['entry_price']:.6f}</code> | Marjin: <b>${pos.get('margin_us
         else:
             await self.send_message(msg)
 
-    def _generate_quant_exit_autopsy(self, record: dict, net_pnl: float, roe: float, is_win: bool, is_partial_tp1: bool, is_breakeven: bool, is_manual: bool) -> str:
-        symbol = record.get("symbol", "")
-        seed_str = f"{symbol}_{record.get('exit_time', '')}_{net_pnl:.2f}_{roe:.2f}_{is_manual}"
-        idx = int(hashlib.md5(seed_str.encode('utf-8')).hexdigest(), 16)
-
-        # 1. MANUEL MÜDAHALE
-        if is_manual:
-            pool = [
-                "Operatör inisiyatifi ile pozisyon güvenli limana çekildi. Piyasa belirsizliği döneminde sermaye likit olarak korumaya alındı.",
-                "Dashboard üzerinden anlık risk tasfiyesi gerçekleştirildi. Kasa emniyeti ön planda tutularak işlem sonlandırıldı.",
-                "Manuel emirle masadan kalkıldı. Sermaye yeni açılacak yüksek potansiyelli fırsatlar için serbest bırakıldı."
-            ]
-            return f"🧠 <b>Yapay Zeka Otopisi:</b> <i>{pool[idx % len(pool)]}</i>\n"
-
-        # 2. DİNAMİK KÂR KİLİDİ (TP1 / %50 NAKİT)
-        if is_partial_tp1:
-            pool = [
-                "Dinamik Kâr Kilidi (%50) disiplinle çalıştı ve kârı cebe kilitledi. Kalan %50 artık tamamen sıfır riskle koşuyor.",
-                "TP1 hedefi kurumsal disiplinle nakite çevrildi. Kalan pozisyon Breakeven kalkanıyla 'bedava bilet' modunda TP2 hedefine ilerliyor.",
-                "Portföy koruma protokolü devrede: İlk dilim kâr realize edildi, anapara koruma stopu başabaş seviyesine sabitlendi.",
-                "İstatistiki kâr optimizasyonu kusursuz işledi. Yarı pay nakite alındı; kalan bakiye sıfır risk zırhıyla trend genişlemesini izliyor.",
-                "Kâr kilitleme kuralı işletildi. Sermaye büyüme eğrisine net katkı sağlandı, sıfır stresle serbest koşu devam ediyor."
-            ]
-            return f"🧠 <b>Yapay Zeka Otopisi:</b> <i>{pool[idx % len(pool)]}</i>\n"
-
-        # 3. BREAKEVEN KAPANIŞ (0 RİSK KORUMASI)
-        if is_breakeven:
-            pool = [
-                "Fiyat ilk hedeften sonra terse döndü; ancak Breakeven kalkanı devreye girerek anaparayı kuruşu kuruşuna korudu.",
-                "Kâr daha önce realize edilmişti; kalan pay piyasa dönüşünde başabaş seviyesinde korundu. İşlem net kârla tamamlandı.",
-                "Sıfır risk zırhı görevini yaptı. Piyasadaki ani ters dalgalanmada anapara erimedi, sermaye bir sonraki kuruluma eksiksiz aktarıldı.",
-                "Başabaş kalkanı kusursuz çalıştı. Piyasa tersine dönerken pozisyon zamanında tasfiye edilerek potansiyel zararlar engellendi.",
-                "Koruma protokolü zaferi: Kâr cepte, anapara korundu. Ters piyasa koşullarında sermaye bütünlüğünü korumak en büyük başarıdır."
-            ]
-            return f"🧠 <b>Yapay Zeka Otopisi:</b> <i>{pool[idx % len(pool)]}</i>\n"
-
-        # 4. KÂRLI TAM KAPANIŞ (TP2 / TAM HEDEF / WIN)
-        if is_win:
-            pool = [
-                f"Matematiksel plan kusursuz işledi! Zirve hedefe ulaşıldı ve {net_pnl:+.2f}$ net kâr kasaya eklendi.",
-                f"Kurumsal kâr istasyonuna tam isabet. Trendin zirve noktasında tam kâr realizasyonuyla {net_pnl:+.2f}$ portföye yazıldı.",
-                f"Hedeflenen R:R matrisi milimetrik tamamlandı. Disiplinli algoritma yönetimiyle kasa büyüme hedefine bir adım daha atıldı.",
-                f"Akıllı para kâr alma bölgesinde pozisyon tamamen tasfiye edildi. Piyasa dönüş riskine maruz kalınmadan net kâr ({net_pnl:+.2f}$) kilitlendi.",
-                f"Kusursuz işlem icrası: Seviye kırılımından tepe hedefe kadar dalga sonuna kadar sürüldü ({net_pnl:+.2f}$). Tebrikler!",
-                f"Trend genişlemesi matematiksel hedefte sonlandırıldı. Kasa disiplini ve sabırla beklenen kâr realize edildi."
-            ]
-            return f"🧠 <b>Yapay Zeka Otopisi:</b> <i>{pool[idx % len(pool)]}</i>\n"
-
-        # 5. SERT STOP / ZARAR KES (STOP LOSS)
-        hard_stop_val = record.get('hard_stop', 0)
-        stop_str = f" (${hard_stop_val:.4f})" if hard_stop_val else ""
-        pool = [
-            f"1.5 ATR dinamik stop mekanizması{stop_str} felaket koruması olarak görevini yaptı ve kaybı sınırladı. Sermaye korundu, yeni fırsat taranıyor.",
-            f"Piyasa yapısı geçici olarak bozuldu; quant kuralı tereddütsüz stop uygulayarak sermayeyi büyük çöküşten korudu. Sermaye disiplini esastır.",
-            f"Kontrollü stop kaybı: İstatistiksel sınır dışına çıkan harekette kayıp katı kurallarla sınırlandı. Portföy riski matematiksel limitler dahilinde.",
-            f"Risk kalkanı devrede: Sert stop seviyesi felaketi engelledi. Yanlış giden piyasa hareketine inatlaşılmadı, sermaye yeni döngüye saklandı.",
-            f"Planlanan risk bütçesi haricinde tek kuruş kayıp verilmedi. Stop olmak bir kayıp değil, sermayeyi hayatta tutan en kritik profesyonel savunmadır.",
-            f"Disiplinli sermaye savunması: Pozisyon stop sınırında tereddütsüz kesildi. Portföy sağlığı ve uzun vadeli hayatta kalma kuralı işletildi."
-        ]
-        return f"🧠 <b>Yapay Zeka Otopisi:</b> <i>{pool[idx % len(pool)]}</i>\n"
-
     async def notify_position_closed(self, record: dict, is_manual: bool = False, df_5m = None, levels: dict = None):
         net_pnl = float(record.get("net_pnl", 0.0))
         roe = float(record.get("roe_pct", 0.0))
-        is_win = net_pnl >= 0
-        is_partial_tp1 = record.get("id", "").endswith("-TP1") or "Dinamik" in str(record.get("close_reason", "")) or "Zaman Kalkanı" in str(record.get("close_reason", ""))
-        is_breakeven = "Breakeven" in str(record.get("close_reason", "")) or (record.get("is_half_closed") and not is_win)
-        if is_manual:
-            pnl_emoji = "🚨 <b>MANUEL MÜDAHALE — POZİSYON KAPATILDI</b> 🚨"
-        elif is_partial_tp1:
-            pnl_emoji = "🎯 <b>DİNAMİK KÂR KİLİTLENDİ (%50 NAKİT ALINDI)</b> 💎"
-        elif is_breakeven:
-            pnl_emoji = "🛡️ <b>BREAKEVEN KORUMASI İLE KAPATILDI (0 RİSK KORUMASI)</b> 🟢"
-        else:
-            pnl_emoji = "🎉 <b>KÂRLI KAPANIŞ (TAM HEDEF)</b> 🟢" if is_win else "🛑 <b>ZARAR KES (STOP)</b> 🔴"
+        is_win = net_pnl > 0
         clean_sym = record.get("symbol", "").replace("/USDT", "")
+        side = record.get("side", "LONG")
+        lev = record.get("leverage", 5)
+        side_tag = "🟢 LONG" if side == "LONG" else "🔴 SHORT"
+        entry_p = float(record.get('entry_price', 0.0))
+        exit_p = float(record.get('exit_price', 0.0))
 
-        manual_tag = "\n⚠️ <i>Kullanıcı Dashboard üzerinden acil müdahale ile pozisyonu kapattı.</i>\n" if is_manual else ""
+        close_reason_raw = str(record.get("close_reason", ""))
+        is_stop = "Stop" in close_reason_raw or "Zarar" in close_reason_raw or net_pnl < -0.20
+        is_partial_tp1 = (record.get("id", "").endswith("-TP1") or "Dinamik Kâr" in close_reason_raw or "TP1" in close_reason_raw) and not is_stop
+        is_breakeven = ("Breakeven" in close_reason_raw or (record.get("is_half_closed") and abs(net_pnl) < 0.8)) and not is_partial_tp1
+
+        if is_manual:
+            header = "🚨🚨🚨 <b>MANUEL KAPANIŞ</b> 🚨🚨🚨"
+            pnl_line = f"🕹️ <b>NET PnL:</b> <b>{net_pnl:+.2f} USDT ({roe:+.2f}% ROE)</b>"
+            reason_text = "Operatör Müdahalesi"
+        elif is_partial_tp1:
+            header = "🟢🟢🟢 <b>DİNAMİK KÂR KİLİTLENDİ (%50)</b> 🟢🟢🟢"
+            pnl_line = f"💰 <b>NET KÂR:</b> <b>+{abs(net_pnl):.2f} USDT (+%{abs(roe):.2f} ROE)</b> 🟢"
+            reason_text = "TP1 Alındı (Kalan %50 Breakeven ile koşuyor)"
+        elif is_win and not is_breakeven:
+            header = "🟢🟢🟢 <b>KÂRLI TAM KAPANIŞ</b> 🚀🚀🚀"
+            pnl_line = f"🚀 <b>NET KÂR:</b> <b>+{abs(net_pnl):.2f} USDT (+%{abs(roe):.2f} ROE)</b> 🟢"
+            reason_text = "Zirve TP2 Hedefine Ulaşıldı"
+        elif is_breakeven:
+            header = "🛡️🛡️🛡️ <b>BREAKEVEN KORUMASI (0 RİSK)</b> 🛡️🛡️🛡️"
+            pnl_line = f"🛡️ <b>NET SONUÇ:</b> <b>{net_pnl:+.2f} USDT (%{roe:+.2f} ROE)</b> ⚪"
+            reason_text = "Fiyat Girişe Döndü (Komisyon zırhı korudu)"
+        else:
+            header = "🔴🔴🔴 <b>STOP KORUMASI DEVREDE</b> 🔴🔴🔴"
+            pnl_line = f"⚠️ <b>NET ZARAR:</b> <b>-{abs(net_pnl):.2f} USDT (-%{abs(roe):.2f} ROE)</b> 🔴"
+            reason_text = "Dinamik Stop Tetiklendi (Sermaye korundu)"
+
         bal_after = record.get('balance_after', '')
         try:
-            bal_str = f"💼 <b>Güncel Toplam Kasa:</b> <b>{float(bal_after):.2f} USDT</b>\n" if bal_after != '' else ""
+            bal_str = f"<code>${float(bal_after):,.2f} USDT</code>" if bal_after != '' else "<code>Güncellendi</code>"
         except Exception:
-            bal_str = ""
+            bal_str = "<code>Güncellendi</code>"
 
-        open_reason = record.get("reason", "Strateji Sinyali")
-        close_reason = record.get("close_reason", "Hedef/Stop Kapanışı")
-        partial_note = "\n🛡️ <b>Kalan %50:</b> <i>Breakeven ile 0 riskle koşuyor!</i>\n" if is_partial_tp1 else ("\nℹ️ <i>İlk %50 kârı daha önce kasaya kilitlenmişti; kalan kısım koruma stopuyla risksiz kapatıldı.</i>\n" if is_breakeven else "")
-        
-        # 🧠 Yapay Zeka Dinamik İşlem Otopisi (20+ Varyasyon)
-        ai_autopsy_note = self._generate_quant_exit_autopsy(record, net_pnl, roe, is_win, is_partial_tp1, is_breakeven, is_manual)
+        t_raw = str(record.get('exit_time', ''))
+        t_disp = t_raw.split()[-1] if ' ' in t_raw else t_raw
 
-        safe_open_reason = html.escape(str(open_reason), quote=False)
-        safe_close_reason = html.escape(str(close_reason), quote=False)
-        safe_macro = html.escape(str(record.get('macro_climate', '')), quote=False)
-        macro_line = f"🌐 <b>İşlem İklimi:</b> <code>{safe_macro}</code>\n" if safe_macro else ""
-
-        msg = f"""💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎
-{pnl_emoji}
-━━━━━━━━━━━━━━━━━━━━━━━━
-Parite: <b>#{clean_sym}/USDT</b> ({record.get('side', '')} {record.get('leverage', 5)}x)
-Giriş: <code>${float(record.get('entry_price', 0.0)):.6f}</code> ➔ Çıkış: <code>${float(record.get('exit_price', 0.0)):.6f}</code>
-━━━━━━━━━━━━━━━━━━━━━━━━
-💰 <b>Net Kâr / Zarar:</b> <b>{net_pnl:+.4f} USDT ({roe:+.2f}%)</b>
-💵 <b>Brüt:</b> {float(record.get('gross_pnl', net_pnl)):+.4f} $ | 💸 <b>Komisyon:</b> {float(record.get('fees', 0.0)):.4f} $
-{bal_str}━━━━━━━━━━━━━━━━━━━━━━━━
-📥 <b>Açılış Nedeni:</b> <i>{safe_open_reason}</i>
-📤 <b>Kapanış Nedeni:</b> <i>{safe_close_reason}</i>{manual_tag}{partial_note}
-{macro_line}{ai_autopsy_note}⏰ <b>Çıkış Zamanı:</b> <code>{record.get('exit_time', '')}</code>
-💎 ━━━━━━━━━━━━━━━━━━━━━━ 💎"""
+        msg = f"""{header}
+🪙 <b>#{clean_sym}/USDT</b> │ {side_tag} <b>({lev}x)</b>
+━━━━━━━━━━━━━━━━━━━━
+💵 <code>{self._fmt_price(entry_p)}</code> ➔ <code>{self._fmt_price(exit_p)}</code>
+{pnl_line}
+─────────────────────
+🎯 <b>Neden:</b> <i>{reason_text}</i>
+💼 <b>Kasa:</b> {bal_str} │ ⏰ <code>{t_disp}</code>"""
 
         chart_buf = None
-        archive_tag = ""
         if df_5m is not None and not df_5m.empty:
             try:
                 entry_ts = record.get("entry_timestamp")
@@ -407,9 +279,9 @@ Giriş: <code>${float(record.get('entry_price', 0.0)):.6f}</code> ➔ Çıkış:
                     net_pnl=net_pnl,
                     roe_pct=roe
                 )
-                
-                # Otomatik Kritik Pozisyon Grafik Arşivleyicisi
-                is_critical = abs(net_pnl) >= 2.0 or abs(roe) >= 5.0 or is_manual or "Stop" in str(close_reason) or "TP" in str(close_reason) or "Dinamik" in str(close_reason)
+
+                # Otomatik Kritik Pozisyon Grafik Arşivleyicisi (Sessizce diske kaydeder, mesaja yol eklemez)
+                is_critical = abs(net_pnl) >= 2.0 or abs(roe) >= 5.0 or is_manual or "Stop" in str(close_reason_raw) or "TP" in str(close_reason_raw) or "Dinamik" in str(close_reason_raw)
                 if chart_buf and is_critical:
                     try:
                         os.makedirs("ANALİZ/KRİTİK_GRAFİKLER", exist_ok=True)
@@ -419,14 +291,10 @@ Giriş: <code>${float(record.get('entry_price', 0.0)):.6f}</code> ➔ Çıkış:
                         fpath = os.path.join("ANALİZ/KRİTİK_GRAFİKLER", fname)
                         with open(fpath, "wb") as f_img:
                             f_img.write(chart_buf.getvalue())
-                        archive_tag = f"📸 <b>Adli Analiz Grafiği Kaydedildi:</b> <code>ANALİZ/KRİTİK_GRAFİKLER/{fname}</code>\n"
                     except Exception as ex_arch:
                         print(f"[ARŞİVLEME HATA]: {ex_arch}")
             except Exception as e:
                 print(f"[TELEGRAM] Kapanis grafigi olusturulamadi: {e}")
-
-        if archive_tag:
-            msg = msg.replace("⏰ <b>Çıkış Zamanı:</b>", f"{archive_tag}⏰ <b>Çıkış Zamanı:</b>")
 
         if chart_buf:
             await self.send_photo(chart_buf, msg)
