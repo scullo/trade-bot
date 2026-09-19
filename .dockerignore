@@ -9,6 +9,6 @@ _ARCHIVE_SCRATCH/
 ANALİZ/
 *.xlsx
 *.csv
-*.txt
 *.docx
 *.lnk
+!requirements.txt
