@@ -6,10 +6,12 @@ import gzip
 import json
 import numpy as np
 import pandas as pd
+import time
 from datetime import datetime, timezone, timedelta
 from aiohttp import web
 from config import SYMBOLS
 
+SERVER_START_TS = time.time()
 sse_clients = set()
 
 HTML_PAGE = """
@@ -824,7 +826,7 @@ HTML_PAGE = """
             border: 1px solid rgba(243, 186, 47, 0.4);
         }
         .settings-html, body { overflow-anchor: none; }
-        body {
+        .settings-body {
             padding: 20px 24px;
             overflow-y: auto;
             flex: 1;
@@ -2152,6 +2154,346 @@ HTML_PAGE = """
             display: block;
         }
 
+        /* 📈 VALKYRIE KURUMSAL KASA PERFORMANSI (EQUITY CURVE) */
+        .equity-curve-card {
+            background: linear-gradient(180deg, rgba(14, 20, 34, 0.92) 0%, rgba(10, 14, 25, 0.98) 100%);
+            border: 1px solid rgba(0, 242, 254, 0.25);
+            border-radius: 18px;
+            padding: 18px 22px;
+            margin-bottom: 22px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 0 20px rgba(0, 242, 254, 0.08);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(14px);
+        }
+        .equity-curve-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2.5px;
+            background: linear-gradient(90deg, #00f2fe, #38bdf8, #10b981);
+        }
+        .equity-top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .equity-title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .equity-title {
+            font-size: 13.5px;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            color: #ffffff;
+            letter-spacing: 0.4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .equity-hud-chips {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .equity-chip {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .equity-chip-label {
+            color: #94a3b8;
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+        .equity-chip-val {
+            color: #ffffff;
+            font-weight: 800;
+        }
+        .equity-canvas-container {
+            width: 100%;
+            height: 260px;
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #080c14;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .equity-empty-placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: #94a3b8;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12.5px;
+            background: radial-gradient(circle at 50% 50%, rgba(0, 242, 254, 0.04) 0%, transparent 70%);
+        }
+
+        /* 🛡️ KUANT KALKANLARI & REDDEDİLEN SİNYAL İSTİHBARATI */
+        .rejection-panel-card {
+            background: linear-gradient(180deg, rgba(14, 20, 34, 0.92) 0%, rgba(10, 14, 25, 0.98) 100%);
+            border: 1px solid rgba(255, 71, 87, 0.25);
+            border-radius: 18px;
+            padding: 18px 22px;
+            margin: 20px 0;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 0 20px rgba(255, 71, 87, 0.08);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(14px);
+        }
+        .rejection-panel-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2.5px;
+            background: linear-gradient(90deg, #ff4757, #fb923c, #f59e0b);
+        }
+        .shield-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .shield-stat-card {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            padding: 9px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+        .shield-stat-card:hover {
+            border-color: rgba(255, 71, 87, 0.35);
+            background: rgba(255, 71, 87, 0.05);
+        }
+        .rejection-feed-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 260px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .rejection-feed-item {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-left: 3px solid #ff4757;
+            border-radius: 8px;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+            transition: all 0.15s ease;
+            gap: 10px;
+        }
+        .rejection-feed-item:hover {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+        .rejection-shield-tag {
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 6px;
+            background: rgba(255, 71, 87, 0.15);
+            color: #ff4757;
+            border: 1px solid rgba(255, 71, 87, 0.35);
+            white-space: nowrap;
+        }
+
+        /* 🌡️ PORTFÖY RİSK & EXPOSURE HUD */
+        .portfolio-risk-hud {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .risk-hud-card {
+            background: linear-gradient(180deg, rgba(16, 22, 36, 0.85) 0%, rgba(11, 16, 28, 0.92) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .risk-hud-title {
+            font-size: 10.5px;
+            font-weight: 800;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .risk-hud-val {
+            font-size: 19px;
+            font-weight: 900;
+            font-family: 'JetBrains Mono', monospace;
+            color: #ffffff;
+        }
+        .risk-hud-sub {
+            font-size: 10.5px;
+            color: #64748b;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* 🎯 STOP / TP ROUTE PROGRESS BAR (DİNAMİK ROTA TAKİBİ) */
+        .pos-route-track {
+            position: relative;
+            width: 100%;
+            height: 14px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 7px;
+            overflow: hidden;
+            margin: 6px 0 3px 0;
+            display: flex;
+        }
+        .pos-route-loss-zone {
+            width: 35%;
+            background: linear-gradient(90deg, rgba(244, 63, 94, 0.3) 0%, rgba(244, 63, 94, 0.08) 100%);
+            border-right: 1.5px dashed rgba(255, 255, 255, 0.25);
+            position: relative;
+        }
+        .pos-route-profit-zone {
+            width: 65%;
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.35) 100%);
+            position: relative;
+        }
+        .pos-route-cursor {
+            position: absolute;
+            top: 1px;
+            bottom: 1px;
+            width: 4px;
+            background: #ffffff;
+            border-radius: 2px;
+            box-shadow: 0 0 8px #ffffff, 0 0 14px #00f2fe;
+            z-index: 5;
+            transition: left 0.3s ease;
+        }
+        .pos-route-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            color: #94a3b8;
+            margin-bottom: 2px;
+        }
+
+        /* 📜 İŞLEM GEÇMİŞİ PNL & ROE PİLLERİ */
+        .history-pnl-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        .history-pnl-pill.pnl-win {
+            background: rgba(16, 185, 129, 0.12);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.15);
+        }
+        .history-pnl-pill.pnl-loss {
+            background: rgba(244, 63, 94, 0.12);
+            color: #f43f5e;
+            border: 1px solid rgba(244, 63, 94, 0.3);
+            box-shadow: 0 0 8px rgba(244, 63, 94, 0.15);
+        }
+        .history-roe-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px 7px;
+            border-radius: 5px;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+            white-space: nowrap;
+        }
+        .history-roe-pill.roe-win {
+            background: rgba(16, 185, 129, 0.08);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        .history-roe-pill.roe-loss {
+            background: rgba(244, 63, 94, 0.08);
+            color: #fb7185;
+            border: 1px solid rgba(244, 63, 94, 0.2);
+        }
+
+        /* 📊 SETUP PERFORMANS MATRİSİ */
+        .setup-matrix-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .setup-matrix-card {
+            background: rgba(13, 18, 30, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            transition: all 0.2s ease;
+        }
+        .setup-matrix-card:hover {
+            border-color: rgba(0, 242, 254, 0.3);
+            transform: translateY(-1px);
+        }
+        .setup-card-name {
+            font-size: 11px;
+            font-weight: 800;
+            color: #94a3b8;
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+        }
+        .setup-card-pnl {
+            font-size: 17px;
+            font-weight: 900;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .setup-card-stats {
+            font-size: 11px;
+            color: #64748b;
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            justify-content: space-between;
+        }
+
     </style>
 </head>
 <body>
@@ -2965,6 +3307,8 @@ HTML_PAGE = """
                 </div>
                 <div class="sidebar-status-meta">
                     <div class="sidebar-status-row"><span>Parite Akışı:</span> <b>100 / 100</b></div>
+                    <div class="sidebar-status-row"><span>Açık PnL:</span> <b id="sidebar-open-pnl" style="color:#94a3b8;">$0.00 (0 Açık)</b></div>
+                    <div class="sidebar-status-row"><span>Net Realize:</span> <b id="sidebar-net-pnl" style="color:var(--green);">+$0.00</b></div>
                     <div class="sidebar-status-row"><span>RAM Kalkanı:</span> <b>512MB RAM</b></div>
                     <div class="sidebar-status-row"><span>Bulut:</span> <b>Render Linux</b></div>
                 </div>
@@ -3046,8 +3390,99 @@ HTML_PAGE = """
             </div>
         </div>
 
+        <!-- 📈 VALKYRIE KURUMSAL KASA PERFORMANSI (EQUITY CURVE) -->
+        <div class="equity-curve-card" id="cockpit-equity-curve-card">
+            <div class="equity-top-bar">
+                <div class="equity-title-wrap">
+                    <div class="equity-title">
+                        <span style="font-size:16px;">📈</span>
+                        <span>VALKYRIE KURUMSAL KASA PERFORMANSI</span>
+                        <span style="font-size:10.5px; background:rgba(0,242,254,0.12); color:var(--cyan); border:1px solid rgba(0,242,254,0.3); padding:2px 7px; border-radius:6px; font-weight:800;">EQUITY CURVE</span>
+                    </div>
+                </div>
+                <div class="equity-hud-chips">
+                    <div class="equity-chip">
+                        <span class="equity-chip-label">Başlangıç:</span>
+                        <span class="equity-chip-val" id="equity-chip-init">$10,000.00</span>
+                    </div>
+                    <div class="equity-chip">
+                        <span class="equity-chip-label">Zirve Kasa:</span>
+                        <span class="equity-chip-val" id="equity-chip-peak" style="color:var(--cyan);">$10,000.00</span>
+                    </div>
+                    <div class="equity-chip">
+                        <span class="equity-chip-label">Net Kâr:</span>
+                        <span class="equity-chip-val" id="equity-chip-pnl" style="color:var(--green);">+$0.00</span>
+                    </div>
+                    <div class="equity-chip">
+                        <span class="equity-chip-label">Max Drawdown:</span>
+                        <span class="equity-chip-val" id="equity-chip-drawdown" style="color:#38bdf8;">%0.00</span>
+                    </div>
+                    <div class="equity-chip">
+                        <span class="equity-chip-label">Kasa Koruma:</span>
+                        <span class="equity-chip-val" style="color:var(--green);">🛡️ %100 Güvenli</span>
+                    </div>
+                </div>
+            </div>
+            <div class="equity-canvas-container" id="cockpit-equity-container">
+                <div class="equity-empty-placeholder" id="equity-empty-state">
+                    <div style="font-size:24px;">📊</div>
+                    <div style="font-weight:800; color:#cbd5e1;">İlk Kapanan İşlemle Birlikte Canlı Kasa Eğrisi Çizilecek</div>
+                    <div style="font-size:11px; color:#64748b;">Referans Başlangıç Kasası: $10,000.00 USDT • Sabit Sermaye Koruma Kalkanı Devrede</div>
+                </div>
+            </div>
+        </div>
+
         <!-- DİNAMİK AÇIK POZİSYONLAR BÖLÜMÜ -->
         <div id="cockpit-open-positions-container" style="margin: 20px 0; display:none;"></div>
+
+        <!-- 🛡️ KUANT KALKANLARI & REDDEDİLEN SİNYAL İSTİHBARATI (SHIELD INTELLIGENCE) -->
+        <div class="rejection-panel-card" id="cockpit-rejection-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.06); flex-wrap:wrap; gap:10px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:16px;">🛡️</span>
+                    <span style="font-size:13.5px; font-weight:800; font-family:'JetBrains Mono'; color:#ffffff; letter-spacing:0.4px;">KUANT KALKANLARI & REDDEDİLEN SİNYAL İSTİHBARATI</span>
+                    <span style="font-size:10px; background:rgba(255,71,87,0.15); color:#ff4757; border:1px solid rgba(255,71,87,0.35); padding:2px 7px; border-radius:6px; font-weight:800; font-family:'JetBrains Mono';" id="rejection-total-badge">0 VETO</span>
+                </div>
+                <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">
+                    <span>Otomatik Risk Filtresi: <b>35+ Kalkan Devrede</b></span>
+                </div>
+            </div>
+
+            <!-- Top Shield Blocker Counters -->
+            <div class="shield-stats-grid" id="shield-stats-container">
+                <div class="shield-stat-card">
+                    <span style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">🌊 Harmonic Flow Gate</span>
+                    <b style="color:var(--cyan); font-family:'JetBrains Mono';" id="shield-cnt-flow">0</b>
+                </div>
+                <div class="shield-stat-card">
+                    <span style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">⚡ Judas Swing Tuzağı</span>
+                    <b style="color:#f59e0b; font-family:'JetBrains Mono';" id="shield-cnt-judas">0</b>
+                </div>
+                <div class="shield-stat-card">
+                    <span style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">🪙 Beta / BTC Korelasyonu</span>
+                    <b style="color:#a78bfa; font-family:'JetBrains Mono';" id="shield-cnt-beta">0</b>
+                </div>
+                <div class="shield-stat-card">
+                    <span style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">🌀 Shannon / Entropi Kalkanı</span>
+                    <b style="color:#38bdf8; font-family:'JetBrains Mono';" id="shield-cnt-entropy">0</b>
+                </div>
+                <div class="shield-stat-card">
+                    <span style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">🛑 Cooldown / Zarar Limiti</span>
+                    <b style="color:#ff4757; font-family:'JetBrains Mono';" id="shield-cnt-cooldown">0</b>
+                </div>
+                <div class="shield-stat-card">
+                    <span style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">🧊 Tri-Modal Iceberg Filtresi</span>
+                    <b style="color:#34d399; font-family:'JetBrains Mono';" id="shield-cnt-iceberg">0</b>
+                </div>
+            </div>
+
+            <!-- Live Rejection Feed Stream -->
+            <div class="rejection-feed-list" id="rejection-feed-container">
+                <div style="text-align:center; padding:20px; color:#64748b; font-size:12px; font-family:'JetBrains Mono';">
+                    🛡️ Henüz kalkanlara çarpan riskli sinyal bulunmuyor. Piyasa 100 paritede temiz akıyor.
+                </div>
+            </div>
+        </div>
 
         <!-- AI PİYASA & PUSU AKIŞI -->
         <div class="ai-quant-room">
@@ -3282,6 +3717,39 @@ HTML_PAGE = """
                 <span class="active-badge-pill" id="positions-active-count-badge">0 Açık Pozisyon</span>
             </div>
         </div>
+
+        <!-- 🌡️ PORTFÖY RİSK & EXPOSURE HUD -->
+        <div class="portfolio-risk-hud" id="positions-risk-hud">
+            <div class="risk-hud-card">
+                <div class="risk-hud-title">
+                    <span>🟢 LONG MARUZİYET</span>
+                </div>
+                <div class="risk-hud-val" id="risk-hud-long-val" style="color:var(--green);">$0.00</div>
+                <div class="risk-hud-sub" id="risk-hud-long-sub">0 Long Pozisyon</div>
+            </div>
+            <div class="risk-hud-card">
+                <div class="risk-hud-title">
+                    <span>🔴 SHORT MARUZİYET</span>
+                </div>
+                <div class="risk-hud-val" id="risk-hud-short-val" style="color:var(--red);">$0.00</div>
+                <div class="risk-hud-sub" id="risk-hud-short-sub">0 Short Pozisyon</div>
+            </div>
+            <div class="risk-hud-card">
+                <div class="risk-hud-title">
+                    <span>⚖️ NET DELTA EĞİLİMİ</span>
+                </div>
+                <div class="risk-hud-val" id="risk-hud-delta-val" style="color:var(--cyan);">$0.00 Net</div>
+                <div class="risk-hud-sub" id="risk-hud-delta-sub">Piyasa-Nötr / Dengeli</div>
+            </div>
+            <div class="risk-hud-card">
+                <div class="risk-hud-title">
+                    <span>🛡️ MARJİN KULLANIMI</span>
+                </div>
+                <div class="risk-hud-val" id="risk-hud-margin-val">%0.0</div>
+                <div class="risk-hud-sub" id="risk-hud-margin-sub">Tam Güvenlik Tamponu</div>
+            </div>
+        </div>
+
         <div id="positions-container" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(360px, 1fr)); gap:18px; margin-bottom:30px;">
             <div style="grid-column:1/-1; color: #94a3b8; text-align:center; padding: 100px 20px; font-size:15px; line-height:1.6;">
                 Şu an açık pozisyon bulunmuyor.<br><span style="color:var(--yellow)">● 5M Mum kapanışları, taze kırılımlar ve destek dönüşleri taranıyor...</span>
@@ -3338,6 +3806,16 @@ HTML_PAGE = """
          ========================================================================= -->
     <div id="main-tab-content-ledger" class="main-tab-content">
         <div class="history-full-box">
+            <!-- 📊 SETUP PERFORMANS MATRİSİ -->
+            <div style="margin-bottom:18px;">
+                <div style="font-size:12px; font-weight:800; color:var(--cyan); text-transform:uppercase; letter-spacing:0.8px; font-family:'JetBrains Mono'; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                    <span>📊</span> KURULUM BAZLI STRATEJİ PERFORMANSI (16 SETUP MATRİSİ)
+                </div>
+                <div class="setup-matrix-grid" id="ledger-setup-matrix-container">
+                    <!-- Dynamically populated by renderSetupPerformanceMatrix() -->
+                </div>
+            </div>
+
             <div class="history-top-controls">
                 <div style="display:flex; align-items:center; gap:12px;">
                     <div class="panel-title" style="margin:0;">📜 İşlem Geçmişi</div>
@@ -4280,11 +4758,6 @@ HTML_PAGE = """
             updateUserSessionUI();
         }
 
-        function openAuthModal() {
-            const m = document.getElementById('auth-modal-overlay');
-            if (m) m.style.display = 'flex';
-        }
-
         function closeAuthModal() {
             const m = document.getElementById('auth-modal-overlay');
             if (m) m.style.display = 'none';
@@ -4860,6 +5333,13 @@ async function loadAdminMetrics() {
             const btcV = Number(btcShock.velocity_60s || 0);
             const btcVStr = (btcV >= 0 ? '+' : '') + btcV.toFixed(2);
 
+            const uptimeSec = Number(appState.server_uptime_sec || 0);
+            const days = Math.floor(uptimeSec / 86400);
+            const hours = Math.floor((uptimeSec % 86400) / 3600);
+            const mins = Math.floor((uptimeSec % 3600) / 60);
+            const secs = uptimeSec % 60;
+            const uptimeStr = `${days > 0 ? days + 'g ' : ''}${hours.toString().padStart(2,'0')}s ${mins.toString().padStart(2,'0')}d ${secs.toString().padStart(2,'0')}sn`;
+
             container.innerHTML = `
                 <!-- ÜST HERO DURUM AFİŞİ -->
                 <div style="background:linear-gradient(135deg, rgba(14, 19, 31, 0.95), rgba(17, 24, 39, 0.95)); border:1.5px solid ${borderCol}; box-shadow:0 4px 24px rgba(0,0,0,0.4); border-radius:14px; padding:20px 24px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
@@ -4882,7 +5362,7 @@ async function loadAdminMetrics() {
                             </span>
                         </div>
                         <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono',monospace;">
-                            Son Kalp Atışı: <span style="color:#cbd5e1; font-weight:700;">${sys.timestamp || new Date().toLocaleTimeString()} (TSİ)</span>
+                            ⏱️ Kesintisiz Uptime: <span style="color:#38bdf8; font-weight:700;">${uptimeStr}</span> • Son Kalp Atışı: <span style="color:#cbd5e1; font-weight:700;">${sys.timestamp || new Date().toLocaleTimeString()} (TSİ)</span>
                         </div>
                         <button onclick="syncBackendState(); if(typeof showToast === 'function') showToast('⚡ Canlı telemetri yenilendi');"
                                 style="background:rgba(0,242,254,0.08); border:1px solid rgba(0,242,254,0.3); color:var(--cyan); font-size:11.5px; font-weight:700; padding:6px 14px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s ease;"
@@ -4925,11 +5405,11 @@ async function loadAdminMetrics() {
 
                     <div class="cockpit-kpi-card" style="border:1px solid rgba(168,85,247,0.25); background:rgba(168,85,247,0.03);">
                         <div class="kpi-card-head">
-                            <span class="kpi-card-title">BELLEK (RAM) KORUMASI</span>
-                            <span class="kpi-card-icon">💾</span>
+                            <span class="kpi-card-title">CANLI UPTIME & BELLEK</span>
+                            <span class="kpi-card-icon">⏱️</span>
                         </div>
-                        <div class="kpi-card-val" style="color:#c084fc; font-size:24px;">${ram.limit || 150} Mum</div>
-                        <div class="kpi-card-sub" style="color:#cbd5e1;">Render 512MB RAM Sızıntı Kalkanı</div>
+                        <div class="kpi-card-val" style="color:#c084fc; font-size:20px;">${uptimeStr}</div>
+                        <div class="kpi-card-sub" style="color:#cbd5e1;">Render 512MB RAM • Max 150 Mum Koruma</div>
                     </div>
                 </div>
 
@@ -5355,6 +5835,9 @@ async function loadAdminMetrics() {
                         </td>
                         <td style="color:${rateColor}; font-weight:900; font-family:'JetBrains Mono'; font-size:13.5px;">
                             ${item.rate_pct >= 0 ? '+' : ''}${item.rate_pct.toFixed(4)}%
+                            <div style="font-size:10px; color:#94a3b8; font-weight:600; margin-top:2px;">
+                                Yıllık: <b style="color:${(item.rate_pct * 3 * 365) >= 0 ? 'var(--cyan)' : 'var(--red)'};">${((item.rate_pct * 3 * 365) >= 0 ? '+' : '') + (item.rate_pct * 3 * 365).toFixed(1)}% APR</b>
+                            </div>
                         </td>
                         <td>${statusBadge}</td>
                         <td style="font-family:'JetBrains Mono'; color:#cbd5e1;">${markPriceStr}</td>
@@ -5708,10 +6191,17 @@ async function loadAdminMetrics() {
             try {
                 if (tabName === 'cockpit') {
                     renderCockpitView();
+                    if (equityChartInstance) {
+                        const eqCont = document.getElementById('cockpit-equity-container');
+                        if (eqCont && eqCont.clientWidth > 0) {
+                            equityChartInstance.applyOptions({ width: eqCont.clientWidth, height: eqCont.clientHeight || 260 });
+                        }
+                    }
                     if (window.ValkyrieBattleEngine) ValkyrieBattleEngine.resize();
                     if (window.ValkyrieKpiSimEngine) window.ValkyrieKpiSimEngine.resize();
                     if (window.ValkyrieTacticalRadarEngine) window.ValkyrieTacticalRadarEngine.resize();
                 } else if (tabName === 'positions') {
+                    renderPortfolioRiskHUD();
                     renderPositions();
                 } else if (tabName === 'radar') {
                     renderCards();
@@ -8211,8 +8701,410 @@ async function loadAdminMetrics() {
             container.innerHTML = html;
         }
 
+        // =========================================================================
+        // 📈 VALKYRIE KURUMSAL KASA PERFORMANSI (EQUITY CURVE) ENGINE
+        // =========================================================================
+        let equityChartInstance = null;
+        let equityAreaSeries = null;
+        let equityBaselineSeries = null;
+
+        function renderEquityCurve() {
+            try {
+                const container = document.getElementById('cockpit-equity-container');
+                const placeholder = document.getElementById('equity-empty-state');
+                if (!container) return;
+
+                const hist = (appState && appState.history) || [];
+                const bal = Number((appState && appState.balance) || 10000.0);
+                const initBal = Number((appState && appState.initial_balance) || 10000.0);
+                const netPnl = (bal - initBal);
+
+                // Update HUD Chips
+                const elInit = document.getElementById('equity-chip-init');
+                const elPeak = document.getElementById('equity-chip-peak');
+                const elPnl = document.getElementById('equity-chip-pnl');
+                const elDd = document.getElementById('equity-chip-drawdown');
+
+                if (elInit) elInit.innerText = `$${initBal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+                if (elPnl) {
+                    elPnl.innerText = `${netPnl >= 0 ? '+' : ''}$${netPnl.toFixed(2)}`;
+                    elPnl.style.color = netPnl >= 0 ? 'var(--green)' : 'var(--red)';
+                }
+
+                if (hist.length === 0) {
+                    if (elPeak) elPeak.innerText = `$${initBal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+                    if (elDd) elDd.innerText = '%0.00';
+                    if (placeholder) placeholder.style.display = 'flex';
+                    return;
+                }
+
+                if (placeholder) placeholder.style.display = 'none';
+
+                // Calculate cumulative balance points
+                let runningBal = initBal;
+                let peak = initBal;
+                let maxDD = 0.0;
+                const points = [];
+                const basePoints = [];
+
+                const nowSec = Math.floor(Date.now() / 1000);
+                const stepSec = 3600;
+                let startSec = nowSec - (hist.length + 1) * stepSec;
+
+                // Starting point
+                points.push({ time: startSec, value: initBal });
+                basePoints.push({ time: startSec, value: initBal });
+
+                hist.forEach((trade, idx) => {
+                    const pnl = Number(trade.net_pnl || 0.0);
+                    runningBal += pnl;
+                    if (runningBal > peak) peak = runningBal;
+                    const dd = peak > 0 ? ((peak - runningBal) / peak) * 100.0 : 0.0;
+                    if (dd > maxDD) maxDD = dd;
+
+                    let tradeTs = startSec + (idx + 1) * stepSec;
+                    if (trade.exit_time) {
+                        const parsed = Math.floor(new Date(trade.exit_time).getTime() / 1000);
+                        if (!isNaN(parsed) && parsed > startSec) {
+                            tradeTs = parsed;
+                        }
+                    }
+                    points.push({ time: tradeTs, value: Number(runningBal.toFixed(2)) });
+                    basePoints.push({ time: tradeTs, value: initBal });
+                });
+
+                // Ensure strictly monotonic timestamps for LightweightCharts
+                for (let i = 1; i < points.length; i++) {
+                    if (points[i].time <= points[i-1].time) {
+                        points[i].time = points[i-1].time + 60;
+                        basePoints[i].time = points[i].time;
+                    }
+                }
+
+                if (elPeak) elPeak.innerText = `$${peak.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+                if (elDd) {
+                    elDd.innerText = `-%${maxDD.toFixed(2)}`;
+                    elDd.style.color = maxDD > 5.0 ? 'var(--red)' : (maxDD > 2.0 ? 'var(--yellow)' : '#38bdf8');
+                }
+
+                if (typeof LightweightCharts === 'undefined') return;
+
+                if (!equityChartInstance) {
+                    container.innerHTML = '';
+                    equityChartInstance = LightweightCharts.createChart(container, {
+                        width: container.clientWidth || 800,
+                        height: container.clientHeight || 260,
+                        layout: {
+                            background: { color: '#080c14' },
+                            textColor: '#94a3b8',
+                            fontSize: 11,
+                            fontFamily: "'JetBrains Mono', monospace",
+                        },
+                        grid: {
+                            vertLines: { color: 'rgba(255, 255, 255, 0.03)' },
+                            horzLines: { color: 'rgba(255, 255, 255, 0.03)' },
+                        },
+                        crosshair: {
+                            mode: LightweightCharts.CrosshairMode.Normal,
+                        },
+                        timeScale: {
+                            timeVisible: true,
+                            secondsVisible: false,
+                            borderColor: 'rgba(255, 255, 255, 0.08)',
+                        },
+                        rightPriceScale: {
+                            borderColor: 'rgba(255, 255, 255, 0.08)',
+                            scaleMargins: { top: 0.15, bottom: 0.15 },
+                        }
+                    });
+
+                    equityBaselineSeries = equityChartInstance.addLineSeries({
+                        color: 'rgba(245, 158, 11, 0.45)',
+                        lineWidth: 1.5,
+                        lineStyle: LightweightCharts.LineStyle.Dashed,
+                        title: 'Başlangıç ($10K)',
+                        priceFormat: { type: 'price', precision: 2, minMove: 0.01 }
+                    });
+
+                    equityAreaSeries = equityChartInstance.addAreaSeries({
+                        topColor: 'rgba(0, 242, 254, 0.45)',
+                        bottomColor: 'rgba(0, 242, 254, 0.01)',
+                        lineColor: '#00f2fe',
+                        lineWidth: 2.5,
+                        title: 'Kasa Bakiyesi',
+                        priceFormat: { type: 'price', precision: 2, minMove: 0.01 }
+                    });
+
+                    window.addEventListener('resize', () => {
+                        if (equityChartInstance && container) {
+                            equityChartInstance.applyOptions({
+                                width: container.clientWidth,
+                                height: container.clientHeight || 260
+                            });
+                        }
+                    });
+                }
+
+                if (equityBaselineSeries) equityBaselineSeries.setData(basePoints);
+                if (equityAreaSeries) {
+                    const isProfit = runningBal >= initBal;
+                    equityAreaSeries.applyOptions({
+                        topColor: isProfit ? 'rgba(16, 185, 129, 0.45)' : 'rgba(244, 63, 94, 0.45)',
+                        lineColor: isProfit ? '#10b981' : '#f43f5e',
+                    });
+                    equityAreaSeries.setData(points);
+                    equityChartInstance.timeScale().fitContent();
+                }
+            } catch (e) {
+                console.error("renderEquityCurve error:", e);
+            }
+        }
+
+        // =========================================================================
+        // 🛡️ KUANT KALKANLARI & REDDEDİLEN SİNYAL İSTİHBARATI
+        // =========================================================================
+        function renderRejectionIntelligence() {
+            try {
+                const rejections = (appState && appState.recent_rejections) || [];
+                const totalBadge = document.getElementById('rejection-total-badge');
+                if (totalBadge) totalBadge.innerText = `${rejections.length} VETO`;
+
+                // Calculate shield frequencies
+                let cntFlow = 0, cntJudas = 0, cntBeta = 0, cntEntropy = 0, cntCooldown = 0, cntIceberg = 0;
+
+                rejections.forEach(r => {
+                    const reason = (r.reason || '').toLowerCase();
+                    if (reason.includes('flow') || reason.includes('cvd') || reason.includes('harmonic')) cntFlow++;
+                    else if (reason.includes('judas') || reason.includes('sweep')) cntJudas++;
+                    else if (reason.includes('beta') || reason.includes('btc')) cntBeta++;
+                    else if (reason.includes('shannon') || reason.includes('entropy') || reason.includes('hurst')) cntEntropy++;
+                    else if (reason.includes('cooldown') || reason.includes('loss') || reason.includes('stop')) cntCooldown++;
+                    else if (reason.includes('iceberg') || reason.includes('stoikov') || reason.includes('vpin')) cntIceberg++;
+                    else cntFlow++;
+                });
+
+                const elFlow = document.getElementById('shield-cnt-flow');
+                const elJudas = document.getElementById('shield-cnt-judas');
+                const elBeta = document.getElementById('shield-cnt-beta');
+                const elEntropy = document.getElementById('shield-cnt-entropy');
+                const elCooldown = document.getElementById('shield-cnt-cooldown');
+                const elIceberg = document.getElementById('shield-cnt-iceberg');
+
+                if (elFlow) elFlow.innerText = cntFlow;
+                if (elJudas) elJudas.innerText = cntJudas;
+                if (elBeta) elBeta.innerText = cntBeta;
+                if (elEntropy) elEntropy.innerText = cntEntropy;
+                if (elCooldown) elCooldown.innerText = cntCooldown;
+                if (elIceberg) elIceberg.innerText = cntIceberg;
+
+                const feed = document.getElementById('rejection-feed-container');
+                if (!feed) return;
+
+                if (rejections.length === 0) {
+                    feed.innerHTML = `
+                        <div style="text-align:center; padding:20px; color:#64748b; font-size:12px; font-family:'JetBrains Mono';">
+                            🛡️ Henüz kalkanlara çarpan riskli sinyal bulunmuyor. Piyasa 100 paritede temiz akıyor.
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                rejections.slice().reverse().forEach(item => {
+                    const sym = item.symbol || '-';
+                    const time = item.time || '-';
+                    const setup = item.setup || 'Kuant Setup';
+                    const reason = item.reason || 'Kalkan Engeli';
+
+                    let shieldName = 'Risk Kalkanı';
+                    let tagColor = '#ff4757';
+                    const rLower = reason.toLowerCase();
+                    if (rLower.includes('flow') || rLower.includes('cvd')) { shieldName = 'Harmonic Flow Gate'; tagColor = 'var(--cyan)'; }
+                    else if (rLower.includes('judas') || rLower.includes('sweep')) { shieldName = 'Judas Swing Tuzağı'; tagColor = '#f59e0b'; }
+                    else if (rLower.includes('beta')) { shieldName = 'Beta Follower Veto'; tagColor = '#a78bfa'; }
+                    else if (rLower.includes('shannon') || rLower.includes('entropy')) { shieldName = 'Shannon Confluence'; tagColor = '#38bdf8'; }
+                    else if (rLower.includes('cooldown')) { shieldName = 'Stop Cooldown'; tagColor = '#ff4757'; }
+                    else if (rLower.includes('iceberg')) { shieldName = 'Iceberg Sniper Veto'; tagColor = '#34d399'; }
+
+                    html += `
+                        <div class="rejection-feed-item">
+                            <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+                                <span style="color:#94a3b8; font-size:11px;">${time}</span>
+                                <b style="color:#ffffff; font-size:12.5px;">${sym}</b>
+                                <span style="color:#cbd5e1; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${setup}</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                                <span class="rejection-shield-tag" style="color:${tagColor}; border-color:${tagColor};">🛡️ ${shieldName}</span>
+                                <span style="font-size:11px; color:#94a3b8; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${reason}">${reason}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                feed.innerHTML = html;
+            } catch (e) {
+                console.error("renderRejectionIntelligence error:", e);
+            }
+        }
+
+        // =========================================================================
+        // 🌡️ PORTFÖY RİSK & MARJİN EXPOSURE HUD
+        // =========================================================================
+        function renderPortfolioRiskHUD() {
+            try {
+                const positions = (appState && appState.open_positions) || {};
+                const bal = Number((appState && appState.balance) || 10000.0);
+
+                let totalLongUsd = 0.0;
+                let totalShortUsd = 0.0;
+                let totalMarginUsd = 0.0;
+                let longCount = 0;
+                let shortCount = 0;
+                let totalUnrealizedPnl = 0.0;
+
+                for (const sym in positions) {
+                    const pos = positions[sym];
+                    const curP = Number((livePrices && livePrices[sym]) || (appState.symbols && appState.symbols[sym] ? appState.symbols[sym].price : 0) || pos.entry_price);
+                    const metrics = computePositionPnL(pos, curP);
+                    totalUnrealizedPnl += metrics.pnlUsdt;
+
+                    const pVal = Number(pos.position_value || (pos.margin * (pos.leverage || 5)) || 0.0);
+                    const mVal = Number(pos.margin || 0.0);
+                    totalMarginUsd += mVal;
+
+                    if (pos.side === 'LONG') {
+                        totalLongUsd += pVal;
+                        longCount++;
+                    } else {
+                        totalShortUsd += pVal;
+                        shortCount++;
+                    }
+                }
+
+                const netDelta = totalLongUsd - totalShortUsd;
+                const marginRatio = bal > 0 ? ((totalMarginUsd / bal) * 100.0).toFixed(1) : '0.0';
+
+                // Update Risk HUD in Positions Tab
+                const elLongVal = document.getElementById('risk-hud-long-val');
+                const elLongSub = document.getElementById('risk-hud-long-sub');
+                const elShortVal = document.getElementById('risk-hud-short-val');
+                const elShortSub = document.getElementById('risk-hud-short-sub');
+                const elDeltaVal = document.getElementById('risk-hud-delta-val');
+                const elDeltaSub = document.getElementById('risk-hud-delta-sub');
+                const elMarginVal = document.getElementById('risk-hud-margin-val');
+                const elMarginSub = document.getElementById('risk-hud-margin-sub');
+
+                if (elLongVal) elLongVal.innerText = `$${totalLongUsd.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+                if (elLongSub) elLongSub.innerText = `${longCount} Long Pozisyon`;
+                if (elShortVal) elShortVal.innerText = `$${totalShortUsd.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+                if (elShortSub) elShortSub.innerText = `${shortCount} Short Pozisyon`;
+
+                if (elDeltaVal) {
+                    elDeltaVal.innerText = `${netDelta >= 0 ? '+' : ''}$${netDelta.toFixed(2)} Net`;
+                    elDeltaVal.style.color = netDelta > 100 ? 'var(--green)' : (netDelta < -100 ? 'var(--red)' : 'var(--cyan)');
+                }
+                if (elDeltaSub) {
+                    if (Math.abs(netDelta) < 50) elDeltaSub.innerText = 'Piyasa-Nötr / Dengeli';
+                    else if (netDelta > 0) elDeltaSub.innerText = 'Boğa Yönlü Net Maruziyet';
+                    else elDeltaSub.innerText = 'Ayı Yönlü Net Maruziyet';
+                }
+
+                if (elMarginVal) {
+                    elMarginVal.innerText = `%${marginRatio}`;
+                    elMarginVal.style.color = Number(marginRatio) > 60 ? 'var(--red)' : (Number(marginRatio) > 30 ? 'var(--yellow)' : '#ffffff');
+                }
+                if (elMarginSub) {
+                    const freeMargin = Math.max(0, bal - totalMarginUsd);
+                    elMarginSub.innerText = `$${freeMargin.toFixed(0)} USDT Boşta`;
+                }
+
+                // Update Sidebar PnL Telemetry
+                const sideOpenPnl = document.getElementById('sidebar-open-pnl');
+                const sideNetPnl = document.getElementById('sidebar-net-pnl');
+                const totalPosCount = longCount + shortCount;
+
+                if (sideOpenPnl) {
+                    sideOpenPnl.innerText = `${totalUnrealizedPnl >= 0 ? '+' : ''}$${totalUnrealizedPnl.toFixed(2)} (${totalPosCount} Açık)`;
+                    sideOpenPnl.style.color = totalUnrealizedPnl >= 0 ? 'var(--green)' : 'var(--red)';
+                }
+
+                const netRealized = (appState && appState.history_summary ? appState.history_summary.total_realized_pnl : (bal - 10000.0)) || 0.0;
+                if (sideNetPnl) {
+                    sideNetPnl.innerText = `${netRealized >= 0 ? '+' : ''}$${netRealized.toFixed(2)}`;
+                    sideNetPnl.style.color = netRealized >= 0 ? 'var(--green)' : 'var(--red)';
+                }
+            } catch (e) {
+                console.error("renderPortfolioRiskHUD error:", e);
+            }
+        }
+
+        // =========================================================================
+        // 📊 SETUP PERFORMANS MATRİSİ (16 SETUP İSTATİSTİĞİ)
+        // =========================================================================
+        function renderSetupPerformanceMatrix() {
+            try {
+                const container = document.getElementById('ledger-setup-matrix-container');
+                if (!container) return;
+
+                const hist = (appState && appState.history) || [];
+
+                // Categorize by setups
+                const setups = {
+                    'nPOC': { name: 'nPOC Likidite Avcısı', icon: '🔵', wins: 0, losses: 0, pnl: 0.0 },
+                    'MACRO': { name: 'Macro mVAL / mVAH', icon: '🟣', wins: 0, losses: 0, pnl: 0.0 },
+                    'CAM_BO': { name: 'Camarilla S4/R4 Breakout', icon: '⚡', wins: 0, losses: 0, pnl: 0.0 },
+                    'CAM_BOUNCE': { name: 'Camarilla S3/R3 Bounce', icon: '🛡️', wins: 0, losses: 0, pnl: 0.0 },
+                    'SCALP': { name: 'Diğer / GEX / Iceberg Scalp', icon: '🎯', wins: 0, losses: 0, pnl: 0.0 }
+                };
+
+                hist.forEach(h => {
+                    const r = (h.reason || '');
+                    const pnl = Number(h.net_pnl || 0.0);
+                    let key = 'SCALP';
+                    if (r.includes('nPOC')) key = 'nPOC';
+                    else if (r.includes('mVAL') || r.includes('mVAH')) key = 'MACRO';
+                    else if (r.includes('Breakout') || r.includes('Breakdown')) key = 'CAM_BO';
+                    else if (r.includes('S3') || r.includes('R3')) key = 'CAM_BOUNCE';
+
+                    setups[key].pnl += pnl;
+                    if (pnl >= 0) setups[key].wins++;
+                    else setups[key].losses++;
+                });
+
+                let html = '';
+                for (const k in setups) {
+                    const s = setups[k];
+                    const total = s.wins + s.losses;
+                    const winRate = total > 0 ? ((s.wins / total) * 100).toFixed(0) : '0';
+                    const pnlColor = s.pnl >= 0 ? 'var(--green)' : 'var(--red)';
+
+                    html += `
+                        <div class="setup-matrix-card">
+                            <div class="setup-card-name">
+                                <span>${s.icon} ${s.name}</span>
+                                <span style="color:#cbd5e1;">${total} İşlem</span>
+                            </div>
+                            <div class="setup-card-pnl" style="color:${pnlColor};">
+                                ${s.pnl >= 0 ? '+' : ''}$${s.pnl.toFixed(2)}
+                            </div>
+                            <div class="setup-card-stats">
+                                <span>Win Rate: <b style="color:${Number(winRate) >= 50 ? 'var(--green)' : '#94a3b8'};">%${winRate}</b></span>
+                                <span>${s.wins}K / ${s.losses}Z</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                container.innerHTML = html;
+            } catch (e) {
+                console.error("renderSetupPerformanceMatrix error:", e);
+            }
+        }
+
         function renderCockpitView() {
             if (!appState) return;
+
+            try { renderEquityCurve(); } catch(e) { console.error("renderEquityCurve error:", e); }
+            try { renderRejectionIntelligence(); } catch(e) { console.error("renderRejectionIntelligence error:", e); }
+            try { renderPortfolioRiskHUD(); } catch(e) { console.error("renderPortfolioRiskHUD error:", e); }
 
             // 1. Cockpit Financial KPIs
             const bal = Number(appState.balance || 10000.0);
@@ -9811,6 +10703,37 @@ async function loadAdminMetrics() {
                 const stopColor = pos.is_half_closed ? 'var(--green)' : '#f87171';
                 const stopLabel = pos.is_half_closed ? '🛡️ Breakeven Stop' : '🛑 Aktif Stop';
 
+                // Stop / TP Route Progress Calculation
+                const entryNum = Number(pos.entry_price || 0.0);
+                const curPNum = Number(metrics.curP || entryNum);
+                const stopNum = Number(activeStop || (pos.side === 'LONG' ? entryNum * 0.985 : entryNum * 1.015));
+                const tp1Num = Number(pos.tp1 || (pos.side === 'LONG' ? entryNum * 1.02 : entryNum * 0.98));
+
+                let routePct = 35.0; // Entry sits at 35% mark
+                if (pos.side === 'LONG') {
+                    if (curPNum >= entryNum) {
+                        const winSpan = Math.max(0.000001, tp1Num - entryNum);
+                        const progress = Math.min(1.0, (curPNum - entryNum) / winSpan);
+                        routePct = 35.0 + (progress * 65.0);
+                    } else {
+                        const lossSpan = Math.max(0.000001, entryNum - stopNum);
+                        const lossProgress = Math.min(1.0, (entryNum - curPNum) / lossSpan);
+                        routePct = Math.max(2.0, 35.0 - (lossProgress * 33.0));
+                    }
+                } else { // SHORT
+                    if (curPNum <= entryNum) {
+                        const winSpan = Math.max(0.000001, entryNum - tp1Num);
+                        const progress = Math.min(1.0, (entryNum - curPNum) / winSpan);
+                        routePct = 35.0 + (progress * 65.0);
+                    } else {
+                        const lossSpan = Math.max(0.000001, stopNum - entryNum);
+                        const lossProgress = Math.min(1.0, (curPNum - entryNum) / lossSpan);
+                        routePct = Math.max(2.0, 35.0 - (lossProgress * 33.0));
+                    }
+                }
+                routePct = Math.min(98.0, Math.max(2.0, routePct));
+                const cursorGlow = routePct >= 35.0 ? '#10b981' : '#f43f5e';
+
                 html += `
                 <div class="active-pos-card ${pnlClass}" id="pos-card-${safeId}">
                     <!-- 1. TOP HEADER (Ticker + Grafik Button on left, 2-line PnL on right) -->
@@ -9836,6 +10759,20 @@ async function loadAdminMetrics() {
                         <div>Anlık: <b id="pos-cur-price-${safeId}" style="color:${pnlColor};">$${curPriceVal}</b></div>
                         <div>Marjin: <b style="color:#ffffff;">$${Number(pos.margin || 100).toFixed(2)}</b></div>
                         <div>Hacim: <b style="color:#ffffff;">$${Number(pos.position_value || 500).toFixed(2)}</b></div>
+                    </div>
+
+                    <!-- 2.5 DİNAMİK STOP/TP ROTA BAR -->
+                    <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:8px 10px;">
+                        <div class="pos-route-labels">
+                            <span style="color:#f87171;">🛑 Stop: $${stopVal}</span>
+                            <span style="color:#cbd5e1; font-weight:700;">Giriş: $${entryVal}</span>
+                            <span style="color:#34d399;">🎯 TP1: $${tp1Val}</span>
+                        </div>
+                        <div class="pos-route-track" title="Anlık Fiyat Pozisyonu Rotası (Kırmızı: Stop Bölgesi | Yeşil: TP1 Bölgesi)">
+                            <div class="pos-route-loss-zone"></div>
+                            <div class="pos-route-profit-zone"></div>
+                            <div class="pos-route-cursor" style="left:${routePct.toFixed(1)}%; box-shadow:0 0 10px ${cursorGlow}, 0 0 16px ${cursorGlow};"></div>
+                        </div>
                     </div>
 
                     <!-- 3. TARGETS & STOP PILLS -->
@@ -10408,6 +11345,7 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 if (totalCountEl) totalCountEl.innerText = `${totalTrades} Toplam İşlem (Son 150 Gösteriliyor)`;
                 
                 try { updateFinancialSummary(); } catch(e) {}
+                try { renderSetupPerformanceMatrix(); } catch(e) {}
 
                 if (hList.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="14" style="text-align:center; padding: 40px; color:#94a3b8;">Kayıtlı işlem geçmişi bulunmuyor.</td></tr>`;
@@ -10509,11 +11447,15 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                         <td><span class="pos-badge ${side === 'LONG' ? 'pos-long' : 'pos-short'}" style="font-size:11px; padding:2px 8px;">${lev}x ${side}</span></td>
                         <td>$${entryP}</td>
                         <td>$${exitP}</td>
-                        <td style="color:${isWin ? 'var(--green)' : 'var(--red)'}; font-weight:800; font-family:'JetBrains Mono';">
-                            ${netPnl >= 0 ? '+' : ''}$${netPnl.toFixed(4)}
+                        <td>
+                            <span class="history-pnl-pill ${isWin ? 'pnl-win' : 'pnl-loss'}">
+                                ${netPnl >= 0 ? '+' : ''}$${netPnl.toFixed(2)}
+                            </span>
                         </td>
-                        <td style="color:${isWin ? 'var(--green)' : 'var(--red)'}; font-weight:800; font-family:'JetBrains Mono';">
-                            ${roePct >= 0 ? '+' : ''}${roePct.toFixed(2)}%
+                        <td>
+                            <span class="history-roe-pill ${isWin ? 'roe-win' : 'roe-loss'}">
+                                ${roePct >= 0 ? '+' : ''}${roePct.toFixed(2)}%
+                            </span>
                         </td>
                         <td style="color:${rMult >= 0 ? 'var(--green)' : 'var(--red)'}; font-weight:800; font-family:'JetBrains Mono'">
                             ${rMult >= 0 ? '+' : ''}${rMult}R
@@ -11459,9 +12401,11 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "cvd_summary": cvd_summary,
                 "symbol_cvd": symbol_cvd,
                 "orderbook_depth": getattr(market_data, 'orderbook_depth', {}) if market_data else {},
-                "recent_rejections": getattr(strategy, "recent_rejections", [])[-20:] if strategy else [],
+                "recent_rejections": getattr(strategy, "recent_rejections", [])[-50:] if strategy else [],
                 "setup_attempts": getattr(strategy, "setup_attempts", {}) if strategy else {},
                 "system_health": sys_health,
+                "server_start_ts": SERVER_START_TS,
+                "server_uptime_sec": int(time.time() - SERVER_START_TS),
                 "macro_climate": strategy.get_macro_climate() if strategy and hasattr(strategy, 'get_macro_climate') else {}
             }, dumps=lambda obj: json.dumps(obj, default=str))
         except Exception as e:
