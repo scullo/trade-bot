@@ -1162,11 +1162,12 @@ class MarketDataManager:
                     dynamic_rs_score = 0.0
                     decoupling_status = "⚪ NÖTR_TAKİPÇİ (Beta)"
 
-        # 🧠 6-SÜTUNLU KUANT TELEMETRİSİ (HURST, BOLTZMANN ENTROPİ, ICEBERG, BOOKMAP EMİLİM, SIMONS HMM, CVD İVME, dPOC)
+        # 🧠 6-SÜTUNLU KUANT TELEMETRİSİ (HURST, BOLTZMANN ENTROPİ, ICEBERG, BOOKMAP EMİLİM, SIMONS HMM, CVD İVME, dPOC, STOIKOV, VPIN, KYLE'S LAMBDA)
         from indicators import (
             calculate_hurst_exponent, calculate_orderbook_entropy, detect_iceberg_orders,
             estimate_hmm_market_phase, detect_bookmap_absorption, calculate_cvd_acceleration,
-            calculate_delta_poc, evaluate_iceberg_offense
+            calculate_delta_poc, evaluate_iceberg_offense,
+            calculate_stoikov_micro_price, calculate_vpin_toxicity, calculate_kyles_lambda
         )
         
         # 1. Mandelbrot Hurst Üssü (5M Kapanışlarından Fraktal Hafıza)
@@ -1256,6 +1257,12 @@ class MarketDataManager:
         # 6. Iceberg Hücum Sniper & Ping-Pong
         ice_offense = evaluate_iceberg_offense(ice_data, cur_p, sym_levels)
 
+        # 7. VPIN Toksik Akış & Konsolidasyon Patlama Erken Uyarısı
+        vpin_info = calculate_vpin_toxicity(df_5m, rolling_window=12, recent_cvd=cvd_info)
+
+        # 8. Kyle's Lambda (İllikitlik & Fiyat Etki Oranı)
+        lambda_info = calculate_kyles_lambda(df_5m)
+
         # JIT L2 önbelleği varsa oradaki derin entropiyi al, yoksa varsayılan
         cached_l2 = getattr(self, 'jit_l2_cache', {}).get(symbol, {})
         entropy_norm = float(cached_l2.get('entropy_norm', 0.65))
@@ -1306,7 +1313,16 @@ class MarketDataManager:
             "is_iceberg_sniper_sell": bool(ice_offense.get('is_sniper_sell', False)),
             "is_iceberg_ping_pong": bool(ice_offense.get('is_ping_pong', False)),
             "iceberg_tight_stop_pct": float(ice_offense.get('tight_stop_dist_pct', 0.0022)),
-            "iceberg_offense_reason": str(ice_offense.get('offense_reason', ''))
+            "iceberg_offense_reason": str(ice_offense.get('offense_reason', '')),
+            "vpin_score": float(vpin_info.get('vpin_score', 0.30)),
+            "vpin_toxicity": str(vpin_info.get('toxicity_level', 'LOW')),
+            "is_vpin_toxic": bool(vpin_info.get('is_toxic_flow', False)),
+            "is_range_veto_alert": bool(vpin_info.get('is_range_veto_alert', False)),
+            "vpin_desc": str(vpin_info.get('vpin_desc', '')),
+            "kyles_lambda_ratio": float(lambda_info.get('lambda_ratio', 1.0)),
+            "is_vacuum_trap": bool(lambda_info.get('is_vacuum_trap', False)),
+            "is_liquid_expansion": bool(lambda_info.get('is_liquid_expansion', False)),
+            "lambda_desc": str(lambda_info.get('desc', ''))
         }
 
     def get_symbol_metrics(self, symbol: str) -> dict:
@@ -1521,10 +1537,11 @@ class MarketDataManager:
 
         spoofing_detected = (top_ratio >= 2.0 and l2_ratio < 0.70)
 
-        # 🧠 BOLTZMANN ENTROPİ, KEN GRIFFIN ICEBERG, BOOKMAP EMİLİM, CVD İVME & dPOC HESAPLAMASI
+        # 🧠 BOLTZMANN ENTROPİ, KEN GRIFFIN ICEBERG, BOOKMAP EMİLİM, CVD İVME, dPOC, STOIKOV, VPIN & KYLE'S LAMBDA
         from indicators import (
             calculate_orderbook_entropy, detect_iceberg_orders, detect_bookmap_absorption,
-            calculate_cvd_acceleration, calculate_delta_poc, evaluate_iceberg_offense
+            calculate_cvd_acceleration, calculate_delta_poc, evaluate_iceberg_offense,
+            calculate_stoikov_micro_price, calculate_vpin_toxicity, calculate_kyles_lambda
         )
         entropy_data = calculate_orderbook_entropy(bids, asks, top_n=20)
 
@@ -1579,6 +1596,13 @@ class MarketDataManager:
 
         # 6. Iceberg Hücum Sniper & Ping-Pong
         ice_offense = evaluate_iceberg_offense(iceberg_data, cur_p_for_ice, sym_levels_for_ice)
+
+        # 7. Stoikov Micro-Price & Mıknatıs Modeli
+        stoikov_info = calculate_stoikov_micro_price(bids, asks, current_price=cur_p_for_ice, levels=sym_levels_for_ice)
+
+        # 8. VPIN ve Kyle's Lambda
+        vpin_info = calculate_vpin_toxicity(df_5m_chk, rolling_window=12, recent_cvd=cvd_acc_info)
+        lambda_info = calculate_kyles_lambda(df_5m_chk)
 
         # Likidite Boşluğu (Hava Cebi / Liquidity Vacuum) Tespiti:
         # Önündeki derinlik karşı tarafın %40'ından az veya oran aşırı asimetrikse hava cebi vardır
@@ -1697,6 +1721,23 @@ class MarketDataManager:
             'is_iceberg_ping_pong': bool(ice_offense.get('is_ping_pong', False)),
             'iceberg_tight_stop_pct': float(ice_offense.get('tight_stop_dist_pct', 0.0022)),
             'iceberg_offense_reason': str(ice_offense.get('offense_reason', '')),
+            'stoikov_micro_price': float(stoikov_info.get('micro_price', mid_price)),
+            'stoikov_mid_price': float(stoikov_info.get('mid_price', mid_price)),
+            'stoikov_drift_bps': float(stoikov_info.get('micro_drift_bps', 0.0)),
+            'stoikov_bias': str(stoikov_info.get('micro_bias', 'NEUTRAL')),
+            'is_stoikov_bull': bool(stoikov_info.get('is_micro_bull', False)),
+            'is_stoikov_bear': bool(stoikov_info.get('is_micro_bear', False)),
+            'stoikov_magnet': str(stoikov_info.get('magnet_status', 'NONE')),
+            'stoikov_magnet_desc': str(stoikov_info.get('magnet_desc', '')),
+            'vpin_score': float(vpin_info.get('vpin_score', 0.30)),
+            'vpin_toxicity': str(vpin_info.get('toxicity_level', 'LOW')),
+            'is_vpin_toxic': bool(vpin_info.get('is_toxic_flow', False)),
+            'is_range_veto_alert': bool(vpin_info.get('is_range_veto_alert', False)),
+            'vpin_desc': str(vpin_info.get('vpin_desc', '')),
+            'kyles_lambda_ratio': float(lambda_info.get('lambda_ratio', 1.0)),
+            'is_vacuum_trap': bool(lambda_info.get('is_vacuum_trap', False)),
+            'is_liquid_expansion': bool(lambda_info.get('is_liquid_expansion', False)),
+            'lambda_desc': str(lambda_info.get('desc', '')),
             'last_update': now_ts
         }
 
@@ -1736,7 +1777,24 @@ class MarketDataManager:
                 'is_iceberg_sniper_sell': res_depth['is_iceberg_sniper_sell'],
                 'is_iceberg_ping_pong': res_depth['is_iceberg_ping_pong'],
                 'iceberg_tight_stop_pct': res_depth['iceberg_tight_stop_pct'],
-                'iceberg_offense_reason': res_depth['iceberg_offense_reason']
+                'iceberg_offense_reason': res_depth['iceberg_offense_reason'],
+                'stoikov_micro_price': res_depth['stoikov_micro_price'],
+                'stoikov_mid_price': res_depth['stoikov_mid_price'],
+                'stoikov_drift_bps': res_depth['stoikov_drift_bps'],
+                'stoikov_bias': res_depth['stoikov_bias'],
+                'is_stoikov_bull': res_depth['is_stoikov_bull'],
+                'is_stoikov_bear': res_depth['is_stoikov_bear'],
+                'stoikov_magnet': res_depth['stoikov_magnet'],
+                'stoikov_magnet_desc': res_depth['stoikov_magnet_desc'],
+                'vpin_score': res_depth['vpin_score'],
+                'vpin_toxicity': res_depth['vpin_toxicity'],
+                'is_vpin_toxic': res_depth['is_vpin_toxic'],
+                'is_range_veto_alert': res_depth['is_range_veto_alert'],
+                'vpin_desc': res_depth['vpin_desc'],
+                'kyles_lambda_ratio': res_depth['kyles_lambda_ratio'],
+                'is_vacuum_trap': res_depth['is_vacuum_trap'],
+                'is_liquid_expansion': res_depth['is_liquid_expansion'],
+                'lambda_desc': res_depth['lambda_desc']
             })
 
         return res_depth

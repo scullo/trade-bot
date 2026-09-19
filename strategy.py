@@ -790,6 +790,8 @@ class StrategyEngine:
         else:
             trend_regime = "⚪ YATAY / SIKIŞMA (Ranging)"
 
+        sym_met = self.market_data.get_symbol_metrics(symbol) if (self.market_data and hasattr(self.market_data, 'get_symbol_metrics')) else {}
+
         # ── 1. ATR / VOLATILITE HESABI & KATMANLI LİKİDİTE EŞİĞİ ──
         atr_pct = 1.2
         vol_surge = 1.0
@@ -1411,6 +1413,28 @@ class StrategyEngine:
                 print(f">> [RED - BOĞA ROTASYON KALKANI] {symbol}: {rej_msg}")
                 self.log_rejection(symbol, reason, rej_msg)
                 return {"error": "BULL_ROTATION_SHORT_BLOCKED"}
+
+        # ── 2e. VPIN TOKSİK AKIŞ & KONSOLİDASYON PATLAMA KALKANI (RANGE VETO SHIELD) ──
+        # Konsolidasyon / Yatay bölgede (SCALP işlemlerinde) VPIN toksisitesi %55 üstüne fırlamışsa
+        # kurumsal içeriden bilgi akışı vardır, konsolidasyon patlamak üzeredir. Ters yönde ezilmemek için scalp engellenir!
+        vpin_score = float(sym_met.get('vpin_score', 0.30)) if sym_met else 0.30
+        is_range_veto = bool(sym_met.get('is_range_veto_alert', False)) or (vpin_score >= 0.55)
+        if trade_type == "SCALP" and is_range_veto:
+            rej_msg = f"🛡️ VPIN Toksik Akış Kalkanı: Konsolidasyon bölgesinde kurumsal toksik akış (VPIN: %{vpin_score*100:.1f} >= %55.0). Sıkışma patlamak üzere, ters yönde ezilmemek için SCALP işlemi engellendi."
+            print(f">> [RED - VPIN RANGE VETO] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg, vpinScore=vpin_score)
+            return {"error": "VPIN_TOXIC_RANGE_VETO"}
+
+        # ── 2f. KYLE'S LAMBDA & HAVA CEBİ SAHTE KIRILIM KALKANI (VACUUM TRAP SHIELD) ──
+        # Kırılım işlemlerinde eğer fiyat sert sıçramış ama hacim sığ kalmışsa (Lambda Ratio >= 2.5x),
+        # bu hareket kurumsal bir trend değil, sığ tahtada boş kademelere savrulmadır (Hava Cebi Tuzağı).
+        is_vacuum_trap = bool(sym_met.get('is_vacuum_trap', False)) if sym_met else False
+        lambda_r = float(sym_met.get('kyles_lambda_ratio', 1.0)) if sym_met else 1.0
+        if is_breakout and is_vacuum_trap:
+            rej_msg = f"🌪️ Kyle's Lambda Kalkanı: Fiyat sıçraması sığ tahtada hava cebi hareketidir (İllikitlik Oranı: {lambda_r:.1f}x normal). Arkası boş sahte kırılım engellendi."
+            print(f">> [RED - KYLE'S LAMBDA AIR POCKET] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg, lambdaRatio=lambda_r)
+            return {"error": "KYLE_LAMBDA_VACUUM_TRAP"}
         
         if tepe_av > 0 and p_val > 0 and entry_price > tepe_av and entry_price > p_val:
             trend_regime = "🟢 GÜÇLÜ BOĞA (Bullish)"
@@ -2637,6 +2661,18 @@ class StrategyEngine:
                 if daily_avwap > 0 and close_price > daily_avwap:
                     c_list.append("Daily_AVWAP_Bull")
 
+                # 🎯 Stoikov Mikro-Fiyat Önden Koşu Teyidi
+                if sym_met.get("is_stoikov_bull", False):
+                    s_drift = sym_met.get("stoikov_drift_bps", 0.0)
+                    c_list.append("Stoikov_Micro_Bull_Drift")
+                    reason_label += f" [🎯 Stoikov +{s_drift:.1f}bps]"
+
+                # 🌊 VPIN Kurumsal Toksik Kırılım Teyidi
+                vpin_val = sym_met.get("vpin_score", 0.30)
+                if vpin_val >= 0.50:
+                    c_list.append("VPIN_Toxic_Expansion_Confirmed")
+                    reason_label += f" [🌊 VPIN %{vpin_val*100:.0f}]"
+
                 await self._handle_open(
                     symbol=symbol, side="LONG", entry_price=close_price,
                     reason=reason_label,
@@ -2698,6 +2734,18 @@ class StrategyEngine:
                 c_list = ["S4_Breakdown", "OI_Short_Expansion" if is_oi_bear_expansion else "Tepe_AVWAP_Alti"]
                 if daily_avwap > 0 and close_price < daily_avwap:
                     c_list.append("Daily_AVWAP_Bear")
+
+                # 🎯 Stoikov Mikro-Fiyat Önden Koşu Teyidi
+                if sym_met.get("is_stoikov_bear", False):
+                    s_drift = sym_met.get("stoikov_drift_bps", 0.0)
+                    c_list.append("Stoikov_Micro_Bear_Drift")
+                    reason_label += f" [🎯 Stoikov {s_drift:.1f}bps]"
+
+                # 🌊 VPIN Kurumsal Toksik Kırılım Teyidi
+                vpin_val = sym_met.get("vpin_score", 0.30)
+                if vpin_val >= 0.50:
+                    c_list.append("VPIN_Toxic_Expansion_Confirmed")
+                    reason_label += f" [🌊 VPIN %{vpin_val*100:.0f}]"
 
                 await self._handle_open(
                     symbol=symbol, side="SHORT", entry_price=close_price,
@@ -2802,6 +2850,12 @@ class StrategyEngine:
             else:
                 reason_label = f"S3 Destek Sekmesi (İlk Hedef {target_name}: ${tp1:.4f})"
 
+            # 🧲 STOIKOV DESTEK MIKNATISI TEYİDİ
+            stoikov_magnet = sym_met.get("stoikov_magnet", "NONE")
+            if stoikov_magnet == "S3_MAGNET_REBOUND" or sym_met.get("is_stoikov_bull", False):
+                c_list.append("Stoikov_S3_Magnet_Rebound")
+                reason_label += " [🧲 Stoikov Destek Mıknatısı]"
+
             await self._handle_open(
                 symbol=symbol, side="LONG", entry_price=close_price,
                 reason=reason_label,
@@ -2857,6 +2911,12 @@ class StrategyEngine:
                 reason_label = f"R3 Direnc Tepkisi + {ice_reason} (İlk Hedef {target_name}: ${tp1:.4f})"
             else:
                 reason_label = f"R3 Direnc Tepkisi (İlk Hedef {target_name}: ${tp1:.4f})"
+
+            # 🧲 STOIKOV DİRENÇ MIKNATISI TEYİDİ
+            stoikov_magnet = sym_met.get("stoikov_magnet", "NONE")
+            if stoikov_magnet == "R3_MAGNET_REJECTION" or sym_met.get("is_stoikov_bear", False):
+                c_list.append("Stoikov_R3_Magnet_Rejection")
+                reason_label += " [🧲 Stoikov Direnç Mıknatısı]"
 
             await self._handle_open(
                 symbol=symbol, side="SHORT", entry_price=close_price,

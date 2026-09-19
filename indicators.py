@@ -766,4 +766,269 @@ def evaluate_iceberg_offense(iceberg_data: dict, current_price: float, levels: d
         return res
 
 
+def calculate_stoikov_micro_price(bids: list, asks: list, current_price: float = 0.0, levels: dict = None) -> dict:
+    """
+    10. SASHA STOIKOV (Cornell) — Stoikov Micro-Price & Mıknatıs Modeli:
+    - Çok kademeli (multi-level weighted) emir defteri ağırlıklı adil fiyatı hesaplar.
+    - P_micro = P_mid + Imbalance * (Spread / 2)
+    - Trendde kırılımı önden koşar (Front-run Breakout/Breakdown).
+    - Yatayda kanal sınırında mıknatıs (Mean-Reversion Magnet) olarak çalışır.
+    """
+    res = {
+        'micro_price': float(current_price),
+        'mid_price': float(current_price),
+        'micro_drift_bps': 0.0,
+        'micro_bias': 'NEUTRAL',
+        'is_micro_bull': False,
+        'is_micro_bear': False,
+        'magnet_status': 'NONE',
+        'magnet_desc': ''
+    }
+    if not bids or not asks:
+        return res
+
+    try:
+        best_bid = float(bids[0][0])
+        best_ask = float(asks[0][0])
+        if best_bid <= 0 or best_ask <= best_bid:
+            return res
+
+        spread = best_ask - best_bid
+        mid_price = (best_bid + best_ask) / 2.0
+
+        # İlk 5 kademenin azalan ağırlıklı (decay) derinlik hesabı
+        weights = [1.0, 0.70, 0.50, 0.35, 0.20]
+        bid_w_vol = 0.0
+        ask_w_vol = 0.0
+
+        for i in range(min(5, len(bids))):
+            w = weights[i]
+            p, q = bids[i]
+            bid_w_vol += float(q) * w
+
+        for i in range(min(5, len(asks))):
+            w = weights[i]
+            p, q = asks[i]
+            ask_w_vol += float(q) * w
+
+        tot_w_vol = bid_w_vol + ask_w_vol
+        if tot_w_vol <= 0:
+            imb = 0.0
+        else:
+            imb = (bid_w_vol - ask_w_vol) / tot_w_vol
+
+        # Stoikov Micro-Price:
+        micro_price = mid_price + (imb * (spread / 2.0))
+        drift_bps = round(((micro_price - mid_price) / mid_price) * 10000.0, 2)
+
+        bias = 'NEUTRAL'
+        if drift_bps >= 1.2:
+            bias = 'BULL_MICRO_DRIFT'
+        elif drift_bps <= -1.2:
+            bias = 'BEAR_MICRO_DRIFT'
+
+        # Yatay Mod Mıknatıs (Mean-Reversion Magnet) Tespiti
+        magnet_status = 'NONE'
+        magnet_desc = ''
+        if levels and current_price > 0:
+            cam = levels.get('camarilla', {})
+            s3 = cam.get('S3', 0.0)
+            r3 = cam.get('R3', 0.0)
+
+            # Destek sekme mıknatısı: Fiyat S3 yakınında ve mikro-fiyat ortalamaya (yukarı) çekiyor
+            if s3 > 0 and abs(current_price - s3) / current_price <= 0.0040:
+                if drift_bps > 0.5:
+                    magnet_status = 'S3_MAGNET_REBOUND'
+                    magnet_desc = f'🧲 Stoikov Destek Mıknatısı: Mikro-fiyat (${micro_price:.4f}, +{drift_bps} bps) yukarı çekiyor.'
+
+            # Direnç tepki mıknatısı: Fiyat R3 yakınında ve mikro-fiyat ortalamaya (aşağı) çekiyor
+            elif r3 > 0 and abs(current_price - r3) / current_price <= 0.0040:
+                if drift_bps < -0.5:
+                    magnet_status = 'R3_MAGNET_REJECTION'
+                    magnet_desc = f'🧲 Stoikov Direnç Mıknatısı: Mikro-fiyat (${micro_price:.4f}, {drift_bps} bps) aşağı çekiyor.'
+
+        return {
+            'micro_price': round(micro_price, 6),
+            'mid_price': round(mid_price, 6),
+            'micro_drift_bps': drift_bps,
+            'micro_bias': bias,
+            'is_micro_bull': drift_bps >= 1.2,
+            'is_micro_bear': drift_bps <= -1.2,
+            'magnet_status': magnet_status,
+            'magnet_desc': magnet_desc
+        }
+    except Exception:
+        return res
+
+
+def calculate_vpin_toxicity(df_candles: pd.DataFrame, rolling_window: int = 12, recent_cvd: dict = None) -> dict:
+    """
+    11. EASLEY, LOPEZ DE PRADO, O'HARA — VPIN (Volume-Synchronized Probability of Toxicity):
+    - Hacim bazlı toksik akış ve kurumsal içeriden bilgi (informed trader) baskısını ölçer.
+    - VPIN in [0.0, 1.0]
+    - TRENDDE: VPIN >= 0.50 ise kırılımın arkasında gerçek kurumsal akış var demektir (Gerçek Kırılım Teyidi).
+    - YATAYDA: VPIN >= 0.55 ise KONSOLİDASYON PATLAMAK ÜZEREDİR! Sahte range scalplarını derhal veto eder.
+    """
+    res = {
+        'vpin_score': 0.30,
+        'toxicity_level': 'LOW',
+        'is_toxic_flow': False,
+        'is_range_veto_alert': False,
+        'vpin_desc': 'Dengeli & Sakin Akış'
+    }
+    if df_candles is None or not isinstance(df_candles, pd.DataFrame) or len(df_candles) < 3:
+        return res
+
+    try:
+        sub = df_candles.tail(min(rolling_window, len(df_candles)))
+        total_v = 0.0
+        abs_order_imbalance = 0.0
+
+        for _, row in sub.iterrows():
+            vol = float(row.get('volume', 0.0))
+            if vol <= 0:
+                continue
+            total_v += vol
+
+            # Taker alım hacmi varsa
+            if 'taker_buy_volume' in row and float(row['taker_buy_volume']) > 0:
+                buy_v = float(row['taker_buy_volume'])
+                sell_v = max(0.0, vol - buy_v)
+            else:
+                o = float(row.get('open', 0.0))
+                c = float(row.get('close', 0.0))
+                h = float(row.get('high', 0.0))
+                l = float(row.get('low', 0.0))
+                rng = h - l
+                if rng > 0:
+                    z = (c - o) / rng
+                    buy_ratio = np.clip(0.5 + (z * 0.4), 0.05, 0.95)
+                else:
+                    buy_ratio = 0.5
+                buy_v = vol * buy_ratio
+                sell_v = vol * (1.0 - buy_ratio)
+
+            abs_order_imbalance += abs(buy_v - sell_v)
+
+        if total_v > 0:
+            raw_vpin = abs_order_imbalance / total_v
+        else:
+            raw_vpin = 0.30
+
+        if recent_cvd and isinstance(recent_cvd, dict):
+            ratio_60s = float(recent_cvd.get('ratio_60s', 50.0))
+            micro_imb = abs(ratio_60s - 50.0) / 50.0
+            vpin_score = float(np.clip((raw_vpin * 0.70) + (micro_imb * 0.30), 0.05, 0.95))
+        else:
+            vpin_score = float(np.clip(raw_vpin, 0.05, 0.95))
+
+        vpin_score = round(vpin_score, 3)
+
+        if vpin_score >= 0.55:
+            tox = 'EXTREME'
+            desc = f'⚠️ Aşırı Toksik Akış (VPIN: %{vpin_score*100:.1f} >= %55). Konsolidasyon patlamak üzere!'
+            is_toxic = True
+            is_range_veto = True
+        elif vpin_score >= 0.38:
+            tox = 'MODERATE'
+            desc = f'⚡ Yükselen Kurumsal Toksisite (VPIN: %{vpin_score*100:.1f})'
+            is_toxic = False
+            is_range_veto = False
+        else:
+            tox = 'LOW'
+            desc = f'🟢 Dengeli & Sakin Piyasa (VPIN: %{vpin_score*100:.1f})'
+            is_toxic = False
+            is_range_veto = False
+
+        return {
+            'vpin_score': vpin_score,
+            'toxicity_level': tox,
+            'is_toxic_flow': is_toxic,
+            'is_range_veto_alert': is_range_veto,
+            'vpin_desc': desc
+        }
+    except Exception:
+        return res
+
+
+def calculate_kyles_lambda(df_candles: pd.DataFrame, current_candle: dict = None) -> dict:
+    """
+    12. ALBERT KYLE & YAKOV AMIHUD — Kyle's Lambda (İllikitlik & Fiyat Etki Oranı):
+    - Birim işlem hacmi başına fiyatın ne kadar kaydığını ölçer (Lambda = |Return| / DollarVolume).
+    - HAVA CEBİ TUZAĞI (Illiquidity Vacuum Trap): Eğer fiyat sert hareket etmiş ama hacim cücük kalmışsa (Lambda >= 2.5x),
+      bu arkası boş sahte bir kırılımdır; asla kırılıma atlanmaz.
+    - LİKİT GENİŞLEME: Düşük Lambda + Yüksek Hacim = Gerçek Kurumsal Trend.
+    """
+    res = {
+        'lambda_ratio': 1.0,
+        'is_vacuum_trap': False,
+        'is_liquid_expansion': False,
+        'lambda_regime': 'NORMAL',
+        'desc': 'Normal Likidite Dağılımı'
+    }
+    if df_candles is None or not isinstance(df_candles, pd.DataFrame) or len(df_candles) < 5:
+        return res
+
+    try:
+        sub = df_candles.tail(20).copy()
+        lambdas = []
+        for _, row in sub.iterrows():
+            c = float(row.get('close', 1.0))
+            o = float(row.get('open', 1.0))
+            v = float(row.get('volume', 0.0))
+            usd_vol = c * v
+            if usd_vol > 500.0 and c > 0 and o > 0:
+                ret = abs(c - o) / o
+                lamb = (ret / usd_vol) * 1e6
+                lambdas.append(lamb)
+
+        if not lambdas:
+            return res
+
+        mean_lambda = float(np.mean(lambdas))
+        if mean_lambda <= 0:
+            mean_lambda = 1e-6
+
+        cur_candle = current_candle or (df_candles.iloc[-1].to_dict() if len(df_candles) > 0 else {})
+        cur_c = float(cur_candle.get('close', 1.0))
+        cur_o = float(cur_candle.get('open', 1.0))
+        cur_v = float(cur_candle.get('volume', 0.0))
+        cur_usd_vol = cur_c * cur_v
+        cur_ret = abs(cur_c - cur_o) / cur_o if cur_o > 0 else 0.0
+
+        if cur_usd_vol > 500.0:
+            cur_lambda = (cur_ret / cur_usd_vol) * 1e6
+        else:
+            cur_lambda = mean_lambda
+
+        lambda_ratio = round(cur_lambda / mean_lambda, 2)
+
+        # 1. Hava Cebi Tuzağı (Fiyat %0.30'dan fazla sıçramış ama hacim sığ -> Lambda 2.5x üstü)
+        is_vacuum = (lambda_ratio >= 2.5 and cur_ret >= 0.0030)
+
+        # 2. Likit Kurumsal Genişleme (Hacim yüksek, Lambda normal veya düşük, fiyat kaymıyor)
+        is_liquid = (lambda_ratio <= 1.2 and cur_ret >= 0.0025)
+
+        if is_vacuum:
+            regime = 'ILLIQUIDITY_VACUUM_TRAP'
+            desc = f'🌪️ Hava Cebi Tuzağı: İllikitlik oranı {lambda_ratio:.1f}x normal. Sığ tahtada sahte sıçrama tespiti!'
+        elif is_liquid:
+            regime = 'LIQUID_EXPANSION'
+            desc = f'🌊 Derin Likit Genişleme: Kurumsal gerçek hacim (Lambda: {lambda_ratio:.2f}x)'
+        else:
+            regime = 'NORMAL'
+            desc = f'⚪ Standart Tahta Likiditesi (Lambda: {lambda_ratio:.2f}x)'
+
+        return {
+            'lambda_ratio': lambda_ratio,
+            'is_vacuum_trap': is_vacuum,
+            'is_liquid_expansion': is_liquid,
+            'lambda_regime': regime,
+            'desc': desc
+        }
+    except Exception:
+        return res
+
+
+
 
