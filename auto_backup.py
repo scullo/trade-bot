@@ -11,7 +11,7 @@ from config import INITIAL_BALANCE
 from paper_trader import _get_gh_token
 from excel_exporter import create_styled_excel_report
 
-GITHUB_RAW_URL = "https://raw.githubusercontent.com/scullo/trade-bot/main/trade_history.json"
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/scullo/trade-bot/state/trade_history.json"
 
 def run_backup():
     token = _get_gh_token()

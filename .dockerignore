@@ -1,5 +1,14 @@
 __pycache__
 *.pyc
+*.pyo
+*.pyd
 *.log
 .git
 .gitignore
+_ARCHIVE_SCRATCH/
+ANALİZ/
+*.xlsx
+*.csv
+*.txt
+*.docx
+*.lnk

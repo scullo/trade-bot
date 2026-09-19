@@ -108,6 +108,7 @@ class MarketDataManager:
 
         self.on_tick_callback = None
         self.on_candle_close_callback = None
+        self.last_candle_callback_ts = {}  # norm_s -> int(candle timestamp) mükerrer mum tetikleme önleyici
 
 
     def _clean_symbol(self, symbol: str) -> str:
@@ -1649,7 +1650,10 @@ class MarketDataManager:
                                 self.candles_5m[s] = pd.DataFrame([cur_candle])
                                 self.recalculate_levels(s)
                             if self.on_candle_close_callback and s in self.active_symbols:
-                                await self.on_candle_close_callback(s, cur_candle, prev_candle)
+                                c_ts = cur_candle.get('timestamp', 0)
+                                if self.last_candle_callback_ts.get(s) != c_ts:
+                                    self.last_candle_callback_ts[s] = c_ts
+                                    await self.on_candle_close_callback(s, cur_candle, prev_candle)
                     except Exception as e:
                         print(f">> [TARAMA HATA] {s}: {e}")
 
@@ -1886,7 +1890,10 @@ class MarketDataManager:
                                                 self.candles_5m[norm_s] = self.candles_5m[norm_s].iloc[-200:].reset_index(drop=True)
                                             self.recalculate_levels(norm_s)
                                             if self.on_candle_close_callback and norm_s in self.active_symbols:
-                                                await self.on_candle_close_callback(norm_s, new_candle, prev_candle)
+                                                c_ts = new_candle.get('timestamp', 0)
+                                                if self.last_candle_callback_ts.get(norm_s) != c_ts:
+                                                    self.last_candle_callback_ts[norm_s] = c_ts
+                                                    await self.on_candle_close_callback(norm_s, new_candle, prev_candle)
                                 elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
                                     break
                 except Exception as e:
@@ -1927,13 +1934,9 @@ class MarketDataManager:
                     if now.hour != last_audited_hour:
                         last_audited_hour = now.hour
                         print(f">> [SAATLİK VADELİ SAĞLIK DENETÇİSİ] Saat {now.strftime('%H:00')} — 100 Paritenin Vadeli Verileri ve Seviyeleri Denetleniyor...")
-                        healed_cnt = 0
-                        for sym in list(self.all_symbols):
-                            try:
-                                await self.fetch_single_symbol(sym)
-                                healed_cnt += 1
-                            except Exception:
-                                pass
+                        tasks = [self.fetch_single_symbol(sym) for sym in list(self.all_symbols)]
+                        results = await asyncio.gather(*tasks, return_exceptions=True)
+                        healed_cnt = sum(1 for r in results if not isinstance(r, Exception))
                         print(f">> [SAATLİK VADELİ SAĞLIK DENETÇİSİ TAMAMLANDI] {healed_cnt}/{len(self.all_symbols)} Parite fapi.binance.com ile %100 doğrulandı ve eşitlendi.")
                     await asyncio.sleep(60)
                 except Exception as e:

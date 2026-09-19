@@ -9,3 +9,4 @@ ENV/
 .system_generated/
 *.log
 .DS_Store
+_ARCHIVE_SCRATCH/

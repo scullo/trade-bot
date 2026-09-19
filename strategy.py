@@ -1182,10 +1182,10 @@ class StrategyEngine:
         is_persistent_wall = (obi_wall_duration >= 6.0)
         now_ts = time.time()
         age_sec = (now_ts - obi_last_upd) if obi_last_upd > 0 else 999.0
-        is_obi_fresh = (age_sec < 20.0) and (obi_bid_qty > 0) and (obi_ask_qty > 0)
+        is_obi_fresh = (age_sec < 35.0) and (obi_bid_qty > 0) and (obi_ask_qty > 0)
 
         # 🛡️ ISINMA KORUMASI (WARM-UP GATE):
-        # Canlı tahta derinliği (OBI) henüz akmamış, sıfır veya 20 saniyeden eski ise körleme işlem AÇILMAZ!
+        # Canlı tahta derinliği (OBI) henüz akmamış, sıfır veya 35 saniyeden eski ise körleme işlem AÇILMAZ!
         if not is_obi_fresh:
             rej_msg = f"🛡️ Isınma Koruması (Warm-up Gate): Canlı tahta derinliği (OBI) henüz oturmadı veya bayat ({age_sec:.1f}s önce güncellendi, B:{obi_bid_qty:.1f}, A:{obi_ask_qty:.1f}). Körleme işleme girilmedi."
             print(f">> [RED - ISINMA KALKANI] {symbol}: {rej_msg}")
@@ -1194,10 +1194,10 @@ class StrategyEngine:
 
         # ⚖️ MODÜL 3: DENGELİ TAHTA (OBI) KALİTE ÇITASI
         if obi_wall_side == "BALANCED":
-            has_vol_surge = (vol_surge >= 1.50)
+            has_vol_surge = (vol_surge >= 1.35)
             has_cvd_flow = (side == "LONG" and cvd_ratio_60s >= 58.0) or (side == "SHORT" and cvd_ratio_60s <= 42.0)
             if not has_vol_surge and not has_cvd_flow:
-                rej_msg = f"⚖️ Dengeli Tahta Kalite Çıtası: Tahtada koruyucu duvar yok (BALANCED, Bid/Ask: {obi_ratio:.2f}x) ve ek hacim/CVD teyidi yetersiz (Hacim: {vol_surge:.2f}x < 1.5x, CVD: %{cvd_ratio_60s:.0f}). Düşük kaliteli işlem elendi."
+                rej_msg = f"⚖️ Dengeli Tahta Kalite Çıtası: Tahtada koruyucu duvar yok (BALANCED, Bid/Ask: {obi_ratio:.2f}x) ve ek hacim/CVD teyidi yetersiz (Hacim: {vol_surge:.2f}x < 1.35x, CVD: %{cvd_ratio_60s:.0f}). Düşük kaliteli işlem elendi."
                 print(f">> [RED - DENGELİ TAHTA KALKANI] {symbol}: {rej_msg}")
                 self.log_rejection(symbol, reason, rej_msg)
                 return {"error": "BALANCED_OBI_CONFIRMATION_MISSING"}
