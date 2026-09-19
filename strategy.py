@@ -733,6 +733,9 @@ class StrategyEngine:
     # POZISYON ACMA YARDIMCISI
     # =========================================================================
     async def _handle_open(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None):
+        # ── 0. KURUMSAL BUZDAĞI (ICEBERG SNIPER) ERKEN TESPİTİ ──
+        is_ice_sniper_order = any("Iceberg_Offense" in str(c) for c in (confluence_list or [])) or ("Buzdağı Hücumu" in reason) or ("Buzdağı Arkası" in reason)
+
         # ── 0a. ZARAR DURDURMA SONRASI SOĞUMA VE ÇİFTE ZARAR DEVRE KESİCİSİ ──
         now_ts = time.time()
         cd_expiry = getattr(self, 'symbol_stop_cooldown', {}).get(symbol, 0.0)
@@ -1189,15 +1192,15 @@ class StrategyEngine:
 
         # ── 1d-2. HARMONİK AKIŞ GEÇİDİ (HARMONIC FLOW GATE) ──
         # Taker akışına karşı asla pozisyon açılamaz!
-        # Taker alıcılar üstünken (CVD > %52.0) SHORT açılması,
-        # Taker satıcılar üstünken (CVD < %48.0) LONG açılması KESİNLİKLE ENGELLENİR!
-        if side == "SHORT" and cvd_ratio_60s > 52.0:
+        # İSTİSNA: Kurumsal Buzdağı veya Pasif Limit Emiliminde (Iceberg / Bookmap) taker akışı kurumsal duvar tarafından absorbe edilir.
+        is_passive_institutional = is_ice_sniper_order or any(k in str(confluence_list or []) for k in ["Iceberg", "Buzdağı", "Emilim", "Absorption", "Wall", "Duvar"])
+        if side == "SHORT" and cvd_ratio_60s > 52.0 and not is_passive_institutional:
             rej_msg = f"🛡️ Harmonik Akış Kalkanı: Taker piyasa alıcıların kontrolünde (Alıcı CVD: %{cvd_ratio_60s:.1f} > %52.0). Yükselen taker akışına karşı SHORT engellendi."
             print(f">> [RED - HARMONİK AKIŞ KALKANI] {symbol}: {rej_msg}")
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "HARMONIC_FLOW_CVD_BUYER_DOMINANT"}
 
-        if side == "LONG" and cvd_ratio_60s < 48.0:
+        if side == "LONG" and cvd_ratio_60s < 48.0 and not is_passive_institutional:
             rej_msg = f"🛡️ Harmonik Akış Kalkanı: Taker piyasa satıcıların kontrolünde (Alıcı CVD: %{cvd_ratio_60s:.1f} < %48.0). Düşen taker akışına karşı LONG engellendi."
             print(f">> [RED - HARMONİK AKIŞ KALKANI] {symbol}: {rej_msg}")
             self.log_rejection(symbol, reason, rej_msg)
@@ -1372,7 +1375,7 @@ class StrategyEngine:
         # ── 1b-2. BETA / NÖTR TAKİPÇİ COİNLERDE LONG KALKANI (BETA FOLLOWER LONG SHIELD) ──
         # Piyasadan bağımsız pozitif güç (Alfa veya Dirençli Boğa) üretmeyen, BTC düştüğünde düşüşe öncülük eden
         # Beta takipçi coinlerde düşüş/yatay piyasada dip sekmesi aramak toksiktir (Zararların %87'si buradan kaynaklandı).
-        if side == "LONG":
+        if side == "LONG" and symbol != "BTC/USDT":
             is_alpha_or_bull = ("ALFA" in decoupling_status or "DİRENÇLİ" in decoupling_status or dynamic_rs_score >= 0.20 or rs_vs_btc >= 0.30)
             if not is_alpha_or_bull:
                 rej_msg = f"🛡️ Beta Takipçi Long Kalkanı: {symbol} piyasadan pozitif ayrışmıyor ({decoupling_status}, RS Skoru: {dynamic_rs_score:+.2f}, BTC Farkı: %{rs_vs_btc:+.2f}). Bağımsız alfa üretmeyen zayıf coinlerde LONG engellendi."
@@ -1555,9 +1558,9 @@ class StrategyEngine:
         # Boyut B: Pasif Tahta Derinliği (L2 Order Book, Duvar, Likidite Boşluğu)
         # Boyut C: Aktif Agresyon & Alfa (Mikro-CVD, Hacim Patlaması, Balina Akışı, RS Ayrışması)
         conf_items = confluence_list or []
-        price_axis = any(any(k in str(ci) for k in ["Breakout", "Breakdown", "Destek", "Direnç", "AVWAP", "nPOC", "mVAH", "mVAL", "Sweep", "Sekmesi", "Reddi", "Flip"]) for ci in conf_items)
-        depth_axis = any(any(k in str(ci) for k in ["Tahta", "L2", "Duvar", "Derinlik", "Hava_Cebi", "Boşluğu"]) for ci in conf_items) or (obi_confirmed)
-        flow_axis = any(any(k in str(ci) for k in ["CVD", "Hacim", "Balina", "ALFA", "Agresyon", "Emilim"]) for ci in conf_items) or (vol_surge >= 1.35) or (cvd_confirmed)
+        price_axis = any(any(k in str(ci) for k in ["Breakout", "Breakdown", "Destek", "Support", "Direnç", "Resistance", "AVWAP", "nPOC", "mVAH", "mVAL", "Sweep", "Sekmesi", "Reddi", "Flip", "Reclaim", "Bounce", "Rejection", "S3", "R3", "S4", "R4", "Pivot", "Target"]) for ci in conf_items)
+        depth_axis = any(any(k in str(ci) for k in ["Tahta", "L2", "Duvar", "Wall", "Derinlik", "Depth", "Hava_Cebi", "Boşluğu", "Iceberg", "Bookmap", "Imbalance", "OBI"]) for ci in conf_items) or (obi_confirmed)
+        flow_axis = any(any(k in str(ci) for k in ["CVD", "Hacim", "Volume", "Balina", "Whale", "ALFA", "Alpha", "Agresyon", "Aggression", "Emilim", "Absorption", "OI", "Open_Interest", "VPIN", "Hawkes", "Stoikov", "Avalanche", "Squeeze"]) for ci in conf_items) or (vol_surge >= 1.35) or (cvd_confirmed)
 
         orthogonal_axes = sum([price_axis, depth_axis, flow_axis])
 
