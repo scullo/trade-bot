@@ -11,6 +11,7 @@ from config import (
     ELITE_SLOT_BASE, ELITE_SLOT_MAX,
     STAGNATION_CANDLES_MEME, STAGNATION_CANDLES_MAJOR,
     FIXED_DOLLAR_RISK, MIN_POSITION_MARGIN, MAX_POSITION_MARGIN,
+    RISK_EQUITY_PCT, MIN_TP1_GAIN_PCT,
     BTC_SHOCK_60S_PCT, BTC_SHOCK_COOLDOWN_SEC,
     WALL_MIN_AGE_SEC, WALL_ANCHOR_AGE_SEC,
     BASIS_BUBBLE_BPS, BASIS_ABSORPTION_BPS,
@@ -45,6 +46,22 @@ class StrategyEngine:
                 print(f">> [COIN DNA] {len(self.dna_baseline)} parite için geçmiş baz DNA hafızaya yüklendi.")
         except Exception as e:
             print(f">> [COIN DNA HATA] Baz DNA yüklenemedi: {e}")
+
+    def get_effective_slot_count(self, open_positions: dict) -> float:
+        """
+        Dinamik Slot Geri Kazanımı (Slot Recycling):
+        TP1'i alınmış ve stopu breakeven/kâra kilitlenmiş risksiz işlemler 0.5 slot sayılır.
+        Böylece koşan risksiz pozisyonlar yeni A+ kurulumların slotunu tıkamaz.
+        """
+        if not open_positions:
+            return 0.0
+        eff_cnt = 0.0
+        for p in open_positions.values():
+            if p.get("is_half_closed", False) and (p.get("_trail_be", False) or p.get("tp1_hit", False)):
+                eff_cnt += 0.5
+            else:
+                eff_cnt += 1.0
+        return eff_cnt
 
     def log_rejection(self, symbol: str, setup_name: str, reason: str, **kwargs):
         now_str = datetime.now().strftime("%H:%M:%S")
@@ -606,21 +623,26 @@ class StrategyEngine:
                     self._cleanup_tracking(symbol)
 
             elif not pos.get("is_half_closed") and tp1 > 0 and current_price >= tp1:
-                lvl_tag = self._get_level_name_by_price(tp1, levels)
-                lvl_str = f" [{lvl_tag}]" if lvl_tag else ""
-
-                # TP2 tanımlıysa %50 Kâr Al & Kalan %50 Runner'ı Breakeven Korumasıyla Bırak
-                if tp2 and tp2 > tp1:
-                    record = await self._safe_close_position(symbol, current_price, f"🎯 TP1 Alındı{lvl_str} (%50 Kapatıldı - TP2 Runner Aktif)", is_partial=True)
-                    if record:
-                        await self._notify_close(record, levels=levels)
-                    return
+                entry_p_check = float(pos.get("entry_price", current_price))
+                min_gain_mult = 1.0 + (float(MIN_TP1_GAIN_PCT) / 100.0)
+                if current_price < (entry_p_check * min_gain_mult):
+                    pass  # 🛡️ Komisyon Kalkanı: Asgari %0.90 fiyat kârı (+%4.5 ROE) oluşmadan erken TP1 tetiklenmez
                 else:
-                    record = await self._safe_close_position(symbol, current_price, f"🎯 TP Hedefine Ulaşıldı{lvl_str} (${tp1:.4f})")
-                    if record:
-                        await self._notify_close(record, levels=levels)
-                        self._cleanup_tracking(symbol)
-                    return
+                    lvl_tag = self._get_level_name_by_price(tp1, levels)
+                    lvl_str = f" [{lvl_tag}]" if lvl_tag else ""
+
+                    # TP2 tanımlıysa %50 Kâr Al & Kalan %50 Runner'ı Breakeven Korumasıyla Bırak
+                    if tp2 and tp2 > tp1:
+                        record = await self._safe_close_position(symbol, current_price, f"🎯 TP1 Alındı{lvl_str} (%50 Kapatıldı - TP2 Runner Aktif)", is_partial=True)
+                        if record:
+                            await self._notify_close(record, levels=levels)
+                        return
+                    else:
+                        record = await self._safe_close_position(symbol, current_price, f"🎯 TP Hedefine Ulaşıldı{lvl_str} (${tp1:.4f})")
+                        if record:
+                            await self._notify_close(record, levels=levels)
+                            self._cleanup_tracking(symbol)
+                        return
 
         elif side == "SHORT":
             if tp2 > 0 and pos.get("is_half_closed") and current_price <= tp2:
@@ -633,21 +655,26 @@ class StrategyEngine:
                 return
 
             elif not pos.get("is_half_closed") and tp1 > 0 and current_price <= tp1:
-                lvl_tag = self._get_level_name_by_price(tp1, levels)
-                lvl_str = f" [{lvl_tag}]" if lvl_tag else ""
-
-                # TP2 tanımlıysa %50 Kâr Al & Kalan %50 Runner'ı Breakeven Korumasıyla Bırak
-                if tp2 and tp2 < tp1:
-                    record = await self._safe_close_position(symbol, current_price, f"🎯 TP1 Alındı{lvl_str} (%50 Kapatıldı - TP2 Runner Aktif)", is_partial=True)
-                    if record:
-                        await self._notify_close(record, levels=levels)
-                    return
+                entry_p_check = float(pos.get("entry_price", current_price))
+                min_gain_mult = 1.0 - (float(MIN_TP1_GAIN_PCT) / 100.0)
+                if current_price > (entry_p_check * min_gain_mult):
+                    pass  # 🛡️ Komisyon Kalkanı: Asgari %0.90 fiyat kârı (+%4.5 ROE) oluşmadan erken TP1 tetiklenmez
                 else:
-                    record = await self._safe_close_position(symbol, current_price, f"🎯 TP Hedefine Ulaşıldı{lvl_str} (${tp1:.4f})")
-                    if record:
-                        await self._notify_close(record, levels=levels)
-                        self._cleanup_tracking(symbol)
-                    return
+                    lvl_tag = self._get_level_name_by_price(tp1, levels)
+                    lvl_str = f" [{lvl_tag}]" if lvl_tag else ""
+
+                    # TP2 tanımlıysa %50 Kâr Al & Kalan %50 Runner'ı Breakeven Korumasıyla Bırak
+                    if tp2 and tp2 < tp1:
+                        record = await self._safe_close_position(symbol, current_price, f"🎯 TP1 Alındı{lvl_str} (%50 Kapatıldı - TP2 Runner Aktif)", is_partial=True)
+                        if record:
+                            await self._notify_close(record, levels=levels)
+                        return
+                    else:
+                        record = await self._safe_close_position(symbol, current_price, f"🎯 TP Hedefine Ulaşıldı{lvl_str} (${tp1:.4f})")
+                        if record:
+                            await self._notify_close(record, levels=levels)
+                            self._cleanup_tracking(symbol)
+                        return
 
         # ── 2.5 KAZANAN ATI BESLEME (PYRAMIDING) & ZAMAN BAZLI KÂR KİLİDİ ──
         if symbol in self.paper_trader.open_positions and not self.paper_trader.open_positions[symbol].get("is_half_closed", False):
@@ -727,22 +754,23 @@ class StrategyEngine:
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "SYMBOL_DAILY_MAX_LOSSES_REACHED"}
 
-        # ── 0. ESNEK PORTFÖY KAPASİTESİ & SERMAYE BÜTÇESİ KONTROLÜ (ELASTIC SLOTS) ──
+        # ── 0. ESNEK PORTFÖY KAPASİTESİ & SERMAYE BÜTÇESİ KONTROLÜ (ELASTIC SLOTS & RECYCLING) ──
         open_positions = getattr(self.paper_trader, 'open_positions', {})
         current_open_cnt = len(open_positions)
+        effective_open_cnt = self.get_effective_slot_count(open_positions)
         current_balance = getattr(self.paper_trader, 'balance', 10000.0)
         total_open_margin = sum(float(p.get("margin", 0.0)) for p in open_positions.values())
         max_margin_budget = current_balance * (MAX_PORTFOLIO_MARGIN_PCT / 100.0)
 
-        # Kural 1: Toplam Marjin Riski Tavanı (%20 Kasa)
+        # Kural 1: Toplam Marjin Riski Tavanı (%25 Kasa - Max $2,500)
         if total_open_margin >= max_margin_budget:
-            rej_msg = f"🛡️ Portföy Risk Tavanı: Toplam açık marjin ${total_open_margin:.1f} (kasanın %{total_open_margin/current_balance*100:.1f}'i) azami bütçeyi aştı. Yeni pozisyon engellendi."
+            rej_msg = f"🛡️ Portföy Risk Tavanı: Toplam açık marjin ${total_open_margin:.1f} (kasanın %{total_open_margin/current_balance*100:.1f}'i) azami bütçeyi (${max_margin_budget:.1f}) aştı. Yeni pozisyon engellendi."
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "PORTFOLIO_MARGIN_CAP_REACHED"}
 
-        # Kural 2: Mutlak Portföy Slot Tavanı (Azami 8)
-        if current_open_cnt >= ELITE_SLOT_MAX:
-            rej_msg = f"🛡️ Esnek Portföy Dolu: Aktif {current_open_cnt} pozisyon mevcut (azami sınır {ELITE_SLOT_MAX}). Yeni işlem açılamaz."
+        # Kural 2: Dinamik Slot Geri Kazanımlı Portföy Slot Tavanı (Azami 8)
+        if effective_open_cnt >= ELITE_SLOT_MAX:
+            rej_msg = f"🛡️ Esnek Portföy Dolu: Efektif {effective_open_cnt:.1f} pozisyon mevcut (azami sınır {ELITE_SLOT_MAX}). Yeni işlem açılamaz."
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "MAX_SLOTS_REACHED"}
 
@@ -1714,8 +1742,13 @@ class StrategyEngine:
         if is_macro_volume_setup:
             self.margin_multiplier *= 1.15
 
-        # ⚖️ 1. VOLATİLİTEYE UYARLI EŞİT DOLAR RİSKİ (INVERSE-ATR EQUAL DOLLAR RISK PARITY)
-        # Her işlemde stop olunduğunda kasadan çıkacak dolar riski tam FIXED_DOLLAR_RISK ($10.00) hedeflenir.
+        # ⚖️ 1. DİNAMİK KASA VE BİLEŞİK GETİRİ RİSK PARİTESİ (DYNAMIC EQUITY RISK PARITY & COMPOUNDING ENGINE)
+        # Kasanın anlık bakiyesine endeksli %0.80 dinamik risk hedeflenir ($10,000 için $80.00 net stop riski).
+        cur_vault_balance = float(getattr(self.paper_trader, 'balance', 10000.0))
+        target_risk_pct = float(RISK_EQUITY_PCT) / 100.0
+        # Kasa 10k -> $80, Kasa 15k -> $120 (Compounding), Kasa 8k -> $64 (Drawdown koruması)
+        target_risk_usd = max(float(FIXED_DOLLAR_RISK), cur_vault_balance * target_risk_pct)
+
         actual_stop_dist = abs(entry_price - hard_stop)
         stop_dist_pct = (actual_stop_dist / entry_price) if entry_price > 0 else 0.02
 
@@ -1725,7 +1758,6 @@ class StrategyEngine:
         effective_stop_pct = max(stop_dist_pct, min_stop_floor_pct)
 
         # Hedef Nominal Pozisyon Büyüklüğü (Notional USD) = Hedef Risk ($) / Stop Yüzdesi
-        target_risk_usd = float(FIXED_DOLLAR_RISK)
         target_notional_usd = target_risk_usd / effective_stop_pct
 
         # Kaldıraç (5x) bazında gereken taban marjin:
@@ -1746,9 +1778,12 @@ class StrategyEngine:
         est_win_rate = 72.0 if (has_whale_flow or c_count >= 4) else (60.0 if c_count >= 3 else 52.0)
         kelly_mult = calculate_fractional_kelly(win_rate_pct=est_win_rate, reward_risk_ratio=2.0, fraction=0.25)
 
-        # Asgari ($35) ve Azami ($110) sınırlar içine kitle (Portföy Risk Paritesi Kalkanı):
-        max_margin_cap = MAX_POSITION_MARGIN if (has_whale_flow or c_count >= 4) else (MAX_POSITION_MARGIN * 0.85)
-        dyn_margin = round(max(MIN_POSITION_MARGIN, min(max_margin_cap, base_calc_margin * kelly_mult * getattr(self, 'margin_multiplier', 1.0))), 2)
+        # Dinamik Kasa Taban ve Tavan Sınırları (10k Kasada Min $150, Max $450-$500):
+        dyn_min_margin_bound = max(float(MIN_POSITION_MARGIN), cur_vault_balance * 0.015)
+        dyn_max_margin_bound = max(float(MAX_POSITION_MARGIN), cur_vault_balance * 0.050)
+        max_margin_cap = dyn_max_margin_bound if (has_whale_flow or c_count >= 4) else (dyn_max_margin_bound * 0.85)
+
+        dyn_margin = round(max(dyn_min_margin_bound, min(max_margin_cap, base_calc_margin * kelly_mult * getattr(self, 'margin_multiplier', 1.0))), 2)
 
         calculated_dollar_risk = round(dyn_margin * float(getattr(self.paper_trader, 'leverage', 5)) * effective_stop_pct, 2)
 
@@ -2295,7 +2330,10 @@ class StrategyEngine:
                 return True
             else:
                 # Pivot P kaydıysa hedefi güncelle, fakat erken kapatma yapma
-                if abs(old_tp1 - p) > 0.0001:
+                # Sadece hedef mantıklı kâr yönündeyse güncelle (Long için entry üstü, Short için entry altı)
+                min_tp_gain = float(MIN_TP1_GAIN_PCT) / 100.0
+                is_valid_pivot_target = (side == "LONG" and p >= entry * (1.0 + min_tp_gain)) or (side == "SHORT" and p <= entry * (1.0 - min_tp_gain))
+                if is_valid_pivot_target and abs(old_tp1 - p) > 0.0001:
                     pos["tp1"] = p
 
         # ── 2. RETEST İŞLEMLERİ (R4 Destek Retest / S4 Direnç Retest) ─────
@@ -2388,7 +2426,14 @@ class StrategyEngine:
                 return
 
             if not is_half and tp1_target > 0:
-                if (side == "LONG" and close_price >= tp1_target) or (side == "SHORT" and close_price <= tp1_target):
+                is_valid_tp_hit = False
+                min_tp_gain = float(MIN_TP1_GAIN_PCT) / 100.0
+                if side == "LONG" and close_price >= tp1_target and close_price >= (entry_p * (1.0 + min_tp_gain)):
+                    is_valid_tp_hit = True
+                elif side == "SHORT" and close_price <= tp1_target and close_price <= (entry_p * (1.0 - min_tp_gain)):
+                    is_valid_tp_hit = True
+
+                if is_valid_tp_hit:
                     lvl_tag = self._get_level_name_by_price(tp1_target, levels)
                     lvl_str = f" [{lvl_tag}]" if lvl_tag else ""
 
@@ -2569,9 +2614,9 @@ class StrategyEngine:
         # ═══════════════════════════════════════════════════════════════════
         # BOLUM 2: YENI POZISYON GIRIS KONTROLLERI (8 SETUP)
         # ═══════════════════════════════════════════════════════════════════
-        # ── ESNEK PORTFÖY KAPASİTESİ (ELASTIC SLOTS KONTROLÜ) ──
-        cur_open_len = len(self.paper_trader.open_positions)
-        if cur_open_len >= ELITE_SLOT_MAX:
+        # ── ESNEK PORTFÖY KAPASİTESİ (ELASTIC SLOTS & SLOT RECYCLING KONTROLÜ) ──
+        eff_open_len = self.get_effective_slot_count(self.paper_trader.open_positions)
+        if eff_open_len >= ELITE_SLOT_MAX:
             return
 
         tot_open_margin = sum(float(p.get("margin", 0.0)) for p in self.paper_trader.open_positions.values())

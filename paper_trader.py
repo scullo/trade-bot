@@ -4,7 +4,10 @@ import time
 import base64
 import threading
 from datetime import datetime, timezone, timedelta
-from config import INITIAL_BALANCE, LEVERAGE, POSITION_SIZE_USDT, COMMISSION_RATE
+from config import (
+    INITIAL_BALANCE, LEVERAGE, POSITION_SIZE_USDT, COMMISSION_RATE,
+    FIXED_DOLLAR_RISK, RISK_EQUITY_PCT, MIN_POSITION_MARGIN, MAX_POSITION_MARGIN
+)
 
 HISTORY_FILE = "trade_history.json"
 
@@ -479,16 +482,15 @@ class PaperTrader:
         risk_dist = abs(entry_price - stop_level) if stop_level > 0 else (entry_price * 0.015)
         stop_dist_pct = (risk_dist / entry_price) if entry_price > 0 else 0.015
 
-        # Kurumsal Risk Paritesi: Her pozisyondaki mutlak dolar riski $15.00'e eşitlenir
-        # Oynaklığı yüksek paritede marjin kısılır ($30-70), stabil paritede artırılır ($150-250)
+        # Kurumsal Risk Paritesi: Kasanın %0.80'i net dolar riski olarak hedeflenir
         if custom_margin is not None:
             margin = float(custom_margin)
         else:
-            TARGET_DOLLAR_RISK = 15.0
+            target_dollar_risk = max(float(FIXED_DOLLAR_RISK), self.balance * (float(RISK_EQUITY_PCT) / 100.0))
             if stop_dist_pct > 0.002:
-                desired_pos_val = TARGET_DOLLAR_RISK / stop_dist_pct
+                desired_pos_val = target_dollar_risk / stop_dist_pct
                 desired_margin = desired_pos_val / float(self.leverage)
-                margin = round(max(30.0, min(250.0, desired_margin)), 2)
+                margin = round(max(float(MIN_POSITION_MARGIN), min(float(MAX_POSITION_MARGIN), desired_margin)), 2)
             else:
                 margin = float(self.margin_per_trade)
 

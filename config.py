@@ -119,15 +119,17 @@ DEFAULT_ACTIVE_SYMBOLS = ALL_AVAILABLE_SYMBOLS.copy()
 
 SYMBOLS = DEFAULT_ACTIVE_SYMBOLS
 
-# 2. Risk ve Kasa Yonetimi (Elastic Quant Portfolio)
+# 2. Risk ve Kasa Yonetimi (Elastic Quant Portfolio & Compounding Engine)
 INITIAL_BALANCE = 10000.0        # Demo baslangic bakiyesi (USDT)
 LEVERAGE = 5                     # Kaldirac (5x)
-POSITION_SIZE_USDT = 80.0        # Kurumsal dengeli baz marjin (80 USDT)
+POSITION_SIZE_USDT = 300.0       # Kurumsal dengeli baz marjin (300 USDT - 10k kasa standardi)
 MAX_OPEN_POSITIONS = 8           # Esnek portfoy tavani: 5 standart, 8'e kadar esnek marjin butcesi
-MAX_PORTFOLIO_MARGIN_PCT = 10.0  # Azami toplam kilitli marjin: Kasanin %10'u (10,000$ icin max 1,000$)
+MAX_PORTFOLIO_MARGIN_PCT = 25.0  # Azami toplam kilitli marjin: Kasanin %25'i (10,000$ icin max 2,500$)
 ELITE_SLOT_BASE = 5              # Temel kaliteli slot hedefi
 ELITE_SLOT_MAX = 8               # Esnek marjin butcesi kapsaminda azami pozisyon siniri
 COMMISSION_RATE = 0.0005         # %0.05 Binance vadeli islem komisyon simulasyonu
+RISK_EQUITY_PCT = 0.80           # Kasa bakiyesinin %0.80'i islem basi hedef net stop riski (10k icin $80)
+MIN_TP1_GAIN_PCT = 0.90          # Komisyon kalkanı: Asgari %0.90 fiyat kârı / 5x'te %4.5 ROE olmadan TP1 tetiklenemez
 
 # 3. Strateji Parametreleri
 TIMEFRAME = "5m"                 # Ana islem zaman dilimi
@@ -154,10 +156,10 @@ STAGNATION_CANDLES_MAJOR = 8     # Majör ve DeFi paritelerde ivme bekleme süre
 CANDLE_5M_FETCH_DAYS = 15       # 5m mum verisi icin ~15 gun (paginated, ~4300 mum)
 
 # 7. 5 Kurumsal Omurga Parametreleri (Institutional Quantitative Pillars)
-# 1. Volatiliteye Uyarlı Eşit Dolar Riski (Inverse-ATR Fixed Dollar Risk Parity)
-FIXED_DOLLAR_RISK = 10.0         # İşlem başına hedeflenen net azami stop riski (10.0 USDT)
-MIN_POSITION_MARGIN = 35.0       # Asgari pozisyon marjini (Binance min notional koruması)
-MAX_POSITION_MARGIN = 110.0      # Azami pozisyon marjini (Asimetrik portföy tavanı)
+# 1. Volatiliteye Uyarlı Dinamik Kasa Riski (Inverse-ATR Dynamic Equity Risk Parity)
+FIXED_DOLLAR_RISK = 80.0         # İşlem başına hedeflenen net azami stop riski tabanı (80.0 USDT)
+MIN_POSITION_MARGIN = 150.0      # Asgari pozisyon marjini (Binance min notional ve komisyon kalkanı)
+MAX_POSITION_MARGIN = 500.0      # Azami pozisyon marjini (A+ Balina teyitli asimetrik portföy tavanı)
 
 # 2. BTC Ani Mikro-Şok Kalkanı (BTC 60s Flush / Spike Gate)
 BTC_SHOCK_60S_PCT = 0.28         # BTC 60 saniyede %0.28 ve üzeri ani hareket yaparsa şok geçidi devreye girer
