@@ -580,3 +580,190 @@ def detect_bookmap_absorption(
         }
 
 
+def calculate_cvd_acceleration(cvd_series, window: int = 5) -> dict:
+    """
+    7. CVD 1. Türev (Hız) ve 2. Türev (İvme) & Sıfır Geçişi (Zero-Crossing) Analiz Motoru:
+    - Fiyat tepeye giderken ivme negatife döndüğünde: BULL_EXHAUSTION_TOP (Alıcı tükenişi, tepe dönüşü).
+    - Fiyat dibe inerken ivme pozitife döndüğünde: BEAR_EXHAUSTION_BOTTOM (Satıcı tükenişi, dip dönüşü).
+    """
+    default_res = {
+        'velocity': 0.0,
+        'acceleration': 0.0,
+        'zero_crossing': 'NONE',
+        'is_exhaustion_top': False,
+        'is_exhaustion_bottom': False,
+        'momentum_regime': 'NEUTRAL'
+    }
+    if not cvd_series or len(cvd_series) < 4:
+        return default_res
+
+    try:
+        arr = np.array(cvd_series[-max(window + 3, 10):], dtype=float)
+        # 3-period EWMA kernel ile gürültü filtreleme
+        if len(arr) >= 5:
+            kernel = np.array([0.2, 0.3, 0.5])
+            smoothed = np.convolve(arr, kernel, mode='valid')
+        else:
+            smoothed = arr
+
+        vel = np.diff(smoothed)
+        acc = np.diff(vel)
+
+        if len(acc) < 2:
+            return default_res
+
+        cur_vel = float(vel[-1])
+        cur_acc = float(acc[-1])
+        prev_acc = float(acc[-2])
+
+        is_ex_top = False
+        is_ex_bottom = False
+        zero_cross = 'NONE'
+
+        # Sıfır Geçişi Tespiti (Son 2 veri noktasında)
+        if (prev_acc > 0 and cur_acc <= 0) or (len(acc) >= 3 and acc[-3] > 0 and acc[-2] <= 0):
+            zero_cross = 'BULL_EXHAUSTION_TOP'
+            is_ex_top = True
+        elif (prev_acc < 0 and cur_acc >= 0) or (len(acc) >= 3 and acc[-3] < 0 and acc[-2] >= 0):
+            zero_cross = 'BEAR_EXHAUSTION_BOTTOM'
+            is_ex_bottom = True
+
+        if cur_vel > 0 and cur_acc > 0:
+            regime = 'ACCELERATING_BUY'
+        elif cur_vel > 0 and cur_acc <= 0:
+            regime = 'DECELERATING_BUY'
+        elif cur_vel < 0 and cur_acc < 0:
+            regime = 'ACCELERATING_SELL'
+        elif cur_vel < 0 and cur_acc >= 0:
+            regime = 'DECELERATING_SELL'
+        else:
+            regime = 'NEUTRAL'
+
+        return {
+            'velocity': round(cur_vel, 2),
+            'acceleration': round(cur_acc, 2),
+            'zero_crossing': zero_cross,
+            'is_exhaustion_top': is_ex_top,
+            'is_exhaustion_bottom': is_ex_bottom,
+            'momentum_regime': regime
+        }
+    except Exception:
+        return default_res
+
+
+def calculate_delta_poc(levels: dict, current_price: float, recent_candles: pd.DataFrame = None) -> dict:
+    """
+    8. dPOC (Delta Point of Control / Tuzaklanmış Likidite Ayak İzi):
+    Seviyelerde gerçekleşen net delta birikimini ve tuzaklanmış yatırımcıları tespit eder.
+    - TRAPPED_LONGS: Dirençte aşırı alım yapıldı fakat fiyat direncin altında kaldı (Boğa Tuzağı -> Short Teyidi).
+    - TRAPPED_SHORTS: Destekte aşırı satım yapıldı fakat fiyat desteğin üstünde kaldı (Ayı Tuzağı -> Long Teyidi).
+    """
+    res = {
+        'trapped_bias': 'NEUTRAL',
+        'trapped_status': 'NONE',
+        'trapped_desc': 'Dengeli Seviye Akışı',
+        'confluence_bonus': 0.0
+    }
+    if not levels or current_price <= 0:
+        return res
+
+    try:
+        cam = levels.get('camarilla', {})
+        s3 = cam.get('S3', 0.0)
+        r3 = cam.get('R3', 0.0)
+        p = cam.get('P', 0.0)
+        below_npoc = levels.get('below_npoc', 0.0) or 0.0
+        above_npoc = levels.get('above_npoc', 0.0) or 0.0
+
+        if recent_candles is not None and isinstance(recent_candles, pd.DataFrame) and len(recent_candles) >= 1:
+            last_candle = recent_candles.iloc[-1]
+            c_high = float(last_candle.get('high', current_price))
+            c_low = float(last_candle.get('low', current_price))
+            c_close = float(last_candle.get('close', current_price))
+
+            # Direnç Retestinde Tuzaklanmış Boğalar (Trapped Longs at Resistance / R3 / Above nPOC)
+            resist_ref = above_npoc if (above_npoc > 0 and abs(current_price - above_npoc) / current_price <= 0.006) else r3
+            if resist_ref > 0 and c_high >= resist_ref and c_close < resist_ref:
+                res['trapped_bias'] = 'SHORT'
+                res['trapped_status'] = 'TRAPPED_LONGS'
+                res['trapped_desc'] = f'🪤 Dirençte (${resist_ref:.4f}) Tuzaklanmış Boğalar (Trapped Longs)'
+                res['confluence_bonus'] = 1.15
+                return res
+
+            # Destek Sekmesinde Tuzaklanmış Ayılar (Trapped Shorts at Support / S3 / Below nPOC)
+            support_ref = below_npoc if (below_npoc > 0 and abs(current_price - below_npoc) / current_price <= 0.006) else s3
+            if support_ref > 0 and c_low <= support_ref and c_close > support_ref:
+                res['trapped_bias'] = 'LONG'
+                res['trapped_status'] = 'TRAPPED_SHORTS'
+                res['trapped_desc'] = f'🪤 Destekte (${support_ref:.4f}) Tuzaklanmış Ayılar (Trapped Shorts)'
+                res['confluence_bonus'] = 1.15
+                return res
+
+        return res
+    except Exception:
+        return res
+
+
+def evaluate_iceberg_offense(iceberg_data: dict, current_price: float, levels: dict, regime: str = 'REGIME_RANGING_PINGPONG') -> dict:
+    """
+    9. Iceberg X-Ray Hücum Sniper Motoru:
+    Mevcut detect_iceberg_orders çıktısını alıp 3 boyutta (Long, Short, Yatay Ping-Pong) hücum silahına dönüştürür.
+    - LONG SNIPER: Destekte alıcı buzdağı arkasına saklanarak %0.22 dar stop ile hücum.
+    - SHORT SNIPER: Dirençte satıcı buzdağı arkasına saklanarak %0.22 dar stop ile hücum.
+    - PING-PONG ARBITRAJ: Yatay rejimde kanal sınırları arasında çift yönlü vur-kaç.
+    """
+    res = {
+        'is_sniper_buy': False,
+        'is_sniper_sell': False,
+        'is_ping_pong': False,
+        'tight_stop_dist_pct': 0.0022,  # %0.22 dar kurumsal stop!
+        'rr_multiplier': 1.0,
+        'offense_reason': '',
+        'target_price': 0.0
+    }
+    if not iceberg_data or current_price <= 0:
+        return res
+
+    try:
+        has_ask_iceberg = bool(iceberg_data.get('has_seller_iceberg', False))
+        has_bid_iceberg = bool(iceberg_data.get('has_buyer_iceberg', False))
+        ask_ratio = float(iceberg_data.get('ask_iceberg_ratio', 1.0))
+        bid_ratio = float(iceberg_data.get('bid_iceberg_ratio', 1.0))
+
+        cam = levels.get('camarilla', {}) if levels else {}
+        s3 = cam.get('S3', 0.0)
+        r3 = cam.get('R3', 0.0)
+        below_npoc = (levels.get('below_npoc') or 0.0) if levels else 0.0
+        above_npoc = (levels.get('above_npoc') or 0.0) if levels else 0.0
+        p = cam.get('P', 0.0)
+
+        # 🟢 1. LONG SNIPER HÜCUMU (Destekte Alıcı Buzdağı Arkasına Saklanma)
+        support_levels = [lvl for lvl in [s3, below_npoc, p] if lvl > 0 and abs(current_price - lvl) / current_price <= 0.0035]
+        if has_bid_iceberg and support_levels and regime in ['REGIME_BULL_TREND', 'REGIME_RANGING_PINGPONG']:
+            sup_lvl = max(support_levels)
+            res['is_sniper_buy'] = True
+            res['tight_stop_dist_pct'] = 0.0022
+            res['rr_multiplier'] = 1.8
+            res['offense_reason'] = f'🧊 Kurumsal Alıcı Buzdağı Hücumu (${sup_lvl:.4f} Destek Arkası, {bid_ratio:.1f}x Emilim)'
+            res['target_price'] = r3 if r3 > current_price else current_price * 1.015
+
+        # 🔴 2. SHORT SNIPER HÜCUMU (Dirençte Satıcı Buzdağı Arkasına Saklanma)
+        resist_levels = [lvl for lvl in [r3, above_npoc, p] if lvl > 0 and abs(current_price - lvl) / current_price <= 0.0035]
+        if has_ask_iceberg and resist_levels and regime in ['REGIME_BEAR_TREND', 'REGIME_RANGING_PINGPONG']:
+            res_lvl = min(resist_levels)
+            res['is_sniper_sell'] = True
+            res['tight_stop_dist_pct'] = 0.0022
+            res['rr_multiplier'] = 1.8
+            res['offense_reason'] = f'🧊 Kurumsal Satıcı Buzdağı Hücumu (${res_lvl:.4f} Direnç Arkası, {ask_ratio:.1f}x Emilim)'
+            res['target_price'] = s3 if (s3 > 0 and s3 < current_price) else current_price * 0.985
+
+        # ⚪ 3. YATAY PİNG-PONG ARBİTRAJI
+        if regime == 'REGIME_RANGING_PINGPONG' and (res['is_sniper_buy'] or res['is_sniper_sell']):
+            res['is_ping_pong'] = True
+
+        return res
+    except Exception:
+        return res
+
+
+

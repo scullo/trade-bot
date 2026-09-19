@@ -1162,8 +1162,12 @@ class MarketDataManager:
                     dynamic_rs_score = 0.0
                     decoupling_status = "⚪ NÖTR_TAKİPÇİ (Beta)"
 
-        # 🧠 6-SÜTUNLU KUANT TELEMETRİSİ (HURST, BOLTZMANN ENTROPİ, ICEBERG, BOOKMAP EMİLİM, SIMONS HMM)
-        from indicators import calculate_hurst_exponent, calculate_orderbook_entropy, detect_iceberg_orders, estimate_hmm_market_phase, detect_bookmap_absorption
+        # 🧠 6-SÜTUNLU KUANT TELEMETRİSİ (HURST, BOLTZMANN ENTROPİ, ICEBERG, BOOKMAP EMİLİM, SIMONS HMM, CVD İVME, dPOC)
+        from indicators import (
+            calculate_hurst_exponent, calculate_orderbook_entropy, detect_iceberg_orders,
+            estimate_hmm_market_phase, detect_bookmap_absorption, calculate_cvd_acceleration,
+            calculate_delta_poc, evaluate_iceberg_offense
+        )
         
         # 1. Mandelbrot Hurst Üssü (5M Kapanışlarından Fraktal Hafıza)
         hurst_val = 0.50
@@ -1241,6 +1245,17 @@ class MarketDataManager:
         hmm_phase = str(hmm_res.get('phase', 'ACCUMULATION'))
         hmm_desc = str(hmm_res.get('desc', 'Sessiz Birikim'))
 
+        # 4. CVD İvme & Sıfır Geçişi (Zero-Crossing)
+        cvd_deltas = [float(s[1] - s[2]) for s in h_deque] if h_deque and len(h_deque) >= 4 else []
+        cvd_acc_info = calculate_cvd_acceleration(cvd_deltas)
+
+        # 5. dPOC Tuzaklanmış Likidite
+        sym_levels = self.levels.get(symbol, {})
+        dpoc_info = calculate_delta_poc(sym_levels, cur_p, df_5m)
+
+        # 6. Iceberg Hücum Sniper & Ping-Pong
+        ice_offense = evaluate_iceberg_offense(ice_data, cur_p, sym_levels)
+
         # JIT L2 önbelleği varsa oradaki derin entropiyi al, yoksa varsayılan
         cached_l2 = getattr(self, 'jit_l2_cache', {}).get(symbol, {})
         entropy_norm = float(cached_l2.get('entropy_norm', 0.65))
@@ -1277,7 +1292,21 @@ class MarketDataManager:
             "wall_duration_sec": float(wall_dur_sec),
             "price_change_pct_60s": float(price_chg_60s),
             "hmm_phase": str(hmm_phase),
-            "hmm_desc": str(hmm_desc)
+            "hmm_desc": str(hmm_desc),
+            "cvd_velocity": float(cvd_acc_info.get('velocity', 0.0)),
+            "cvd_acceleration": float(cvd_acc_info.get('acceleration', 0.0)),
+            "cvd_zero_cross": str(cvd_acc_info.get('zero_crossing', 'NONE')),
+            "is_cvd_exhaustion_top": bool(cvd_acc_info.get('is_exhaustion_top', False)),
+            "is_cvd_exhaustion_bottom": bool(cvd_acc_info.get('is_exhaustion_bottom', False)),
+            "cvd_momentum_regime": str(cvd_acc_info.get('momentum_regime', 'NEUTRAL')),
+            "trapped_bias": str(dpoc_info.get('trapped_bias', 'NEUTRAL')),
+            "trapped_status": str(dpoc_info.get('trapped_status', 'NONE')),
+            "trapped_desc": str(dpoc_info.get('trapped_desc', 'Dengeli Seviye Akışı')),
+            "is_iceberg_sniper_buy": bool(ice_offense.get('is_sniper_buy', False)),
+            "is_iceberg_sniper_sell": bool(ice_offense.get('is_sniper_sell', False)),
+            "is_iceberg_ping_pong": bool(ice_offense.get('is_ping_pong', False)),
+            "iceberg_tight_stop_pct": float(ice_offense.get('tight_stop_dist_pct', 0.0022)),
+            "iceberg_offense_reason": str(ice_offense.get('offense_reason', ''))
         }
 
     def get_symbol_metrics(self, symbol: str) -> dict:
@@ -1492,8 +1521,11 @@ class MarketDataManager:
 
         spoofing_detected = (top_ratio >= 2.0 and l2_ratio < 0.70)
 
-        # 🧠 BOLTZMANN ENTROPİ, KEN GRIFFIN ICEBERG & BOOKMAP EMİLİM HESAPLAMASI
-        from indicators import calculate_orderbook_entropy, detect_iceberg_orders, detect_bookmap_absorption
+        # 🧠 BOLTZMANN ENTROPİ, KEN GRIFFIN ICEBERG, BOOKMAP EMİLİM, CVD İVME & dPOC HESAPLAMASI
+        from indicators import (
+            calculate_orderbook_entropy, detect_iceberg_orders, detect_bookmap_absorption,
+            calculate_cvd_acceleration, calculate_delta_poc, evaluate_iceberg_offense
+        )
         entropy_data = calculate_orderbook_entropy(bids, asks, top_n=20)
 
         # 60s Kayan Taker Hacmi
@@ -1535,64 +1567,86 @@ class MarketDataManager:
             is_major=is_major_sym
         )
 
+        # 4. CVD İvme & Sıfır Geçişi
+        cvd_deltas = [float(s[1] - s[2]) for s in h_deque] if h_deque and len(h_deque) >= 4 else []
+        cvd_acc_info = calculate_cvd_acceleration(cvd_deltas)
+
+        # 5. dPOC Tuzaklanmış Likidite
+        cur_p_for_ice = bids[0][0] if bids else self.current_prices.get(symbol, 0.0)
+        sym_levels_for_ice = self.levels.get(symbol, {})
+        df_5m_chk = self.candles_5m.get(symbol, pd.DataFrame())
+        dpoc_info = calculate_delta_poc(sym_levels_for_ice, cur_p_for_ice, df_5m_chk)
+
+        # 6. Iceberg Hücum Sniper & Ping-Pong
+        ice_offense = evaluate_iceberg_offense(iceberg_data, cur_p_for_ice, sym_levels_for_ice)
+
         # Likidite Boşluğu (Hava Cebi / Liquidity Vacuum) Tespiti:
         # Önündeki derinlik karşı tarafın %40'ından az veya oran aşırı asimetrikse hava cebi vardır
         vacuum_detected = False
         vacuum_side = "NONE"
-        if l2_ratio >= 2.5 and ask_usd_05 <= (bid_usd_05 * 0.40):
-            vacuum_detected = True
-            vacuum_side = "ASK_VACUUM_BULLISH"  # Satıcı tahtası bomboş, yukarı yön roket
-        elif l2_ratio <= 0.40 and bid_usd_05 <= (ask_usd_05 * 0.40):
-            vacuum_detected = True
-            vacuum_side = "BID_VACUUM_BEARISH"  # Alıcı tahtası bomboş, aşağı yön dökülme
+        if len(bids) >= 10 and len(asks) >= 10:
+            bids_10_usd = sum(p * q for p, q in bids[:10])
+            asks_10_usd = sum(p * q for p, q in asks[:10])
+            if bids_10_usd > 0 and asks_10_usd > 0:
+                v_ratio = bids_10_usd / asks_10_usd
+                if v_ratio >= 3.5:
+                    vacuum_detected = True
+                    vacuum_side = "ASK_VACUUM"   # Satıcı boşluğu -> Yukarı roketleme kolay
+                elif v_ratio <= 0.28:
+                    vacuum_detected = True
+                    vacuum_side = "BID_VACUUM"   # Alıcı boşluğu -> Aşağı şelale kolay
 
-        # 💧 5. Makas (Spread %) & Gerçek Zamanlı Kayma (Slippage) Simülasyonu
-        best_bid = bids[0][0] if bids else 0.0
-        best_ask = asks[0][0] if asks else 0.0
-        spread_pct = round(((best_ask - best_bid) / mid_price * 100.0), 4) if (mid_price > 0 and best_ask > best_bid) else 0.0
+        # Duvar Doğrulama
+        wall_dur = float(bm_data.get('wall_duration_sec', 0.0))
+        is_anchor_aged = (wall_dur >= WALL_ANCHOR_AGE_SEC)
+        is_unverified_wall = (wall_dur < WALL_MIN_AGE_SEC)
 
-        # Fiyatın %0.3 derinliğindeki toplam likidite
-        bid_usd_03 = sum(p * q for p, q in bids if p >= mid_price * 0.997) if mid_price > 0 else 0.0
-        ask_usd_03 = sum(p * q for p, q in asks if p <= mid_price * 1.003) if mid_price > 0 else 0.0
-        depth_usd_03 = round(bid_usd_03 + ask_usd_03, 2)
-
-        # $500 standart emir için tahtada yürüme (walk the book) kayma simülasyonu
-        target_slip_n = 500.0
+        # Kayma (Slippage) ve Makas (Spread) Simülasyonu ($500 Büyüklük):
+        spread_pct = 0.0
+        depth_usd_03 = 0.0
         sim_slip_long = 0.0
-        rem_n = target_slip_n
-        sum_p = 0.0
-        for p, q in asks:
-            lvl_val = p * q
-            if lvl_val <= 0: continue
-            fill_n = min(rem_n, lvl_val)
-            sum_p += fill_n * p
-            rem_n -= fill_n
-            if rem_n <= 0: break
-        if rem_n > 0:
-            sim_slip_long = 0.50  # Tahta $500'ü bile karşılayamıyor (Hava cebi)
-        else:
-            avg_p = sum_p / target_slip_n
-            sim_slip_long = round(abs(avg_p - mid_price) / mid_price * 100.0, 4)
-
         sim_slip_short = 0.0
-        rem_n = target_slip_n
-        sum_p = 0.0
-        for p, q in bids:
-            lvl_val = p * q
-            if lvl_val <= 0: continue
-            fill_n = min(rem_n, lvl_val)
-            sum_p += fill_n * p
-            rem_n -= fill_n
-            if rem_n <= 0: break
-        if rem_n > 0:
-            sim_slip_short = 0.50
-        else:
-            avg_p = sum_p / target_slip_n
-            sim_slip_short = round(abs(avg_p - mid_price) / mid_price * 100.0, 4)
+        if bids and asks:
+            best_bid = bids[0][0]
+            best_ask = asks[0][0]
+            if best_bid > 0:
+                spread_pct = round(((best_ask - best_bid) / best_bid) * 100.0, 3)
 
-        # 🧱 3. Tahta Duvarı Yaşlanma Durumu (Wall Aging Status)
-        is_anchor_aged = (wall_dur_sec >= WALL_ANCHOR_AGE_SEC)
-        is_unverified_wall = (wall_dur_sec < WALL_MIN_AGE_SEC)
+            mid_p = (best_bid + best_ask) / 2.0
+            if mid_p > 0:
+                p_min = mid_p * 0.997
+                p_max = mid_p * 1.003
+                b_depth = sum(p * q for p, q in bids if p >= p_min)
+                a_depth = sum(p * q for p, q in asks if p <= p_max)
+                depth_usd_03 = round(b_depth + a_depth, 1)
+
+            # Simüle Kayma
+            req_usd = 500.0
+            accum_usd = 0.0
+            vwap_buy = 0.0
+            for p, q in asks:
+                tier_usd = p * q
+                take = min(tier_usd, req_usd - accum_usd)
+                vwap_buy += p * (take / p)
+                accum_usd += take
+                if accum_usd >= req_usd:
+                    break
+            if accum_usd > 0 and best_ask > 0:
+                avg_exec = vwap_buy / (accum_usd / best_ask) if best_ask > 0 else best_ask
+                sim_slip_long = round(max(0.0, (avg_exec - best_ask) / best_ask * 100.0), 3)
+
+            accum_usd_s = 0.0
+            vwap_sell = 0.0
+            for p, q in bids:
+                tier_usd = p * q
+                take = min(tier_usd, req_usd - accum_usd_s)
+                vwap_sell += p * (take / p)
+                accum_usd_s += take
+                if accum_usd_s >= req_usd:
+                    break
+            if accum_usd_s > 0 and best_bid > 0:
+                avg_exec_s = vwap_sell / (accum_usd_s / best_bid) if best_bid > 0 else best_bid
+                sim_slip_short = round(max(0.0, (best_bid - avg_exec_s) / best_bid * 100.0), 3)
 
         res_depth = {
             'symbol': symbol,
@@ -1629,6 +1683,20 @@ class MarketDataManager:
             'sim_slip_long': float(sim_slip_long),
             'sim_slip_short': float(sim_slip_short),
             'price_change_pct_60s': float(price_chg_60s),
+            'cvd_velocity': float(cvd_acc_info.get('velocity', 0.0)),
+            'cvd_acceleration': float(cvd_acc_info.get('acceleration', 0.0)),
+            'cvd_zero_cross': str(cvd_acc_info.get('zero_crossing', 'NONE')),
+            'is_cvd_exhaustion_top': bool(cvd_acc_info.get('is_exhaustion_top', False)),
+            'is_cvd_exhaustion_bottom': bool(cvd_acc_info.get('is_exhaustion_bottom', False)),
+            'cvd_momentum_regime': str(cvd_acc_info.get('momentum_regime', 'NEUTRAL')),
+            'trapped_bias': str(dpoc_info.get('trapped_bias', 'NEUTRAL')),
+            'trapped_status': str(dpoc_info.get('trapped_status', 'NONE')),
+            'trapped_desc': str(dpoc_info.get('trapped_desc', 'Dengeli Seviye Akışı')),
+            'is_iceberg_sniper_buy': bool(ice_offense.get('is_sniper_buy', False)),
+            'is_iceberg_sniper_sell': bool(ice_offense.get('is_sniper_sell', False)),
+            'is_iceberg_ping_pong': bool(ice_offense.get('is_ping_pong', False)),
+            'iceberg_tight_stop_pct': float(ice_offense.get('tight_stop_dist_pct', 0.0022)),
+            'iceberg_offense_reason': str(ice_offense.get('offense_reason', '')),
             'last_update': now_ts
         }
 
@@ -1654,7 +1722,21 @@ class MarketDataManager:
                 'is_anchor_wall': res_depth['is_anchor_wall'],
                 'is_iron_wall': res_depth['is_iron_wall'],
                 'wall_duration_sec': res_depth['wall_duration_sec'],
-                'price_change_pct_60s': res_depth['price_change_pct_60s']
+                'price_change_pct_60s': res_depth['price_change_pct_60s'],
+                'cvd_velocity': res_depth['cvd_velocity'],
+                'cvd_acceleration': res_depth['cvd_acceleration'],
+                'cvd_zero_cross': res_depth['cvd_zero_cross'],
+                'is_cvd_exhaustion_top': res_depth['is_cvd_exhaustion_top'],
+                'is_cvd_exhaustion_bottom': res_depth['is_cvd_exhaustion_bottom'],
+                'cvd_momentum_regime': res_depth['cvd_momentum_regime'],
+                'trapped_bias': res_depth['trapped_bias'],
+                'trapped_status': res_depth['trapped_status'],
+                'trapped_desc': res_depth['trapped_desc'],
+                'is_iceberg_sniper_buy': res_depth['is_iceberg_sniper_buy'],
+                'is_iceberg_sniper_sell': res_depth['is_iceberg_sniper_sell'],
+                'is_iceberg_ping_pong': res_depth['is_iceberg_ping_pong'],
+                'iceberg_tight_stop_pct': res_depth['iceberg_tight_stop_pct'],
+                'iceberg_offense_reason': res_depth['iceberg_offense_reason']
             })
 
         return res_depth

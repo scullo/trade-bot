@@ -773,10 +773,16 @@ class StrategyEngine:
         if tepe_av <= 0 and self.market_data and hasattr(self.market_data, 'levels'):
             tepe_av = float(self.market_data.levels.get(symbol, {}).get('tepe_avwap', 0.0))
 
+        cam_lvl = snaps.get('camarilla', {}) if isinstance(snaps, dict) else {}
+        s3_val = float(cam_lvl.get('S3', 0.0))
+        r3_val = float(cam_lvl.get('R3', 0.0))
+
         if tepe_av > 0 and p_val > 0 and entry_price > tepe_av and entry_price > p_val:
             trend_regime = "🟢 GÜÇLÜ BOĞA (Bullish)"
         elif dip_av > 0 and p_val > 0 and entry_price < dip_av and entry_price < p_val:
             trend_regime = "🔴 GÜÇLÜ AYI (Bearish)"
+        elif s3_val > 0 and r3_val > 0 and s3_val <= entry_price <= r3_val:
+            trend_regime = "⚪ YATAY / SIKIŞMA (Ranging)"
         elif p_val > 0 and entry_price > p_val:
             trend_regime = "🟡 ILIMLI BOĞA (Moderate Bull)"
         elif p_val > 0 and entry_price < p_val:
@@ -1399,6 +1405,7 @@ class StrategyEngine:
                 return {"error": "ALPHA_SURGE_SHORT_BLOCKED"}
 
             # 🛡️ BOĞA SEKTÖREL ROTASYON KALKANI: Boğa piyasasında aşırı zayıf coinler (RS < -0.40) sert rotasyon sıçraması yapar (%76 zarar önleme)
+            is_severely_weak = ("AŞIRI_ZAYIF" in decoupling_status) or (dynamic_rs_score <= -1.0)
             if "BOĞA" in trend_regime and (dynamic_rs_score <= -0.40 or is_severely_weak):
                 rej_msg = f"🛡️ Boğa Sektörel Rotasyon Kalkanı: Piyasa {trend_regime} rejimindeyken geride kalmış aşırı zayıf coin (RS: {dynamic_rs_score:+.2f}) rotasyonla patlayabilir. SHORT engellendi."
                 print(f">> [RED - BOĞA ROTASYON KALKANI] {symbol}: {rej_msg}")
@@ -1409,6 +1416,8 @@ class StrategyEngine:
             trend_regime = "🟢 GÜÇLÜ BOĞA (Bullish)"
         elif dip_av > 0 and p_val > 0 and entry_price < dip_av and entry_price < p_val:
             trend_regime = "🔴 GÜÇLÜ AYI (Bearish)"
+        elif s3_val > 0 and r3_val > 0 and s3_val <= entry_price <= r3_val:
+            trend_regime = "⚪ YATAY / SIKIŞMA (Ranging)"
         elif p_val > 0 and entry_price > p_val:
             trend_regime = "🟡 ILIMLI BOĞA (Moderate Bull)"
         elif p_val > 0 and entry_price < p_val:
@@ -1482,9 +1491,10 @@ class StrategyEngine:
         # 🐂 MODÜL 1b: BOĞA REJİMİNDE SHORT KALİTE FİLTRESİ (DİRENÇ SHORTU YASAĞI)
         if side == "SHORT" and ("BOĞA" in trend_regime):
             # Boğa piyasasında ("ILIMLI BOĞA" veya "GÜÇLÜ BOĞA") altcoin direnç sekmesi aramak trende karşı intihardır!
-            # Yalnızca aşırı teyitli (4/4) VE gerçek bir breakdown kırılımı varsa izin verilir
+            # Yalnızca aşırı teyitli (4/4) VE (gerçek bir breakdown kırılımı VEYA Kurumsal Buzdağı / dPOC Tuzak Sniper) varsa izin verilir
             cvd_r_chk = float(cvd_data.get('ratio_60s', 50.0)) if cvd_data else 50.0
-            if not is_breakout or c_count < 4 or cvd_r_chk > 38.0:
+            has_inst_short_edge = is_ice_sniper_order or any(k in str(confluence_list or []) for k in ["Iceberg_Offense_Sniper_Short", "dPOC_Trapped_Longs"])
+            if (not is_breakout and not has_inst_short_edge) or c_count < 4 or cvd_r_chk > 48.0:
                 rej_msg = f"🐂 Boğa Rejimi SHORT Kalkanı: Piyasa {trend_regime} rejimindeyken altcoinlerde karşı-trend SHORT açmak engellendi (Mevcut: {conf_score_str}, CVD: %{cvd_r_chk:.1f})."
                 print(f">> [RED - BOĞA REJİMİ SHORT KALKANI] {symbol}: {rej_msg}")
                 self.log_rejection(symbol, reason, rej_msg)
@@ -1780,17 +1790,21 @@ class StrategyEngine:
         # ── DİNAMİK STOP VE HEDEFLERİ (YAPISAL SEVİYE & ADAPTİF FİTİL KALKANI) ──
         # Kripto piyasasında %0.50 gibi aşırı dar stoplar normal 5M fitillerinde sahte stop-out'lara yol açar.
         # Asgari stop tabanı %0.80'e çıkarılmış olup, coin volatilitesine (ATR) ve persona çarpanına göre dinamik ölçeklenir.
+        # 🧊 İSTİSNA: Kurumsal Iceberg Sniper hücumunda kurumsal beton duvar arkasına saklanıldığından stop %0.25'e indirilir!
+        is_ice_sniper_order = any("Iceberg_Offense" in str(c) for c in (confluence_list or [])) or ("Buzdağı Hücumu" in reason) or ("Buzdağı Arkası" in reason)
         safe_atr_pct = max(0.60, min(3.5, atr_pct))
         stop_mult = persona.get("stop_loss_atr_mult", 1.0)
-        # Adaptif stop: minimum %0.80 tabanı (fitil gürültüsü kalkanı), maksimum %1.60 risk tavanı
-        effective_stop_pct = max(0.80, min(1.60, safe_atr_pct * 0.90 * stop_mult))
+        
+        # Adaptif stop: Iceberg hücumunda minimum %0.25 tabanı (Asimetrik R:R kalkanı), standartta %0.80 tabanı
+        min_stop_floor = 0.25 if is_ice_sniper_order else 0.80
+        effective_stop_pct = max(min_stop_floor, min(1.60, safe_atr_pct * (0.35 if is_ice_sniper_order else 0.90) * stop_mult))
         stop_dist = entry_price * (effective_stop_pct / 100.0)
-        min_allowed_stop_dist = entry_price * 0.0080  # %0.80 mutlak asgari nefes payı
+        min_allowed_stop_dist = entry_price * (0.0025 if is_ice_sniper_order else 0.0080)
 
-        # TP1 & TP2: Asimetrik Kâr Oranı (R:R >= 1.8x - 3.5x Hedef)
+        # TP1 & TP2: Asimetrik Kâr Oranı (R:R >= 1.8x - 3.5x Hedef, Iceberg'de 4.5x+)
         # 🎯 KURUMSAL HÜCUM REFORMU: Düşük ATR / Dar Bantta gerçekçi TP1 sıkıştırması (MANA vb. testere paritelerinde kârı kilitler)
         min_tp1_pct = max(1.0, min(1.80, safe_atr_pct * 1.8))
-        min_tp1_dist = max(stop_dist * 1.8, entry_price * (min_tp1_pct / 100.0))
+        min_tp1_dist = max(stop_dist * (3.5 if is_ice_sniper_order else 1.8), entry_price * (min_tp1_pct / 100.0))
         adaptive_tp1_dist = entry_price * (max(min_tp1_pct, safe_atr_pct * 2.0) / 100.0)
         tp1_dist = max(min_tp1_dist, adaptive_tp1_dist)
         tp2_dist = max(tp1_dist * 1.75, entry_price * (max(3.0, safe_atr_pct * 3.5) / 100.0))
@@ -2010,6 +2024,16 @@ class StrategyEngine:
                         print(f">> [RED - ALICI ICEBERG ENGELİ] {symbol}: {rej_msg}")
                         self.log_rejection(symbol, reason, rej_msg, icebergRatio=bid_ice_r, bidIcebergRatio=bid_ice_r, icebergSide="ICEBERG_BID_SUPPORT", hasIceberg=True)
                         return {"error": "GRIFFIN_BUYER_ICEBERG_BLOCKED"}
+
+                    # 🧊 ICEBERG HÜCUM SNIPER BONUSU (Destekte Alıcı Arkası Long veya Dirençte Satıcı Arkası Short)
+                    if side == "LONG" and has_buyer_iceberg and bid_ice_r >= 3.0:
+                        if confluence_list is not None and isinstance(confluence_list, list) and "Iceberg_Offense_Sniper_Long" not in confluence_list:
+                            confluence_list.append("Iceberg_Offense_Sniper_Long")
+                            reason += f" [🧊 Alıcı Buzdağı Arkası Sniper ({bid_ice_r:.1f}x)]"
+                    elif side == "SHORT" and has_seller_iceberg and ask_ice_r >= 3.0:
+                        if confluence_list is not None and isinstance(confluence_list, list) and "Iceberg_Offense_Sniper_Short" not in confluence_list:
+                            confluence_list.append("Iceberg_Offense_Sniper_Short")
+                            reason += f" [🧊 Satıcı Buzdağı Arkası Sniper ({ask_ice_r:.1f}x)]"
 
                     # Veto 1: Spoofing Tuzağı (1. kademede duvar var ama arkadaki 19 kademe boş)
                     if side == "LONG" and is_dynamic_spoofing:
@@ -2532,6 +2556,15 @@ class StrategyEngine:
 
         trend_regime = regime_desc
 
+        # ── 3 BOYUTLU TRİ-MODAL REJİM HAKEMİ (BOĞA TRENDİ, AYI TRENDİ, YATAY PİNG-PONG) ──
+        if "BOĞA" in regime_desc or macro_regime == "BOĞA" or macro_regime in ["BULL_PUMP", "EXTREME_BULL"]:
+            tri_modal_regime = "REGIME_BULL_TREND"
+        elif "AYI" in regime_desc or macro_regime == "BEAR_DUMP" or macro_regime in ["EXTREME_BEAR"]:
+            tri_modal_regime = "REGIME_BEAR_TREND"
+        else:
+            tri_modal_regime = "REGIME_RANGING_PINGPONG"
+            is_range_regime = True
+
         # Parite Bazlı Alfa ve Hacim Metrikleri (Dinamik Ayrışma)
         sym_met = self.market_data.get_symbol_metrics(symbol) if (self.market_data and hasattr(self.market_data, 'get_symbol_metrics')) else {}
         coin_rs_score = sym_met.get("dynamic_rs_score", 0.0)
@@ -2757,9 +2790,21 @@ class StrategyEngine:
             if daily_avwap > 0 and close_price > daily_avwap:
                 c_list.append("Daily_AVWAP_Bull")
 
+            # 🧊 ICEBERG HÜCUM SNIPER & PİNG-PONG TEYİDİ
+            is_ice_sniper = sym_met.get("is_iceberg_sniper_buy", False)
+            if is_ice_sniper:
+                ice_reason = sym_met.get("iceberg_offense_reason", "")
+                c_list.append("Iceberg_Offense_Sniper_Long")
+                # Kurumsal alıcı buzdağı arkasına asimetrik dar stop (%0.25 taban)
+                soft_stop = max(s3 - buffer * 0.4, close_price * 0.9975)
+                hard_stop = max(close_price * 0.9970, s3 - buffer * 0.6)
+                reason_label = f"S3 Destek Sekmesi + {ice_reason} (İlk Hedef {target_name}: ${tp1:.4f})"
+            else:
+                reason_label = f"S3 Destek Sekmesi (İlk Hedef {target_name}: ${tp1:.4f})"
+
             await self._handle_open(
                 symbol=symbol, side="LONG", entry_price=close_price,
-                reason=f"S3 Destek Sekmesi (İlk Hedef {target_name}: ${tp1:.4f})",
+                reason=reason_label,
                 soft_stop=soft_stop, hard_stop=hard_stop,
                 tp1=tp1, tp2=tp2, trade_type="SCALP",
                 snapshot_levels=levels, setup_id="SETUP_3_S3_BOUNCE",
@@ -2801,9 +2846,21 @@ class StrategyEngine:
             if daily_avwap > 0 and close_price < daily_avwap:
                 c_list.append("Daily_AVWAP_Bear")
 
+            # 🧊 ICEBERG HÜCUM SNIPER & PİNG-PONG TEYİDİ
+            is_ice_sniper = sym_met.get("is_iceberg_sniper_sell", False)
+            if is_ice_sniper:
+                ice_reason = sym_met.get("iceberg_offense_reason", "")
+                c_list.append("Iceberg_Offense_Sniper_Short")
+                # Kurumsal satıcı buzdağı arkasına asimetrik dar stop (%0.25 taban)
+                soft_stop = min(r3 + buffer * 0.4, close_price * 1.0025)
+                hard_stop = min(close_price * 1.0030, r3 + buffer * 0.6)
+                reason_label = f"R3 Direnc Tepkisi + {ice_reason} (İlk Hedef {target_name}: ${tp1:.4f})"
+            else:
+                reason_label = f"R3 Direnc Tepkisi (İlk Hedef {target_name}: ${tp1:.4f})"
+
             await self._handle_open(
                 symbol=symbol, side="SHORT", entry_price=close_price,
-                reason=f"R3 Direnc Tepkisi (İlk Hedef {target_name}: ${tp1:.4f})",
+                reason=reason_label,
                 soft_stop=soft_stop, hard_stop=hard_stop,
                 tp1=tp1, tp2=tp2, trade_type="SCALP",
                 snapshot_levels=levels, setup_id="SETUP_4_R3_REJECTION",
@@ -3061,6 +3118,25 @@ class StrategyEngine:
             if daily_avwap > 0 and close_price > daily_avwap:
                 c_list.append("Daily_AVWAP_Bull")
 
+            # 🪤 dPOC TUZAKLANMIŞ AYILAR & CVD DİP TÜKENİŞİ TEYİDİ
+            is_trapped_shorts = (sym_met.get("trapped_status") == "TRAPPED_SHORTS")
+            is_cvd_ex_bot = sym_met.get("is_cvd_exhaustion_bottom", False)
+            if is_trapped_shorts:
+                c_list.append("dPOC_Trapped_Shorts")
+                reason_text += " [🪤 Tuzaklanmış Ayılar]"
+            if is_cvd_ex_bot:
+                c_list.append("CVD_Exhaustion_Bottom")
+                reason_text += " [⚡ CVD Dip Tükenişi]"
+
+            # 🧊 ICEBERG HÜCUM SNIPER & PİNG-PONG TEYİDİ
+            is_ice_sniper = sym_met.get("is_iceberg_sniper_buy", False)
+            if is_ice_sniper:
+                ice_reason = sym_met.get("iceberg_offense_reason", "")
+                c_list.append("Iceberg_Offense_Sniper_Long")
+                soft_stop = max(support_npoc - buffer * 0.4, close_price * 0.9975)
+                hard_stop = max(close_price * 0.9970, support_npoc - buffer * 0.6)
+                reason_text += f" + {ice_reason}"
+
             await self._handle_open(
                 symbol=symbol, side="LONG", entry_price=close_price,
                 reason=reason_text,
@@ -3082,10 +3158,20 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 10 nPOC Reddi", struct_reason)
                 return
 
-            # 🛡️ BOĞA TRENDİ VE SQUEEZE KALKANI: Boğa rejimindeyken yukarı nPOC'ye kafa atılmaz (Short Squeeze Koruması)
-            if "BOĞA" in trend_regime or macro.get("btc_chg_1h", 0.0) > 0.15:
+            # 🛡️ BOĞA TRENDİ VE SQUEEZE KALKANI: Güçlü Boğa rejimindeyken yukarı nPOC'ye kafa atılmaz (Short Squeeze Koruması)
+            btc_chg_1h = macro.get("btc_chg_1h", 0.0)
+            is_ice_sniper_sell = sym_met.get("is_iceberg_sniper_sell", False)
+            is_trapped_longs_check = (sym_met.get("trapped_status") == "TRAPPED_LONGS")
+            if "GÜÇLÜ BOĞA" in trend_regime or btc_chg_1h > 0.35:
                 self.log_rejection(symbol, "Yukarı nPOC Reddi", f"Piyasa {trend_regime} rejimindeyken Yukarı nPOC'den SHORT açılmadı (Short Squeeze Koruması)")
                 return
+            elif "BOĞA" in trend_regime:
+                cvd_data_chk = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+                cvd_ratio_chk = float(cvd_data_chk.get('ratio_60s', 50.0))
+                has_institutional_short = is_ice_sniper_sell or is_trapped_longs_check or (cvd_ratio_chk < 45.0 and coin_rs_score < 0.0)
+                if not has_institutional_short:
+                    self.log_rejection(symbol, "Yukarı nPOC Reddi", f"Piyasa {trend_regime} rejimindeyken Yukarı nPOC SHORT için satıcı üstünlüğü (Buzdağı/dPOC/CVD) yetersiz.")
+                    return
 
             # 🛡️ CVD BOĞA İTİŞİ KALKANI (Taker Alıcı Aşırılığı)
             cvd_data_npoc_r = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
@@ -3127,6 +3213,25 @@ class StrategyEngine:
             c_list = ["nPOC_Rejection", f"Target_{target_name}"]
             if daily_avwap > 0 and close_price < daily_avwap:
                 c_list.append("Daily_AVWAP_Bear")
+
+            # 🪤 dPOC TUZAKLANMIŞ BOĞALAR & CVD TEPE TÜKENİŞİ TEYİDİ
+            is_trapped_longs = (sym_met.get("trapped_status") == "TRAPPED_LONGS")
+            is_cvd_ex_top = sym_met.get("is_cvd_exhaustion_top", False)
+            if is_trapped_longs:
+                c_list.append("dPOC_Trapped_Longs")
+                reason_text += " [🪤 Tuzaklanmış Boğalar]"
+            if is_cvd_ex_top:
+                c_list.append("CVD_Exhaustion_Top")
+                reason_text += " [⚡ CVD Tepe Tükenişi]"
+
+            # 🧊 ICEBERG HÜCUM SNIPER & PİNG-PONG TEYİDİ
+            is_ice_sniper = sym_met.get("is_iceberg_sniper_sell", False)
+            if is_ice_sniper:
+                ice_reason = sym_met.get("iceberg_offense_reason", "")
+                c_list.append("Iceberg_Offense_Sniper_Short")
+                soft_stop = min(resist_npoc + buffer * 0.4, close_price * 1.0025)
+                hard_stop = min(close_price * 1.0030, resist_npoc + buffer * 0.6)
+                reason_text += f" + {ice_reason}"
 
             await self._handle_open(
                 symbol=symbol, side="SHORT", entry_price=close_price,
