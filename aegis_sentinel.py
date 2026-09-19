@@ -158,12 +158,12 @@ class ValkyrieAegisSentinel:
                 except Exception as e:
                     actions_taken.append(f"⚠️ {sym} seviye tazeleme hatası: {e}")
 
-        # 2. RAM & Bellek Optimizasyonu: 5M mum dizilerini max 300 satira sinirla
+        # 2. RAM & Bellek Optimizasyonu: 5M mum dizilerini max 150 satira sinirla (Render 512MB RAM Korumasi)
         cleaned_dfs = 0
         for sym in list(market_data.candles_5m.keys()):
             df = market_data.candles_5m[sym]
-            if isinstance(df, pd.DataFrame) and len(df) > 300:
-                market_data.candles_5m[sym] = df.iloc[-300:].copy().reset_index(drop=True)
+            if isinstance(df, pd.DataFrame) and len(df) > 150:
+                market_data.candles_5m[sym] = df.iloc[-150:].copy().reset_index(drop=True)
                 cleaned_dfs += 1
 
         if cleaned_dfs > 0:

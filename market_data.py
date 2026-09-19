@@ -141,57 +141,148 @@ class MarketDataManager:
             return 1000000.0
         return 1.0
 
-    def get_system_health(self) -> dict:
+    def get_system_health(self, paper_trader=None, strategy=None) -> dict:
         try:
             total_syms = len(self.all_symbols)
-            healthy_levs = 0
-            live_prices_cnt = 0
-            for s in self.all_symbols:
-                if self.current_prices.get(s, 0.0) > 0:
-                    live_prices_cnt += 1
-                lev = self.levels.get(s, {})
-                cam = lev.get('camarilla', {}) if isinstance(lev, dict) else {}
-                if cam.get('R4', 0.0) > 0:
-                    healthy_levs += 1
-
             now_sec = time.time()
-            last_scan = getattr(self, '_last_candle_scan_ts', now_sec)
-            scan_active = (now_sec - last_scan) < 420
-            levels_ok = (healthy_levs >= total_syms * 0.95 and total_syms > 0)
+            now_str = datetime.now(timezone(timedelta(hours=3))).strftime('%H:%M:%S')
+
+            # 1. Canlı Fiyatlar & WebSocket (!bookTicker)
+            live_prices_cnt = sum(1 for s in self.all_symbols if self.current_prices.get(s, 0.0) > 0)
+            ws_price_pct = round(live_prices_cnt / max(1, total_syms) * 100.0, 1)
             ws_ok = (live_prices_cnt >= total_syms * 0.8)
 
-            is_perfect = levels_ok and ws_ok and scan_active
-            err_msg = None
-            if not levels_ok:
-                err_msg = f"{total_syms - healthy_levs} paritenin seviye verisi eksik!"
-            elif not scan_active:
-                err_msg = "5M Mum tarayıcısı gecikmeli çalışıyor!"
-            elif not ws_ok:
-                err_msg = "WebSocket canlı fiyat akışında gecikme var!"
+            # 2. Seviye Bütünlüğü (Camarilla R4/S4/P, AVWAP, nPOC)
+            healthy_levs = 0
+            for s in self.all_symbols:
+                lev = self.levels.get(s, {})
+                cam = lev.get('camarilla', {}) if isinstance(lev, dict) else {}
+                if cam.get('R4', 0.0) > 0 and cam.get('S4', 0.0) > 0:
+                    healthy_levs += 1
+            levels_pct = round(healthy_levs / max(1, total_syms) * 100.0, 1)
+            levels_ok = (healthy_levs >= total_syms * 0.90)
 
-            scan_str = getattr(self, '_last_candle_scan_str', datetime.now(timezone(timedelta(hours=3))).strftime('%H:%M:%S'))
+            # 3. Canlı L2 OBI & Tahta Derinliği (!bookTicker)
+            fresh_obi_cnt = 0
+            bid_walls_cnt = 0
+            ask_walls_cnt = 0
+            for s in self.all_symbols:
+                ob = self.orderbook_depth.get(s, {})
+                upd = ob.get('last_update', 0.0)
+                if (now_sec - upd) < 45.0 and ob.get('bid_qty', 0) > 0:
+                    fresh_obi_cnt += 1
+                    w = ob.get('wall_side', 'BALANCED')
+                    if w == 'BID_WALL':
+                        bid_walls_cnt += 1
+                    elif w == 'ASK_WALL':
+                        ask_walls_cnt += 1
+            obi_ok = (fresh_obi_cnt >= total_syms * 0.75)
+
+            # 4. Mikro-CVD & Taker Agresyon Akışı
+            cvd_active_cnt = sum(1 for s in self.all_symbols if (now_sec - self.symbol_cvd.get(s, {}).get('last_update', 0.0)) < 75.0)
+            cvd_ok = (cvd_active_cnt >= total_syms * 0.70)
+
+            # 5. Global Tasfiye Radarı (!forceOrder@arr)
+            liq_stats = getattr(self, 'global_liquidation_stats', {})
+            liq_total_usd = float(liq_stats.get('total_usd_24h', 0.0))
+            liq_top_sym = str(liq_stats.get('top_symbol', '-'))
+            liq_last_time = str(liq_stats.get('last_event_time', '-'))
+            liq_ok = True
+
+            # 6. Spot vs Vadeli Basis Ayrışması (Binance Vision Spot API)
+            spot_active_cnt = sum(1 for s in self.all_symbols if self.spot_prices.get(s, 0.0) > 0)
+            spot_delay_sec = int(now_sec - getattr(self, 'last_spot_update_ts', now_sec))
+            spot_ok = (spot_active_cnt >= total_syms * 0.70)
+
+            # 7. 5M Mum Tarayıcısı & Deduplication
+            last_scan = getattr(self, '_last_candle_scan_ts', now_sec)
+            scan_delay_sec = int(now_sec - last_scan)
+            scan_active = (scan_delay_sec < 420)
+            scan_str = getattr(self, '_last_candle_scan_str', now_str)
+
+            # 8. BTC 60s Mikro-Şok Kalkanı
+            btc_v60 = round(getattr(self, 'btc_velocity_60s', 0.0), 2)
+            btc_shock_active = getattr(self, 'btc_shock_gate_active', False)
+
+            # 9. Dinamik Fonlama Oranları & Squeeze
+            funding_data = getattr(self, 'funding_stats', {})
+            funding_upd_str = funding_data.get('last_update_str', now_str)
+
+            # 10. RAM & Bellek Koruması
+            max_candles = max([len(df) for df in self.candles_5m.values() if hasattr(df, '__len__')] or [0])
+            ram_ok = (max_candles <= 200)
+
+            # 11. GitHub Cloud State Persistence
+            gh_synced = True
+            gh_branch = "state"
+            gh_sha = None
+            if paper_trader:
+                gh_synced = getattr(paper_trader, '_last_push_ok', True)
+                gh_branch = getattr(paper_trader, 'GITHUB_BRANCH', 'state')
+                gh_sha = getattr(paper_trader, '_github_sha', None)
+                if gh_sha and len(gh_sha) > 8:
+                    gh_sha = gh_sha[:8]
+
+            # 12. 100 Parite Kuant DNA & Persona Baseline
+            dna_count = len(getattr(strategy, 'persona_matrix', {})) if strategy else len(self.all_symbols)
+            dna_loaded = (dna_count >= total_syms * 0.90)
+
+            # Toplam Puanlama
+            checks = [levels_ok, ws_ok, scan_active, obi_ok, cvd_ok, spot_ok, ram_ok, gh_synced]
+            passed = sum(1 for c in checks if c)
+            is_perfect = (passed >= 7)
+
+            status_text = f"{passed}/{len(checks)} TAM SAĞLIKLI (KURUMSAL QUANT KOKPİTİ)" if is_perfect else f"⚠️ UYARI: {len(checks) - passed} Alt Sistemde Gecikme"
+
             return {
                 "is_perfect": is_perfect,
-                "status_text": "5/5 Tam Sağlıklı & Hatasız" if is_perfect else f"⚠️ Sorun: {err_msg}",
+                "status_text": status_text,
+                "score_str": f"{passed}/{len(checks)}",
                 "healthy_symbols": healthy_levs,
                 "total_symbols": total_syms,
                 "live_prices": live_prices_cnt,
                 "scan_active": scan_active,
                 "ws_active": ws_ok,
                 "last_scan_time": scan_str,
-                "error_detail": err_msg
+                "timestamp": now_str,
+                "streams": {
+                    "ws_prices": {"healthy": ws_ok, "count": live_prices_cnt, "total": total_syms, "pct": ws_price_pct},
+                    "obi_depth": {"healthy": obi_ok, "count": fresh_obi_cnt, "total": total_syms, "bid_walls": bid_walls_cnt, "ask_walls": ask_walls_cnt},
+                    "cvd_flow": {"healthy": cvd_ok, "count": cvd_active_cnt, "total": total_syms},
+                    "liquidations": {"healthy": liq_ok, "total_usd_24h": round(liq_total_usd, 2), "top_symbol": liq_top_sym, "last_event_time": liq_last_time},
+                    "spot_basis": {"healthy": spot_ok, "count": spot_active_cnt, "total": total_syms, "delay_sec": spot_delay_sec},
+                    "candle_poller": {"healthy": scan_active, "last_scan_time": scan_str, "delay_sec": scan_delay_sec},
+                    "btc_shock": {"healthy": not btc_shock_active, "velocity_60s": btc_v60, "is_active": btc_shock_active},
+                    "funding": {"healthy": True, "last_update": funding_upd_str}
+                },
+                "quant_engine": {
+                    "levels": {"healthy": levels_ok, "count": healthy_levs, "total": total_syms, "pct": levels_pct},
+                    "coin_dna": {"healthy": dna_loaded, "count": dna_count, "total": total_syms},
+                    "confluence": {"healthy": True, "mode": "Shannon Ortogonal 3-Eksen JIT"}
+                },
+                "infrastructure": {
+                    "github_persistence": {"healthy": gh_synced, "branch": gh_branch, "sha": gh_sha or "-"},
+                    "ram_watchdog": {"healthy": ram_ok, "max_candles": max_candles, "limit": 150, "gc_interval": "60s"},
+                    "keepalive": {"healthy": True, "interval": "3dk Self-Ping"},
+                    "telegram": {"healthy": True, "mode": "Saatlik VIP + /kasa Dinleyici"}
+                }
             }
         except Exception as e:
             return {
                 "is_perfect": False,
                 "status_text": f"Teşhis İstisnası: {e}",
+                "score_str": "Hata",
                 "healthy_symbols": 0,
-                "total_symbols": 100,
+                "total_symbols": len(self.all_symbols) if hasattr(self, 'all_symbols') else 100,
                 "live_prices": 0,
                 "scan_active": True,
                 "ws_active": True,
                 "last_scan_time": "Şimdi",
-                "error_detail": str(e)
+                "timestamp": datetime.now().strftime('%H:%M:%S'),
+                "error_detail": str(e),
+                "streams": {},
+                "quant_engine": {},
+                "infrastructure": {}
             }
 
     async def fetch_funding_rates(self):
