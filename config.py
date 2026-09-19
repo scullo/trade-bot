@@ -136,13 +136,13 @@ BUFFER_RATIO = 0.25              # %25 akilli stop tampon payi
 BREAKOUT_HOLD_SECONDS = 60       # Kirilim tutunma teyit suresi (60 saniye)
 
 # 4. Trailing Stop / Kar Koruma Esikleri (Dense Tiered Trailing Engine)
-TRAILING_BREAKEVEN_ROE = 1.2     # %1.2 ROE'de Tier 0 breakeven (+%0.20 komisyon korumali)
-TRAILING_LOCK_TIER1_ROE = 2.5    # %2.5 ROE'de Tier 1: +%1.6 ROE net kâr kilit
-TRAILING_LOCK_TIER2_ROE = 4.5    # %4.5 ROE'de Tier 2: +%2.8 ROE orta dalga kilit (Giveback Kalkanı)
-TRAILING_LOCK_TIER3_ROE = 7.0    # %7.0 ROE'de Tier 3: +%4.5 ROE trend kilit
-TRAILING_LOCK_TIER4_ROE = 12.0   # %12.0 ROE'de Tier 4: +%8.0 ROE trend runner kilit
+TRAILING_BREAKEVEN_ROE = 2.5     # %2.5 ROE'de Tier 0 breakeven (+%0.30 komisyon korumali ve nefes payli)
+TRAILING_LOCK_TIER1_ROE = 3.5    # %3.5 ROE'de Tier 1: +%2.0 ROE net kâr kilit
+TRAILING_LOCK_TIER2_ROE = 5.5    # %5.5 ROE'de Tier 2: +%3.5 ROE orta dalga kilit (Giveback Kalkanı)
+TRAILING_LOCK_TIER3_ROE = 8.0    # %8.0 ROE'de Tier 3: +%5.5 ROE trend kilit
+TRAILING_LOCK_TIER4_ROE = 13.0   # %13.0 ROE'de Tier 4: +%9.0 ROE trend runner kilit
 TRAILING_LOCK_TIER5_ROE = 18.0   # %18.0 ROE'de Tier 5: +%13.0 ROE moonbag kilit
-TRAILING_LOCK_30_ROE = 12.0      # Geriye dönük uyumluluk alias
+TRAILING_LOCK_30_ROE = 13.0      # Geriye dönük uyumluluk alias
 TRAILING_LOCK_50_ROE = 18.0      # Geriye dönük uyumluluk alias
 
 # 5. Scalp & Stagnation Zaman Sinirlari
