@@ -44,6 +44,27 @@ class TelegramNotifier:
         except Exception as e:
             print(f">> Telegram gonderim hatasi: {e}")
 
+    async def delete_webhook(self, drop_pending_updates: bool = False) -> bool:
+        """Telegram Webhook'unu temizler. Webhook varken getUpdates 409 Conflict hatası verir."""
+        if not self.token:
+            return False
+        url = f"https://api.telegram.org/bot{self.token}/deleteWebhook"
+        try:
+            payload = {"drop_pending_updates": bool(drop_pending_updates)}
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=8)) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        if data.get("ok"):
+                            print(">> [TELEGRAM] Webhook basariyla kaldirildi (getUpdates aktif).")
+                            return True
+                    err_txt = await resp.text()
+                    print(f">> [TELEGRAM WEBHOOK DELETE ERROR] (HTTP {resp.status}): {err_txt}")
+                    return False
+        except Exception as e:
+            print(f">> [TELEGRAM WEBHOOK DELETE EXCEPTION]: {e}")
+            return False
+
     async def send_photo(self, photo_data, caption: str):
         if not self.token or not self.chat_id:
             return
@@ -611,9 +632,12 @@ class TelegramNotifier:
             print(f"[DAILY BRIEFING ERROR]: {e}")
 
     async def start_command_listener(self, trader_manager, market_data=None):
-        """Telegram üzerinden gelen /kasa veya kasa mesajlarını dinler ve anında detaylı portföy yanıtı döner."""
+        """Telegram üzerinden gelen /kasa, kasa veya aksa mesajlarını dinler ve anında detaylı portföy yanıtı döner."""
         if not self.token:
             return
+        
+        # Webhook çakışmasını engellemek için başlangıçta deleteWebhook çağırıyoruz
+        await self.delete_webhook()
         
         offset = 0
         poll_url = f"https://api.telegram.org/bot{self.token}/getUpdates"
@@ -643,7 +667,13 @@ class TelegramNotifier:
 
                                 print(f">> [TELEGRAM ASİSTAN KOMUT ALINDI]: '{raw_text}' (Chat ID: {sender_chat_id})")
 
-                                is_kasa_cmd = any(w in text for w in ["kasa", "durum", "bakiye", "start", "help", "rapor", "pnl", "portfoy"])
+                                is_kasa_cmd = any(w in text for w in [
+                                    "kasa", "aksa", "bakiye", "durum", "start", "help",
+                                    "rapor", "pnl", "portfoy", "özet", "ozet", "pozisyon",
+                                    "yardim", "yardım", "komut", "info",
+                                    "/kasa", "/aksa", "/durum", "/bakiye", "/ozet", "/özet",
+                                    "/start", "/help", "/rapor", "/pnl", "/portfoy"
+                                ])
                                 if is_kasa_cmd:
                                     init_bal = 10000.0
                                     bal = float(getattr(trader_manager, 'balance', init_bal))
@@ -786,6 +816,15 @@ class TelegramNotifier:
 💎 ━━━━━━━━━━━━━━━━━━━━━━━━━ 💎"""
                                     await self.send_message(reply, chat_id=sender_chat_id)
                                     print(f">> [TELEGRAM ASİSTAN ANINDA YANITLANDI] -> {sender_chat_id}")
+                        elif resp.status == 409:
+                            err_txt = await resp.text()
+                            print(f">> [TELEGRAM POLLING 409 CONFLICT]: {err_txt} -> Webhook temizleniyor...")
+                            await self.delete_webhook()
+                            await asyncio.sleep(2)
+                        else:
+                            err_txt = await resp.text()
+                            print(f">> [TELEGRAM POLLING UYARI] (HTTP {resp.status}): {err_txt}")
+                            await asyncio.sleep(1)
             except Exception as e:
                 print(f"[TELEGRAM LISTENER ERROR]: {e}")
                 await asyncio.sleep(2)
