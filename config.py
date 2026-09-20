@@ -164,6 +164,17 @@ MAX_ABSOLUTE_STOP_PCT = 1.60     # Mutlak acil felaket stop tavanı (%1.60 - Ser
 ENABLE_FAKEOUT_RECLAIM = True    # Sahte Kırılım / Ayı-Boğa Tuzağı İntikam Modülü (Reclaim Sniper)
 FAKEOUT_RECLAIM_MAX_CANDLES = 4  # İntikam takip penceresi: 4 mum (20 dakika)
 
+# 7. Açık Pozisyon (Open Interest) & Türev Yakıt Radarı
+ENABLE_OI_VELOCITY_RADAR = True
+OI_EXPANSION_THRESHOLD_PCT = 1.20   # %1.20 ve üzeri ΔOI: Kurumsal yeni para girişi (Breakout onayı)
+OI_SQUEEZE_EXHAUSTION_PCT = -0.80   # -%0.80 ve altı ΔOI: Short/Long Squeeze tükenişi (Sahte kırılım tuzağı)
+OI_POLL_INTERVAL_SEC = 30.0         # 30 saniyede bir aday paritelerde OI taraması
+
+# 8. Çapraz Borsa Spot Öncüsü (Coinbase Pro Spot Lead-Lag)
+ENABLE_COINBASE_LEAD_LAG = True
+COINBASE_LEAD_SPREAD_BPS = 8.0      # 8 bps (%0.08) spread farkı: Öncü kurumsal nakit akışı
+COINBASE_TICK_WINDOW_SEC = 5.0      # 5 saniyelik mikro öncü penceresi
+
 # 6. Veri Fetch Ayarlari
 CANDLE_5M_FETCH_DAYS = 15       # 5m mum verisi icin ~15 gun (paginated, ~4300 mum)
 

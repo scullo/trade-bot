@@ -19,8 +19,9 @@ from config import (
     MAX_ENTRY_SLIPPAGE_PCT, MIN_L2_DEPTH_USD_03,
     ENABLE_SMART_SWING_STOP, SWING_LOOKBACK_CANDLES, SWING_ATR_BUFFER_MULT,
     ENABLE_HMM_SWEEP_SHIELD, HMM_SWEEP_SHIELD_MULT,
-    ENABLE_LONDON_SWEEP_SHIELD, LONDON_SWEEP_SHIELD_MULT,
-    MAX_ABSOLUTE_STOP_PCT, ENABLE_FAKEOUT_RECLAIM, FAKEOUT_RECLAIM_MAX_CANDLES
+    MAX_ABSOLUTE_STOP_PCT, ENABLE_FAKEOUT_RECLAIM, FAKEOUT_RECLAIM_MAX_CANDLES,
+    ENABLE_OI_VELOCITY_RADAR, OI_EXPANSION_THRESHOLD_PCT, OI_SQUEEZE_EXHAUSTION_PCT,
+    ENABLE_COINBASE_LEAD_LAG, COINBASE_LEAD_SPREAD_BPS
 )
 
 
@@ -980,40 +981,70 @@ class StrategyEngine:
         delta_oi_pct = float(oi_data.get('delta_oi_pct', 0.0))
 
         # Veto 1: Kurumsal Short Baskısı — Fiyat düşerken açık faiz patlıyorsa düşen bıçağa LONG açmak intihardır!
-        if side == "LONG" and oi_status == "AGGRESSIVE_SHORT_EXPANSION":
+        if ENABLE_OI_VELOCITY_RADAR and side == "LONG" and oi_status == "AGGRESSIVE_SHORT_EXPANSION":
             rej_msg = f"🛡️ Açık Faiz (OI) Kalkanı: Paritede açık faiz hızla artarken (%{delta_oi_pct:+.2f}) fiyat düşüyor. Piyasaya taze kurumsal short basılıyor, zayıf LONG engellendi."
             print(f">> [RED - OI SHORT BASKISI] {symbol}: {rej_msg}")
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "OI_AGGRESSIVE_SHORT_BLOCKED"}
 
         # Veto 2: Sahte Ralli / Short Kapaması — Fiyat yükselirken açık faiz çöküyorsa tepe kırılımı açılmaz!
-        if side == "LONG" and is_breakout and oi_status == "SHORT_COVERING_PUMP":
-            rej_msg = f"🛡️ Sahte Ralli Kalkanı: Fiyat yükselirken açık faiz düşüyor (%{delta_oi_pct:+.2f}). Hareket taze para girişi değil, short kapamasıyla yürüyor. Tepe kırılımı engellendi."
+        if ENABLE_OI_VELOCITY_RADAR and side == "LONG" and is_breakout and (oi_status == "SHORT_COVERING_PUMP" or delta_oi_pct <= OI_SQUEEZE_EXHAUSTION_PCT):
+            rej_msg = f"🛡️ Sahte Ralli Kalkanı: Fiyat yükselirken açık faiz düşüyor (%{delta_oi_pct:+.2f} <= %{OI_SQUEEZE_EXHAUSTION_PCT:+.2f}). Hareket taze para girişi değil, short kapamasıyla yürüyor. Tepe kırılımı engellendi."
             print(f">> [RED - SAHTE RALLİ KALKANI] {symbol}: {rej_msg}")
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "OI_SHORT_COVERING_PUMP_BLOCKED"}
 
         # Veto 3: Kurumsal Long Baskısı — Fiyat yükselirken açık faiz patlıyorsa yükselen rokete SHORT açmak intihardır!
-        if side == "SHORT" and oi_status == "AGGRESSIVE_LONG_EXPANSION":
+        if ENABLE_OI_VELOCITY_RADAR and side == "SHORT" and oi_status == "AGGRESSIVE_LONG_EXPANSION":
             rej_msg = f"🛡️ Açık Faiz (OI) Kalkanı: Paritede açık faiz hızla artarken (%{delta_oi_pct:+.2f}) fiyat yükseliyor. Piyasaya taze kurumsal long basılıyor, zayıf SHORT engellendi."
             print(f">> [RED - OI LONG BASKISI] {symbol}: {rej_msg}")
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "OI_AGGRESSIVE_LONG_BLOCKED"}
 
         # Veto 4: Sahte Dökülme / Long Kapaması — Fiyat düşerken açık faiz çöküyorsa dip breakdown SHORT açılmaz!
-        if side == "SHORT" and is_breakout and oi_status == "LONG_LIQUIDATION_DUMP":
-            rej_msg = f"🛡️ Sahte Dökülme Kalkanı: Fiyat düşerken açık faiz düşüyor (%{delta_oi_pct:+.2f}). Hareket taze short değil, panik long kapamasıyla yürüyor. Dip çöküş kırılımı engellendi."
+        if ENABLE_OI_VELOCITY_RADAR and side == "SHORT" and is_breakout and (oi_status in ("LONG_LIQUIDATION_DUMP", "LONG_LIQUIDATION_DRAIN") or delta_oi_pct <= OI_SQUEEZE_EXHAUSTION_PCT):
+            rej_msg = f"🛡️ Sahte Dökülme Kalkanı: Fiyat düşerken açık faiz düşüyor (%{delta_oi_pct:+.2f} <= %{OI_SQUEEZE_EXHAUSTION_PCT:+.2f}). Hareket taze short değil, panik long kapamasıyla yürüyor. Dip çöküş kırılımı engellendi."
             print(f">> [RED - SAHTE DÖKÜLME KALKANI] {symbol}: {rej_msg}")
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "OI_LONG_LIQUIDATION_DUMP_BLOCKED"}
 
         # OI Confluence Bonusu
-        if side == "LONG" and oi_status == "AGGRESSIVE_LONG_EXPANSION":
-            if confluence_list is not None and isinstance(confluence_list, list):
-                confluence_list.append("Kurumsal_OI_Girişi_Teyitli")
-        elif side == "SHORT" and oi_status == "AGGRESSIVE_SHORT_EXPANSION":
-            if confluence_list is not None and isinstance(confluence_list, list):
-                confluence_list.append("Kurumsal_OI_Short_Baskısı_Teyitli")
+        if ENABLE_OI_VELOCITY_RADAR:
+            if side == "LONG" and (oi_status == "AGGRESSIVE_LONG_EXPANSION" or delta_oi_pct >= OI_EXPANSION_THRESHOLD_PCT):
+                if confluence_list is not None and isinstance(confluence_list, list):
+                    confluence_list.append("Kurumsal_OI_Girişi_Teyitli")
+            elif side == "SHORT" and (oi_status == "AGGRESSIVE_SHORT_EXPANSION" or (delta_oi_pct >= OI_EXPANSION_THRESHOLD_PCT and oi_status != "BALANCED")):
+                if confluence_list is not None and isinstance(confluence_list, list):
+                    confluence_list.append("Kurumsal_OI_Short_Baskısı_Teyitli")
+
+        # ── 1c-2b. ÇAPRAZ BORSA KURUMSAL SPOT ÖNCÜSÜ (COINBASE PRO SPOT LEAD-LAG ENGINE) ──
+        cb_lead = getattr(self.market_data, 'coinbase_lead_lag', {}) if self.market_data else {}
+        cb_spread_bps = float(cb_lead.get('spread_bps', 0.0))
+        cb_dir = cb_lead.get('direction', 'NEUTRAL')
+        cb_status = cb_lead.get('status', '')
+
+        # Veto 1: Coinbase Spot Satış Baskısı (Kurumsal Ayı Öncüsü) varken Altcoin Boğa Tuzağı (Exit Liquidity Shield)
+        if ENABLE_COINBASE_LEAD_LAG and side == "LONG" and is_breakout and cb_spread_bps <= -COINBASE_LEAD_SPREAD_BPS:
+            rej_msg = f"🛡️ Coinbase Spot Çapraz Borsa Kalkanı: Coinbase Spot BTC Binance'e kıyasla {cb_spread_bps:+.1f} bps negatif iskontolu (Kurumsal Satıcı Baskısı). Sahte boğa kırılımı riski sebebiyle LONG engellendi."
+            print(f">> [RED - COINBASE SPOT DUMP] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "COINBASE_SPOT_DUMP_GATE"}
+
+        # Veto 2: Coinbase Spot Alıcı Rallisi varken Altcoin Ayı Tuzağı (Short Squeeze Shield)
+        if ENABLE_COINBASE_LEAD_LAG and side == "SHORT" and is_breakout and cb_spread_bps >= COINBASE_LEAD_SPREAD_BPS:
+            rej_msg = f"🛡️ Coinbase Spot Çapraz Borsa Kalkanı: Coinbase Spot BTC Binance'e kıyasla {cb_spread_bps:+.1f} bps primli (Kurumsal Alıcı Baskısı). Ayı tuzağı riski sebebiyle SHORT breakdown engellendi."
+            print(f">> [RED - COINBASE SPOT PUMP] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg)
+            return {"error": "COINBASE_SPOT_PUMP_GATE"}
+
+        # Coinbase Confluence Teyitleri:
+        if ENABLE_COINBASE_LEAD_LAG:
+            if side == "LONG" and cb_spread_bps >= COINBASE_LEAD_SPREAD_BPS:
+                if confluence_list is not None and isinstance(confluence_list, list):
+                    confluence_list.append("Coinbase_Spot_Boğa_Öncüsü_Teyitli")
+            elif side == "SHORT" and cb_spread_bps <= -COINBASE_LEAD_SPREAD_BPS:
+                if confluence_list is not None and isinstance(confluence_list, list):
+                    confluence_list.append("Coinbase_Spot_Ayı_Öncüsü_Teyitli")
 
         # ── 1c-3. KURUMSAL SEANS ÇAPALARI & JUDAS SWING LİKİDİTE KALKANI (PDH / PDL / ASYA) ──
         snaps_early = snapshot_levels or {}
@@ -1329,6 +1360,19 @@ class StrategyEngine:
             self.margin_multiplier *= cvd_margin_mult
         if obi_margin_mult != 1.0:
             self.margin_multiplier *= obi_margin_mult
+
+        # OI ve Coinbase Pro Spot Lead-Lag Pozisyon Büyütme Çarpanları
+        if ENABLE_OI_VELOCITY_RADAR:
+            if side == "LONG" and (oi_status == "AGGRESSIVE_LONG_EXPANSION" or delta_oi_pct >= OI_EXPANSION_THRESHOLD_PCT):
+                self.margin_multiplier *= 1.15
+            elif side == "SHORT" and (oi_status == "AGGRESSIVE_SHORT_EXPANSION" or (delta_oi_pct >= OI_EXPANSION_THRESHOLD_PCT and oi_status != "BALANCED")):
+                self.margin_multiplier *= 1.15
+
+        if ENABLE_COINBASE_LEAD_LAG:
+            if side == "LONG" and cb_spread_bps >= COINBASE_LEAD_SPREAD_BPS:
+                self.margin_multiplier *= 1.10
+            elif side == "SHORT" and cb_spread_bps <= -COINBASE_LEAD_SPREAD_BPS:
+                self.margin_multiplier *= 1.10
         
         # Madde 5 Kurali
         if current_touch == 2:

@@ -13,7 +13,9 @@ from config import (
     WALL_MIN_AGE_SEC, WALL_ANCHOR_AGE_SEC,
     BASIS_BUBBLE_BPS, BASIS_ABSORPTION_BPS,
     MAX_ALLOWED_SPREAD_MAJORS, MAX_ALLOWED_SPREAD_ALTS, MAX_ALLOWED_SPREAD_MEME,
-    MAX_ENTRY_SLIPPAGE_PCT, MIN_L2_DEPTH_USD_03
+    MAX_ENTRY_SLIPPAGE_PCT, MIN_L2_DEPTH_USD_03,
+    ENABLE_OI_VELOCITY_RADAR, OI_EXPANSION_THRESHOLD_PCT, OI_SQUEEZE_EXHAUSTION_PCT, OI_POLL_INTERVAL_SEC,
+    ENABLE_COINBASE_LEAD_LAG, COINBASE_LEAD_SPREAD_BPS, COINBASE_TICK_WINDOW_SEC
 )
 from indicators import calculate_camarilla_pivots, calculate_anchored_vwap, calculate_volume_profile, get_tradingview_naked_lines, calculate_session_and_daily_levels
 
@@ -86,12 +88,35 @@ class MarketDataManager:
         self.symbol_oi = {s: {
             'symbol': s,
             'open_interest': 0.0,
-            'oi_5m_ago': 0.0,
+            'oi_prev': 0.0,
             'delta_oi_pct': 0.0,
-            'price_chg_5m': 0.0,
             'status': 'BALANCED',
             'last_update': 0.0
         } for s in all_symbols}
+        self.oi_summary = {
+            'top_expansion_symbol': '-',
+            'top_expansion_pct': 0.0,
+            'top_squeeze_symbol': '-',
+            'top_squeeze_pct': 0.0,
+            'last_update': 0.0
+        }
+
+        # 🇺🇸 Çapraz Borsa Spot Öncüsü (Coinbase Pro Lead-Lag) Veri Yapıları
+        self.coinbase_prices = {
+            'BTC': 0.0,
+            'ETH': 0.0,
+            'SOL': 0.0,
+            'last_update': 0.0,
+            'is_connected': False
+        }
+        self.coinbase_lead_lag = {
+            'lead_symbol': 'NONE',
+            'spread_bps': 0.0,
+            'direction': 'NEUTRAL',
+            'status': '⚪ DENGELİ NAKİT AKIŞI',
+            'desc': 'Coinbase Spot ile Binance Vadeli dengede.',
+            'last_update': 0.0
+        }
 
         # ⚡ 1. BTC Ani Mikro-Şok Kalkanı Veri Yapıları (60s Flush / Spike Gate)
         self.btc_price_60s_deque = deque(maxlen=120)
@@ -273,7 +298,19 @@ class MarketDataManager:
                     "spot_basis": {"healthy": spot_ok, "count": spot_active_cnt, "total": total_syms, "delay_sec": spot_delay_sec},
                     "candle_poller": {"healthy": scan_active, "last_scan_time": scan_str, "delay_sec": scan_delay_sec},
                     "btc_shock": {"healthy": not btc_shock_active, "velocity_60s": btc_v60, "is_active": btc_shock_active},
-                    "funding": {"healthy": True, "last_update": funding_upd_str}
+                    "funding": {"healthy": True, "last_update": funding_upd_str},
+                    "coinbase_lead_lag": {
+                        "healthy": bool((now_sec - getattr(self, 'coinbase_prices', {}).get('last_update', 0.0)) < 30.0),
+                        "status": getattr(self, 'coinbase_lead_lag', {}).get('status', '⚪ DENGELİ'),
+                        "spread_bps": getattr(self, 'coinbase_lead_lag', {}).get('spread_bps', 0.0),
+                        "direction": getattr(self, 'coinbase_lead_lag', {}).get('direction', 'NEUTRAL')
+                    },
+                    "oi_radar": {
+                        "healthy": bool(sum(1 for v in getattr(self, 'symbol_oi', {}).values() if (now_sec - v.get('last_update', 0.0)) < 90.0) >= 10),
+                        "fresh_count": sum(1 for v in getattr(self, 'symbol_oi', {}).values() if (now_sec - v.get('last_update', 0.0)) < 90.0),
+                        "top_expansion": getattr(self, 'oi_summary', {}).get('top_expansion_symbol', '-'),
+                        "top_expansion_pct": getattr(self, 'oi_summary', {}).get('top_expansion_pct', 0.0)
+                    }
                 },
                 "quant_engine": {
                     "levels": {"healthy": levels_ok, "count": healthy_levs, "total": total_syms, "pct": levels_pct},
@@ -1589,14 +1626,18 @@ class MarketDataManager:
                 pass
 
         status = "BALANCED"
-        if price_chg_5m <= -0.15 and delta_pct >= 0.35:
+        if price_chg_5m <= -0.10 and delta_pct >= OI_EXPANSION_THRESHOLD_PCT:
             status = "AGGRESSIVE_SHORT_EXPANSION"
-        elif price_chg_5m <= -0.15 and delta_pct <= -0.35:
-            status = "LONG_LIQUIDATION_DRAIN"
-        elif price_chg_5m >= 0.15 and delta_pct >= 0.35:
+        elif price_chg_5m <= -0.10 and delta_pct <= OI_SQUEEZE_EXHAUSTION_PCT:
+            status = "LONG_LIQUIDATION_DUMP"
+        elif price_chg_5m >= 0.10 and delta_pct >= OI_EXPANSION_THRESHOLD_PCT:
             status = "AGGRESSIVE_LONG_EXPANSION"
-        elif price_chg_5m >= 0.15 and delta_pct <= -0.35:
+        elif price_chg_5m >= 0.10 and delta_pct <= OI_SQUEEZE_EXHAUSTION_PCT:
             status = "SHORT_COVERING_PUMP"
+        elif delta_pct >= OI_EXPANSION_THRESHOLD_PCT:
+            status = "AGGRESSIVE_LONG_EXPANSION" if price_chg_5m >= 0 else "AGGRESSIVE_SHORT_EXPANSION"
+        elif delta_pct <= OI_SQUEEZE_EXHAUSTION_PCT:
+            status = "SHORT_COVERING_PUMP" if price_chg_5m >= 0 else "LONG_LIQUIDATION_DUMP"
 
         res = {
             'symbol': symbol,
@@ -2485,6 +2526,163 @@ class MarketDataManager:
                     print(f">> [DERIBIT GEX RADAR UYARI] {e} (Mevcut GEX önbelleği korunuyor)")
                 await asyncio.sleep(900)  # Her 15 dakikada bir güncelle
 
+        # Worker 8: Çapraz Borsa Spot Öncüsü (Coinbase Pro Lead-Lag wss://ws-feed.exchange.coinbase.com)
+        async def coinbase_lead_lag_worker():
+            if not ENABLE_COINBASE_LEAD_LAG:
+                return
+            url = "wss://ws-feed.exchange.coinbase.com"
+            sub_msg = {
+                "type": "subscribe",
+                "product_ids": ["BTC-USD", "ETH-USD", "SOL-USD"],
+                "channels": ["ticker"]
+            }
+            while True:
+                try:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.ws_connect(url, heartbeat=10) as ws:
+                            await ws.send_str(json.dumps(sub_msg))
+                            print(">> [COINBASE SPOT WS] wss://ws-feed.exchange.coinbase.com bağlandı (BTC, ETH, SOL).")
+                            self.coinbase_prices['is_connected'] = True
+                            async for msg in ws:
+                                if msg.type == aiohttp.WSMsgType.TEXT:
+                                    d = json.loads(msg.data)
+                                    if d.get("type") == "ticker":
+                                        prod = d.get("product_id", "")
+                                        p = float(d.get("price", 0.0))
+                                        if p > 0:
+                                            now_t = time.time()
+                                            base_asset = prod.split("-")[0]
+                                            self.coinbase_prices[base_asset] = p
+                                            self.coinbase_prices['last_update'] = now_t
+
+                                            # Binance BTC/USDT ile Lead-Lag Karşılaştırması
+                                            binance_btc = self.current_prices.get("BTC/USDT", 0.0)
+                                            cb_btc = self.coinbase_prices.get("BTC", 0.0)
+                                            if binance_btc > 0 and cb_btc > 0:
+                                                spread_bps = round(((cb_btc - binance_btc) / binance_btc) * 10000.0, 1)
+                                                direction = "NEUTRAL"
+                                                status_str = "⚪ DENGELİ NAKİT AKIŞI"
+                                                desc_str = f"Coinbase (${cb_btc:,.1f}) ile Binance (${binance_btc:,.1f}) dengede ({spread_bps:+.1f} bps)."
+
+                                                if spread_bps >= COINBASE_LEAD_SPREAD_BPS:
+                                                    direction = "BULLISH_LEAD"
+                                                    status_str = f"🇺🇸 COINBASE SPOT BOĞA ÖNCÜSÜ (+{spread_bps:.0f} bps)"
+                                                    desc_str = f"Coinbase Spot alıcı baskısıyla önde (+{spread_bps:+.1f} bps). Kurumsal yukarı itki."
+                                                elif spread_bps <= -COINBASE_LEAD_SPREAD_BPS:
+                                                    direction = "BEARISH_LEAD"
+                                                    status_str = f"🇺🇸 COINBASE SPOT AYI BASKISI ({spread_bps:.0f} bps)"
+                                                    desc_str = f"Coinbase Spot satıcı baskısıyla geride ({spread_bps:+.1f} bps). Kurumsal aşağı baskı."
+
+                                                self.coinbase_lead_lag = {
+                                                    'lead_symbol': 'BTC',
+                                                    'spread_bps': spread_bps,
+                                                    'direction': direction,
+                                                    'status': status_str,
+                                                    'desc': desc_str,
+                                                    'last_update': now_t
+                                                }
+                                elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
+                                    break
+                except Exception as e:
+                    self.coinbase_prices['is_connected'] = False
+                    print(f">> [COINBASE WS UYARI] {e} (2s sonra yeniden bağlanıyor...)")
+                    await asyncio.sleep(2)
+
+        # Worker 9: Gerçek Zamanlı Açık Pozisyon İvmesi (Binance Futures OI Poller)
+        async def open_interest_worker():
+            if not ENABLE_OI_VELOCITY_RADAR:
+                return
+            sem = asyncio.Semaphore(15)
+            while True:
+                try:
+                    now_sec = time.time()
+                    async with aiohttp.ClientSession() as session:
+                        async def fetch_oi(s):
+                            async with sem:
+                                clean_sym = self._clean_symbol(s)
+                                raw_s = clean_sym.replace('/', '').replace(':USDT', '').replace('USDT', '') + 'USDT'
+                                url = f"https://fapi.binance.com/fapi/v1/openInterest?symbol={raw_s}"
+                                try:
+                                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=3)) as resp:
+                                        if resp.status == 200:
+                                            data = await resp.json()
+                                            cur_oi = float(data.get('openInterest', 0.0))
+                                            if cur_oi > 0:
+                                                cur_hist = self.symbol_oi.get(s, {}).get('oi_history', [])
+                                                cur_hist.append((now_sec, cur_oi))
+                                                cur_hist = [(t, v) for (t, v) in cur_hist if (now_sec - t) <= 360.0]
+                                                oi_5m_ago = cur_hist[0][1] if cur_hist else cur_oi
+
+                                                delta_pct = round(((cur_oi - oi_5m_ago) / oi_5m_ago) * 100.0, 2) if oi_5m_ago > 0 else 0.0
+
+                                                # 5 Dakikalık Fiyat Değişimiyle Karşılaştırma
+                                                price_chg_5m = 0.0
+                                                df = self.candles_5m.get(s, pd.DataFrame())
+                                                if df is not None and len(df) >= 2:
+                                                    try:
+                                                        c_last = float(df['close'].iloc[-1])
+                                                        c_prev = float(df['close'].iloc[-2])
+                                                        if c_prev > 0:
+                                                            price_chg_5m = round(((c_last - c_prev) / c_prev) * 100.0, 2)
+                                                    except Exception:
+                                                        pass
+
+                                                status = "BALANCED"
+                                                if price_chg_5m <= -0.10 and delta_pct >= OI_EXPANSION_THRESHOLD_PCT:
+                                                    status = "AGGRESSIVE_SHORT_EXPANSION"
+                                                elif price_chg_5m <= -0.10 and delta_pct <= OI_SQUEEZE_EXHAUSTION_PCT:
+                                                    status = "LONG_LIQUIDATION_DUMP"
+                                                elif price_chg_5m >= 0.10 and delta_pct >= OI_EXPANSION_THRESHOLD_PCT:
+                                                    status = "AGGRESSIVE_LONG_EXPANSION"
+                                                elif price_chg_5m >= 0.10 and delta_pct <= OI_SQUEEZE_EXHAUSTION_PCT:
+                                                    status = "SHORT_COVERING_PUMP"
+                                                elif delta_pct >= OI_EXPANSION_THRESHOLD_PCT:
+                                                    status = "AGGRESSIVE_LONG_EXPANSION" if price_chg_5m >= 0 else "AGGRESSIVE_SHORT_EXPANSION"
+                                                elif delta_pct <= OI_SQUEEZE_EXHAUSTION_PCT:
+                                                    status = "SHORT_COVERING_PUMP" if price_chg_5m >= 0 else "LONG_LIQUIDATION_DUMP"
+
+                                                self.symbol_oi[s] = {
+                                                    'symbol': s,
+                                                    'open_interest': cur_oi,
+                                                    'oi_5m_ago': oi_5m_ago,
+                                                    'oi_history': cur_hist,
+                                                    'delta_oi_pct': delta_pct,
+                                                    'price_chg_5m': price_chg_5m,
+                                                    'status': status,
+                                                    'last_update': now_sec
+                                                }
+                                                if hasattr(self, 'symbol_metrics') and s in self.symbol_metrics:
+                                                    self.symbol_metrics[s]['delta_oi_pct'] = delta_pct
+                                                    self.symbol_metrics[s]['oi_status'] = status
+                                except Exception:
+                                    pass
+
+                        active_targets = list(self.active_symbols)[:40]
+                        await asyncio.gather(*(fetch_oi(s) for s in active_targets))
+
+                        top_exp_sym = '-'
+                        top_exp_val = 0.0
+                        top_sqz_sym = '-'
+                        top_sqz_val = 0.0
+                        for s_k, oi_d in self.symbol_oi.items():
+                            d_pct = oi_d.get('delta_oi_pct', 0.0)
+                            if d_pct > top_exp_val:
+                                top_exp_val = d_pct
+                                top_exp_sym = s_k
+                            if d_pct < top_sqz_val:
+                                top_sqz_val = d_pct
+                                top_sqz_sym = s_k
+                        self.oi_summary = {
+                            'top_expansion_symbol': top_exp_sym,
+                            'top_expansion_pct': top_exp_val,
+                            'top_squeeze_symbol': top_sqz_sym,
+                            'top_squeeze_pct': top_sqz_val,
+                            'last_update': now_sec
+                        }
+                except Exception as e:
+                    print(f">> [OI WORKER UYARI]: {e}")
+                await asyncio.sleep(OI_POLL_INTERVAL_SEC)
+
         # Her worker'ı crash-proof saran koruyucu (bir worker çökerse diğerlerini öldürmez, otomatik yeniden başlatır)
         async def resilient_worker(name, coro_fn, *args):
             backoff = 2
@@ -2507,6 +2705,8 @@ class MarketDataManager:
             resilient_worker("ForceOrderRadar", forceorder_worker),
             resilient_worker("SpotBasisWorker", spot_basis_worker),
             resilient_worker("DeribitGexRadar", deribit_gex_worker),
+            resilient_worker("CoinbaseLeadLag", coinbase_lead_lag_worker),
+            resilient_worker("OpenInterestRadar", open_interest_worker),
         ] + [resilient_worker(f"KLine-Chunk-{i}", kline_worker, c) for i, c in enumerate(kline_chunks)]
         await asyncio.gather(*tasks)
 

@@ -3222,6 +3222,10 @@ HTML_PAGE = """
                 <span id="mode-badge-text">🟡 DEMO MODU</span>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:middle; margin-left:3px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
             </div>
+            <div class="live-tag" id="cb-lead-lag-pill" onclick="switchMainTab('health')" style="cursor:pointer; background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.35); color:#60a5fa;" title="Coinbase Pro Spot Lead-Lag ($LLI$ - Kurumsal Spot Öncüsü)">
+                <span id="cb-lead-lag-dot" style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#60a5fa; box-shadow:0 0 8px #60a5fa;"></span>
+                <span id="cb-lead-lag-text">🇺🇸 CB: 0.0 bps</span>
+            </div>
             <div class="live-tag" id="system-health-pill" onclick="switchMainTab('health')" style="cursor:pointer;" title="Aegis Sentinel 360° Kuant Telemetri Sekmesini Aç">
                 <div class="live-dot" id="system-health-dot"></div>
                 <span id="system-health-text">100/100 Parite Canlı Akıyor</span>
@@ -5067,6 +5071,30 @@ async function loadAdminMetrics() {
                 if (dotEl) dotEl.className = 'live-dot-error';
                 if (pill) pill.style.borderColor = 'rgba(255,71,87,0.5)';
             }
+
+            // Coinbase Lead-Lag Badge Update
+            const cbPill = document.getElementById('cb-lead-lag-pill');
+            const cbText = document.getElementById('cb-lead-lag-text');
+            const cbDot = document.getElementById('cb-lead-lag-dot');
+            if (cbText && appState) {
+                const cb = appState.coinbase_lead_lag || {};
+                const spread = Number(cb.spread_bps || 0);
+                const dir = cb.direction || 'NEUTRAL';
+                const sStr = (spread >= 0 ? '+' : '') + spread.toFixed(1);
+                if (dir === 'BULLISH_LEAD') {
+                    cbText.innerText = `🇺🇸 CB Boğa: ${sStr} bps`;
+                    if (cbDot) { cbDot.style.background = 'var(--green)'; cbDot.style.boxShadow = '0 0 8px var(--green)'; }
+                    if (cbPill) { cbPill.style.borderColor = 'rgba(16,185,129,0.5)'; cbPill.style.color = 'var(--green)'; }
+                } else if (dir === 'BEARISH_LEAD') {
+                    cbText.innerText = `🇺🇸 CB Ayı: ${sStr} bps`;
+                    if (cbDot) { cbDot.style.background = 'var(--red)'; cbDot.style.boxShadow = '0 0 8px var(--red)'; }
+                    if (cbPill) { cbPill.style.borderColor = 'rgba(244,63,94,0.5)'; cbPill.style.color = 'var(--red)'; }
+                } else {
+                    cbText.innerText = `🇺🇸 CB: ${sStr} bps`;
+                    if (cbDot) { cbDot.style.background = '#60a5fa'; cbDot.style.boxShadow = '0 0 8px #60a5fa'; }
+                    if (cbPill) { cbPill.style.borderColor = 'rgba(59,130,246,0.35)'; cbPill.style.color = '#60a5fa'; }
+                }
+            }
         }
 
         function openHealthDiagnosticModal() {
@@ -5089,6 +5117,8 @@ async function loadAdminMetrics() {
             const poller = streams.candle_poller || { last_scan_time: sys.last_scan_time || 'Şimdi', delay_sec: 0 };
             const btcShock = streams.btc_shock || { velocity_60s: 0.0, is_active: false };
             const funding = streams.funding || { last_update: 'Aktif' };
+            const cb = streams.coinbase_lead_lag || (appState.coinbase_lead_lag || { spread_bps: 0.0, status: '⚪ DENGELİ', direction: 'NEUTRAL' });
+            const oi = streams.oi_radar || (appState.oi_summary || { fresh_count: 40, top_expansion: '-', top_expansion_pct: 0.0 });
 
             // Quant Engine Data
             const lev = qEngine.levels || { count: sys.healthy_symbols || 100, total: sys.total_symbols || 100, pct: 100 };
@@ -5176,11 +5206,25 @@ async function loadAdminMetrics() {
                                 ${pill(btcShock.is_active ? 'ŞOK DEVREDE' : 'GÜVENLİ', btcShock.is_active ? 'var(--red)' : 'var(--green)')}
                             </div>
                         </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:6px;">
                             <span style="color:#94a3b8;">💰 Fonlama Oranı (Funding Rate) & Squeeze:</span>
                             <div style="display:flex; align-items:center; gap:8px;">
                                 <span style="color:#e2e8f0; font-weight:700;">100 Parite Taranıyor (${funding.last_update || 'Güncel'})</span>
                                 ${pill('60s PERİYOT', 'var(--green)')}
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:6px;">
+                            <span style="color:#94a3b8;">🇺🇸 Coinbase Spot Öncüsü (Coinbase Pro Lead-Lag):</span>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="color:#e2e8f0; font-weight:700;">${(cb.spread_bps >= 0 ? '+' : '') + Number(cb.spread_bps || 0).toFixed(1)} bps (${cb.direction || 'NEUTRAL'})</span>
+                                ${pill(cb.spread_bps >= 8.0 ? 'BOĞA ÖNCÜSÜ' : (cb.spread_bps <= -8.0 ? 'AYI BASKISI' : 'DENGELİ'), cb.spread_bps >= 8.0 ? 'var(--green)' : (cb.spread_bps <= -8.0 ? 'var(--red)' : 'var(--cyan)'))}
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="color:#94a3b8;">🧲 Gerçek Zamanlı Açık Pozisyon İvmesi (Delta-OI):</span>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="color:#e2e8f0; font-weight:700;">${oi.fresh_count || 40} Parite (Lider: ${oi.top_expansion || '-'} %${Number(oi.top_expansion_pct || 0).toFixed(1)})</span>
+                                ${pill('30s RADAR', 'var(--green)')}
                             </div>
                         </div>
                     </div>
@@ -5285,6 +5329,8 @@ async function loadAdminMetrics() {
             const poller = streams.candle_poller || { last_scan_time: sys.last_scan_time || 'Şimdi', delay_sec: 0 };
             const btcShock = streams.btc_shock || { velocity_60s: 0.0, is_active: false };
             const funding = streams.funding || { last_update: 'Aktif' };
+            const cb = streams.coinbase_lead_lag || (appState.coinbase_lead_lag || { spread_bps: 0.0, status: '⚪ DENGELİ', direction: 'NEUTRAL' });
+            const oi = streams.oi_radar || (appState.oi_summary || { fresh_count: 40, top_expansion: '-', top_expansion_pct: 0.0 });
 
             // Quant Engine Data
             const lev = qEngine.levels || { count: sys.healthy_symbols || 100, total: sys.total_symbols || 100, pct: 100 };
@@ -5431,6 +5477,8 @@ async function loadAdminMetrics() {
                         ${itemRow('💀', 'Global Tasfiye Radarı (!forceOrder)', 'Son 24 saatlik long/short likidasyon patlamaları ve piyasa yönü', '$' + liqAmount + ' (Son: ' + (liq.last_event_time || '-') + ')', pill('7/24 SOKET', 'var(--green)'))}
                         ${itemRow('⚖️', 'Spot vs Vadeli Basis Senkronu', 'Vadeli ile spot piyasa arasındaki arbitraj primi ve kurumsal sapma radarı', (spot.count || 100) + ' Parite (15s)', pill('SENKRON', 'var(--cyan)'))}
                         ${itemRow('⏱️', '5M Mum Senkronizasyonu & Dedup', '5 dakikalık mum kapanışları ve REST/WebSocket çift tetik engelleme motoru', 'Son Mum: ' + (poller.last_scan_time || 'Şimdi'), pill('DEDUP KORUMASI', 'var(--green)'))}
+                        ${itemRow('🇺🇸', 'Coinbase Spot Öncüsü (Lead-Lag LLI)', 'Coinbase Pro BTC/USD spot akışı ile Binance arasındaki kurumsal likidite öncüsü', (cb.spread_bps >= 0 ? '+' : '') + Number(cb.spread_bps || 0).toFixed(1) + ' bps (' + (cb.direction || 'NEUTRAL') + ')', pill(cb.spread_bps >= 8.0 ? 'BOĞA ÖNCÜSÜ' : (cb.spread_bps <= -8.0 ? 'AYI BASKISI' : 'DENGELİ'), cb.spread_bps >= 8.0 ? 'var(--green)' : (cb.spread_bps <= -8.0 ? 'var(--red)' : 'var(--cyan)')))}
+                        ${itemRow('🧲', 'Açık Faiz İvmesi (Delta-OI Radar)', 'Binance Vadeli paritelerinde 30s periyotlu taze kurumsal para girişi/sıkışma radarı', (oi.fresh_count || 40) + ' Parite (Top: ' + (oi.top_expansion || '-') + ' %' + Number(oi.top_expansion_pct || 0).toFixed(1) + ')', pill(oi.fresh_count >= 10 ? 'RADAR AKTİF' : 'TARANIYOR', oi.fresh_count >= 10 ? 'var(--green)' : 'var(--yellow)'))}
                     </div>
 
                     <!-- KOLON 2: KUANT MOTORU VE ANALİTİK SENSÖRLER -->
@@ -12404,6 +12452,9 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "recent_rejections": getattr(strategy, "recent_rejections", [])[-50:] if strategy else [],
                 "setup_attempts": getattr(strategy, "setup_attempts", {}) if strategy else {},
                 "system_health": sys_health,
+                "coinbase_lead_lag": getattr(market_data, 'coinbase_lead_lag', {}) if market_data else {},
+                "oi_summary": getattr(market_data, 'oi_summary', {}) if market_data else {},
+                "symbol_oi": getattr(market_data, 'symbol_oi', {}) if market_data else {},
                 "server_start_ts": SERVER_START_TS,
                 "server_uptime_sec": int(time.time() - SERVER_START_TS),
                 "macro_climate": strategy.get_macro_climate() if strategy and hasattr(strategy, 'get_macro_climate') else {}
@@ -12419,6 +12470,9 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "history_summary": {"total_realized_pnl": 0, "total_fees": 0, "total_trades": len(hist_full), "wins": 0, "losses": 0, "win_pnl_sum": 0, "loss_pnl_sum": 0},
                 "symbols": {},
                 "all_coins": [],
+                "coinbase_lead_lag": {},
+                "oi_summary": {},
+                "symbol_oi": {},
                 "system_health": {"is_perfect": False, "status_text": f"Hata: {e}"},
                 "macro_climate": {}
             }, dumps=lambda obj: json.dumps(obj, default=str))
