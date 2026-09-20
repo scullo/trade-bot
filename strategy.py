@@ -594,39 +594,42 @@ class StrategyEngine:
         tp2 = pos.get("tp2") or 0.0
         hard_stop = pos.get("hard_stop") or 0.0
 
-        # ── 1. SERT STOP KONTROLU (Felaket Korumasi & Dinamik Fitil Kalkanı) ──
-        hold_sec = time.time() - pos.get("entry_timestamp", time.time())
-        is_early_stage = (hold_sec <= 600.0) and not pos.get("is_half_closed", False)
+        # ── 1. SERT STOP KONTROLU (İki Kademeli Fitil & Felaket Tavanı Mimarisi) ──
+        # Kural: Milisaniyelik anlık tick çıkışı YALNIZCA mutlak acil tavan (%1.60) delindiğinde tetiklenir!
+        # Normal fitil bölgesindeki iğnelerde mum kapanışı teyidi (evaluate_candle_close) beklenerek sahte fitiller elenir.
+        entry_p = float(pos.get("entry_price", current_price))
+        abs_max_stop_pct = MAX_ABSOLUTE_STOP_PCT / 100.0
 
-        if side == "LONG" and hard_stop > 0:
-            trigger_stop = hard_stop
-            if is_early_stage:
-                coin_atr = float(pos.get("atr_pct", 1.2))
-                entry_p = float(pos.get("entry_price", current_price))
-                wick_buf = entry_p * (coin_atr / 100.0) * 0.25
-                # İlk 10dk tolerans eşiği (en fazla %1.60 mutlak acil stop tavanı ile sınırlı)
-                trigger_stop = max(hard_stop - wick_buf, entry_p * (1.0 - 0.0160))
-
-            if current_price <= trigger_stop:
-                stop_label = f"Sert Stop Tetiklendi (${hard_stop:.4f})" if not is_early_stage else f"🚨 Acil Fitil Tavan Stopu (${current_price:.4f})"
-                record = await self._safe_close_position(symbol, current_price, stop_label)
+        if pos.get("is_half_closed", False):
+            # TP1 sonrası: Breakeven / Kâr Koruma Stopu tick düzeyinde anında korunur
+            be_stop = float(pos.get("hard_stop") or pos.get("soft_stop") or entry_p)
+            if side == "LONG" and current_price <= be_stop:
+                record = await self._safe_close_position(symbol, current_price, f"🛡️ Breakeven Stop Tetiklendi (${be_stop:.4f})")
                 if record:
                     await self._notify_close(record, levels=levels)
                     self._cleanup_tracking(symbol)
                 return
+            elif side == "SHORT" and current_price >= be_stop:
+                record = await self._safe_close_position(symbol, current_price, f"🛡️ Breakeven Stop Tetiklendi (${be_stop:.4f})")
+                if record:
+                    await self._notify_close(record, levels=levels)
+                    self._cleanup_tracking(symbol)
+                return
+        else:
+            # TP1 öncesi: İki Kademeli Mimari
+            # Kademe 1 (Milisaniyelik): %1.60 Mutlak Felaket Tavanı (Sermaye koruma acil devre kesicisi)
+            # Kademe 2 (5M Mum Teyitli): hard_stop fitil bölgesi mum kapanışında evaluate_candle_close tarafından kesilir
+            disaster_floor = entry_p * (1.0 - abs_max_stop_pct)
+            disaster_ceiling = entry_p * (1.0 + abs_max_stop_pct)
 
-        elif side == "SHORT" and hard_stop > 0:
-            trigger_stop = hard_stop
-            if is_early_stage:
-                coin_atr = float(pos.get("atr_pct", 1.2))
-                entry_p = float(pos.get("entry_price", current_price))
-                wick_buf = entry_p * (coin_atr / 100.0) * 0.25
-                # İlk 10dk tolerans eşiği (en fazla %1.60 mutlak acil stop tavanı ile sınırlı)
-                trigger_stop = min(hard_stop + wick_buf, entry_p * (1.0 + 0.0160))
-
-            if current_price >= trigger_stop:
-                stop_label = f"Sert Stop Tetiklendi (${hard_stop:.4f})" if not is_early_stage else f"🚨 Acil Fitil Tavan Stopu (${current_price:.4f})"
-                record = await self._safe_close_position(symbol, current_price, stop_label)
+            if side == "LONG" and current_price <= disaster_floor:
+                record = await self._safe_close_position(symbol, current_price, f"🚨 Mutlak Acil Tavan Stopu (%{MAX_ABSOLUTE_STOP_PCT:.2f} Delindi: ${current_price:.4f})")
+                if record:
+                    await self._notify_close(record, levels=levels)
+                    self._cleanup_tracking(symbol)
+                return
+            elif side == "SHORT" and current_price >= disaster_ceiling:
+                record = await self._safe_close_position(symbol, current_price, f"🚨 Mutlak Acil Tavan Stopu (%{MAX_ABSOLUTE_STOP_PCT:.2f} Delindi: ${current_price:.4f})")
                 if record:
                     await self._notify_close(record, levels=levels)
                     self._cleanup_tracking(symbol)
@@ -772,7 +775,7 @@ class StrategyEngine:
             self.symbol_daily_loss_count = {}
             self.symbol_daily_loss_date = today_str
 
-        if getattr(self, 'symbol_daily_loss_count', {}).get(symbol, 0) >= 2:
+        if not is_fakeout_reclaim and getattr(self, 'symbol_daily_loss_count', {}).get(symbol, 0) >= 2:
             rej_msg = f"🛡️ Çifte Zarar Devre Kesicisi: {symbol} bugün 2 kez zarar durdurdu. Toksik parite kilidi aktif, gün boyu yeni işlem açılmaz."
             print(f">> [RED - ÇİFTE ZARAR KİLİDİ] {symbol}: {rej_msg}")
             self.log_rejection(symbol, reason, rej_msg)
@@ -1398,7 +1401,7 @@ class StrategyEngine:
         # Beta takipçi coinlerde düşüş/yatay piyasada dip sekmesi aramak toksiktir (Zararların %87'si buradan kaynaklandı).
         if side == "LONG" and symbol != "BTC/USDT":
             is_alpha_or_bull = ("ALFA" in decoupling_status or "DİRENÇLİ" in decoupling_status or dynamic_rs_score >= 0.20 or rs_vs_btc >= 0.30)
-            if not is_alpha_or_bull:
+            if not is_fakeout_reclaim and not is_alpha_or_bull:
                 rej_msg = f"🛡️ Beta Takipçi Long Kalkanı: {symbol} piyasadan pozitif ayrışmıyor ({decoupling_status}, RS Skoru: {dynamic_rs_score:+.2f}, BTC Farkı: %{rs_vs_btc:+.2f}). Bağımsız alfa üretmeyen zayıf coinlerde LONG engellendi."
                 print(f">> [RED - BETA TAKİPÇİ LONG KALKANI] {symbol}: {rej_msg}")
                 self.log_rejection(symbol, reason, rej_msg)
