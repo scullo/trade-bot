@@ -121,7 +121,14 @@ SYMBOLS = DEFAULT_ACTIVE_SYMBOLS
 
 # 2. Risk ve Kasa Yonetimi (Elastic Quant Portfolio & Compounding Engine)
 INITIAL_BALANCE = 10000.0        # Demo baslangic bakiyesi (USDT)
-LEVERAGE = 5                     # Kaldirac (5x)
+LEVERAGE = 5                     # Varsayilan temel kaldirac (5x)
+DEFAULT_LEVERAGE = LEVERAGE
+ENABLE_DYNAMIC_LEVERAGE = True   # Akilli 3-Kademeli Dinamik Kaldirac Motoru (2x - 8x)
+MIN_LEVERAGE = 2                 # Azami defansif kaldirac tabani (Asiri dalgalanma / Dead Zone kalkani)
+MAX_LEVERAGE = 8                 # Azami kurumsal hucum kaldiraci tavani (A+ Elit Sniper teyitli)
+LEVERAGE_LOW_ATR_THRESHOLD = 0.65   # Dusuk dalgalanma (BTC/ETH gibi agirbasli majorler): 7x-8x'e izin verilir
+LEVERAGE_HIGH_ATR_THRESHOLD = 1.80  # Yuksek dalgalanma (Meme/Beta): 3x-4x'e dusurulur
+LEVERAGE_EXTREME_ATR_THRESHOLD = 2.80 # Asiri dalgalanma: 2x'e sabitlenir (Sermaye zirhi)
 POSITION_SIZE_USDT = 300.0       # Kurumsal dengeli baz marjin (300 USDT - 10k kasa standardi)
 MAX_OPEN_POSITIONS = 8           # Esnek portfoy tavani: 5 standart, 8'e kadar esnek marjin butcesi
 MAX_PORTFOLIO_MARGIN_PCT = 25.0  # Azami toplam kilitli marjin: Kasanin %25'i (10,000$ icin max 2,500$)

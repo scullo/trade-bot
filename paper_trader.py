@@ -473,9 +473,12 @@ class PaperTrader:
         print(f">> [PYRAMID EKLENDİ] {symbol} {side} @ {current_price} | +${add_margin} Marjin (Komisyon: ${add_fee:.3f}) | Yeni Giriş: {new_entry_price:.4f} | Stop: {pos.get('soft_stop')}")
         return True
 
-    def open_position(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None, atr_pct: float = 1.0, trend_regime: str = "YATAY", session: str = "LONDRA", volume_surge: float = 1.0, confluence_score: str = "2/4", htf_alignment: str = "TREND YÖNÜNDE", custom_margin: float = None, rs_vs_btc: float = 0.0, decoupling_status: str = "⚪ NÖTR_TAKİPÇİ", cvd_pct: float = 50.0, candle_velocity: float = 1.0, **kwargs):
+    def open_position(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None, atr_pct: float = 1.0, trend_regime: str = "YATAY", session: str = "LONDRA", volume_surge: float = 1.0, confluence_score: str = "2/4", htf_alignment: str = "TREND YÖNÜNDE", custom_margin: float = None, rs_vs_btc: float = 0.0, decoupling_status: str = "⚪ NÖTR_TAKİPÇİ", cvd_pct: float = 50.0, candle_velocity: float = 1.0, custom_leverage: int = None, **kwargs):
         if symbol in self.open_positions:
             return None
+
+        # Dinamik veya Temel Kaldıraç Belirleme
+        active_leverage = int(custom_leverage) if custom_leverage is not None and int(custom_leverage) > 0 else int(self.leverage)
 
         # Risk hesabı (1R değeri) ve Kurumsal Risk Paritesi (Volatility Targeting / Normalized Dollar Risk)
         stop_level = hard_stop if (hard_stop and hard_stop > 0) else (soft_stop if (soft_stop and soft_stop > 0) else 0)
@@ -489,7 +492,7 @@ class PaperTrader:
             target_dollar_risk = max(float(FIXED_DOLLAR_RISK), self.balance * (float(RISK_EQUITY_PCT) / 100.0))
             if stop_dist_pct > 0.002:
                 desired_pos_val = target_dollar_risk / stop_dist_pct
-                desired_margin = desired_pos_val / float(self.leverage)
+                desired_margin = desired_pos_val / float(active_leverage)
                 margin = round(max(float(MIN_POSITION_MARGIN), min(float(MAX_POSITION_MARGIN), desired_margin)), 2)
             else:
                 margin = float(self.margin_per_trade)
@@ -503,7 +506,7 @@ class PaperTrader:
                 "current_balance": free_bal
             }
 
-        position_value = margin * self.leverage
+        position_value = margin * active_leverage
         quantity = position_value / entry_price
         entry_fee = position_value * self.commission_rate
         entry_timestamp = time.time()
@@ -533,7 +536,7 @@ class PaperTrader:
             "side": side.upper(),
             "entry_price": float(entry_price),
             "margin": float(margin),
-            "leverage": int(self.leverage),
+            "leverage": int(active_leverage),
             "position_value": float(position_value),
             "quantity": float(quantity),
             "entry_fee": float(entry_fee),
@@ -573,7 +576,7 @@ class PaperTrader:
 
         self.open_positions[symbol] = pos
         self.save_history()
-        print(f">> [POZISYON ACILDI] {symbol} {side} @ {entry_price} | Marjin: {margin}$ ({self.leverage}x) | Setup: {pos['setup_id']}")
+        print(f">> [POZISYON ACILDI] {symbol} {side} @ {entry_price} | Marjin: {margin}$ ({active_leverage}x) | Setup: {pos['setup_id']}")
         return pos
 
     def close_position(self, symbol: str, exit_price: float, close_reason: str, is_partial: bool = False):

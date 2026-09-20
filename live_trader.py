@@ -178,7 +178,7 @@ class LiveTrader:
         except Exception as e:
             print(f"[LIVE TRADER] Pozisyon senkronizasyon hatasi: {e}")
 
-    async def open_position(self, symbol: str, side: str, current_price: float, trade_type: str, reason: str, levels_snapshot: dict = None, tp1: float = 0.0, tp2: float = 0.0, hard_stop: float = 0.0) -> dict:
+    async def open_position(self, symbol: str, side: str, current_price: float, trade_type: str, reason: str, levels_snapshot: dict = None, tp1: float = 0.0, tp2: float = 0.0, hard_stop: float = 0.0, custom_margin: float = None, custom_leverage: int = None, **kwargs) -> dict:
         if not self.exchange:
             print("[LIVE TRADER HATA] API anahtari tanimli degil, pozisyon acilamadi.")
             return None
@@ -187,8 +187,8 @@ class LiveTrader:
         if '/' not in clean_sym and not clean_sym.endswith('/USDT'):
             clean_sym = clean_sym + '/USDT'
 
-        leverage = self.config.get("leverage", 5)
-        margin_usdt = self.config.get("position_size_usdt", 10.0)
+        leverage = int(custom_leverage) if custom_leverage is not None and int(custom_leverage) > 0 else self.config.get("leverage", 5)
+        margin_usdt = float(custom_margin) if custom_margin is not None else self.config.get("position_size_usdt", 10.0)
 
         try:
             try:

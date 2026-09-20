@@ -21,7 +21,9 @@ from config import (
     ENABLE_HMM_SWEEP_SHIELD, HMM_SWEEP_SHIELD_MULT,
     MAX_ABSOLUTE_STOP_PCT, ENABLE_FAKEOUT_RECLAIM, FAKEOUT_RECLAIM_MAX_CANDLES,
     ENABLE_OI_VELOCITY_RADAR, OI_EXPANSION_THRESHOLD_PCT, OI_SQUEEZE_EXHAUSTION_PCT,
-    ENABLE_COINBASE_LEAD_LAG, COINBASE_LEAD_SPREAD_BPS
+    ENABLE_COINBASE_LEAD_LAG, COINBASE_LEAD_SPREAD_BPS,
+    ENABLE_DYNAMIC_LEVERAGE, MIN_LEVERAGE, MAX_LEVERAGE, DEFAULT_LEVERAGE,
+    LEVERAGE_LOW_ATR_THRESHOLD, LEVERAGE_HIGH_ATR_THRESHOLD, LEVERAGE_EXTREME_ATR_THRESHOLD
 )
 
 
@@ -752,6 +754,56 @@ class StrategyEngine:
     def _cleanup_tracking(self, symbol: str):
         """Pozisyon kapandiginda tracking verilerini temizle."""
         self.peak_prices.pop(symbol, None)
+
+    def calculate_dynamic_leverage(self, symbol: str, atr_pct: float, confluence_count: int, has_whale_flow: bool = False, is_dead_zone: bool = False, is_major: bool = False, confluence_list: list = None) -> int:
+        """
+        Volatiliteye (ATR), Confluence Teyitlerine ve Kurumsal Sinyal Kalitesine Uyarli
+        3-Kademeli Akilli Dinamik Kaldirac Motoru (2x - 8x):
+        
+        💎 Kademe 1: A+ Elit Sniper (7x - 8x)
+        ⚖️ Kademe 2: Standart A Kalite (4x - 5x)
+        🛡️ Kademe 3: Defansif Volatilite Kalkani (2x - 3x)
+        """
+        if not ENABLE_DYNAMIC_LEVERAGE:
+            return int(DEFAULT_LEVERAGE)
+
+        base_lev = int(DEFAULT_LEVERAGE)
+        min_lev = int(MIN_LEVERAGE)
+        max_lev = int(MAX_LEVERAGE)
+
+        c_list = [str(c) for c in (confluence_list or [])]
+        has_cb_lead = any("Coinbase" in c for c in c_list)
+        has_oi_surge = any("OI" in c or "Acik_Pozisyon" in c or "Açık_Pozisyon" in c for c in c_list)
+
+        # 1. Kalite & Confluence Skoru Degerlendirmesi
+        # A+ Elit Firsat Sartlari: 4+ teyit VEYA (Balina Akisi + Coinbase/OI teyidi)
+        is_elite_setup = (confluence_count >= 4 or (has_whale_flow and (has_cb_lead or has_oi_surge)))
+        is_strong_setup = (confluence_count >= 3 or has_whale_flow)
+
+        target_lev = base_lev
+        if is_elite_setup:
+            target_lev = 7
+            if is_major or atr_pct <= LEVERAGE_LOW_ATR_THRESHOLD:
+                target_lev = 8  # Dusuk dalgalanmali majorlerde ve A+ firsatta tam kurumsal guc: 8x
+        elif is_strong_setup:
+            target_lev = 5
+        else:
+            target_lev = 4
+
+        # 2. Volatilite (ATR) Kalkani:
+        if atr_pct >= LEVERAGE_EXTREME_ATR_THRESHOLD:
+            # Asiri dalgali meme/beta paritelerde mutlak guvenlik zirhi (2x)
+            target_lev = min_lev
+        elif atr_pct >= LEVERAGE_HIGH_ATR_THRESHOLD:
+            # Yuksek dalgali coinlerde kaldiraci 1-2 kademe kis (3x)
+            target_lev = max(min_lev, min(target_lev - 2, 3))
+
+        # 3. Makro Rejim Kalkani (Dead Zone / Testere Piyasasi)
+        if is_dead_zone:
+            # Olu bolge veya deger alani sikismasinda azami 3x tavani (Sermaye koruma)
+            target_lev = min(target_lev, 3)
+
+        return int(max(min_lev, min(max_lev, target_lev)))
 
     # =========================================================================
     # POZISYON ACMA YARDIMCISI
@@ -1847,9 +1899,6 @@ class StrategyEngine:
         # Hedef Nominal Pozisyon Büyüklüğü (Notional USD) = Hedef Risk ($) / Stop Yüzdesi
         target_notional_usd = target_risk_usd / effective_stop_pct
 
-        # Kaldıraç (5x) bazında gereken taban marjin:
-        base_calc_margin = target_notional_usd / float(getattr(self.paper_trader, 'leverage', 5))
-
         # 🐋 KURUMSAL BALİNA ONAYLI SEVİYE HÜCUM MARJİNİ (Sniper Sizing)
         has_whale_flow = (cvd_confirmed or cvd_margin_mult > 1.0) and (obi_confirmed or obi_margin_mult > 1.0)
         if has_whale_flow:
@@ -1868,6 +1917,23 @@ class StrategyEngine:
 
         c_count = len(confluence_list or [1])
 
+        # ⚡ 3-KADEMELİ AKILLI DİNAMİK KALDIRAÇ HESAPLAYICISI (2x - 8x)
+        is_major_coin = symbol in ["BTC/USDT", "ETH/USDT", "SOL/USDT"]
+        macro_clim_early = self.get_macro_climate()
+        is_dz = macro_clim_early.get("is_dead_zone", False) or macro_clim_early.get("regime") == "DEAD_ZONE"
+        dyn_leverage = self.calculate_dynamic_leverage(
+            symbol=symbol,
+            atr_pct=clean_atr,
+            confluence_count=c_count,
+            has_whale_flow=has_whale_flow,
+            is_dead_zone=is_dz,
+            is_major=is_major_coin,
+            confluence_list=confluence_list
+        )
+
+        # Dinamik kaldıraç bazında gereken taban marjin:
+        base_calc_margin = target_notional_usd / float(dyn_leverage)
+
         # 🎲 ED THORP FRAKSİYONEL KELLY KRİTERİ İLE MARJİN MODÜLASYONU
         from indicators import calculate_fractional_kelly
         est_win_rate = 72.0 if (has_whale_flow or c_count >= 4) else (60.0 if c_count >= 3 else 52.0)
@@ -1880,7 +1946,19 @@ class StrategyEngine:
 
         dyn_margin = round(max(dyn_min_margin_bound, min(max_margin_cap, base_calc_margin * kelly_mult * getattr(self, 'margin_multiplier', 1.0))), 2)
 
-        calculated_dollar_risk = round(dyn_margin * float(getattr(self.paper_trader, 'leverage', 5)) * effective_stop_pct, 2)
+        calculated_dollar_risk = round(dyn_margin * float(dyn_leverage) * effective_stop_pct, 2)
+
+        # Kaldıraç Rozeti ve Confluence Etiketi
+        if dyn_leverage >= 7:
+            reason += f" [💎 {dyn_leverage}x Elit Hücum]"
+            if confluence_list is not None and isinstance(confluence_list, list):
+                confluence_list.append(f"⚡_Dinamik_Kaldıraç_{dyn_leverage}x_Elit")
+        elif dyn_leverage <= 3:
+            reason += f" [🛡️ {dyn_leverage}x Defans Kalkanı]"
+            if confluence_list is not None and isinstance(confluence_list, list):
+                confluence_list.append(f"🛡️_Dinamik_Kaldıraç_{dyn_leverage}x_Defans")
+        else:
+            reason += f" [⚖️ {dyn_leverage}x Standart]"
 
 
         # ── 1c. GERÇEK CVD (TAKER BUY RATIO), İVME VE FİTİL ORANI HESABI ──
@@ -2326,7 +2404,7 @@ class StrategyEngine:
             atr_pct=atr_pct, trend_regime=trend_regime, session=session_str,
             session_tag=session_str,
             volume_surge=vol_surge, confluence_score=conf_score_str, htf_alignment=htf_str,
-            custom_margin=dyn_margin, rs_vs_btc=rs_vs_btc, decoupling_status=decoupling_status,
+            custom_margin=dyn_margin, custom_leverage=dyn_leverage, rs_vs_btc=rs_vs_btc, decoupling_status=decoupling_status,
             dynamic_rs_score=dynamic_rs_score,
             macro_climate=macro_clim.get('status', '⚪ Nötr / Dengeli Piyasa'),
             eth_leading=macro_clim.get('eth_leading', False),

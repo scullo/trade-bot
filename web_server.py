@@ -10786,7 +10786,7 @@ async function loadAdminMetrics() {
                     <!-- 1. TOP HEADER (Ticker + Grafik Button on left, 2-line PnL on right) -->
                     <div class="pos-top">
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <span class="pos-badge ${pos.side === 'LONG' ? 'pos-long' : 'pos-short'}">${pos.leverage}x ${pos.side}</span>
+                            <span class="pos-badge ${pos.side === 'LONG' ? 'pos-long' : 'pos-short'}">${(Number(pos.leverage || 5) >= 7 ? '💎 ' : (Number(pos.leverage || 5) <= 3 ? '🛡️ ' : ''))}${pos.leverage || 5}x ${pos.side}</span>
                             <span onclick="openTradingViewModal('${cleanSym}')" style="font-size:17px; font-weight:900; font-family:'JetBrains Mono'; color:#ffffff; letter-spacing:0.5px; cursor:pointer;" title="${cleanSym} Özel Göstergeli Canlı Grafiğini Aç">${cleanSym}</span>
                             <button class="btn-open-chart" onclick="openTradingViewModal('${cleanSym}')" style="padding:3px 8px; font-size:11px; margin-left:2px;" title="${cleanSym} Özel Göstergeli Canlı Grafiği Aç">📈 Grafik</button>
                         </div>
@@ -11491,7 +11491,7 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                         <td style="color:#cbd5e1; font-size:12px; white-space:nowrap;">${exitTime}</td>
                         <td style="color:#94a3b8; font-size:12px; white-space:nowrap;">⏱️ ${duration}</td>
                         <td><b style="color:#ffffff; font-size:13.5px; cursor:pointer;" onclick="openTradingViewModal('${symClean}')" title="${symClean} Göstergeli Grafiğini Aç">${symClean}</b></td>
-                        <td><span class="pos-badge ${side === 'LONG' ? 'pos-long' : 'pos-short'}" style="font-size:11px; padding:2px 8px;">${lev}x ${side}</span></td>
+                        <td><span class="pos-badge ${side === 'LONG' ? 'pos-long' : 'pos-short'}" style="font-size:11px; padding:2px 8px;">${(Number(lev) >= 7 ? '💎 ' : (Number(lev) <= 3 ? '🛡️ ' : ''))}${lev}x ${side}</span></td>
                         <td>$${entryP}</td>
                         <td>$${exitP}</td>
                         <td>
