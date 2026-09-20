@@ -3224,7 +3224,7 @@ HTML_PAGE = """
             </div>
             <div class="live-tag" id="cb-lead-lag-pill" onclick="switchMainTab('health')" style="cursor:pointer; background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.35); color:#60a5fa;" title="Coinbase Pro Spot Lead-Lag ($LLI$ - Kurumsal Spot Öncüsü)">
                 <span id="cb-lead-lag-dot" style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#60a5fa; box-shadow:0 0 8px #60a5fa;"></span>
-                <span id="cb-lead-lag-text">🇺🇸 CB: 0.0 bps</span>
+                <span id="cb-lead-lag-text">🏛️ CB: 0.0 bps</span>
             </div>
             <div class="live-tag" id="system-health-pill" onclick="switchMainTab('health')" style="cursor:pointer;" title="Aegis Sentinel 360° Kuant Telemetri Sekmesini Aç">
                 <div class="live-dot" id="system-health-dot"></div>
@@ -5082,15 +5082,15 @@ async function loadAdminMetrics() {
                 const dir = cb.direction || 'NEUTRAL';
                 const sStr = (spread >= 0 ? '+' : '') + spread.toFixed(1);
                 if (dir === 'BULLISH_LEAD') {
-                    cbText.innerText = `🇺🇸 CB Boğa: ${sStr} bps`;
+                    cbText.innerText = `🏛️ CB Boğa: ${sStr} bps`;
                     if (cbDot) { cbDot.style.background = 'var(--green)'; cbDot.style.boxShadow = '0 0 8px var(--green)'; }
                     if (cbPill) { cbPill.style.borderColor = 'rgba(16,185,129,0.5)'; cbPill.style.color = 'var(--green)'; }
                 } else if (dir === 'BEARISH_LEAD') {
-                    cbText.innerText = `🇺🇸 CB Ayı: ${sStr} bps`;
+                    cbText.innerText = `🏛️ CB Ayı: ${sStr} bps`;
                     if (cbDot) { cbDot.style.background = 'var(--red)'; cbDot.style.boxShadow = '0 0 8px var(--red)'; }
                     if (cbPill) { cbPill.style.borderColor = 'rgba(244,63,94,0.5)'; cbPill.style.color = 'var(--red)'; }
                 } else {
-                    cbText.innerText = `🇺🇸 CB: ${sStr} bps`;
+                    cbText.innerText = `🏛️ CB: ${sStr} bps`;
                     if (cbDot) { cbDot.style.background = '#60a5fa'; cbDot.style.boxShadow = '0 0 8px #60a5fa'; }
                     if (cbPill) { cbPill.style.borderColor = 'rgba(59,130,246,0.35)'; cbPill.style.color = '#60a5fa'; }
                 }
@@ -5214,7 +5214,7 @@ async function loadAdminMetrics() {
                             </div>
                         </div>
                         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:6px;">
-                            <span style="color:#94a3b8;">🇺🇸 Coinbase Spot Öncüsü (Coinbase Pro Lead-Lag):</span>
+                            <span style="color:#94a3b8;">🏛️ Coinbase Spot Öncüsü (Lead-Lag LLI):</span>
                             <div style="display:flex; align-items:center; gap:8px;">
                                 <span style="color:#e2e8f0; font-weight:700;">${(cb.spread_bps >= 0 ? '+' : '') + Number(cb.spread_bps || 0).toFixed(1)} bps (${cb.direction || 'NEUTRAL'})</span>
                                 ${pill(cb.spread_bps >= 8.0 ? 'BOĞA ÖNCÜSÜ' : (cb.spread_bps <= -8.0 ? 'AYI BASKISI' : 'DENGELİ'), cb.spread_bps >= 8.0 ? 'var(--green)' : (cb.spread_bps <= -8.0 ? 'var(--red)' : 'var(--cyan)'))}
@@ -5223,8 +5223,8 @@ async function loadAdminMetrics() {
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <span style="color:#94a3b8;">🧲 Gerçek Zamanlı Açık Pozisyon İvmesi (Delta-OI):</span>
                             <div style="display:flex; align-items:center; gap:8px;">
-                                <span style="color:#e2e8f0; font-weight:700;">${oi.fresh_count || 40} Parite (Lider: ${oi.top_expansion || '-'} %${Number(oi.top_expansion_pct || 0).toFixed(1)})</span>
-                                ${pill('30s RADAR', 'var(--green)')}
+                                <span style="color:#e2e8f0; font-weight:700;">${oi.fresh_count || 100} Parite (Lider: ${oi.top_expansion || '-'} %${Number(oi.top_expansion_pct || 0).toFixed(1)})</span>
+                                ${pill(oi.fresh_count >= 10 ? 'RADAR AKTİF' : 'TARANIYOR', oi.fresh_count >= 10 ? 'var(--green)' : 'var(--yellow)')}
                             </div>
                         </div>
                     </div>
@@ -5476,9 +5476,8 @@ async function loadAdminMetrics() {
                         ${itemRow('🌊', 'Anlık Mikro-CVD & Taker Emilim', 'Gerçek zamanlı piyasa alıcı/satıcı hacim farkı ve kurumsal emir emilimi', (cvd.count || 100) + ' Parite (60s)', pill('DELTA TAKİPTE', 'var(--green)'))}
                         ${itemRow('💀', 'Global Tasfiye Radarı (!forceOrder)', 'Son 24 saatlik long/short likidasyon patlamaları ve piyasa yönü', '$' + liqAmount + ' (Son: ' + (liq.last_event_time || '-') + ')', pill('7/24 SOKET', 'var(--green)'))}
                         ${itemRow('⚖️', 'Spot vs Vadeli Basis Senkronu', 'Vadeli ile spot piyasa arasındaki arbitraj primi ve kurumsal sapma radarı', (spot.count || 100) + ' Parite (15s)', pill('SENKRON', 'var(--cyan)'))}
-                        ${itemRow('⏱️', '5M Mum Senkronizasyonu & Dedup', '5 dakikalık mum kapanışları ve REST/WebSocket çift tetik engelleme motoru', 'Son Mum: ' + (poller.last_scan_time || 'Şimdi'), pill('DEDUP KORUMASI', 'var(--green)'))}
-                        ${itemRow('🇺🇸', 'Coinbase Spot Öncüsü (Lead-Lag LLI)', 'Coinbase Pro BTC/USD spot akışı ile Binance arasındaki kurumsal likidite öncüsü', (cb.spread_bps >= 0 ? '+' : '') + Number(cb.spread_bps || 0).toFixed(1) + ' bps (' + (cb.direction || 'NEUTRAL') + ')', pill(cb.spread_bps >= 8.0 ? 'BOĞA ÖNCÜSÜ' : (cb.spread_bps <= -8.0 ? 'AYI BASKISI' : 'DENGELİ'), cb.spread_bps >= 8.0 ? 'var(--green)' : (cb.spread_bps <= -8.0 ? 'var(--red)' : 'var(--cyan)')))}
-                        ${itemRow('🧲', 'Açık Faiz İvmesi (Delta-OI Radar)', 'Binance Vadeli paritelerinde 30s periyotlu taze kurumsal para girişi/sıkışma radarı', (oi.fresh_count || 40) + ' Parite (Top: ' + (oi.top_expansion || '-') + ' %' + Number(oi.top_expansion_pct || 0).toFixed(1) + ')', pill(oi.fresh_count >= 10 ? 'RADAR AKTİF' : 'TARANIYOR', oi.fresh_count >= 10 ? 'var(--green)' : 'var(--yellow)'))}
+                        ${itemRow('🏛️', 'Coinbase Spot Öncüsü (Lead-Lag LLI)', 'Coinbase Pro BTC/USD spot akışı ile Binance arasındaki kurumsal likidite öncüsü', (cb.spread_bps >= 0 ? '+' : '') + Number(cb.spread_bps || 0).toFixed(1) + ' bps (' + (cb.direction || 'NEUTRAL') + ')', pill(cb.spread_bps >= 8.0 ? 'BOĞA ÖNCÜSÜ' : (cb.spread_bps <= -8.0 ? 'AYI BASKISI' : 'DENGELİ'), cb.spread_bps >= 8.0 ? 'var(--green)' : (cb.spread_bps <= -8.0 ? 'var(--red)' : 'var(--cyan)')))}
+                        ${itemRow('🧲', 'Açık Faiz İvmesi (Delta-OI Radar)', 'Vadeli piyasada (Bybit/Gate/Binance) 30s periyotlu taze kurumsal sermaye akış radarı', (oi.fresh_count || 100) + ' Parite (Top: ' + (oi.top_expansion || '-') + ' %' + Number(oi.top_expansion_pct || 0).toFixed(1) + ')', pill(oi.fresh_count >= 10 ? 'RADAR AKTİF' : 'TARANIYOR', oi.fresh_count >= 10 ? 'var(--green)' : 'var(--yellow)'))}
                     </div>
 
                     <!-- KOLON 2: KUANT MOTORU VE ANALİTİK SENSÖRLER -->

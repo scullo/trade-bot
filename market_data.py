@@ -2592,73 +2592,98 @@ class MarketDataManager:
         async def open_interest_worker():
             if not ENABLE_OI_VELOCITY_RADAR:
                 return
-            sem = asyncio.Semaphore(15)
+            headers = {'User-Agent': 'Mozilla/5.0'}
             while True:
                 try:
                     now_sec = time.time()
-                    async with aiohttp.ClientSession() as session:
-                        async def fetch_oi(s):
-                            async with sem:
-                                clean_sym = self._clean_symbol(s)
-                                raw_s = clean_sym.replace('/', '').replace(':USDT', '').replace('USDT', '') + 'USDT'
-                                url = f"https://fapi.binance.com/fapi/v1/openInterest?symbol={raw_s}"
-                                try:
-                                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=3)) as resp:
-                                        if resp.status == 200:
-                                            data = await resp.json()
-                                            cur_oi = float(data.get('openInterest', 0.0))
-                                            if cur_oi > 0:
-                                                cur_hist = self.symbol_oi.get(s, {}).get('oi_history', [])
-                                                cur_hist.append((now_sec, cur_oi))
-                                                cur_hist = [(t, v) for (t, v) in cur_hist if (now_sec - t) <= 360.0]
-                                                oi_5m_ago = cur_hist[0][1] if cur_hist else cur_oi
+                    oi_batch = {}
+                    async with aiohttp.ClientSession(headers=headers, timeout=aiohttp.ClientTimeout(total=5)) as session:
+                        # 1. Öncelik: Bybit Vadeli Tickers (Tüm pariteler tek istekte, US geoblock yok)
+                        try:
+                            url_bybit = "https://api.bybit.com/v5/market/tickers?category=linear"
+                            async with session.get(url_bybit) as resp:
+                                if resp.status == 200:
+                                    d = await resp.json()
+                                    for item in d.get('result', {}).get('list', []):
+                                        sym_raw = item.get('symbol', '')
+                                        val = float(item.get('openInterestValue', 0.0))
+                                        if val > 0:
+                                            oi_batch[sym_raw] = val
+                        except Exception:
+                            pass
 
-                                                delta_pct = round(((cur_oi - oi_5m_ago) / oi_5m_ago) * 100.0, 2) if oi_5m_ago > 0 else 0.0
+                        # 2. Öncelik: Gate.io Vadeli Tickers (Yedek borsa)
+                        if not oi_batch:
+                            try:
+                                url_gate = "https://api.gateio.ws/api/v4/futures/usdt/tickers"
+                                async with session.get(url_gate) as resp:
+                                    if resp.status == 200:
+                                        d = await resp.json()
+                                        if isinstance(d, list):
+                                            for item in d:
+                                                c_name = item.get('contract', '').replace('_', '')
+                                                val = float(item.get('total_size', 0.0))
+                                                if val > 0:
+                                                    oi_batch[c_name] = val
+                            except Exception:
+                                pass
 
-                                                # 5 Dakikalık Fiyat Değişimiyle Karşılaştırma
-                                                price_chg_5m = 0.0
-                                                df = self.candles_5m.get(s, pd.DataFrame())
-                                                if df is not None and len(df) >= 2:
-                                                    try:
-                                                        c_last = float(df['close'].iloc[-1])
-                                                        c_prev = float(df['close'].iloc[-2])
-                                                        if c_prev > 0:
-                                                            price_chg_5m = round(((c_last - c_prev) / c_prev) * 100.0, 2)
-                                                    except Exception:
-                                                        pass
+                    if oi_batch:
+                        for s in list(self.all_symbols):
+                            clean = s.replace('/', '').replace(':USDT', '')
+                            cur_oi = oi_batch.get(clean, 0.0)
+                            if cur_oi <= 0:
+                                cur_oi = oi_batch.get('1000' + clean, 0.0)
+                            if cur_oi <= 0:
+                                cur_oi = oi_batch.get('1000000' + clean, 0.0)
 
-                                                status = "BALANCED"
-                                                if price_chg_5m <= -0.10 and delta_pct >= OI_EXPANSION_THRESHOLD_PCT:
-                                                    status = "AGGRESSIVE_SHORT_EXPANSION"
-                                                elif price_chg_5m <= -0.10 and delta_pct <= OI_SQUEEZE_EXHAUSTION_PCT:
-                                                    status = "LONG_LIQUIDATION_DUMP"
-                                                elif price_chg_5m >= 0.10 and delta_pct >= OI_EXPANSION_THRESHOLD_PCT:
-                                                    status = "AGGRESSIVE_LONG_EXPANSION"
-                                                elif price_chg_5m >= 0.10 and delta_pct <= OI_SQUEEZE_EXHAUSTION_PCT:
-                                                    status = "SHORT_COVERING_PUMP"
-                                                elif delta_pct >= OI_EXPANSION_THRESHOLD_PCT:
-                                                    status = "AGGRESSIVE_LONG_EXPANSION" if price_chg_5m >= 0 else "AGGRESSIVE_SHORT_EXPANSION"
-                                                elif delta_pct <= OI_SQUEEZE_EXHAUSTION_PCT:
-                                                    status = "SHORT_COVERING_PUMP" if price_chg_5m >= 0 else "LONG_LIQUIDATION_DUMP"
+                            if cur_oi > 0:
+                                cur_hist = self.symbol_oi.get(s, {}).get('oi_history', [])
+                                cur_hist.append((now_sec, cur_oi))
+                                cur_hist = [(t, v) for (t, v) in cur_hist if (now_sec - t) <= 360.0]
+                                oi_5m_ago = cur_hist[0][1] if cur_hist else cur_oi
 
-                                                self.symbol_oi[s] = {
-                                                    'symbol': s,
-                                                    'open_interest': cur_oi,
-                                                    'oi_5m_ago': oi_5m_ago,
-                                                    'oi_history': cur_hist,
-                                                    'delta_oi_pct': delta_pct,
-                                                    'price_chg_5m': price_chg_5m,
-                                                    'status': status,
-                                                    'last_update': now_sec
-                                                }
-                                                if hasattr(self, 'symbol_metrics') and s in self.symbol_metrics:
-                                                    self.symbol_metrics[s]['delta_oi_pct'] = delta_pct
-                                                    self.symbol_metrics[s]['oi_status'] = status
-                                except Exception:
-                                    pass
+                                delta_pct = round(((cur_oi - oi_5m_ago) / oi_5m_ago) * 100.0, 2) if oi_5m_ago > 0 else 0.0
 
-                        active_targets = list(self.active_symbols)[:40]
-                        await asyncio.gather(*(fetch_oi(s) for s in active_targets))
+                                # 5 Dakikalık Fiyat Değişimiyle Karşılaştırma
+                                price_chg_5m = 0.0
+                                df = self.candles_5m.get(s, pd.DataFrame())
+                                if df is not None and len(df) >= 2:
+                                    try:
+                                        c_last = float(df['close'].iloc[-1])
+                                        c_prev = float(df['close'].iloc[-2])
+                                        if c_prev > 0:
+                                            price_chg_5m = round(((c_last - c_prev) / c_prev) * 100.0, 2)
+                                    except Exception:
+                                        pass
+
+                                status = "BALANCED"
+                                if price_chg_5m <= -0.10 and delta_pct >= OI_EXPANSION_THRESHOLD_PCT:
+                                    status = "AGGRESSIVE_SHORT_EXPANSION"
+                                elif price_chg_5m <= -0.10 and delta_pct <= OI_SQUEEZE_EXHAUSTION_PCT:
+                                    status = "LONG_LIQUIDATION_DUMP"
+                                elif price_chg_5m >= 0.10 and delta_pct >= OI_EXPANSION_THRESHOLD_PCT:
+                                    status = "AGGRESSIVE_LONG_EXPANSION"
+                                elif price_chg_5m >= 0.10 and delta_pct <= OI_SQUEEZE_EXHAUSTION_PCT:
+                                    status = "SHORT_COVERING_PUMP"
+                                elif delta_pct >= OI_EXPANSION_THRESHOLD_PCT:
+                                    status = "AGGRESSIVE_LONG_EXPANSION" if price_chg_5m >= 0 else "AGGRESSIVE_SHORT_EXPANSION"
+                                elif delta_pct <= OI_SQUEEZE_EXHAUSTION_PCT:
+                                    status = "SHORT_COVERING_PUMP" if price_chg_5m >= 0 else "LONG_LIQUIDATION_DUMP"
+
+                                self.symbol_oi[s] = {
+                                    'symbol': s,
+                                    'open_interest': cur_oi,
+                                    'oi_5m_ago': oi_5m_ago,
+                                    'oi_history': cur_hist,
+                                    'delta_oi_pct': delta_pct,
+                                    'price_chg_5m': price_chg_5m,
+                                    'status': status,
+                                    'last_update': now_sec
+                                }
+                                if hasattr(self, 'symbol_metrics') and s in self.symbol_metrics:
+                                    self.symbol_metrics[s]['delta_oi_pct'] = delta_pct
+                                    self.symbol_metrics[s]['oi_status'] = status
 
                         top_exp_sym = '-'
                         top_exp_val = 0.0
