@@ -12466,6 +12466,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                     strategy.symbol_daily_loss_count.clear()
                 if hasattr(strategy, 'symbol_daily_loss_date'):
                     strategy.symbol_daily_loss_date = None
+                if hasattr(strategy, 'recently_stopped_levels'):
+                    strategy.recently_stopped_levels.clear()
             return web.json_response({
                 "status": "ok",
                 "message": "Cüzdan $10,000 USDT seviyesine çekildi, tüm açık pozisyonlar ve defter sıfırlandı!",

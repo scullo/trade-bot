@@ -149,8 +149,20 @@ TRAILING_LOCK_50_ROE = 18.0      # Geriye dönük uyumluluk alias
 
 # 5. Scalp & Stagnation Zaman Sinirlari
 SCALP_MAX_HOLD_CANDLES = 48      # Azami tutma: 48 mum (4 saat)
-STAGNATION_CANDLES_MEME = 4      # Yüksek beta / meme paritelerde ivme bekleme süresi: 4 mum (20 dk)
-STAGNATION_CANDLES_MAJOR = 8     # Majör ve DeFi paritelerde ivme bekleme süresi: 8 mum (40 dk)
+STAGNATION_CANDLES_MEME = 6      # Yüksek beta / meme paritelerde ivme bekleme süresi: 6 mum (30 dk) (4'ten 6'ya yükseltildi)
+STAGNATION_CANDLES_MAJOR = 12    # Majör ve DeFi paritelerde ivme bekleme süresi: 12 mum (60 dk) (8'den 12'ye yükseltildi - Erken kapanış önleyici)
+
+# 6. 4 Kademeli Kuant Reformu (Institutional Stop & Reclaim Engine)
+ENABLE_SMART_SWING_STOP = True   # Swing High/Low + 0.5x ATR Akıllı Stop Mimarisi
+SWING_LOOKBACK_CANDLES = 12      # Son 1 saatlik (12 mum) yerel tepe/dip iğne referansı
+SWING_ATR_BUFFER_MULT = 0.50     # Yerel iğne arkası emniyet tamponu (0.50x ATR)
+ENABLE_HMM_SWEEP_SHIELD = True   # Simons HMM Manipülasyon/Stop Avı Kalkanı
+HMM_SWEEP_SHIELD_MULT = 1.35     # Manipülasyon anında 1.35x stop nefes payı
+ENABLE_LONDON_SWEEP_SHIELD = True# Londra seansı sabah dip/tepe süpürme kalkanı (12:00 - 16:30 UTC+3)
+LONDON_SWEEP_SHIELD_MULT = 1.25  # Londra seansı süpürme çarpanı (1.25x)
+MAX_ABSOLUTE_STOP_PCT = 1.60     # Mutlak acil felaket stop tavanı (%1.60 - Sermaye zırhı)
+ENABLE_FAKEOUT_RECLAIM = True    # Sahte Kırılım / Ayı-Boğa Tuzağı İntikam Modülü (Reclaim Sniper)
+FAKEOUT_RECLAIM_MAX_CANDLES = 4  # İntikam takip penceresi: 4 mum (20 dakika)
 
 # 6. Veri Fetch Ayarlari
 CANDLE_5M_FETCH_DAYS = 15       # 5m mum verisi icin ~15 gun (paginated, ~4300 mum)

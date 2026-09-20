@@ -16,7 +16,11 @@ from config import (
     WALL_MIN_AGE_SEC, WALL_ANCHOR_AGE_SEC,
     BASIS_BUBBLE_BPS, BASIS_ABSORPTION_BPS,
     MAX_ALLOWED_SPREAD_MAJORS, MAX_ALLOWED_SPREAD_ALTS, MAX_ALLOWED_SPREAD_MEME,
-    MAX_ENTRY_SLIPPAGE_PCT, MIN_L2_DEPTH_USD_03
+    MAX_ENTRY_SLIPPAGE_PCT, MIN_L2_DEPTH_USD_03,
+    ENABLE_SMART_SWING_STOP, SWING_LOOKBACK_CANDLES, SWING_ATR_BUFFER_MULT,
+    ENABLE_HMM_SWEEP_SHIELD, HMM_SWEEP_SHIELD_MULT,
+    ENABLE_LONDON_SWEEP_SHIELD, LONDON_SWEEP_SHIELD_MULT,
+    MAX_ABSOLUTE_STOP_PCT, ENABLE_FAKEOUT_RECLAIM, FAKEOUT_RECLAIM_MAX_CANDLES
 )
 
 
@@ -36,6 +40,7 @@ class StrategyEngine:
         self.warmup_seconds = 45.0   # Ilk 45 saniye ani kapatmalari onle
         self.recent_rejections = []  # 🧠 Son elenen / girilmeyen sinyaller ve nedenleri (Canlı Dashboard Zekası)
         self.setup_attempts = {}     # Seviye temas takibi (Madde 5)
+        self.recently_stopped_levels = {}  # 🪤 Fakeout Reclaim (Tuzak İntikamı) Seviye Takipçisi
         self.dna_baseline = {}       # 🧬 3,615 Gerçek İşlem Analizinden Türetilen Parite DNA Hafızası
         try:
             import json, os
@@ -97,6 +102,21 @@ class StrategyEngine:
                 "timestamp": time.time(),
                 "reason": close_reason
             }
+            # 🪤 4 Kademeli Reform: Fakeout Reclaim (Tuzak İntikamı) Takip Kaydı
+            if ENABLE_FAKEOUT_RECLAIM and net_pnl < 0 and ("Stop" in close_reason or "İvmesizlik" in close_reason):
+                if not hasattr(self, 'recently_stopped_levels'):
+                    self.recently_stopped_levels = {}
+                self.recently_stopped_levels[symbol] = {
+                    "side": record.get("side"),
+                    "setup_id": record.get("setup_id", ""),
+                    "level_price": float(record.get("entry_price", 0.0)),
+                    "stop_price": float(record.get("exit_price", 0.0)),
+                    "tp1": record.get("tp1"),
+                    "tp2": record.get("tp2"),
+                    "stop_time": time.time(),
+                    "candles_left": FAKEOUT_RECLAIM_MAX_CANDLES
+                }
+
             # 🛡️ 45 Dakika Zarar Durdurma Soğuma Kalkanı (Testere piyasasında intikam/çalkantı koruması)
             if not hasattr(self, 'symbol_stop_cooldown'):
                 self.symbol_stop_cooldown = {}
@@ -737,9 +757,10 @@ class StrategyEngine:
         is_ice_sniper_order = any("Iceberg_Offense" in str(c) for c in (confluence_list or [])) or ("Buzdağı Hücumu" in reason) or ("Buzdağı Arkası" in reason)
 
         # ── 0a. ZARAR DURDURMA SONRASI SOĞUMA VE ÇİFTE ZARAR DEVRE KESİCİSİ ──
+        is_fakeout_reclaim = "Fakeout Reclaim" in reason or "FAKEOUT_RECLAIM" in setup_id
         now_ts = time.time()
         cd_expiry = getattr(self, 'symbol_stop_cooldown', {}).get(symbol, 0.0)
-        if now_ts < cd_expiry:
+        if not is_fakeout_reclaim and now_ts < cd_expiry:
             rem_mins = max(1, int((cd_expiry - now_ts) // 60))
             rej_msg = f"🛡️ Parite Soğuma Kalkanı: {symbol} kısa süre önce zarar durdurdu. Testere piyasası tuzağını önlemek için {rem_mins} dk daha soğumada."
             print(f">> [RED - SOĞUMA KALKANI] {symbol}: {rej_msg}")
@@ -1893,22 +1914,44 @@ class StrategyEngine:
             self.log_rejection(symbol, reason, rej_msg, hmmPhase=hmm_phase)
             return {"error": "SIMONS_HMM_MANIPULATION_PHASE_BLOCKED"}
 
-        # ── DİNAMİK STOP VE HEDEFLERİ (YAPISAL SEVİYE & ADAPTİF FİTİL KALKANI) ──
-        # Kripto piyasasında %0.50 gibi aşırı dar stoplar normal 5M fitillerinde sahte stop-out'lara yol açar.
-        # Asgari stop tabanı %0.80'e çıkarılmış olup, coin volatilitesine (ATR) ve persona çarpanına göre dinamik ölçeklenir.
-        # 🧊 İSTİSNA: Kurumsal Iceberg Sniper hücumunda kurumsal beton duvar arkasına saklanıldığından stop %0.25'e indirilir!
+        # ── 4 KADEMELİ KUANT REFORMU: DİNAMİK STOP VE HEDEFLERİ ──
+        # 1. Simons HMM & Londra Seansı Likidite Avı Kalkanı (Sweep Shield)
+        sweep_mult = 1.00
+        if ENABLE_HMM_SWEEP_SHIELD and hmm_phase == "MANIPULATION_SWEEP":
+            sweep_mult = max(sweep_mult, HMM_SWEEP_SHIELD_MULT)
+            if confluence_list is not None and isinstance(confluence_list, list) and "🛡️_Simons_Sweep_Kalkanı" not in confluence_list:
+                confluence_list.append("🛡️_Simons_Sweep_Kalkanı")
+
+        curr_hour_utc = datetime.now(timezone.utc).hour
+        if ENABLE_LONDON_SWEEP_SHIELD and (9 <= curr_hour_utc <= 13):
+            sweep_mult = max(sweep_mult, LONDON_SWEEP_SHIELD_MULT)
+            if confluence_list is not None and isinstance(confluence_list, list) and "🏛️_Londra_Dip_Avı_Kalkanı" not in confluence_list:
+                confluence_list.append("🏛️_Londra_Dip_Avı_Kalkanı")
+
         is_ice_sniper_order = any("Iceberg_Offense" in str(c) for c in (confluence_list or [])) or ("Buzdağı Hücumu" in reason) or ("Buzdağı Arkası" in reason)
         safe_atr_pct = max(0.60, min(3.5, atr_pct))
         stop_mult = persona.get("stop_loss_atr_mult", 1.0)
         
-        # Adaptif stop: Iceberg hücumunda minimum %0.25 tabanı (Asimetrik R:R kalkanı), standartta %0.80 tabanı
-        min_stop_floor = 0.25 if is_ice_sniper_order else 0.80
-        effective_stop_pct = max(min_stop_floor, min(1.60, safe_atr_pct * (0.35 if is_ice_sniper_order else 0.90) * stop_mult))
+        # Stop tabanı: Iceberg hücumunda %0.25, standartta %0.80 * sweep_mult
+        base_floor = 0.25 if is_ice_sniper_order else 0.80
+        min_stop_floor = base_floor * (1.0 if is_ice_sniper_order else sweep_mult)
+        effective_stop_pct = max(min_stop_floor, min(MAX_ABSOLUTE_STOP_PCT, safe_atr_pct * (0.35 if is_ice_sniper_order else 0.90) * stop_mult * sweep_mult))
         stop_dist = entry_price * (effective_stop_pct / 100.0)
-        min_allowed_stop_dist = entry_price * (0.0025 if is_ice_sniper_order else 0.0080)
+        min_allowed_stop_dist = entry_price * (0.0025 if is_ice_sniper_order else (0.0080 * sweep_mult))
+
+        # 2. Swing Extreme + 0.5x ATR Akıllı Stop Hesaplaması
+        swing_stop = None
+        if ENABLE_SMART_SWING_STOP and df_5m_quant is not None and len(df_5m_quant) >= SWING_LOOKBACK_CANDLES:
+            atr_val = entry_price * (atr_pct / 100.0)
+            buffer_amt = SWING_ATR_BUFFER_MULT * atr_val
+            if side == "LONG":
+                local_swing_low = float(df_5m_quant['low'].iloc[-SWING_LOOKBACK_CANDLES:].min())
+                swing_stop = round(local_swing_low - buffer_amt, 6)
+            else:
+                local_swing_high = float(df_5m_quant['high'].iloc[-SWING_LOOKBACK_CANDLES:].max())
+                swing_stop = round(local_swing_high + buffer_amt, 6)
 
         # TP1 & TP2: Asimetrik Kâr Oranı (R:R >= 1.8x - 3.5x Hedef, Iceberg'de 4.5x+)
-        # 🎯 KURUMSAL HÜCUM REFORMU: Düşük ATR / Dar Bantta gerçekçi TP1 sıkıştırması (MANA vb. testere paritelerinde kârı kilitler)
         min_tp1_pct = max(1.0, min(1.80, safe_atr_pct * 1.8))
         min_tp1_dist = max(stop_dist * (3.5 if is_ice_sniper_order else 1.8), entry_price * (min_tp1_pct / 100.0))
         adaptive_tp1_dist = entry_price * (max(min_tp1_pct, safe_atr_pct * 2.0) / 100.0)
@@ -1922,75 +1965,74 @@ class StrategyEngine:
 
         if side == "LONG":
             atr_hard_stop = round(entry_price - stop_dist, 6)
-            # Eğer çağıran setup yapısal bir stop belirlediyse ve en az %0.80 nefes payına sahipse koru
+            chosen_stop = atr_hard_stop
             if caller_hard_stop and 0 < caller_hard_stop <= (entry_price - min_allowed_stop_dist):
-                if caller_hard_stop > atr_hard_stop:
-                    hard_stop = round(caller_hard_stop, 6)
-                else:
-                    hard_stop = atr_hard_stop
-            else:
-                hard_stop = atr_hard_stop
-            soft_stop = hard_stop  # Dinamik ATR / Yapısal Stop: UI, telemetri ve risk motoru ile tam senkron
+                chosen_stop = min(atr_hard_stop, caller_hard_stop)
+            
+            # Swing Low arkasına gizleme (Akıllı Stop)
+            if swing_stop and swing_stop < entry_price:
+                chosen_stop = min(chosen_stop, swing_stop)
+            
+            # Mutlak Sermaye Zırhı: MAX_ABSOLUTE_STOP_PCT (%1.60) tavanını aşamaz
+            absolute_floor = round(entry_price * (1.0 - (MAX_ABSOLUTE_STOP_PCT / 100.0)), 6)
+            hard_stop = max(chosen_stop, absolute_floor)
+            soft_stop = hard_stop
 
             actual_stop_dist = abs(entry_price - hard_stop)
-            # TP1: İlk kurumsal tepki seviyesi (Pivot P, S3/R3, AVWAP, nPOC) ve asgari 1.25x R:R nefesi (%0.90 taban)
             min_tp1_dist = max(actual_stop_dist * 1.25, entry_price * 0.0090)
-            max_tp1_dist = entry_price * min(0.040, max(0.020, safe_atr_pct * 2.5 / 100.0))  # 5m Scalp Tavan Sınırı
+            max_tp1_dist = entry_price * min(0.040, max(0.020, safe_atr_pct * 2.5 / 100.0))
 
-            # Çağıran setup'ın birincil hedefi (caller_tp1) ve ikincil koşucu hedefi (caller_tp2)
             first_target = caller_tp1 if (caller_tp1 and caller_tp1 > entry_price) else None
             second_target = caller_tp2 if (caller_tp2 and caller_tp2 > entry_price) else None
 
-            # TP1 Belirleme (Öncelik birincil kurumsal tepki seviyesindedir):
             if first_target:
                 f_dist = first_target - entry_price
                 if min_tp1_dist <= f_dist <= max_tp1_dist:
                     tp1 = round(first_target, 6)
                 elif f_dist < min_tp1_dist:
                     tp1 = round(entry_price + min_tp1_dist, 6)
-                else: # Aşırı uzak hedefse scalp tavan sınırına çek (DASH hatasını önler)
+                else:
                     tp1 = round(entry_price + max_tp1_dist, 6)
             else:
                 tp1 = round(entry_price + max(actual_stop_dist * 1.2, tp1_dist), 6)
 
-            # TP2 (Runner) Belirleme:
             if second_target and second_target > tp1:
                 tp2 = round(second_target, 6)
             else:
                 tp2 = round(max(tp1 * 1.015, entry_price + tp2_dist), 6)
         else:
             atr_hard_stop = round(entry_price + stop_dist, 6)
-            # Eğer çağıran setup yapısal bir stop belirlediyse ve en az %0.80 nefes payına sahipse koru
+            chosen_stop = atr_hard_stop
             if caller_hard_stop and caller_hard_stop >= (entry_price + min_allowed_stop_dist):
-                if caller_hard_stop < atr_hard_stop:
-                    hard_stop = round(caller_hard_stop, 6)
-                else:
-                    hard_stop = atr_hard_stop
-            else:
-                hard_stop = atr_hard_stop
-            soft_stop = hard_stop  # Dinamik ATR / Yapısal Stop: UI, telemetri ve risk motoru ile tam senkron
+                chosen_stop = max(atr_hard_stop, caller_hard_stop)
+            
+            # Swing High arkasına gizleme (Akıllı Stop)
+            if swing_stop and swing_stop > entry_price:
+                chosen_stop = max(chosen_stop, swing_stop)
+            
+            # Mutlak Sermaye Zırhı: MAX_ABSOLUTE_STOP_PCT (%1.60) tavanını aşamaz
+            absolute_ceiling = round(entry_price * (1.0 + (MAX_ABSOLUTE_STOP_PCT / 100.0)), 6)
+            hard_stop = min(chosen_stop, absolute_ceiling)
+            soft_stop = hard_stop
 
             actual_stop_dist = abs(hard_stop - entry_price)
-            # TP1: İlk kurumsal tepki seviyesi (Pivot P, S3/R3, AVWAP, nPOC) ve asgari 1.25x R:R nefesi (%0.90 taban)
             min_tp1_dist = max(actual_stop_dist * 1.25, entry_price * 0.0090)
-            max_tp1_dist = entry_price * min(0.040, max(0.020, safe_atr_pct * 2.5 / 100.0))  # 5m Scalp Tavan Sınırı
+            max_tp1_dist = entry_price * min(0.040, max(0.020, safe_atr_pct * 2.5 / 100.0))
 
             first_target = caller_tp1 if (caller_tp1 and caller_tp1 < entry_price) else None
             second_target = caller_tp2 if (caller_tp2 and caller_tp2 < entry_price) else None
 
-            # TP1 Belirleme (Öncelik birincil kurumsal tepki seviyesindedir):
             if first_target:
                 f_dist = entry_price - first_target
                 if min_tp1_dist <= f_dist <= max_tp1_dist:
                     tp1 = round(first_target, 6)
                 elif f_dist < min_tp1_dist:
                     tp1 = round(entry_price - min_tp1_dist, 6)
-                else: # Aşırı uzak hedefse scalp tavan sınırına çek (DASH hatasını önler)
+                else:
                     tp1 = round(entry_price - max_tp1_dist, 6)
             else:
                 tp1 = round(entry_price - max(actual_stop_dist * 1.2, tp1_dist), 6)
 
-            # TP2 (Runner) Belirleme:
             if second_target and second_target < tp1:
                 tp2 = round(second_target, 6)
             else:
@@ -2390,6 +2432,12 @@ class StrategyEngine:
         close_price = current_candle['close']
         prev_close = prev_candle['close'] if prev_candle else close_price
 
+        # 🪤 Fakeout Reclaim mum ömrü takibi
+        if hasattr(self, 'recently_stopped_levels') and symbol in self.recently_stopped_levels:
+            self.recently_stopped_levels[symbol]["candles_left"] -= 1
+            if self.recently_stopped_levels[symbol]["candles_left"] <= 0:
+                del self.recently_stopped_levels[symbol]
+
         # Hacim Patlama Katsayısı (Volume Surge Ratio)
         vol_surge = 1.0
         if self.market_data and hasattr(self.market_data, 'get_symbol_metrics'):
@@ -2610,16 +2658,16 @@ class StrategyEngine:
                             self._cleanup_tracking(symbol)
                         return
 
-                # Kural B: Scalp & Mean-Reversion İçin 6-Mum (30dk) Nefes ve İvmesizlik Kontrolü
+                # Kural B: Scalp & Mean-Reversion İçin Nefes ve İvmesizlik Kontrolü
                 is_meme_or_high_beta = coin_atr >= 0.70 or any(m in symbol for m in ["PEPE", "WIF", "DOGE", "BONK", "SHIB", "MEME"])
                 stag_limit_candles = STAGNATION_CANDLES_MEME if is_meme_or_high_beta else STAGNATION_CANDLES_MAJOR
 
-                # 6 Mum (30dk) Boyunca Kâr Üretemeyen ve Belirgin Negatif Sürüklenen Pozisyon Koruması:
-                # Normal piyasa gürültüsünde (%0.15) 35 işlemin peş peşe zararla kesilmesi önlenmiştir (Asgari -%2.50 ROE / -%0.50 fiyat payı):
-                if hold_candles >= 6.0 and max_mfe_seen < 1.50 and roe_raw <= -2.50:
+                # İvmesizlik Kalkanı (Majörlerde 12 mum / 60dk, Meme'lerde 6 mum / 30dk sabır payı):
+                # Normal piyasa gürültüsünde erken kesilme önlenir:
+                if hold_candles >= stag_limit_candles and max_mfe_seen < 1.50 and roe_raw <= -2.50:
                     record = await self._safe_close_position(
                         symbol, close_price,
-                        f"⏱️ Erken İvmesizlik Kalkanı (30dk İvmelenmedi, ROE: %{roe_raw:+.1f})")
+                        f"⏱️ Erken İvmesizlik Kalkanı ({int(stag_limit_candles*5)}dk İvmelenmedi, ROE: %{roe_raw:+.1f})")
                     if record:
                         await self._notify_close(record, levels=levels)
                         self._cleanup_tracking(symbol)
@@ -2647,6 +2695,49 @@ class StrategyEngine:
                         self._cleanup_tracking(symbol)
                     return
             return
+
+        # ═══════════════════════════════════════════════════════════════════
+        # BOLUM 1.5: 🪤 FAKEOUT RECLAIM (TUZAK İNTİKAMI) SNIPER MODÜLÜ
+        # ═══════════════════════════════════════════════════════════════════
+        if ENABLE_FAKEOUT_RECLAIM and hasattr(self, 'recently_stopped_levels') and symbol in self.recently_stopped_levels:
+            reclaim_info = self.recently_stopped_levels[symbol]
+            stopped_side = reclaim_info.get("side")
+            orig_level = reclaim_info.get("level_price", 0.0)
+            
+            cvd_info_rec = self.market_data.get_symbol_cvd(symbol) if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+            cvd_ratio_rec = cvd_info_rec.get('ratio_60s', 50.0)
+            
+            # SHORT TUZAĞI (Bear Trap Reclaim):
+            # Önceki SHORT pozisyon sahte fitille yukarı stoplandı; ancak fiyat tekrar direncin altına satıcı hacmiyle çöktü
+            if stopped_side == "SHORT" and close_price < orig_level and cvd_ratio_rec <= 48.0:
+                print(f">> [🪤 FAKEOUT RECLAIM SHORT] {symbol}: Fiyat ${orig_level:.4f} altına satıcı baskısıyla (%{cvd_ratio_rec:.1f}) geri kazanıldı! İntikam Short açılıyor...")
+                del self.recently_stopped_levels[symbol]
+                await self._handle_open(
+                    symbol=symbol, side="SHORT", entry_price=close_price,
+                    reason=f"🪤 Fakeout Reclaim Sniper Short (${orig_level:.4f} Direnç Tuzağı İntikamı)",
+                    soft_stop=orig_level * 1.008, hard_stop=orig_level * 1.008,
+                    tp1=reclaim_info.get("tp1"), tp2=reclaim_info.get("tp2"),
+                    trade_type="SCALP", snapshot_levels=levels,
+                    setup_id="SETUP_FAKEOUT_RECLAIM_SHORT",
+                    confluence_list=["🪤_Fakeout_Reclaim_Teyidi", "🛡️_Ayı_Tuzağı_İntikamı"]
+                )
+                return
+
+            # LONG TUZAĞI (Bull Trap Reclaim):
+            # Önceki LONG pozisyon sahte fitille aşağı stoplandı; ancak fiyat tekrar desteğin üstüne alıcı hacmiyle sıçradı
+            elif stopped_side == "LONG" and close_price > orig_level and cvd_ratio_rec >= 52.0:
+                print(f">> [🪤 FAKEOUT RECLAIM LONG] {symbol}: Fiyat ${orig_level:.4f} üstüne alıcı baskısıyla (%{cvd_ratio_rec:.1f}) geri kazanıldı! İntikam Long açılıyor...")
+                del self.recently_stopped_levels[symbol]
+                await self._handle_open(
+                    symbol=symbol, side="LONG", entry_price=close_price,
+                    reason=f"🪤 Fakeout Reclaim Sniper Long (${orig_level:.4f} Destek Tuzağı İntikamı)",
+                    soft_stop=orig_level * 0.992, hard_stop=orig_level * 0.992,
+                    tp1=reclaim_info.get("tp1"), tp2=reclaim_info.get("tp2"),
+                    trade_type="SCALP", snapshot_levels=levels,
+                    setup_id="SETUP_FAKEOUT_RECLAIM_LONG",
+                    confluence_list=["🪤_Fakeout_Reclaim_Teyidi", "🛡️_Boğa_Tuzağı_İntikamı"]
+                )
+                return
 
         # ═══════════════════════════════════════════════════════════════════
         # BOLUM 2: YENI POZISYON GIRIS KONTROLLERI (8 SETUP)
