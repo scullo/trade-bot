@@ -6,7 +6,8 @@ import threading
 from datetime import datetime, timezone, timedelta
 from config import (
     INITIAL_BALANCE, LEVERAGE, POSITION_SIZE_USDT, COMMISSION_RATE,
-    FIXED_DOLLAR_RISK, RISK_EQUITY_PCT, MIN_POSITION_MARGIN, MAX_POSITION_MARGIN
+    FIXED_DOLLAR_RISK, RISK_EQUITY_PCT, MIN_POSITION_MARGIN, MAX_POSITION_MARGIN,
+    ENABLE_CHANDELIER_BREATHING
 )
 
 HISTORY_FILE = "trade_history.json"
@@ -393,23 +394,24 @@ class PaperTrader:
                     updated_stop = True
             print(f">> [TRAILING TIER 1] {symbol} +%3.5 ROE Görüldü -> Stop +%2.0 Kâra Kilitlendi!")
 
-        # Tier 0 (Erken Breakeven & Komisyon Kalkanı): ROE >= +2.50% -> Giriş + Komisyon Tamponu (+%0.30 fiyat)
+        # Tier 0 (Erken Breakeven & Komisyon Kalkanı): ROE >= +2.50%
         elif current_roe >= 2.50 and not pos.get("_trail_be"):
             pos["_trail_be"] = True
-            pos["trail_status"] = "🛡️ TIER 0 BREAKEVEN KORUMA AKTİF"
+            pos["trail_status"] = "🛡️ TIER 0 DEFANSİF RİSK KISMA AKTİF" if ENABLE_CHANDELIER_BREATHING else "🛡️ TIER 0 BREAKEVEN KORUMA AKTİF"
             if side == "LONG":
-                be_p = round(entry * 1.0030, 8)
+                # Chandelier Breathing: Stop hemen girişe yapışıp gürültüde patlamasın, riski %70 kısarak 0.8% nefes payı bırakır (-%0.30)
+                be_p = round(entry * 0.9970, 8) if ENABLE_CHANDELIER_BREATHING else round(entry * 1.0030, 8)
                 if be_p > pos.get("soft_stop", 0):
                     pos["soft_stop"] = be_p
                     pos["hard_stop"] = be_p
                     updated_stop = True
             else:
-                be_p = round(entry * 0.9970, 8)
+                be_p = round(entry * 1.0030, 8) if ENABLE_CHANDELIER_BREATHING else round(entry * 0.9970, 8)
                 if be_p < pos.get("soft_stop", 999999):
                     pos["soft_stop"] = be_p
                     pos["hard_stop"] = be_p
                     updated_stop = True
-            print(f">> [TRAILING TIER 0] {symbol} +%2.50 ROE Görüldü -> Stop Komisyon Korumalı Breakeven (+%0.30) Seviyesine Alındı!")
+            print(f">> [TRAILING TIER 0] {symbol} +%2.50 ROE Görüldü -> Stop Defansif Seviyeye Alındı!")
 
         if updated_stop:
             self.save_local_history()

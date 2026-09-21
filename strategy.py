@@ -2430,6 +2430,29 @@ class StrategyEngine:
             except Exception as e:
                 print(f">> [JIT L2 HATA] {symbol}: {e}")
 
+        # ── 8c. VALKYRIE QUANT GRAND ENGINE: GEOMETRİK R & ÖN-ONAY KAPISI ──
+        try:
+            from quant_geometry import validate_pre_trade_clearance
+            is_approved, rej_reason, q_metrics = validate_pre_trade_clearance(
+                symbol=symbol,
+                side=side,
+                entry_p=entry_price,
+                stop_p=hard_stop,
+                tp1_p=tp1,
+                tp2_p=tp2,
+                levels=snapshot_levels,
+                cvd_taker_pct=cvd_ratio_60s if 'cvd_ratio_60s' in locals() else 50.0,
+                market_regime=trend_regime if 'trend_regime' in locals() else None,
+                hurst_h=hurst_val if 'hurst_val' in locals() else None
+            )
+            if not is_approved:
+                print(f">> [RED - GEOMETRİK R KALKANI] {symbol}: {rej_reason}")
+                self.log_rejection(symbol, reason, rej_reason, planned_r=q_metrics.get("planned_r", 0.0))
+                return {"error": "GEOMETRIC_R_GATE_BLOCKED", "reason": rej_reason}
+        except Exception as e:
+            # Sistemi bozma ilkesi: Beklenmedik hatada akışı kesme, güvenle devam et
+            print(f">> [UYARI - QUANT GEOMETRY ATLANDI] {symbol}: {e}")
+
         macro_clim = self.get_macro_climate()
         res = await self._safe_open_position(
             symbol=symbol, side=side, entry_price=entry_price,
