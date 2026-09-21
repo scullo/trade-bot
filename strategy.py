@@ -1,7 +1,6 @@
 from security_vault import SecurityVault
 import time
-import datetime
-from datetime import datetime
+from datetime import datetime, timezone
 import pandas as pd
 import numpy as np
 from config import (
@@ -19,6 +18,7 @@ from config import (
     MAX_ENTRY_SLIPPAGE_PCT, MIN_L2_DEPTH_USD_03,
     ENABLE_SMART_SWING_STOP, SWING_LOOKBACK_CANDLES, SWING_ATR_BUFFER_MULT,
     ENABLE_HMM_SWEEP_SHIELD, HMM_SWEEP_SHIELD_MULT,
+    ENABLE_LONDON_SWEEP_SHIELD, LONDON_SWEEP_SHIELD_MULT,
     MAX_ABSOLUTE_STOP_PCT, ENABLE_FAKEOUT_RECLAIM, FAKEOUT_RECLAIM_MAX_CANDLES,
     ENABLE_OI_VELOCITY_RADAR, OI_EXPANSION_THRESHOLD_PCT, OI_SQUEEZE_EXHAUSTION_PCT,
     ENABLE_COINBASE_LEAD_LAG, COINBASE_LEAD_SPREAD_BPS,
@@ -796,13 +796,14 @@ class StrategyEngine:
 
         target_lev = base_lev
         if is_elite_setup:
-            target_lev = 7
-            if is_major or atr_pct <= LEVERAGE_LOW_ATR_THRESHOLD:
-                target_lev = 8  # Dusuk dalgalanmali majorlerde ve A+ firsatta tam kurumsal guc: 8x
+            if is_major:
+                target_lev = 8 if atr_pct <= LEVERAGE_LOW_ATR_THRESHOLD else 7
+            else:
+                target_lev = 5  # Altcoinlerde elit dahi olsa tavan 5x (Sermaye koruma kalkani)
         elif is_strong_setup:
-            target_lev = 5
+            target_lev = 6 if is_major else 5
         else:
-            target_lev = 4
+            target_lev = 5 if is_major else 4
 
         # 2. Volatilite (ATR) Kalkani:
         if atr_pct >= LEVERAGE_EXTREME_ATR_THRESHOLD:
@@ -816,6 +817,10 @@ class StrategyEngine:
         if is_dead_zone:
             # Olu bolge veya deger alani sikismasinda azami 3x tavani (Sermaye koruma)
             target_lev = min(target_lev, 3)
+
+        # Altcoin Mutlak Tavan Zirhi: Major (BTC/ETH/SOL) harici hicbir altcoin 5x'i asamaz
+        if not is_major:
+            target_lev = min(target_lev, 5)
 
         return int(max(min_lev, min(max_lev, target_lev)))
 
@@ -3434,7 +3439,8 @@ class StrategyEngine:
             coin_atr = self.get_symbol_atr_pct(symbol)
             dyn_stop_pct = max(0.008, min(0.025, coin_atr * 1.0))
             buffer = mvah * dyn_stop_pct
-            soft_stop = mvah - buffer
+            soft_stop = round(mvah - buffer, 6)
+            hard_stop = round(mvah - buffer * 1.5, 6)
             reason_lbl6 = "mVAH Aylik Direnc Kirilimi (Macro Breakout)"
             c_list6 = ["mVAH_Breakout", "Volume_Profile_Expansion"]
             if sym_met.get("is_stoikov_bull", False):
@@ -3533,6 +3539,8 @@ class StrategyEngine:
             coin_atr = self.get_symbol_atr_pct(symbol)
             dyn_stop_pct = max(0.008, min(0.025, coin_atr * 1.0))
             buffer = mval * dyn_stop_pct
+            soft_stop = round(mval + buffer, 6)
+            hard_stop = round(mval + buffer * 1.5, 6)
             reason_lbl8 = "mVAL Aylik Destek Kirilimi (Macro Breakdown)"
             c_list8 = ["mVAL_Breakdown", "Volume_Profile_Collapse"]
             if sym_met.get("is_stoikov_bear", False):
@@ -3793,8 +3801,10 @@ class StrategyEngine:
             if not struct_ok:
                 self.log_rejection(symbol, f"SETUP 11 {resist_tag} Retest Reddi", struct_reason)
             else:
+                cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+                cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
                 is_strong_bull_mkt = ("GÜÇLÜ BOĞA" in trend_regime or macro.get("btc_chg_1h", 0.0) > 0.35)
-                is_weak_outlier = (coin_rs_score <= -0.30)
+                is_weak_outlier = (coin_rs_score <= -0.60 and cvd_ratio <= 44.0)
                 if is_strong_bull_mkt or (coin_rs_score >= 0.5 and not is_bear_dump) or ("BOĞA" in trend_regime and not is_weak_outlier):
                     self.log_rejection(symbol, f"SETUP 11 {resist_tag} Retest Reddi", f"Piyasa {trend_regime} rejimindeyken (RS: {coin_rs_score:+.2f}) direnç retest shortu açılmadı.")
                 else:
@@ -3805,9 +3815,6 @@ class StrategyEngine:
                     upper_wick = (c_high - max(c_open, close_price)) if c_range > 0 else 0
                     upper_wick_ratio = (upper_wick / c_range) if c_range > 0 else 0
                     is_seller_rejection = (upper_wick_ratio >= 0.22) or (upper_wick_ratio >= 0.15 and close_price < c_open)
-
-                    cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
-                    cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
 
                     obi_data = self.market_data.get_orderbook_depth(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_orderbook_depth')) else {}
                     obi_imbalance = float(obi_data.get('imbalance', 0.0))
@@ -3871,7 +3878,7 @@ class StrategyEngine:
                 has_seller_pressure = (obi_ratio <= 0.65) or (obi_imbalance <= -0.20) or (cvd_ratio <= 42.0)
 
                 is_strong_bull_mkt = ("GÜÇLÜ BOĞA" in trend_regime or macro.get("btc_chg_1h", 0.0) > 0.35)
-                is_weak_outlier = (coin_rs_score <= -0.30)
+                is_weak_outlier = (coin_rs_score <= -0.60 and cvd_ratio <= 44.0)
                 if not has_seller_pressure and vol_surge < 1.3:
                     self.log_rejection(symbol, f"SETUP 12 {support_type} Çöküşü", f"Destek kırılımında satıcı duvarı / CVD teyidi yok (OBI: %{obi_imbalance*100:.1f}, CVD: %{cvd_ratio:.1f})")
                 elif is_strong_bull_mkt or ("BOĞA" in trend_regime and not is_weak_outlier):
@@ -3915,6 +3922,10 @@ class StrategyEngine:
                 upper_wick_ratio = (upper_wick / c_range) if c_range > 0 else 0
                 is_seller_rej = (upper_wick_ratio >= 0.18) or (close_price < c_open)
 
+                cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+                cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
+                is_strong_bull_mkt = ("GÜÇLÜ BOĞA" in trend_regime or macro.get("btc_chg_1h", 0.0) > 0.35)
+                is_weak_outlier = (coin_rs_score <= -0.60 and cvd_ratio <= 44.0)
                 if not is_seller_rej:
                     self.log_rejection(symbol, "SETUP 13 S3 Retest Reddi", f"S3 retestinde satıcı tepkisi yok (Fitil: %{upper_wick_ratio*100:.1f})")
                 elif is_strong_bull_mkt or ("BOĞA" in trend_regime and not is_weak_outlier):
