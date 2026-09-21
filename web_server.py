@@ -12509,6 +12509,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                     strategy.failed_levels.clear()
                 if hasattr(strategy, 'setup_attempts'):
                     strategy.setup_attempts.clear()
+                if hasattr(strategy, 'setup_attempt_history'):
+                    strategy.setup_attempt_history.clear()
                 if hasattr(strategy, 'peak_prices'):
                     strategy.peak_prices.clear()
                 if hasattr(strategy, 'recent_rejections'):

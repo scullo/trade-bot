@@ -1,8 +1,11 @@
 from security_vault import SecurityVault
+import os
+import json
 import time
 from datetime import datetime, timezone
 import pandas as pd
 import numpy as np
+from indicators import calculate_fractional_kelly, calculate_hurst_exponent, estimate_hmm_market_phase
 from config import (
     BUFFER_RATIO, MAX_OPEN_POSITIONS,
     TRAILING_BREAKEVEN_ROE, TRAILING_LOCK_30_ROE, TRAILING_LOCK_50_ROE,
@@ -46,7 +49,6 @@ class StrategyEngine:
         self.recently_stopped_levels = {}  # 🪤 Fakeout Reclaim (Tuzak İntikamı) Seviye Takipçisi
         self.dna_baseline = {}       # 🧬 3,615 Gerçek İşlem Analizinden Türetilen Parite DNA Hafızası
         try:
-            import json, os
             baseline_path = os.path.join(os.path.dirname(__file__), 'coin_dna_baseline.json')
             if os.path.exists(baseline_path):
                 with open(baseline_path, 'r', encoding='utf-8') as f:
@@ -1970,7 +1972,6 @@ class StrategyEngine:
         base_calc_margin = target_notional_usd / float(dyn_leverage)
 
         # 🎲 ED THORP FRAKSİYONEL KELLY KRİTERİ İLE MARJİN MODÜLASYONU
-        from indicators import calculate_fractional_kelly
         est_win_rate = 72.0 if (has_whale_flow or c_count >= 4) else (60.0 if c_count >= 3 else 52.0)
         kelly_mult = calculate_fractional_kelly(win_rate_pct=est_win_rate, reward_risk_ratio=2.0, fraction=0.25)
 
@@ -2049,7 +2050,6 @@ class StrategyEngine:
             return {"error": "EXCESSIVE_WICK_TRAP_BLOCKED"}
 
         # 🌀 BENOIT MANDELBROT FRAKTAL REJİM KALKANI (HURST EXPONENT R/S ANALİZİ)
-        from indicators import calculate_hurst_exponent, estimate_hmm_market_phase
         df_5m_quant = self.market_data.candles_5m.get(symbol, pd.DataFrame()) if self.market_data else pd.DataFrame()
         hurst_val = 0.50
         if isinstance(df_5m_quant, pd.DataFrame) and len(df_5m_quant) >= 30 and 'close' in df_5m_quant.columns:
