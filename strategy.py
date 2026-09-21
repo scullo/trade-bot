@@ -2453,6 +2453,22 @@ class StrategyEngine:
             # Sistemi bozma ilkesi: Beklenmedik hatada akışı kesme, güvenle devam et
             print(f">> [UYARI - QUANT GEOMETRY ATLANDI] {symbol}: {e}")
 
+        # ── 8d. 4 GİZLİ SİLAH TELEMETRİSİ (CVD DIVERGENCE, RVOL, MAKRO DOMİNANS) ──
+        cvd_div_tag = "⚪ UYUMLU_AKIS (Normal)"
+        rvol_ratio_v = 1.0
+        rvol_z_v = 0.0
+        rvol_tag_v = "⚪ SEANS_NORMU"
+        macro_dom_tag = "⚪ DENGELİ_MAKRO_AKIS"
+        try:
+            from advanced_quant_signals import calculate_cvd_divergence, calculate_rvol_zscore, calculate_macro_dominance_bias
+            df_5m_sig = self.market_data.candles_5m.get(symbol, pd.DataFrame()) if self.market_data else pd.DataFrame()
+            df_btc_sig = self.market_data.candles_5m.get('BTC/USDT', pd.DataFrame()) if self.market_data else pd.DataFrame()
+            cvd_div_tag, _ = calculate_cvd_divergence(df_5m_sig, lookback=15)
+            rvol_ratio_v, rvol_z_v, rvol_tag_v = calculate_rvol_zscore(df_5m_sig)
+            macro_dom_tag, _ = calculate_macro_dominance_bias(df_btc_sig, df_5m_sig)
+        except Exception:
+            pass
+
         macro_clim = self.get_macro_climate()
         res = await self._safe_open_position(
             symbol=symbol, side=side, entry_price=entry_price,
@@ -2506,7 +2522,13 @@ class StrategyEngine:
             hawkes_eta=float(l2_info.get('hawkes_eta', 0.15)) if 'l2_info' in locals() and l2_info else 0.15,
             is_avalanche_active=bool(l2_info.get('is_avalanche_active', False)) if 'l2_info' in locals() and l2_info else False,
             cvd_accel_60s=float(cvd_info.get('accel_60s', 0.0)) if 'cvd_info' in locals() and cvd_info else 0.0,
-            tri_modal_regime=str(getattr(self, 'current_market_regime', 'RANGING_PINGPONG'))
+            tri_modal_regime=str(getattr(self, 'current_market_regime', 'RANGING_PINGPONG')),
+            cvd_divergence=cvd_div_tag,
+            rvol_ratio=rvol_ratio_v,
+            rvol_z_score=rvol_z_v,
+            rvol_tag=rvol_tag_v,
+            macro_dominance_bias=macro_dom_tag,
+            planned_r=float(q_metrics.get("planned_r", 2.0)) if 'q_metrics' in locals() else 2.0
         )
 
         if isinstance(res, dict) and res.get("error") == "INSUFFICIENT_BALANCE":

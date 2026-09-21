@@ -248,7 +248,11 @@ class TestBlueprintSystemIntegrity(unittest.TestCase):
         self.assertIn('Kyle’s Lambda Oranı', header_names)
         self.assertIn('Deribit GEX Rejimi', header_names)
         self.assertIn('Hawkes Tasfiye Çığı (η)', header_names)
-        self.assertEqual(len(HEADERS_GRANULAR), 86, "Toplam sütun sayısı 86 olmalı")
+        self.assertIn('CVD Uyumsuzluğu (Divergence)', header_names)
+        self.assertIn('Göreceli Hacim (RVOL Z-Score)', header_names)
+        self.assertIn('Makro Likidite & Dominans', header_names)
+        self.assertIn('Geometrik R-Oranı', header_names)
+        self.assertEqual(len(HEADERS_GRANULAR), 90, "Toplam sütun sayısı 90 olmalı")
 
         # Gerçek bir rapor oluşturma testi
         dummy_trade = {

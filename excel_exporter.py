@@ -99,7 +99,11 @@ HEADERS_GRANULAR = [
     ('VPIN Toksisite Skoru', 22),
     ('Kyle’s Lambda Oranı', 20),
     ('Deribit GEX Rejimi', 22),
-    ('Hawkes Tasfiye Çığı (η)', 22)
+    ('Hawkes Tasfiye Çığı (η)', 22),
+    ('CVD Uyumsuzluğu (Divergence)', 28),
+    ('Göreceli Hacim (RVOL Z-Score)', 24),
+    ('Makro Likidite & Dominans', 26),
+    ('Geometrik R-Oranı', 18)
 ]
 headers_granular = HEADERS_GRANULAR
 
@@ -614,6 +618,18 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ws.write(r_idx, 83, f"{kyles_l:.2f}x", cell_center)
         ws.write(r_idx, 84, gex_reg, cell_center)
         ws.write(r_idx, 85, f"η={hwk_eta:.2f}" + (" (ÇIĞ)" if hwk_act else ""), cell_roe_red if hwk_act else cell_center)
+
+        # 4 Gizli Kuant Silahı Sütunları (86, 87, 88, 89)
+        cvd_div = str(h.get('cvd_divergence', '⚪ UYUMLU_AKIS (Normal)'))
+        rvol_tag = str(h.get('rvol_tag', '⚪ SEANS_NORMU'))
+        rvol_z = _safe_float(h.get('rvol_z_score', 0.0))
+        macro_dom = str(h.get('macro_dominance_bias', '⚪ DENGELİ_MAKRO_AKIS'))
+        planned_r_val = _safe_float(h.get('planned_r', 2.0))
+
+        ws.write(r_idx, 86, cvd_div, cell_center)
+        ws.write(r_idx, 87, f"{rvol_tag} ({rvol_z:+.1f}σ)", cell_center)
+        ws.write(r_idx, 88, macro_dom, cell_center)
+        ws.write(r_idx, 89, f"{planned_r_val:.2f}x", cell_roe_green if planned_r_val >= 1.8 else cell_roe_red)
 
     def render_table_sheet(ws_obj, t_list):
 
