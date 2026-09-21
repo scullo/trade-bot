@@ -525,6 +525,20 @@ class StrategyEngine:
         res = self.paper_trader.open_position(*args, **kwargs)
         if hasattr(res, '__await__'):
             res = await res
+        if res and isinstance(res, dict) and not res.get("error"):
+            # Gerçek açılan pozisyon için temas geçmişini güncelle
+            symbol = kwargs.get("symbol") or (args[0] if len(args) > 0 else "")
+            setup_id = kwargs.get("setup_id") or ""
+            if symbol and setup_id:
+                s_key = f"{symbol}_{setup_id}"
+                if not hasattr(self, 'setup_attempt_history'):
+                    self.setup_attempt_history = {}
+                if s_key not in self.setup_attempt_history:
+                    self.setup_attempt_history[s_key] = []
+                self.setup_attempt_history[s_key].append(time.time())
+                if not hasattr(self, 'setup_attempts'):
+                    self.setup_attempts = {}
+                self.setup_attempts[s_key] = len(self.setup_attempt_history[s_key])
         return res
 
     # =========================================================================
@@ -1353,8 +1367,12 @@ class StrategyEngine:
         obi_margin_mult = 1.0
 
         if side == "LONG":
-            # Kalkan: Satıcı duvarı baskınsa (Bid/Ask < 0.65 veya Ask > 1.5x Bid) destek tutunamaz
-            if obi_ratio < 0.65 or obi_imbalance <= -0.21:
+            # Kalkan: Satıcı duvarı baskınsa ve taker alıcı agresyonu yetersizse engelle
+            # Taker alıcı akışı (CVD >= 55) ask duvarını eritir, eşik esnetilir
+            is_strong_taker_buy = (cvd_ratio_60s >= 55.0)
+            obi_min_ratio = 0.35 if is_strong_taker_buy else 0.40
+            obi_min_imbalance = -0.45 if is_strong_taker_buy else -0.38
+            if obi_ratio < obi_min_ratio or obi_imbalance <= obi_min_imbalance:
                 rej_msg = f"🛡️ Tahta Derinlik Kalkanı (OBI): Satıcı duvarı baskın (Bid/Ask: {obi_ratio:.2f}x, OBI: %{obi_imbalance*100:.1f}). Alıcı derinliği zayıf, LONG engellendi."
                 print(f">> [RED - OBI KALKANI] {symbol}: {rej_msg}")
                 self.log_rejection(symbol, reason, rej_msg)
@@ -1367,8 +1385,11 @@ class StrategyEngine:
                 else:
                     obi_tag = f" [⚠️ Tahta Alıcı Duvarı Yeni/Kalıcı Değil ({obi_wall_duration:.1f}s)]"
         elif side == "SHORT":
-            # Kalkan: Alıcı duvarı baskınsa (Bid/Ask > 1.55 veya Bid > 1.55x Ask) direnç kırılamaz
-            if obi_ratio > 1.55 or obi_imbalance >= 0.21:
+            # Kalkan: Alıcı duvarı baskınsa ve taker satıcı baskısı yetersizse engelle
+            is_strong_taker_sell = (cvd_ratio_60s <= 45.0)
+            obi_max_ratio = 2.80 if is_strong_taker_sell else 2.50
+            obi_max_imbalance = 0.45 if is_strong_taker_sell else 0.38
+            if obi_ratio > obi_max_ratio or obi_imbalance >= obi_max_imbalance:
                 rej_msg = f"🛡️ Tahta Derinlik Kalkanı (OBI): Alıcı duvarı baskın (Bid/Ask: {obi_ratio:.2f}x, OBI: %{obi_imbalance*100:+.1f}). Satıcı derinliği zayıf, SHORT engellendi."
                 print(f">> [RED - OBI KALKANI] {symbol}: {rej_msg}")
                 self.log_rejection(symbol, reason, rej_msg)
@@ -1388,24 +1409,24 @@ class StrategyEngine:
                 wall_name = "Tahta_Derinlik_Alıcı_Duvarı" if side == "LONG" else "Tahta_Derinlik_Satıcı_Duvarı"
                 confluence_list.append(wall_name)
 
-        # MADDE 5: TEMAS (TOUCH) TAKIBI VE FAKEOUT KORUMASI
-        current_date = datetime.now().date()
+        # MADDE 5: TEMAS (TOUCH) TAKİBİ VE FAKEOUT KORUMASI (KAYAN 90 DK PENCERESİ)
+        now_ts = time.time()
+        if not hasattr(self, 'setup_attempt_history'):
+            self.setup_attempt_history = {}
         if not hasattr(self, 'setup_attempts'):
             self.setup_attempts = {}
-        if not hasattr(self, 'last_attempt_date') or self.last_attempt_date != current_date:
-            self.setup_attempts = {}
-            self.last_attempt_date = current_date
             
         setup_key = f"{symbol}_{setup_id}"
-        touches_so_far = self.setup_attempts.get(setup_key, 0)
+        # Son 90 dakika içindeki gerçek açılmış pozisyon geçmişini filtrele (24 saatlik kör kilitlenmeyi önler)
+        past_timestamps = [ts for ts in self.setup_attempt_history.get(setup_key, []) if (now_ts - ts) < 5400]
+        self.setup_attempt_history[setup_key] = past_timestamps
+        touches_so_far = len(past_timestamps)
         current_touch = touches_so_far + 1
         
         if current_touch >= 3:
-            print(f">> [RED - MADDE 5] {symbol}: 3. Asinmis Temas (Likidite Tukendi). Islem iptal.")
+            print(f">> [RED - MADDE 5] {symbol}: Son 90 dk içinde 3. Aşınmış Temas (Likidite Tükendi). İşlem iptal.")
             self.log_rejection(symbol, reason, "Seviye 3. kez test edildiği için taze likidite tükendi, işlem açılmadı")
             return {"error": "MAX_TOUCH_REACHED"}
-            
-        self.setup_attempts[setup_key] = current_touch
 
         self.margin_multiplier = 1.0
         if cvd_margin_mult != 1.0:
@@ -1426,23 +1447,29 @@ class StrategyEngine:
             elif side == "SHORT" and cb_spread_bps <= -COINBASE_LEAD_SPREAD_BPS:
                 self.margin_multiplier *= 1.10
         
-        # Madde 5 Kurali
+        # Madde 5 Kuralı (2. Temas)
+        is_mean_rev = (trade_type == "SCALP" or any(k in reason for k in ["nPOC", "Destek", "Retest", "Reclaim", "Sekmesi", "S3", "R3", "Flip"]))
         if current_touch == 2:
             self.margin_multiplier *= 0.5
-            if vol_surge < 2.0:
-                print(f">> [RED - MADDE 5] {symbol}: 2. Temasta hacim patlamasi 2.0x altinda ({vol_surge}x). Iptal.")
-                self.log_rejection(symbol, reason, f"2. temasta hacim patlaması {vol_surge:.2f}x (en az 2.0x teyit aranıyor)")
+            min_touch2_vol = 1.25 if is_mean_rev else 2.0
+            if vol_surge < min_touch2_vol:
+                print(f">> [RED - MADDE 5] {symbol}: 2. Temasta hacim patlaması {min_touch2_vol:.2f}x altında ({vol_surge}x). İptal.")
+                self.log_rejection(symbol, reason, f"2. temasta hacim patlaması {vol_surge:.2f}x (en az {min_touch2_vol:.2f}x teyit aranıyor)")
                 return {"error": "INSUFFICIENT_VOLUME_FOR_2ND_TOUCH"}
                 
-        # Madde 6 Kurali
+        # Madde 6 Kuralı (1. Temas)
         if current_touch == 1:
-            if not is_top_80:
-                print(f">> [RED - MADDE 6] {symbol}: Hacim Top %80'de degil. Iptal.")
-                self.log_rejection(symbol, reason, "24S hacim sıralamasında Top %80 diliminde değil (yetersiz likidite)")
-                return {"error": "VOLUME_PERCENTILE_LOW"}
-            if vol_surge < min_vol_surge:
-                print(f">> [RED - MADDE 6] {symbol}: Hacim {min_vol_surge}x altinda ({vol_surge}x). Iptal.")
-                self.log_rejection(symbol, reason, f"5M hacim patlaması {vol_surge:.2f}x (en az {min_vol_surge}x patlama şartı aranıyor)")
+            has_absorption_conf = (cvd_confirmed or obi_confirmed or cvd_ratio_60s >= 52.0 or (side == "SHORT" and cvd_ratio_60s <= 48.0))
+            if not is_mean_rev and not has_absorption_conf:
+                if not is_top_80:
+                    print(f">> [RED - MADDE 6] {symbol}: Hacim Top %80'de değil. İptal.")
+                    self.log_rejection(symbol, reason, "24S hacim sıralamasında Top %80 diliminde değil (yetersiz likidite)")
+                    return {"error": "VOLUME_PERCENTILE_LOW"}
+            
+            effective_min_vol = 0.85 if (is_mean_rev or has_absorption_conf) else min_vol_surge
+            if vol_surge < effective_min_vol:
+                print(f">> [RED - MADDE 6] {symbol}: Hacim {effective_min_vol:.2f}x altında ({vol_surge}x). İptal.")
+                self.log_rejection(symbol, reason, f"5M hacim patlaması {vol_surge:.2f}x (en az {effective_min_vol:.2f}x patlama şartı aranıyor)")
                 return {"error": "VOLUME_SURGE_LOW"}
                 
         # 🛡️ AŞIRI HACİM CLIMAX KALKANI (Tükeniş / Tuzak Koruması)
@@ -1494,11 +1521,14 @@ class StrategyEngine:
 
         # ── 1b-2. BETA / NÖTR TAKİPÇİ COİNLERDE LONG KALKANI (BETA FOLLOWER LONG SHIELD) ──
         # Piyasadan bağımsız pozitif güç (Alfa veya Dirençli Boğa) üretmeyen, BTC düştüğünde düşüşe öncülük eden
-        # Beta takipçi coinlerde düşüş/yatay piyasada dip sekmesi aramak toksiktir (Zararların %87'si buradan kaynaklandı).
+        # Beta takipçi coinlerde düşüş/yatay piyasada tepe kırılımı (Breakout) kovalamak toksiktir.
+        # Mean-reversion sekmeleri (S3, nPOC, Pivot Flip, AVWAP Reclaim) veya emir akışı teyidi olan işlemler istisnadır.
         if side == "LONG" and symbol != "BTC/USDT":
+            is_mean_rev_setup = (trade_type == "SCALP" or any(k in reason for k in ["nPOC", "Destek", "Retest", "Reclaim", "Sekmesi", "S3", "Flip"]))
+            has_orderflow_conf = (cvd_confirmed or obi_confirmed or cvd_ratio_60s >= 52.0)
             is_alpha_or_bull = ("ALFA" in decoupling_status or "DİRENÇLİ" in decoupling_status or dynamic_rs_score >= 0.20 or rs_vs_btc >= 0.30)
-            if not is_fakeout_reclaim and not is_alpha_or_bull:
-                rej_msg = f"🛡️ Beta Takipçi Long Kalkanı: {symbol} piyasadan pozitif ayrışmıyor ({decoupling_status}, RS Skoru: {dynamic_rs_score:+.2f}, BTC Farkı: %{rs_vs_btc:+.2f}). Bağımsız alfa üretmeyen zayıf coinlerde LONG engellendi."
+            if not is_fakeout_reclaim and not is_mean_rev_setup and not has_orderflow_conf and not is_alpha_or_bull:
+                rej_msg = f"🛡️ Beta Takipçi Long Kalkanı: {symbol} piyasadan pozitif ayrışmıyor ({decoupling_status}, RS Skoru: {dynamic_rs_score:+.2f}, BTC Farkı: %{rs_vs_btc:+.2f}). Bağımsız alfa üretmeyen zayıf coinlerde trend LONG kırılımı engellendi."
                 print(f">> [RED - BETA TAKİPÇİ LONG KALKANI] {symbol}: {rej_msg}")
                 self.log_rejection(symbol, reason, rej_msg)
                 return {"error": "BETA_FOLLOWER_LONG_BLOCKED"}
@@ -3162,34 +3192,37 @@ class StrategyEngine:
                 )
                 return
 
+            # 🛡️ GÜÇLÜ AYI VE AYI PİYASASI SEKMESİ KALKANI:
+            # Düşüş rejimindeyken S3 desteğinden tepki alımı için akıllı emilim aranır.
+            # Taker alıcı akışı (CVD >= 52.0%) VEYA pozitif RS (>= 0.15) varsa sekme onaylanır!
+            # Yalnızca hem alıcı akışı yoksa HEM DE coin aşırı zayıfsa düşen bıçak engellenir.
+            cvd_data_s3 = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+            cvd_ratio_s3 = float(cvd_data_s3.get('ratio_60s', 50.0))
+            has_s3_buyer_abs = (cvd_ratio_s3 >= 52.0)
+            has_s3_pos_rs = (coin_rs_score >= 0.15)
+
             if "GÜÇLÜ AYI" in trend_regime:
-                cvd_data_s3 = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
-                cvd_ratio_s3 = float(cvd_data_s3.get('ratio_60s', 50.0))
-                if cvd_ratio_s3 < 58.0 or coin_rs_score < 0.20:
+                if not has_s3_buyer_abs and not has_s3_pos_rs:
                     self.log_rejection(
                         symbol, "SETUP 3 S3 Destek",
-                        f"Güçlü Ayı Rejimi Kalkanı: Genel piyasa düşüşteyken S3 desteğinde LONG için alıcı akışı (CVD: %{cvd_ratio_s3:.1f} < %58, RS: {coin_rs_score:+.2f} < 0.20) yetersiz. Düşen bıçak engellendi."
+                        f"Güçlü Ayı Rejimi Kalkanı: Genel piyasa düşüşteyken S3 desteğinde LONG için alıcı akışı (CVD: %{cvd_ratio_s3:.1f} < %52, RS: {coin_rs_score:+.2f} < 0.15) yetersiz. Düşen bıçak engellendi."
+                    )
+                    return
+            elif "AYI" in trend_regime:
+                if cvd_ratio_s3 < 50.0 and coin_rs_score < -0.40:
+                    self.log_rejection(
+                        symbol, "SETUP 3 S3 Destek",
+                        f"Ayı Rejimi Kalkanı: Piyasa {trend_regime} rejimindeyken S3 desteğinden sekme için güçlü alıcı akışı (CVD: %{cvd_ratio_s3:.1f} < %50, RS: {coin_rs_score:+.2f} < -0.40) bulunamadı. Düşen bıçak engellendi."
                     )
                     return
 
-            # 🛡️ GÖRECELİ GÜÇ (RS) BARİYERİ: Zayıf coinlerde S3 desteği tutunamaz
-            if coin_rs_score < -0.30 or is_severely_weak:
+            # 🛡️ GÖRECELİ GÜÇ (RS) BARİYERİ: Aşırı negatif çöken toksik coinlerde S3 desteği tutunamaz
+            if coin_rs_score < -1.0 or is_severely_weak:
                 self.log_rejection(
                     symbol, "SETUP 3 S3 Destek",
-                    f"Zayıf Parite Kalkanı: Negatif Göreceli Güç (RS: {coin_rs_score:+.2f}) olan paritede S3 sekmesi engellendi."
+                    f"Zayıf Parite Kalkanı: Aşırı Negatif Göreceli Güç (RS: {coin_rs_score:+.2f}) olan paritede S3 sekmesi engellendi."
                 )
                 return
-
-            # 🛡️ AYI PİYASASI SEKMESİ KALKANI: Piyasa Ayı rejimindeyken S3 desteğinden tepki alımı için güçlü alıcı teyidi şarttır
-            if "AYI" in trend_regime:
-                cvd_data_s3 = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
-                cvd_ratio_s3 = float(cvd_data_s3.get('ratio_60s', 50.0))
-                if cvd_ratio_s3 < 58.0 or coin_rs_score < 0.20:
-                    self.log_rejection(
-                        symbol, "SETUP 3 S3 Destek",
-                        f"Ayı Rejimi Kalkanı: Piyasa {trend_regime} rejimindeyken S3 desteğinden sekme için güçlü alıcı akışı (CVD: %{cvd_ratio_s3:.1f} < %58, RS: {coin_rs_score:+.2f} < 0.20) bulunamadı. Düşen bıçak engellendi."
-                    )
-                    return
 
             # 🛡️ ALICI EMİLİM MUMU ŞARTI
             c_open = current_candle.get('open', close_price)
@@ -3548,21 +3581,34 @@ class StrategyEngine:
                 )
                 return
 
-            if "AYI" in trend_regime:
-                cvd_data_npoc = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
-                cvd_ratio_npoc = float(cvd_data_npoc.get('ratio_60s', 50.0))
-                if cvd_ratio_npoc < 58.0 or coin_rs_score < 0.20:
+            # 🛡️ GÜÇLÜ AYI VE AYI PİYASASI SEKMESİ KALKANI:
+            # Düşüş rejimindeyken nPOC desteğinden tepki alımı için akıllı emilim aranır.
+            # Taker alıcı akışı (CVD >= 52.0%) VEYA pozitif RS (>= 0.15) varsa sekme onaylanır!
+            cvd_data_npoc = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+            cvd_ratio_npoc = float(cvd_data_npoc.get('ratio_60s', 50.0))
+            has_npoc_buyer_abs = (cvd_ratio_npoc >= 52.0)
+            has_npoc_pos_rs = (coin_rs_score >= 0.15)
+
+            if "GÜÇLÜ AYI" in trend_regime:
+                if not has_npoc_buyer_abs and not has_npoc_pos_rs:
                     self.log_rejection(
                         symbol, "SETUP 9 nPOC Sekmesi",
-                        f"Ayı Rejimi Kalkanı: Piyasa {trend_regime} rejimindeyken nPOC sekmesi için güçlü alıcı akışı (CVD: %{cvd_ratio_npoc:.1f} < %58, RS: {coin_rs_score:+.2f} < 0.20) bulunamadı. Düşen bıçak engellendi."
+                        f"Güçlü Ayı Rejimi Kalkanı: Genel piyasa düşüşteyken nPOC desteğinde LONG için alıcı akışı (CVD: %{cvd_ratio_npoc:.1f} < %52, RS: {coin_rs_score:+.2f} < 0.15) yetersiz. Düşen bıçak engellendi."
+                    )
+                    return
+            elif "AYI" in trend_regime:
+                if cvd_ratio_npoc < 50.0 and coin_rs_score < -0.40:
+                    self.log_rejection(
+                        symbol, "SETUP 9 nPOC Sekmesi",
+                        f"Ayı Rejimi Kalkanı: Piyasa {trend_regime} rejimindeyken nPOC sekmesi için güçlü alıcı akışı (CVD: %{cvd_ratio_npoc:.1f} < %50, RS: {coin_rs_score:+.2f} < -0.40) bulunamadı. Düşen bıçak engellendi."
                     )
                     return
 
-            # 🛡️ GÖRECELİ GÜÇ (RS) BARİYERİ: Negatif RS'li zayıf coinlerde nPOC desteği tutunamaz
-            if coin_rs_score < -0.30 or is_severely_weak:
+            # 🛡️ GÖRECELİ GÜÇ (RS) BARİYERİ: Aşırı negatif çöken toksik coinlerde nPOC desteği tutunamaz
+            if coin_rs_score < -1.0 or is_severely_weak:
                 self.log_rejection(
                     symbol, "SETUP 9 nPOC Sekmesi",
-                    f"Zayıf Parite Kalkanı: Negatif Göreceli Güç (RS: {coin_rs_score:+.2f}) olan paritede nPOC sekmesi engellendi."
+                    f"Zayıf Parite Kalkanı: Aşırı Negatif Göreceli Güç (RS: {coin_rs_score:+.2f}) olan paritede nPOC sekmesi engellendi."
                 )
                 return
 
@@ -3747,7 +3793,9 @@ class StrategyEngine:
             if not struct_ok:
                 self.log_rejection(symbol, f"SETUP 11 {resist_tag} Retest Reddi", struct_reason)
             else:
-                if "BOĞA" in trend_regime or macro.get("btc_chg_1h", 0.0) > 0.15 or (coin_rs_score >= 0.5 and not is_bear_dump):
+                is_strong_bull_mkt = ("GÜÇLÜ BOĞA" in trend_regime or macro.get("btc_chg_1h", 0.0) > 0.35)
+                is_weak_outlier = (coin_rs_score <= -0.30)
+                if is_strong_bull_mkt or (coin_rs_score >= 0.5 and not is_bear_dump) or ("BOĞA" in trend_regime and not is_weak_outlier):
                     self.log_rejection(symbol, f"SETUP 11 {resist_tag} Retest Reddi", f"Piyasa {trend_regime} rejimindeyken (RS: {coin_rs_score:+.2f}) direnç retest shortu açılmadı.")
                 else:
                     c_high = current_candle.get('high', close_price)
@@ -3822,9 +3870,11 @@ class StrategyEngine:
 
                 has_seller_pressure = (obi_ratio <= 0.65) or (obi_imbalance <= -0.20) or (cvd_ratio <= 42.0)
 
+                is_strong_bull_mkt = ("GÜÇLÜ BOĞA" in trend_regime or macro.get("btc_chg_1h", 0.0) > 0.35)
+                is_weak_outlier = (coin_rs_score <= -0.30)
                 if not has_seller_pressure and vol_surge < 1.3:
                     self.log_rejection(symbol, f"SETUP 12 {support_type} Çöküşü", f"Destek kırılımında satıcı duvarı / CVD teyidi yok (OBI: %{obi_imbalance*100:.1f}, CVD: %{cvd_ratio:.1f})")
-                elif "BOĞA" in trend_regime or macro.get("btc_chg_1h", 0.0) > 0.15:
+                elif is_strong_bull_mkt or ("BOĞA" in trend_regime and not is_weak_outlier):
                     self.log_rejection(symbol, f"SETUP 12 {support_type} Çöküşü", f"Piyasa {trend_regime} rejimindeyken destek kırılım shortu açılmadı.")
                 else:
                     down_targets = [lvl for lvl in [s4, s5, below_nval, mval] if lvl and lvl <= close_price * 0.992]
@@ -3867,7 +3917,7 @@ class StrategyEngine:
 
                 if not is_seller_rej:
                     self.log_rejection(symbol, "SETUP 13 S3 Retest Reddi", f"S3 retestinde satıcı tepkisi yok (Fitil: %{upper_wick_ratio*100:.1f})")
-                elif "BOĞA" in trend_regime or macro.get("btc_chg_1h", 0.0) > 0.15:
+                elif is_strong_bull_mkt or ("BOĞA" in trend_regime and not is_weak_outlier):
                     self.log_rejection(symbol, "SETUP 13 S3 Retest Reddi", f"Piyasa {trend_regime} rejimindeyken S3 retest shortu açılmadı.")
                 else:
                     down_targets = [lvl for lvl in [s4, s5, below_npoc, below_nval] if lvl and lvl <= close_price * 0.992]
