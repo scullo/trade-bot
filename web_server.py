@@ -6273,15 +6273,29 @@ async function loadAdminMetrics() {
             try {
                 if (tabName === 'cockpit') {
                     renderCockpitView();
+                    renderCockpitOpenPositions();
                     if (equityChartInstance) {
                         const eqCont = document.getElementById('cockpit-equity-container');
                         if (eqCont && eqCont.clientWidth > 0) {
                             equityChartInstance.applyOptions({ width: eqCont.clientWidth, height: eqCont.clientHeight || 260 });
+                            try { equityChartInstance.timeScale().fitContent(); } catch(e) {}
                         }
                     }
                     if (window.ValkyrieBattleEngine) ValkyrieBattleEngine.resize();
                     if (window.ValkyrieKpiSimEngine) window.ValkyrieKpiSimEngine.resize();
                     if (window.ValkyrieTacticalRadarEngine) window.ValkyrieTacticalRadarEngine.resize();
+                    setTimeout(() => {
+                        if (equityChartInstance) {
+                            const eqCont = document.getElementById('cockpit-equity-container');
+                            if (eqCont && eqCont.clientWidth > 0) {
+                                equityChartInstance.applyOptions({ width: eqCont.clientWidth, height: eqCont.clientHeight || 260 });
+                                try { equityChartInstance.timeScale().fitContent(); } catch(e) {}
+                            }
+                        }
+                        if (window.ValkyrieBattleEngine) ValkyrieBattleEngine.resize();
+                        if (window.ValkyrieKpiSimEngine) window.ValkyrieKpiSimEngine.resize();
+                        if (window.ValkyrieTacticalRadarEngine) window.ValkyrieTacticalRadarEngine.resize();
+                    }, 60);
                 } else if (tabName === 'positions') {
                     renderPortfolioRiskHUD();
                     renderPositions();
@@ -7734,13 +7748,32 @@ async function loadAdminMetrics() {
                 }
 
                 if (cvdEl) {
-                    const rs = target.rsScore || 0;
-                    cvdEl.innerText = `${rs >= 0 ? '+' : ''}${rs.toFixed(2)}`;
-                    cvdEl.style.color = rs >= 0 ? '#10b981' : 'var(--red)';
-                }
-                if (cvdSubEl) {
-                    const rs = target.rsScore || 0;
-                    cvdSubEl.innerText = rs >= 0 ? 'BTC Üzeri Güçlü RS' : 'Zayıf Göreceli Güç';
+                    const sCvds = (typeof appState !== 'undefined' && appState && appState.symbol_cvd) || {};
+                    const rawSym = (target.symbol || '').replace('/USDT', '').replace('USDT', '').trim();
+                    const sCvd = sCvds[target.symbol] || sCvds[rawSym + 'USDT'] || sCvds[rawSym] || null;
+                    if (sCvd && sCvd.ratio_60s != null) {
+                        const ratio = Number(sCvd.ratio_60s);
+                        const delta = Number(sCvd.delta_60s !== undefined ? sCvd.delta_60s : (sCvd.delta_usd || 0));
+                        if (ratio >= 50) {
+                            cvdEl.innerText = `%${ratio.toFixed(0)} Alıcı 🟢`;
+                            cvdEl.style.color = '#10b981';
+                        } else {
+                            cvdEl.innerText = `%${(100 - ratio).toFixed(0)} Satıcı 🔴`;
+                            cvdEl.style.color = 'var(--red)';
+                        }
+                        if (cvdSubEl) {
+                            const dSign = delta >= 0 ? '+' : '';
+                            const dFmt = Math.abs(delta) >= 1000 ? Math.round(delta).toLocaleString('en-US') : delta.toFixed(1);
+                            cvdSubEl.innerText = `Net ${dSign}$${dFmt} Taker`;
+                        }
+                    } else {
+                        const rs = target.rsScore || 0;
+                        cvdEl.innerText = `RS: ${rs >= 0 ? '+' : ''}${rs.toFixed(2)}`;
+                        cvdEl.style.color = rs >= 0 ? '#10b981' : 'var(--red)';
+                        if (cvdSubEl) {
+                            cvdSubEl.innerText = rs >= 0 ? 'BTC Üzeri Güçlü RS' : 'Zayıf Göreceli Güç';
+                        }
+                    }
                 }
 
                 if (statEl) {
@@ -8688,17 +8721,20 @@ async function loadAdminMetrics() {
                 const sideColor = isLong ? '#22c55e' : '#ef4444';
                 const sideBg = isLong ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)';
                 
-                const curP = Number(livePrices[sym] || (appState.symbols[sym] ? appState.symbols[sym].price : pos.entry_price));
+                const curP = Number((typeof livePrices !== 'undefined' && livePrices && livePrices[sym]) || (appState.symbols && appState.symbols[sym] ? appState.symbols[sym].price : 0) || pos.entry_price);
                 const entry = Number(pos.entry_price);
                 
                 let roe = 0.0;
                 let netPnl = 0.0;
                 
-                if (curP > 0 && entry > 0) {
+                if (typeof computePositionPnL === 'function') {
+                    const metrics = computePositionPnL(pos, curP);
+                    netPnl = metrics.pnlUsdt;
+                    roe = metrics.roePct;
+                } else if (curP > 0 && entry > 0) {
                     const priceDiff = isLong ? (curP - entry) : (entry - curP);
                     const qty = Number(pos.quantity) || 0;
                     const margin = Number(pos.margin) || 0;
-                    
                     netPnl = priceDiff * qty;
                     if (margin > 0) {
                         roe = (netPnl / margin) * 100.0;
@@ -8710,21 +8746,27 @@ async function loadAdminMetrics() {
                 const pnlSign = isProfit ? '+' : '';
                 
                 const tp1 = Number(pos.tp1) || 0;
+                const hardStop = Number(pos.hard_stop || pos.stop_floor) || 0;
                 let progressHtml = '';
                 
                 if (tp1 > 0 && entry > 0) {
                     const totalDist = Math.abs(tp1 - entry);
                     const curDist = isLong ? (curP - entry) : (entry - curP);
                     let pct = 0;
-                    if (curDist > 0) {
+                    if (curDist > 0 && totalDist > 0) {
                         pct = (curDist / totalDist) * 100;
                         if (pct > 100) pct = 100;
                     }
+                    const sEntry = typeof formatSmartPrice === 'function' ? formatSmartPrice(entry) : entry.toFixed(4);
+                    const sTp1 = typeof formatSmartPrice === 'function' ? formatSmartPrice(tp1) : tp1.toFixed(4);
+                    const sStop = hardStop > 0 ? (typeof formatSmartPrice === 'function' ? formatSmartPrice(hardStop) : hardStop.toFixed(4)) : null;
+
                     progressHtml = `
                         <div style="margin-top:14px;">
                             <div style="display:flex; justify-content:space-between; font-size:10px; color:#94a3b8; margin-bottom:5px; font-family:'JetBrains Mono';">
-                                <span>Giriş: ${entry.toFixed(4)}</span>
-                                <span style="color:#38bdf8;">TP: ${tp1.toFixed(4)}</span>
+                                <span>Giriş: $${sEntry}</span>
+                                ${sStop ? `<span style="color:var(--red);">SL: $${sStop}</span>` : ''}
+                                <span style="color:#38bdf8;">TP: $${sTp1}</span>
                             </div>
                             <div style="width:100%; height:4px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden;">
                                 <div style="height:100%; width:${pct.toFixed(1)}%; background:linear-gradient(90deg, ${sideColor}, #38bdf8); box-shadow:0 0 6px ${sideColor}; transition:width 0.5s ease;"></div>
@@ -8733,16 +8775,19 @@ async function loadAdminMetrics() {
                     `;
                 }
 
+                const sCurPrice = typeof formatSmartPrice === 'function' ? formatSmartPrice(curP) : curP.toFixed(4);
+
                 html += `
                     <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:16px; position:relative; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.2);">
                         <div style="position:absolute; top:0; left:0; width:4px; height:100%; background:${sideColor}; box-shadow:0 0 8px ${sideColor};"></div>
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
                             <div>
                                 <div style="font-size:16px; font-weight:800; color:#fff; display:flex; align-items:center; gap:8px;">
-                                    ${sym.replace('USDT','')} <span style="font-size:10px; font-weight:700; padding:3px 6px; border-radius:6px; background:${sideBg}; color:${sideColor}; border:1px solid ${sideColor};">${side} ${pos.leverage}x</span>
+                                    ${sym.replace('USDT','')} <span style="font-size:10px; font-weight:700; padding:3px 6px; border-radius:6px; background:${sideBg}; color:${sideColor}; border:1px solid ${sideColor};">${side} ${pos.leverage || 5}x</span>
                                 </div>
-                                <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono', monospace; margin-top:4px;">
-                                    ${pos.setup_id || 'AI_SETUP'}
+                                <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono', monospace; margin-top:4px; display:flex; gap:8px;">
+                                    <span>${pos.setup_id || 'AI_SETUP'}</span>
+                                    <span style="color:#38bdf8;">• Fiyat: $${sCurPrice}</span>
                                 </div>
                             </div>
                             <div style="text-align:right;">
@@ -9187,10 +9232,12 @@ async function loadAdminMetrics() {
             try { renderEquityCurve(); } catch(e) { console.error("renderEquityCurve error:", e); }
             try { renderRejectionIntelligence(); } catch(e) { console.error("renderRejectionIntelligence error:", e); }
             try { renderPortfolioRiskHUD(); } catch(e) { console.error("renderPortfolioRiskHUD error:", e); }
+            try { renderCockpitOpenPositions(); } catch(e) { console.error("renderCockpitOpenPositions error:", e); }
 
             // 1. Cockpit Financial KPIs
             const bal = Number(appState.balance || 10000.0);
             const initBal = Number(appState.initial_balance || 10000.0);
+            const freeBal = Number(appState.free_balance !== undefined && appState.free_balance !== null ? appState.free_balance : bal);
             const hist = appState.history || [];
             
             let totalNetPnl = 0.0;
@@ -9223,7 +9270,24 @@ async function loadAdminMetrics() {
                 });
             }
 
-            const growthPct = ((bal - initBal) / initBal) * 100.0;
+            // Calculate unrealized PnL from active open positions
+            let totalUnrealizedPnl = 0.0;
+            const openPositions = appState.open_positions || {};
+            const openKeys = Object.keys(openPositions);
+            const openCount = openKeys.length;
+
+            openKeys.forEach(sym => {
+                const pos = openPositions[sym];
+                const curP = Number((typeof livePrices !== 'undefined' && livePrices && livePrices[sym]) || (appState.symbols && appState.symbols[sym] ? appState.symbols[sym].price : 0) || pos.entry_price);
+                if (typeof computePositionPnL === 'function') {
+                    const metrics = computePositionPnL(pos, curP);
+                    totalUnrealizedPnl += (metrics.pnlUsdt || 0.0);
+                }
+            });
+
+            const combinedNetPnl = totalNetPnl + totalUnrealizedPnl;
+            const combinedBal = bal + totalUnrealizedPnl;
+            const growthPct = initBal > 0 ? ((combinedBal - initBal) / initBal) * 100.0 : 0.0;
             const totalTrades = wins + losses;
             const winRate = totalTrades > 0 ? ((wins / totalTrades) * 100.0).toFixed(1) : '0.0';
             const pf = lossPnlSum > 0 ? (winPnlSum / lossPnlSum).toFixed(2) : (winPnlSum > 0 ? '99.0' : '0.00');
@@ -9239,13 +9303,22 @@ async function loadAdminMetrics() {
             const cPfNote = document.getElementById('cockpit-pf-note');
 
             if (cBal) cBal.innerText = `$${bal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-            if (cFree) cFree.innerText = `Kullanılabilir Kasa: $${bal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})} USDT (5x)`;
+            if (cFree) cFree.innerText = `Kullanılabilir Kasa: $${freeBal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})} USDT (5x)`;
             if (cPnl) {
-                cPnl.innerText = `${totalNetPnl >= 0 ? '+' : ''}$${totalNetPnl.toFixed(2)}`;
-                cPnl.style.color = totalNetPnl >= 0 ? 'var(--green)' : 'var(--red)';
+                const sign = combinedNetPnl >= 0 ? '+' : '';
+                cPnl.innerText = `${sign}$${combinedNetPnl.toFixed(2)}`;
+                cPnl.style.color = combinedNetPnl >= 0 ? 'var(--green)' : 'var(--red)';
             }
-            if (cGrowth) cGrowth.innerText = `${growthPct >= 0 ? '+' : ''}${growthPct.toFixed(2)}% Büyüme`;
-            const openCount = Object.keys(appState.open_positions || {}).length;
+            if (cGrowth) {
+                const sign = growthPct >= 0 ? '+' : '';
+                if (openCount > 0) {
+                    const uSign = totalUnrealizedPnl >= 0 ? '+' : '';
+                    cGrowth.innerText = `${sign}${growthPct.toFixed(2)}% (Açık: ${uSign}$${totalUnrealizedPnl.toFixed(2)})`;
+                } else {
+                    cGrowth.innerText = `${sign}${growthPct.toFixed(2)}% Büyüme`;
+                }
+                cGrowth.style.color = growthPct >= 0 ? 'var(--green)' : 'var(--red)';
+            }
             if (cWinrate) cWinrate.innerText = `%${winRate}`;
             if (cWinLoss) {
                 if (openCount > 0) {
@@ -9323,7 +9396,7 @@ async function loadAdminMetrics() {
                 window.ValkyrieKpiSimEngine.updateMetrics({
                     balance: bal,
                     initialBalance: initBal,
-                    pnl: totalNetPnl,
+                    pnl: combinedNetPnl,
                     growthPct: growthPct,
                     winRate: parseFloat(winRate) || 0.0,
                     wins: wins,
@@ -11356,48 +11429,56 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 const hList = appState.history || [];
                 hList.forEach(h => {
                     totalRealizedNetPnl += Number(h.net_pnl || 0);
-                    totalFees += Number(h.fees || 0);
+                    totalFees += Number(h.commission || h.fees || 0);
                 });
             }
 
-            let totalUnrealizedPnl = 0;
-            const openKeys = Object.keys(appState.open_positions || {});
-            openKeys.forEach(sym => {
-                const pos = appState.open_positions[sym];
-                const curP = Number((livePrices && livePrices[sym]) || pos.entry_price || 0.0);
-                if (typeof computePositionPnL === 'function') {
-                    const metrics = computePositionPnL(pos, curP);
-                    totalUnrealizedPnl += metrics.pnlUsdt;
-                }
-            });
-
-            const bal = appState.balance || 10000.0;
-            const totalPortfolioEquity = bal + totalUnrealizedPnl;
-            const totalNetPnl = totalRealizedNetPnl + totalUnrealizedPnl;
-
             const feesEl = document.getElementById('kpi-fees');
-            const pnlEl = document.getElementById('kpi-pnl') || document.getElementById('cockpit-pnl');
-            const growthEl = document.getElementById('kpi-growth') || document.getElementById('cockpit-growth');
-            const balEl = document.getElementById('kpi-balance') || document.getElementById('cockpit-balance');
-
             if (feesEl) feesEl.innerText = '$' + totalFees.toFixed(4);
-            if (pnlEl) {
-                pnlEl.innerText = (totalNetPnl >= 0 ? '+' : '') + totalNetPnl.toFixed(2) + ' $';
-                pnlEl.style.color = totalNetPnl >= 0 ? 'var(--green)' : 'var(--red)';
-            }
-            
-            const initialBal = (appState.initial_balance || 10000.0);
-            const growthPct = ((totalPortfolioEquity - initialBal) / initialBal) * 100;
-            if (growthEl) {
-                if (growthPct >= 0) {
-                    growthEl.innerText = `+${growthPct.toFixed(2)}% BÜYÜME`;
-                    growthEl.style.color = 'var(--green)';
-                } else {
-                    growthEl.innerText = `${growthPct.toFixed(2)}% KÜÇÜLME`;
-                    growthEl.style.color = 'var(--red)';
+
+            // Legacy KPI fallbacks (if present on secondary screens, not clobbering Cockpit)
+            const pnlEl = document.getElementById('kpi-pnl');
+            const growthEl = document.getElementById('kpi-growth');
+            const balEl = document.getElementById('kpi-balance');
+
+            if (pnlEl || growthEl || balEl) {
+                let totalUnrealizedPnl = 0;
+                const openPositions = appState.open_positions || {};
+                const openKeys = Object.keys(openPositions);
+                openKeys.forEach(sym => {
+                    const pos = openPositions[sym];
+                    const curP = Number((typeof livePrices !== 'undefined' && livePrices && livePrices[sym]) || pos.entry_price || 0.0);
+                    if (typeof computePositionPnL === 'function') {
+                        const metrics = computePositionPnL(pos, curP);
+                        totalUnrealizedPnl += metrics.pnlUsdt;
+                    }
+                });
+
+                const bal = Number(appState.balance || 10000.0);
+                const totalPortfolioEquity = bal + totalUnrealizedPnl;
+                const totalNetPnl = totalRealizedNetPnl + totalUnrealizedPnl;
+
+                if (pnlEl) {
+                    pnlEl.innerText = (totalNetPnl >= 0 ? '+' : '') + totalNetPnl.toFixed(2) + ' $';
+                    pnlEl.style.color = totalNetPnl >= 0 ? 'var(--green)' : 'var(--red)';
                 }
+                
+                const initialBal = Number(appState.initial_balance || 10000.0);
+                const growthPct = initialBal > 0 ? ((totalPortfolioEquity - initialBal) / initialBal) * 100 : 0.0;
+                if (growthEl) {
+                    if (growthPct >= 0) {
+                        growthEl.innerText = `+${growthPct.toFixed(2)}% BÜYÜME`;
+                        growthEl.style.color = 'var(--green)';
+                    } else {
+                        growthEl.innerText = `${growthPct.toFixed(2)}% KÜÇÜLME`;
+                        growthEl.style.color = 'var(--red)';
+                    }
+                }
+                if (balEl) balEl.innerText = '$' + totalPortfolioEquity.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
             }
-            if (balEl) balEl.innerText = '$' + totalPortfolioEquity.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+            // Sync Cockpit with unified authority
+            try { renderCockpitView(); } catch(e) {}
         }
 
                 let ledgerCurrentPage = 1;
