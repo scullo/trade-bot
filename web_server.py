@@ -8723,6 +8723,29 @@ async function loadAdminMetrics() {
             }
         };
 
+        function formatSetupDisplayName(sId) {
+            if (!sId) return 'AI Kurulum';
+            const s = String(sId).toUpperCase();
+            if (s.includes('SETUP_1_') || s.includes('R4_BREAKOUT')) return 'S1: R4 Breakout';
+            if (s.includes('SETUP_2_') || s.includes('S4_BREAKDOWN')) return 'S2: S4 Breakdown';
+            if (s.includes('SETUP_3_') || s.includes('S3_BOUNCE')) return 'S3: S3 Sekmesi';
+            if (s.includes('SETUP_4_') || s.includes('R3_REJECTION')) return 'S4: R3 Reddi';
+            if (s.includes('SETUP_5_') || s.includes('R4_SUPPORT_FLIP')) return 'S5: R4 Destek Flip';
+            if (s.includes('SETUP_6_') || s.includes('MVAH_MACRO')) return 'S6: mVAH Breakout';
+            if (s.includes('SETUP_7_') || s.includes('S4_RESISTANCE_FLIP')) return 'S7: S4 Direnç Flip';
+            if (s.includes('SETUP_8_') || s.includes('MVAL_MACRO')) return 'S8: mVAL Breakdown';
+            if (s.includes('SETUP_9_') || s.includes('BELOW_NPOC')) return 'S9: Dip nPOC Sekme';
+            if (s.includes('SETUP_10_') || s.includes('ABOVE_NPOC')) return 'S10: Tepe nPOC Ret';
+            if (s.includes('SETUP_11_') || s.includes('RESISTANCE_FLIP')) return 'S11: Direnç Retest';
+            if (s.includes('SETUP_12_') || s.includes('SUPPORT_BREAKDOWN')) return 'S12: Destek Çöküşü';
+            if (s.includes('SETUP_13_') || s.includes('S3_RESISTANCE_FLIP')) return 'S13: S3 Direnç Flip';
+            if (s.includes('SETUP_14_') || s.includes('PIVOT_SUPPORT_FLIP')) return 'S14: Pivot Destek Flip';
+            if (s.includes('SETUP_15_') || s.includes('AVWAP_MVAH_RECLAIM')) return 'S15: AVWAP Reclaim';
+            if (s.includes('SETUP_16_') || s.includes('R3_SUPPORT_FLIP')) return 'S16: R3 Destek Flip';
+            if (s.includes('FAKEOUT_RECLAIM')) return '🪤 Fakeout Reclaim';
+            return s.replace('SETUP_', '').replace(/_/g, ' ');
+        }
+
         function renderCockpitOpenPositions() {
             const container = document.getElementById('cockpit-open-positions-container');
             if (!container || !appState) return;
@@ -8749,7 +8772,7 @@ async function loadAdminMetrics() {
                         </div>
                         <div id="open-positions-toggle-icon" style="color:#38bdf8; font-size:12px; font-weight:700;">${isHidden ? '▶ Göster' : '▼ Gizle'}</div>
                     </div>
-                    <div id="open-positions-grid" style="display:${isHidden ? 'none' : 'grid'}; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; padding: 20px;">
+                    <div id="open-positions-grid" style="display:${isHidden ? 'none' : 'grid'}; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; padding: 20px;">
             `;
             
             posKeys.forEach(sym => {
@@ -8758,6 +8781,7 @@ async function loadAdminMetrics() {
                 const isLong = side.toUpperCase() === 'LONG';
                 const sideColor = isLong ? '#22c55e' : '#ef4444';
                 const sideBg = isLong ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)';
+                const cleanSym = (sym || '').replace('/USDT', '').replace('USDT', '').trim();
                 
                 const curP = Number((typeof livePrices !== 'undefined' && livePrices && livePrices[sym]) || (appState.symbols && appState.symbols[sym] ? appState.symbols[sym].price : 0) || pos.entry_price);
                 const entry = Number(pos.entry_price);
@@ -8800,11 +8824,11 @@ async function loadAdminMetrics() {
                     const sStop = hardStop > 0 ? (typeof formatSmartPrice === 'function' ? formatSmartPrice(hardStop) : hardStop.toFixed(4)) : null;
 
                     progressHtml = `
-                        <div style="margin-top:14px;">
-                            <div style="display:flex; justify-content:space-between; font-size:10px; color:#94a3b8; margin-bottom:5px; font-family:'JetBrains Mono';">
-                                <span>Giriş: $${sEntry}</span>
-                                ${sStop ? `<span style="color:var(--red);">SL: $${sStop}</span>` : ''}
-                                <span style="color:#38bdf8;">TP: $${sTp1}</span>
+                        <div style="margin-top:12px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; color:#94a3b8; margin-bottom:5px; font-family:'JetBrains Mono'; white-space:nowrap; gap:6px;">
+                                <span>Giriş: <b style="color:#e2e8f0;">$${sEntry}</b></span>
+                                ${sStop ? `<span style="color:var(--red);">SL: <b>$${sStop}</b></span>` : ''}
+                                <span style="color:#38bdf8;">TP: <b>$${sTp1}</b></span>
                             </div>
                             <div style="width:100%; height:4px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden;">
                                 <div style="height:100%; width:${pct.toFixed(1)}%; background:linear-gradient(90deg, ${sideColor}, #38bdf8); box-shadow:0 0 6px ${sideColor}; transition:width 0.5s ease;"></div>
@@ -8814,25 +8838,27 @@ async function loadAdminMetrics() {
                 }
 
                 const sCurPrice = typeof formatSmartPrice === 'function' ? formatSmartPrice(curP) : curP.toFixed(4);
+                const displaySetup = formatSetupDisplayName(pos.setup_id || 'AI_SETUP');
 
                 html += `
-                    <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:16px; position:relative; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.2);">
+                    <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:15px; position:relative; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.2);">
                         <div style="position:absolute; top:0; left:0; width:4px; height:100%; background:${sideColor}; box-shadow:0 0 8px ${sideColor};"></div>
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-                            <div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:6px;">
+                            <div style="min-width:0; flex:1;">
                                 <div style="font-size:16px; font-weight:800; color:#fff; display:flex; align-items:center; gap:8px;">
-                                    ${sym.replace('USDT','')} <span style="font-size:10px; font-weight:700; padding:3px 6px; border-radius:6px; background:${sideBg}; color:${sideColor}; border:1px solid ${sideColor};">${side} ${pos.leverage || 5}x</span>
+                                    <span onclick="openTradingViewModal('${cleanSym}')" style="cursor:pointer;" title="${cleanSym} Göstergeli Canlı Grafiğini Aç">${cleanSym}</span>
+                                    <span style="font-size:10px; font-weight:700; padding:2px 7px; border-radius:6px; background:${sideBg}; color:${sideColor}; border:1px solid ${sideColor}; white-space:nowrap;">${side} ${pos.leverage || 5}x</span>
                                 </div>
-                                <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono', monospace; margin-top:4px; display:flex; gap:8px;">
-                                    <span>${pos.setup_id || 'AI_SETUP'}</span>
-                                    <span style="color:#38bdf8;">• Fiyat: $${sCurPrice}</span>
+                                <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono', monospace; margin-top:4px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                    <span style="background:rgba(0,242,254,0.08); color:var(--cyan); border:1px solid rgba(0,242,254,0.25); padding:1px 6px; border-radius:4px; font-weight:700; font-size:10px;" title="${pos.setup_id || ''}">${displaySetup}</span>
+                                    <span style="color:#38bdf8; font-size:11px;">$${sCurPrice}</span>
                                 </div>
                             </div>
-                            <div style="text-align:right;">
-                                <div style="font-size:18px; font-weight:800; color:${pnlColor}; font-family:'JetBrains Mono', monospace; text-shadow:0 0 8px ${pnlColor}40;">
+                            <div style="text-align:right; flex-shrink:0; min-width:85px;">
+                                <div style="font-size:17px; font-weight:900; color:${pnlColor}; font-family:'JetBrains Mono', monospace; white-space:nowrap; text-shadow:0 0 8px ${pnlColor}40;">
                                     ${pnlSign}$${Math.abs(netPnl).toFixed(2)}
                                 </div>
-                                <div style="font-size:12px; color:${pnlColor}; font-weight:700; margin-top:2px;">
+                                <div style="font-size:12px; color:${pnlColor}; font-weight:800; margin-top:2px; white-space:nowrap;">
                                     ${pnlSign}${Math.abs(roe).toFixed(2)}% ROE
                                 </div>
                             </div>
