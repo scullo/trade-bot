@@ -221,7 +221,7 @@ TELEGRAM_CHAT_ID = "829687700"
 ENABLE_GEOMETRIC_R_GATE = True        # R >= 1.80x Geometrik Ön-Onay Kapısı (Dün -$457 yazan 25 sıkışık işlemi eler)
 MIN_PLANNED_R_RATIO = 1.80            # Asgari Planlanan R Oranı (1.80x)
 ENABLE_RUNWAY_CLEARANCE = True         # Hava Koridoru (Air Pocket) Engeli Kontrolü
-MIN_RUNWAY_OBSTACLE_R = 1.40          # Hedefe giden yolda ilk engel en az 1.4R uzakta olmalı
+MIN_RUNWAY_OBSTACLE_R = 1.10          # Hedefe giden yolda ilk engel en az 1.10R uzakta olmali (1R nefes alani)
 ENABLE_REGIME_DIRECTIONAL_GATE = True # Boğa rejiminde zayıf CVD'li counter-trend shortları engelle
 BULL_SHORT_MIN_CVD_PCT = 52.0         # Boğada short için gereken asgari satıcı CVD üstünlüğü (%52)
 ENABLE_CHANDELIER_BREATHING = True    # Erken Breakeven boğulmasını önleyen nefes payı

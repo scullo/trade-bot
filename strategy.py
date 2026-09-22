@@ -2165,7 +2165,7 @@ class StrategyEngine:
             soft_stop = hard_stop
 
             actual_stop_dist = abs(entry_price - hard_stop)
-            min_tp1_dist = max(actual_stop_dist * 1.25, entry_price * 0.0090)
+            min_tp1_dist = max(actual_stop_dist * 1.85, entry_price * 0.0090)
             max_tp1_dist = entry_price * min(0.040, max(0.020, safe_atr_pct * 2.5 / 100.0))
 
             first_target = caller_tp1 if (caller_tp1 and caller_tp1 > entry_price) else None
@@ -2180,7 +2180,7 @@ class StrategyEngine:
                 else:
                     tp1 = round(entry_price + max_tp1_dist, 6)
             else:
-                tp1 = round(entry_price + max(actual_stop_dist * 1.2, tp1_dist), 6)
+                tp1 = round(entry_price + max(actual_stop_dist * 1.85, tp1_dist), 6)
 
             if second_target and second_target > tp1:
                 tp2 = round(second_target, 6)
@@ -2209,7 +2209,7 @@ class StrategyEngine:
             soft_stop = hard_stop
 
             actual_stop_dist = abs(hard_stop - entry_price)
-            min_tp1_dist = max(actual_stop_dist * 1.25, entry_price * 0.0090)
+            min_tp1_dist = max(actual_stop_dist * 1.85, entry_price * 0.0090)
             max_tp1_dist = entry_price * min(0.040, max(0.020, safe_atr_pct * 2.5 / 100.0))
 
             first_target = caller_tp1 if (caller_tp1 and caller_tp1 < entry_price) else None
@@ -2224,7 +2224,7 @@ class StrategyEngine:
                 else:
                     tp1 = round(entry_price - max_tp1_dist, 6)
             else:
-                tp1 = round(entry_price - max(actual_stop_dist * 1.2, tp1_dist), 6)
+                tp1 = round(entry_price - max(actual_stop_dist * 1.85, tp1_dist), 6)
 
             if second_target and second_target < tp1:
                 tp2 = round(second_target, 6)
@@ -2960,10 +2960,11 @@ class StrategyEngine:
             if stopped_side == "SHORT" and close_price < orig_level and cvd_ratio_rec <= 48.0:
                 print(f">> [🪤 FAKEOUT RECLAIM SHORT] {symbol}: Fiyat ${orig_level:.4f} altına satıcı baskısıyla (%{cvd_ratio_rec:.1f}) geri kazanıldı! İntikam Short açılıyor...")
                 del self.recently_stopped_levels[symbol]
+                fakeout_short_stop = min(orig_level * 1.004, close_price * 1.0055)
                 await self._handle_open(
                     symbol=symbol, side="SHORT", entry_price=close_price,
                     reason=f"🪤 Fakeout Reclaim Sniper Short (${orig_level:.4f} Direnç Tuzağı İntikamı)",
-                    soft_stop=orig_level * 1.008, hard_stop=orig_level * 1.008,
+                    soft_stop=min(orig_level * 1.003, close_price * 1.0050), hard_stop=fakeout_short_stop,
                     tp1=reclaim_info.get("tp1"), tp2=reclaim_info.get("tp2"),
                     trade_type="SCALP", snapshot_levels=levels,
                     setup_id="SETUP_FAKEOUT_RECLAIM_SHORT",
@@ -2976,10 +2977,11 @@ class StrategyEngine:
             elif stopped_side == "LONG" and close_price > orig_level and cvd_ratio_rec >= 52.0:
                 print(f">> [🪤 FAKEOUT RECLAIM LONG] {symbol}: Fiyat ${orig_level:.4f} üstüne alıcı baskısıyla (%{cvd_ratio_rec:.1f}) geri kazanıldı! İntikam Long açılıyor...")
                 del self.recently_stopped_levels[symbol]
+                fakeout_long_stop = max(orig_level * 0.996, close_price * 0.9945)
                 await self._handle_open(
                     symbol=symbol, side="LONG", entry_price=close_price,
                     reason=f"🪤 Fakeout Reclaim Sniper Long (${orig_level:.4f} Destek Tuzağı İntikamı)",
-                    soft_stop=orig_level * 0.992, hard_stop=orig_level * 0.992,
+                    soft_stop=max(orig_level * 0.997, close_price * 0.9950), hard_stop=fakeout_long_stop,
                     tp1=reclaim_info.get("tp1"), tp2=reclaim_info.get("tp2"),
                     trade_type="SCALP", snapshot_levels=levels,
                     setup_id="SETUP_FAKEOUT_RECLAIM_LONG",
@@ -3136,10 +3138,11 @@ class StrategyEngine:
                 candidates = [c for c in [above_npoc, above_nvah, tepe_avwap] if c and c >= tp1 * 1.008]
                 tp2 = min(candidates) if candidates else (mvah if (mvah >= tp1 * 1.008) else None)
                 coin_atr = self.get_symbol_atr_pct(symbol)
-                dyn_stop_pct = max(0.008, min(0.025, coin_atr * 1.0))
+                dyn_stop_pct = max(0.0030, min(0.0055, coin_atr * 0.35))
                 buffer = r4 * dyn_stop_pct
                 soft_stop = r4 - buffer
-                hard_stop = r3 if (r3 > 0 and r3 < r4) else (r4 - buffer * 2.0)
+                raw_stop = r3 if (r3 > 0 and r3 < r4 and (r4 - r3)/r4 <= 0.0075) else (r4 - buffer)
+                hard_stop = max(raw_stop, close_price * 0.9940)
 
                 setup_label = "SETUP_1_OI_LONG_EXPANSION" if is_oi_bull_expansion else "SETUP_1_R4_BREAKOUT"
                 reason_label = "Kurumsal OI Boğa Taarruzu (Taze Long Akışı + R4 Üstü)" if is_oi_bull_expansion else "Taze R4 Breakout + Tepe AVWAP Ustu Onay"
@@ -3221,10 +3224,11 @@ class StrategyEngine:
                 candidates = [c for c in [below_npoc, below_nval, dip_avwap] if c and c <= tp1 * 0.992]
                 tp2 = max(candidates) if candidates else (mval if (mval > 0 and mval <= tp1 * 0.992) else None)
                 coin_atr = self.get_symbol_atr_pct(symbol)
-                dyn_stop_pct = max(0.008, min(0.025, coin_atr * 1.0))
+                dyn_stop_pct = max(0.0030, min(0.0055, coin_atr * 0.35))
                 buffer = s4 * dyn_stop_pct
                 soft_stop = s4 + buffer
-                hard_stop = s3 if (s3 > 0 and s3 > s4) else (s4 + buffer * 2.0)
+                raw_stop = s3 if (s3 > 0 and s3 > s4 and (s3 - s4)/s4 <= 0.0075) else (s4 + buffer)
+                hard_stop = min(raw_stop, close_price * 1.0060)
 
                 setup_label = "SETUP_2_OI_SHORT_EXPANSION" if is_oi_bear_expansion else "SETUP_2_S4_BREAKDOWN"
                 reason_label = "Kurumsal OI Ayı Taarruzu (Taze Short Akışı + S4 Altı)" if is_oi_bear_expansion else "Taze S4 Breakdown + Ayı İvmesi Onayı"
@@ -3337,9 +3341,9 @@ class StrategyEngine:
                 return
 
             buffer = (s3 - s4) * BUFFER_RATIO if (s3 > s4) else (s3 * 0.003)
-            soft_stop = max(s3 - buffer, close_price * 0.994)
-            # 🛡️ SERT STOP TAVAN KORUMASI: Maksimum %0.9 risk sınırı (R:R Dengelemesi)
-            hard_stop = max(s4 if s4 > 0 else (s3 - buffer * 2.0), close_price * 0.991)
+            soft_stop = max(s3 - buffer, close_price * 0.9950)
+            raw_stop = s4 if (s4 > 0 and s4 < s3 and (s3 - s4)/s3 <= 0.0075) else (s3 - buffer)
+            hard_stop = max(raw_stop, close_price * 0.9945)
             up_targets = [lvl for lvl in [dip_avwap, tepe_avwap, mpoc, p, r3] if lvl and lvl > close_price * 1.008]
             up_targets.sort()
             tp1 = up_targets[0] if up_targets else (close_price * 1.012)
@@ -3404,9 +3408,10 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 4 R3 Direnç", f"CVD Boğa İtişi Kalkanı: R3 test ediliyor fakat taker alıcı baskısı (%{cvd_ratio_r3:.1f} alıcı) aşırı agresif. Tepeye kafa atılmadı.")
                 return
 
-            buffer = (r4 - r3) * BUFFER_RATIO if (r4 > r3) else (r3 * 0.004)
-            soft_stop = min(r3 + buffer, close_price * 1.008)
-            hard_stop = min(r4 if r4 > 0 else (r3 + buffer * 2.0), close_price * 1.012)
+            buffer = (r4 - r3) * BUFFER_RATIO if (r4 > r3) else (r3 * 0.003)
+            soft_stop = min(r3 + buffer, close_price * 1.0050)
+            raw_stop = r4 if (r4 > 0 and r4 > r3 and (r4 - r3)/r3 <= 0.0075) else (r3 + buffer)
+            hard_stop = min(raw_stop, close_price * 1.0055)
             down_targets = [lvl for lvl in [tepe_avwap, dip_avwap, mpoc, p, s3] if lvl and lvl < close_price * 0.992]
             down_targets.sort(reverse=True)
             tp1 = down_targets[0] if down_targets else (close_price * 0.988)
@@ -3484,11 +3489,10 @@ class StrategyEngine:
                 return
 
             coin_atr = self.get_symbol_atr_pct(symbol)
-            dyn_stop_pct = max(0.008, min(0.025, coin_atr * 1.0))
+            dyn_stop_pct = max(0.0030, min(0.0055, coin_atr * 0.35))
             buffer = r4 * dyn_stop_pct
-            soft_stop = max(r4 - buffer, close_price * 0.992)
-            # 🛡️ SERT STOP TAVAN KORUMASI: Maksimum %1.2 risk sınırı
-            hard_stop = max(r4 - buffer * 1.5, close_price * 0.988)
+            soft_stop = max(r4 - buffer, close_price * 0.9950)
+            hard_stop = max(r4 - buffer, close_price * 0.9945)
             target_r5 = r5 if (r5 >= close_price * 1.008) else (mvah if (mvah >= close_price * 1.008) else close_price * 1.015)
             await self._handle_open(
                 symbol=symbol, side="LONG", entry_price=close_price,
@@ -3525,10 +3529,10 @@ class StrategyEngine:
             candidates = [c for c in [above_npoc, above_nvah, r5, tepe_avwap] if c and c >= close_price * 1.008]
             target = min(candidates) if candidates else close_price * 1.018
             coin_atr = self.get_symbol_atr_pct(symbol)
-            dyn_stop_pct = max(0.008, min(0.025, coin_atr * 1.0))
+            dyn_stop_pct = max(0.0030, min(0.0055, coin_atr * 0.35))
             buffer = mvah * dyn_stop_pct
-            soft_stop = round(mvah - buffer, 6)
-            hard_stop = round(mvah - buffer * 1.5, 6)
+            soft_stop = round(max(mvah - buffer, close_price * 0.9950), 6)
+            hard_stop = round(max(mvah - buffer, close_price * 0.9940), 6)
             reason_lbl6 = "mVAH Aylik Direnc Kirilimi (Macro Breakout)"
             c_list6 = ["mVAH_Breakout", "Volume_Profile_Expansion"]
             if sym_met.get("is_stoikov_bull", False):
@@ -3582,10 +3586,10 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 7 S4 Resistance Flip", f"Retest hacmi {vol_surge:.2f}x yetersiz (en az {min_retest_vol:.2f}x aranıyor)")
                 return
 
-            buffer = (s3 - s4) * BUFFER_RATIO if (s3 > s4) else (s4 * 0.004)
-            soft_stop = min(s4 + buffer, close_price * 1.008)
-            # 🛡️ SERT STOP TAVAN KORUMASI: Maksimum %1.2 risk sınırı
-            hard_stop = min(s3 if (s3 > 0 and s3 > s4) else (s4 + buffer * 2.0), close_price * 1.012)
+            buffer = (s3 - s4) * BUFFER_RATIO if (s3 > s4) else (s4 * 0.003)
+            soft_stop = min(s4 + buffer, close_price * 1.0050)
+            raw_stop = s3 if (s3 > 0 and s3 > s4 and (s3 - s4)/s4 <= 0.0075) else (s4 + buffer)
+            hard_stop = min(raw_stop, close_price * 1.0055)
             target_s5 = s5 if (s5 > 0 and s5 <= close_price * 0.992) else (mval if (mval > 0 and mval <= close_price * 0.992) else close_price * 0.985)
             await self._handle_open(
                 symbol=symbol, side="SHORT", entry_price=close_price,
@@ -3625,10 +3629,10 @@ class StrategyEngine:
             candidates = [c for c in [below_npoc, below_nval, s5, dip_avwap] if c and c <= close_price * 0.992]
             target = max(candidates) if candidates else close_price * 0.982
             coin_atr = self.get_symbol_atr_pct(symbol)
-            dyn_stop_pct = max(0.008, min(0.025, coin_atr * 1.0))
+            dyn_stop_pct = max(0.0030, min(0.0055, coin_atr * 0.35))
             buffer = mval * dyn_stop_pct
-            soft_stop = round(mval + buffer, 6)
-            hard_stop = round(mval + buffer * 1.5, 6)
+            soft_stop = round(min(mval + buffer, close_price * 1.0050), 6)
+            hard_stop = round(min(mval + buffer, close_price * 1.0060), 6)
             reason_lbl8 = "mVAL Aylik Destek Kirilimi (Macro Breakdown)"
             c_list8 = ["mVAL_Breakdown", "Volume_Profile_Collapse"]
             if sym_met.get("is_stoikov_bear", False):
@@ -3728,10 +3732,9 @@ class StrategyEngine:
                 return
 
             buffer = (p - support_npoc) * BUFFER_RATIO if (p > support_npoc) else (support_npoc * 0.003)
-            soft_stop = max(support_npoc - buffer, close_price * 0.994)
-            raw_hard_stop = s4 if (s4 > 0 and s4 < support_npoc) else (support_npoc - buffer * 2)
-            # 🛡️ SERT STOP TAVAN KORUMASI: Maksimum %0.9 risk sınırı (R:R Dengelemesi)
-            hard_stop = max(raw_hard_stop, close_price * 0.991)
+            soft_stop = max(support_npoc - buffer, close_price * 0.9950)
+            raw_hard_stop = s4 if (s4 > 0 and s4 < support_npoc and (support_npoc - s4)/support_npoc <= 0.0075) else (support_npoc - buffer)
+            hard_stop = max(raw_hard_stop, close_price * 0.9945)
 
             # Smart Multi-Target: En yakin ilk direnci TP1, nihai hedefi TP2 yap
             up_targets = [
@@ -3792,7 +3795,7 @@ class StrategyEngine:
             btc_chg_1h = macro.get("btc_chg_1h", 0.0)
             is_ice_sniper_sell = sym_met.get("is_iceberg_sniper_sell", False)
             is_trapped_longs_check = (sym_met.get("trapped_status") == "TRAPPED_LONGS")
-            if "GÜÇLÜ BOĞA" in trend_regime or btc_chg_1h > 0.35:
+            if "GÜÇLÜ BOĞA" in trend_regime or (btc_chg_1h > 0.80 and "AYI" not in trend_regime):
                 self.log_rejection(symbol, "Yukarı nPOC Reddi", f"Piyasa {trend_regime} rejimindeyken Yukarı nPOC'den SHORT açılmadı (Short Squeeze Koruması)")
                 return
             elif "BOĞA" in trend_regime:
@@ -3824,10 +3827,9 @@ class StrategyEngine:
                     return
 
             buffer = (resist_npoc - p) * BUFFER_RATIO if (resist_npoc > p) else (resist_npoc * 0.003)
-            soft_stop = min(resist_npoc + buffer, close_price * 1.006)
-            raw_hard_stop = r4 if (r4 > 0 and r4 > resist_npoc) else (resist_npoc + buffer * 2)
-            # 🛡️ SERT STOP TAVAN KORUMASI: Maksimum %0.9 risk sınırı (R:R Dengelemesi)
-            hard_stop = min(raw_hard_stop, close_price * 1.009)
+            soft_stop = min(resist_npoc + buffer, close_price * 1.0050)
+            raw_hard_stop = r4 if (r4 > 0 and r4 > resist_npoc and (r4 - resist_npoc)/resist_npoc <= 0.0075) else (resist_npoc + buffer)
+            hard_stop = min(raw_hard_stop, close_price * 1.0055)
 
             # Smart Multi-Target: En yakin ilk destegi TP1, nihai hedefi TP2 yap
             down_targets = [
@@ -3891,9 +3893,9 @@ class StrategyEngine:
             else:
                 cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
                 cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
-                is_strong_bull_mkt = ("GÜÇLÜ BOĞA" in trend_regime or macro.get("btc_chg_1h", 0.0) > 0.35)
+                is_strong_bull_mkt = ("GÜÇLÜ BOĞA" in trend_regime) or (macro.get("btc_chg_1h", 0.0) > 0.80 and "AYI" not in trend_regime)
                 is_weak_outlier = (coin_rs_score <= -0.60 and cvd_ratio <= 44.0)
-                if is_strong_bull_mkt or (coin_rs_score >= 0.5 and not is_bear_dump) or ("BOĞA" in trend_regime and not is_weak_outlier):
+                if (is_strong_bull_mkt and not is_weak_outlier) or (coin_rs_score >= 0.5 and not is_bear_dump) or ("BOĞA" in trend_regime and not is_weak_outlier):
                     self.log_rejection(symbol, f"SETUP 11 {resist_tag} Retest Reddi", f"Piyasa {trend_regime} rejimindeyken (RS: {coin_rs_score:+.2f}) direnç retest shortu açılmadı.")
                 else:
                     c_high = current_candle.get('high', close_price)
@@ -3923,9 +3925,8 @@ class StrategyEngine:
                         tp2_target = down_targets[-1] if len(down_targets) > 1 else (s4 if (s4 > 0 and s4 < tp1_target) else None)
 
                         buffer = resist_lvl * 0.0025
-                        soft_stop = min(resist_lvl + buffer, close_price * 1.006)
-                        # 🛡️ SERT STOP TAVAN KORUMASI: Maksimum %0.9 risk sınırı (R:R Dengelemesi)
-                        hard_stop = min(resist_lvl + buffer * 2.0, close_price * 1.009)
+                        soft_stop = min(resist_lvl + buffer, close_price * 1.0050)
+                        hard_stop = min(resist_lvl + buffer, close_price * 1.0055)
 
                         await self._handle_open(
                             symbol=symbol, side="SHORT", entry_price=close_price,
@@ -3965,11 +3966,11 @@ class StrategyEngine:
 
                 has_seller_pressure = (obi_ratio <= 0.65) or (obi_imbalance <= -0.20) or (cvd_ratio <= 42.0)
 
-                is_strong_bull_mkt = ("GÜÇLÜ BOĞA" in trend_regime or macro.get("btc_chg_1h", 0.0) > 0.35)
+                is_strong_bull_mkt = ("GÜÇLÜ BOĞA" in trend_regime) or (macro.get("btc_chg_1h", 0.0) > 0.80 and "AYI" not in trend_regime)
                 is_weak_outlier = (coin_rs_score <= -0.60 and cvd_ratio <= 44.0)
                 if not has_seller_pressure and vol_surge < 1.3:
                     self.log_rejection(symbol, f"SETUP 12 {support_type} Çöküşü", f"Destek kırılımında satıcı duvarı / CVD teyidi yok (OBI: %{obi_imbalance*100:.1f}, CVD: %{cvd_ratio:.1f})")
-                elif is_strong_bull_mkt or ("BOĞA" in trend_regime and not is_weak_outlier):
+                elif (is_strong_bull_mkt and not is_weak_outlier) or ("BOĞA" in trend_regime and not is_weak_outlier):
                     self.log_rejection(symbol, f"SETUP 12 {support_type} Çöküşü", f"Piyasa {trend_regime} rejimindeyken destek kırılım shortu açılmadı.")
                 else:
                     down_targets = [lvl for lvl in [s4, s5, below_nval, mval] if lvl and lvl <= close_price * 0.992]
@@ -3978,9 +3979,8 @@ class StrategyEngine:
                     tp2_target = down_targets[-1] if len(down_targets) > 1 else None
 
                     buffer = break_support * 0.003
-                    soft_stop = min(break_support + buffer, close_price * 1.006)
-                    # 🛡️ SERT STOP TAVAN KORUMASI: Maksimum %1.0 risk sınırı (R:R Dengelemesi)
-                    hard_stop = min(break_support + buffer * 2.0, close_price * 1.010)
+                    soft_stop = min(break_support + buffer, close_price * 1.0050)
+                    hard_stop = min(break_support + buffer, close_price * 1.0060)
 
                     await self._handle_open(
                         symbol=symbol, side="SHORT", entry_price=close_price,
@@ -4012,11 +4012,11 @@ class StrategyEngine:
 
                 cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
                 cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
-                is_strong_bull_mkt = ("GÜÇLÜ BOĞA" in trend_regime or macro.get("btc_chg_1h", 0.0) > 0.35)
+                is_strong_bull_mkt = ("GÜÇLÜ BOĞA" in trend_regime) or (macro.get("btc_chg_1h", 0.0) > 0.80 and "AYI" not in trend_regime)
                 is_weak_outlier = (coin_rs_score <= -0.60 and cvd_ratio <= 44.0)
                 if not is_seller_rej:
                     self.log_rejection(symbol, "SETUP 13 S3 Retest Reddi", f"S3 retestinde satıcı tepkisi yok (Fitil: %{upper_wick_ratio*100:.1f})")
-                elif is_strong_bull_mkt or ("BOĞA" in trend_regime and not is_weak_outlier):
+                elif (is_strong_bull_mkt and not is_weak_outlier) or ("BOĞA" in trend_regime and not is_weak_outlier):
                     self.log_rejection(symbol, "SETUP 13 S3 Retest Reddi", f"Piyasa {trend_regime} rejimindeyken S3 retest shortu açılmadı.")
                 else:
                     down_targets = [lvl for lvl in [s4, s5, below_npoc, below_nval] if lvl and lvl <= close_price * 0.992]
@@ -4025,8 +4025,9 @@ class StrategyEngine:
                     tp2_target = down_targets[-1] if len(down_targets) > 1 else None
 
                     buffer = (p - s3) * BUFFER_RATIO if (p > s3) else (s3 * 0.003)
-                    soft_stop = min(s3 + buffer, close_price * 1.008)
-                    hard_stop = min(s3 + buffer * 2.0, close_price * 1.012)
+                    soft_stop = min(s3 + buffer, close_price * 1.0050)
+                    raw_stop = p if (p > 0 and p > s3 and (p - s3)/s3 <= 0.0075) else (s3 + buffer)
+                    hard_stop = min(raw_stop, close_price * 1.0055)
 
                     await self._handle_open(
                         symbol=symbol, side="SHORT", entry_price=close_price,
@@ -4087,8 +4088,8 @@ class StrategyEngine:
                         tp2_target = up_targets[-1] if len(up_targets) > 1 else (r4 if (r4 > 0 and r4 > tp1_target) else None)
 
                         buffer = support_lvl * 0.0025
-                        soft_stop = max(support_lvl - buffer, close_price * 0.994)
-                        hard_stop = max(support_lvl - buffer * 2.0, close_price * 0.991)
+                        soft_stop = max(support_lvl - buffer, close_price * 0.9950)
+                        hard_stop = max(support_lvl - buffer, close_price * 0.9945)
 
                         await self._handle_open(
                             symbol=symbol, side="LONG", entry_price=close_price,
@@ -4130,8 +4131,8 @@ class StrategyEngine:
                         tp2_target = up_targets[-1] if len(up_targets) > 1 else None
 
                         buffer = reclaim_lvl * 0.003
-                        soft_stop = max(reclaim_lvl - buffer, close_price * 0.994)
-                        hard_stop = max(reclaim_lvl - buffer * 2.0, close_price * 0.990)
+                        soft_stop = max(reclaim_lvl - buffer, close_price * 0.9950)
+                        hard_stop = max(reclaim_lvl - buffer, close_price * 0.9945)
 
                         await self._handle_open(
                             symbol=symbol, side="LONG", entry_price=close_price,
@@ -4172,8 +4173,9 @@ class StrategyEngine:
                     tp2_target = up_targets[-1] if len(up_targets) > 1 else None
 
                     buffer = (r3 - p) * BUFFER_RATIO if (r3 > p) else (r3 * 0.003)
-                    soft_stop = max(r3 - buffer, close_price * 0.992)
-                    hard_stop = max(r3 - buffer * 2.0, close_price * 0.988)
+                    soft_stop = max(r3 - buffer, close_price * 0.9950)
+                    raw_stop = p if (p > 0 and p < r3 and (r3 - p)/r3 <= 0.0075) else (r3 - buffer)
+                    hard_stop = max(raw_stop, close_price * 0.9945)
 
                     await self._handle_open(
                         symbol=symbol, side="LONG", entry_price=close_price,

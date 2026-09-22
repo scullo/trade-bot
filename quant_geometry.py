@@ -33,7 +33,7 @@ except ImportError:
     ENABLE_GEOMETRIC_R_GATE = True
     MIN_PLANNED_R_RATIO = 1.80
     ENABLE_RUNWAY_CLEARANCE = True
-    MIN_RUNWAY_OBSTACLE_R = 1.40
+    MIN_RUNWAY_OBSTACLE_R = 1.10
     ENABLE_REGIME_DIRECTIONAL_GATE = True
     BULL_SHORT_MIN_CVD_PCT = 52.0
     ENABLE_MAX_STOP_DIST_GATE = True
@@ -66,7 +66,7 @@ def check_runway_clearance(
     target_p: float,
     levels: Optional[Dict[str, Any]],
     side: str,
-    min_obstacle_r: float = 1.40
+    min_obstacle_r: float = 1.10
 ) -> Tuple[bool, str, Optional[str], float]:
     """
     Giriş ile hedef (TP1) arasında fiyatın koşusunu engelleyecek sert bir yapısal
@@ -103,19 +103,23 @@ def check_runway_clearance(
         for name, lvl in level_keys:
             if lvl and isinstance(lvl, (int, float)) and lvl > entry_p * (1.0 + tolerance):
                 dist_to_lvl = lvl - entry_p
+                eff_min_r = 1.00 if name == 'mPOC' else min_obstacle_r
+                min_free_dist = risk_dist * eff_min_r
                 # Eğer seviye hedefin önündeyse ve min_free_dist'ten daha yakınsa koridor tıkalıdır
                 if dist_to_lvl < (target_p - entry_p) and dist_to_lvl < min_free_dist:
                     obs_r = dist_to_lvl / risk_dist if risk_dist > 0 else 0
-                    return False, f"Hava Koridoru Tıkalı: Önünde {name} (${lvl:.4f}) engeli var ({obs_r:.2f}R < {min_obstacle_r:.2f}R)", name, float(lvl)
+                    return False, f"Hava Koridoru Tıkalı: Önünde {name} (${lvl:.4f}) engeli var ({obs_r:.2f}R < {eff_min_r:.2f}R)", name, float(lvl)
 
     elif side == "SHORT":
         for name, lvl in level_keys:
             if lvl and isinstance(lvl, (int, float)) and lvl < entry_p * (1.0 - tolerance):
                 dist_to_lvl = entry_p - lvl
+                eff_min_r = 1.00 if name == 'mPOC' else min_obstacle_r
+                min_free_dist = risk_dist * eff_min_r
                 # Eğer seviye hedefin önündeyse ve min_free_dist'ten daha yakınsa koridor tıkalıdır
                 if dist_to_lvl < (entry_p - target_p) and dist_to_lvl < min_free_dist:
                     obs_r = dist_to_lvl / risk_dist if risk_dist > 0 else 0
-                    return False, f"Hava Koridoru Tıkalı: Önünde {name} (${lvl:.4f}) engeli var ({obs_r:.2f}R < {min_obstacle_r:.2f}R)", name, float(lvl)
+                    return False, f"Hava Koridoru Tıkalı: Önünde {name} (${lvl:.4f}) engeli var ({obs_r:.2f}R < {eff_min_r:.2f}R)", name, float(lvl)
 
     return True, "Hava koridoru açık.", None, 0.0
 
