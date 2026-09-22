@@ -2467,10 +2467,18 @@ HTML_PAGE = """
             flex-direction: column;
             gap: 4px;
             transition: all 0.2s ease;
+            cursor: pointer;
+            user-select: none;
         }
         .setup-matrix-card:hover {
-            border-color: rgba(0, 242, 254, 0.3);
-            transform: translateY(-1px);
+            border-color: rgba(0, 242, 254, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 14px rgba(0, 242, 254, 0.12);
+        }
+        .setup-matrix-card.active-card {
+            border-color: var(--cyan);
+            background: rgba(0, 242, 254, 0.1);
+            box-shadow: 0 0 16px rgba(0, 242, 254, 0.25);
         }
         .setup-card-name {
             font-size: 11px;
@@ -3832,11 +3840,39 @@ HTML_PAGE = """
                     </select>
 
                     <select class="filter-select" id="filter-setup" onchange="onLedgerFilterChange()">
-                        <option value="ALL">🎯 Tüm Stratejiler</option>
-                        <option value="nPOC">🔵 nPOC Likidite</option>
-                        <option value="MACRO">🟣 mVAL / mVAH Kırılım</option>
-                        <option value="CAM_BO">⚡ S4 / R4 Breakout</option>
-                        <option value="CAM_BOUNCE">🛡️ S3 / R3 Destek & Direnç</option>
+                        <option value="ALL">🎯 Tüm Stratejiler (18 Setup)</option>
+                        
+                        <optgroup label="🔵 LİKİDİTE & nPOC">
+                            <option value="NPOC">🔵 nPOC Likidite Sekmesi / Reddi (Setup 9, 10)</option>
+                        </optgroup>
+                        
+                        <optgroup label="🔁 DESTEK & DİRENÇ RETEST / FLIP">
+                            <option value="RETEST">🔁 Tüm Retest & Flip Kurulumları (Setup 5-16)</option>
+                            <option value="FLIP_AVWAP">〰️ Dip/Tepe AVWAP & mVAH Reclaim (Setup 15)</option>
+                            <option value="FLIP_CAM">🛡️ Camarilla S3/R3/S4/R4 Flip (Setup 5, 7, 13, 16)</option>
+                            <option value="FLIP_PIVOT">⚖️ Pivot P & mPOC Flip / Retest (Setup 11, 14)</option>
+                        </optgroup>
+                        
+                        <optgroup label="⚡ CAMARILLA KIRILIMLARI (BREAKOUT)">
+                            <option value="CAM_BO">⚡ Camarilla S4 / R4 Breakout (Setup 1, 2)</option>
+                            <option value="BREAKDOWN">🚨 Destek Çöküşü / Breakdown (Setup 12)</option>
+                        </optgroup>
+                        
+                        <optgroup label="🛡️ BANT İÇİ DÖNÜŞ (BOUNCE / REJECTION)">
+                            <option value="CAM_BOUNCE">🛡️ Camarilla S3 Sekmesi / R3 Reddi (Setup 3, 4)</option>
+                        </optgroup>
+                        
+                        <optgroup label="🟣 MAKRO HACİM ALANI">
+                            <option value="MACRO">🟣 mVAL / mVAH Makro Kırılımı (Setup 6, 8)</option>
+                        </optgroup>
+                        
+                        <optgroup label="🪤 TUZAK İNTİKAMI (REFORM 4)">
+                            <option value="RECLAIM">🪤 Fakeout Reclaim (Boğa / Ayı Tuzağı İntikamı)</option>
+                        </optgroup>
+
+                        <optgroup label="🎯 DİĞER ÖZEL STRATEJİLER">
+                            <option value="SCALP">🎯 Diğer Scalp / Iceberg & L2 Derinlik</option>
+                        </optgroup>
                     </select>
 
                     <select class="filter-select" id="filter-status" onchange="onLedgerFilterChange()">
@@ -3845,6 +3881,9 @@ HTML_PAGE = """
                         <option value="LOSS">🔴 Zararlı İşlemler</option>
                     </select>
 
+                    <button class="btn-export" onclick="resetLedgerFilters()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); box-shadow:none; padding:7px 12px;" title="Tüm filtreleri varsayılana sıfırla">
+                        🔄 Sıfırla
+                    </button>
                     <button class="btn-export" onclick="downloadExcelReport()" title="Pasta grafikleri, KPI kartları ve renklendirilmiş sekmeleriyle Excel raporu indir">
                         📊 Excel İndir (.xlsx)
                     </button>
@@ -9164,57 +9203,134 @@ async function loadAdminMetrics() {
         }
 
         // =========================================================================
-        // 📊 SETUP PERFORMANS MATRİSİ (16 SETUP İSTATİSTİĞİ)
+        // 📊 SETUP PERFORMANS MATRİSİ VE ADLİ DEFTER SINIFLANDIRMA MOTORU
         // =========================================================================
+        function classifyTradeSetup(h) {
+            if (!h) return 'SCALP';
+            const sId = (h.setup_id || '').toUpperCase();
+            const r = (h.reason || '');
+            const raw = (sId + ' ' + (h.trade_type || '') + ' ' + r).toUpperCase();
+
+            // 1. Fakeout Reclaim (Reform 4)
+            if (sId.includes('FAKEOUT_RECLAIM') || r.includes('Fakeout Reclaim') || (raw.includes('FAKEOUT') && raw.includes('RECLAIM'))) return 'RECLAIM';
+
+            // 2. nPOC Likidite (Setup 9, 10)
+            if (sId.includes('NPOC') || r.includes('nPOC') || raw.includes('NPOC')) return 'NPOC';
+
+            // 3. Makro Değer Alanı (Setup 6, 8, 15)
+            if (sId.includes('MVAL') || sId.includes('MVAH') || r.includes('mVAL') || r.includes('mVAH') || (r.includes('Macro') && !r.includes('Breakout'))) return 'MACRO';
+
+            // 4. Retest & Support/Resistance Flip (Setup 5, 7, 11, 13, 14, 15, 16)
+            if (r.includes('Retest') || r.includes('Flip') || sId.includes('FLIP') || sId.includes('RETEST') || r.includes('AVWAP Destek') || r.includes('AVWAP Reclaim') || r.includes('Support Flip')) return 'RETEST';
+
+            // 5. Destek Çöküşü / Breakdown (Setup 12)
+            if (sId.includes('BREAKDOWN') || r.includes('Breakdown') || r.includes('Çöküşü') || r.includes('ÇÖKÜŞ')) return 'BREAKDOWN';
+
+            // 6. Camarilla S4 / R4 Breakout (Setup 1, 2)
+            if (sId.includes('BREAKOUT') || r.includes('Breakout') || (r.includes('S4') && r.includes('Kırılım')) || (r.includes('R4') && r.includes('Kırılım'))) return 'CAM_BO';
+
+            // 7. Camarilla S3 / R3 Bant Dönüşü (Setup 3, 4)
+            if (sId.includes('BOUNCE') || sId.includes('REJECTION') || r.includes('S3 Destek Sekmesi') || r.includes('R3 Direnç Reddi') || r.includes('S3 Sekmesi') || r.includes('R3 Reddi')) return 'CAM_BOUNCE';
+
+            return 'SCALP';
+        }
+
+        function matchSetupFilter(h, filterVal) {
+            if (!filterVal || filterVal === 'ALL') return true;
+            const key = classifyTradeSetup(h);
+            const r = (h.reason || '');
+            const sId = (h.setup_id || '').toUpperCase();
+
+            if (filterVal === 'NPOC') return key === 'NPOC';
+            if (filterVal === 'MACRO') return key === 'MACRO';
+            if (filterVal === 'RETEST') return key === 'RETEST';
+            if (filterVal === 'FLIP_AVWAP') return key === 'RETEST' && (r.includes('AVWAP') || sId.includes('AVWAP') || sId.includes('MVAH'));
+            if (filterVal === 'FLIP_CAM') return key === 'RETEST' && (r.includes('S3') || r.includes('R3') || r.includes('S4') || r.includes('R4') || sId.includes('S3') || sId.includes('R3') || sId.includes('S4') || sId.includes('R4'));
+            if (filterVal === 'FLIP_PIVOT') return key === 'RETEST' && (r.includes('Pivot') || r.includes('mPOC') || sId.includes('PIVOT') || sId.includes('MPOC') || sId.includes('SETUP_11') || sId.includes('SETUP_14'));
+            if (filterVal === 'CAM_BO') return key === 'CAM_BO';
+            if (filterVal === 'BREAKDOWN') return key === 'BREAKDOWN';
+            if (filterVal === 'CAM_BOUNCE') return key === 'CAM_BOUNCE';
+            if (filterVal === 'RECLAIM') return key === 'RECLAIM';
+            if (filterVal === 'SCALP') return key === 'SCALP';
+            return true;
+        }
+
+        function quickFilterSetup(setupKey) {
+            const setupEl = document.getElementById('filter-setup');
+            if (!setupEl) return;
+            if (setupEl.value === setupKey) {
+                setupEl.value = 'ALL';
+            } else {
+                setupEl.value = setupKey;
+            }
+            if (typeof onLedgerFilterChange === 'function') {
+                onLedgerFilterChange();
+            }
+        }
+
+        function resetLedgerFilters() {
+            const symEl = document.getElementById('filter-symbol');
+            const setupEl = document.getElementById('filter-setup');
+            const statusEl = document.getElementById('filter-status');
+            if (symEl) symEl.value = 'ALL';
+            if (setupEl) setupEl.value = 'ALL';
+            if (statusEl) statusEl.value = 'ALL';
+            if (typeof onLedgerFilterChange === 'function') {
+                onLedgerFilterChange();
+            }
+        }
+
         function renderSetupPerformanceMatrix() {
             try {
                 const container = document.getElementById('ledger-setup-matrix-container');
                 if (!container) return;
 
                 const hist = (appState && appState.history) || [];
+                const curFilter = document.getElementById('filter-setup') ? document.getElementById('filter-setup').value : 'ALL';
 
                 // Categorize by setups
                 const setups = {
-                    'nPOC': { name: 'nPOC Likidite Avcısı', icon: '🔵', wins: 0, losses: 0, pnl: 0.0 },
-                    'MACRO': { name: 'Macro mVAL / mVAH', icon: '🟣', wins: 0, losses: 0, pnl: 0.0 },
-                    'CAM_BO': { name: 'Camarilla S4/R4 Breakout', icon: '⚡', wins: 0, losses: 0, pnl: 0.0 },
-                    'CAM_BOUNCE': { name: 'Camarilla S3/R3 Bounce', icon: '🛡️', wins: 0, losses: 0, pnl: 0.0 },
-                    'SCALP': { name: 'Diğer / GEX / Iceberg Scalp', icon: '🎯', wins: 0, losses: 0, pnl: 0.0 }
+                    'NPOC': { name: 'nPOC Likidite Avcısı', icon: '🔵', desc: 'Setup 9, 10', wins: 0, losses: 0, pnl: 0.0 },
+                    'RETEST': { name: 'Destek/Direnç Retest & Flip', icon: '🔁', desc: 'Setup 5-16', wins: 0, losses: 0, pnl: 0.0 },
+                    'CAM_BO': { name: 'Camarilla S4/R4 Breakout', icon: '⚡', desc: 'Setup 1, 2', wins: 0, losses: 0, pnl: 0.0 },
+                    'BREAKDOWN': { name: 'Destek Çöküşü / Breakdown', icon: '🚨', desc: 'Setup 12', wins: 0, losses: 0, pnl: 0.0 },
+                    'CAM_BOUNCE': { name: 'Camarilla S3/R3 Bant Dönüşü', icon: '🛡️', desc: 'Setup 3, 4', wins: 0, losses: 0, pnl: 0.0 },
+                    'MACRO': { name: 'Macro mVAL / mVAH Kırılımı', icon: '🟣', desc: 'Setup 6, 8', wins: 0, losses: 0, pnl: 0.0 },
+                    'RECLAIM': { name: 'Fakeout Reclaim (Tuzak İntikamı)', icon: '🪤', desc: 'Reform 4', wins: 0, losses: 0, pnl: 0.0 },
+                    'SCALP': { name: 'Diğer Scalp & Iceberg', icon: '🎯', desc: 'L2 Scalp', wins: 0, losses: 0, pnl: 0.0 }
                 };
 
                 hist.forEach(h => {
-                    const r = (h.reason || '');
+                    const key = classifyTradeSetup(h);
                     const pnl = Number(h.net_pnl || 0.0);
-                    let key = 'SCALP';
-                    if (r.includes('nPOC')) key = 'nPOC';
-                    else if (r.includes('mVAL') || r.includes('mVAH')) key = 'MACRO';
-                    else if (r.includes('Breakout') || r.includes('Breakdown')) key = 'CAM_BO';
-                    else if (r.includes('S3') || r.includes('R3')) key = 'CAM_BOUNCE';
-
-                    setups[key].pnl += pnl;
-                    if (pnl >= 0) setups[key].wins++;
-                    else setups[key].losses++;
+                    if (setups[key]) {
+                        setups[key].pnl += pnl;
+                        if (pnl >= 0) setups[key].wins++;
+                        else setups[key].losses++;
+                    }
                 });
 
                 let html = '';
                 for (const k in setups) {
                     const s = setups[k];
                     const total = s.wins + s.losses;
+                    if (total === 0 && (k === 'SCALP' || k === 'RECLAIM')) continue;
                     const winRate = total > 0 ? ((s.wins / total) * 100).toFixed(0) : '0';
                     const pnlColor = s.pnl >= 0 ? 'var(--green)' : 'var(--red)';
+                    const isActive = (curFilter === k);
 
                     html += `
-                        <div class="setup-matrix-card">
+                        <div class="setup-matrix-card ${isActive ? 'active-card' : ''}" onclick="quickFilterSetup('${k}')" title="${s.name} (${s.desc}) filtrelemek için tıklayın">
                             <div class="setup-card-name">
                                 <span>${s.icon} ${s.name}</span>
-                                <span style="color:#cbd5e1;">${total} İşlem</span>
+                                <span style="color:#cbd5e1; font-size:10.5px;">${total} İşlem</span>
                             </div>
                             <div class="setup-card-pnl" style="color:${pnlColor};">
-                                ${s.pnl >= 0 ? '+' : ''}$${s.pnl.toFixed(2)}
+                                ${s.pnl >= 0 ? '+' : '-'}$${Math.abs(s.pnl).toFixed(2)}
                             </div>
                             <div class="setup-card-stats">
                                 <span>Win Rate: <b style="color:${Number(winRate) >= 50 ? 'var(--green)' : '#94a3b8'};">%${winRate}</b></span>
-                                <span>${s.wins}K / ${s.losses}Z</span>
+                                <span>${s.wins}K / ${s.losses}Z ${isActive ? '• <b style="color:var(--cyan)">FİLTRELİ</b>' : ''}</span>
                             </div>
                         </div>
                     `;
@@ -11537,18 +11653,15 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
 
                 let filtered = hList.slice().reverse().filter(item => {
                     if (!item) return false;
-                    const itemSym = item.symbol || '';
-                    if (symFilter !== 'ALL' && itemSym !== symFilter) return false;
+                    const itemSym = (item.symbol || '').replace('/USDT', '');
+                    const cleanSymFilter = (symFilter || '').replace('/USDT', '');
+                    if (cleanSymFilter !== 'ALL' && itemSym !== cleanSymFilter && item.symbol !== symFilter) return false;
                     
                     const pnlNum = Number(item.net_pnl || 0.0);
                     if (statusFilter === 'WIN' && pnlNum < 0) return false;
                     if (statusFilter === 'LOSS' && pnlNum >= 0) return false;
 
-                    const r = item.reason || '';
-                    if (setupFilter === 'nPOC' && !r.includes('nPOC')) return false;
-                    if (setupFilter === 'MACRO' && !r.includes('mVAL') && !r.includes('mVAH')) return false;
-                    if (setupFilter === 'CAM_BO' && !r.includes('Breakout') && !r.includes('Breakdown')) return false;
-                    if (setupFilter === 'CAM_BOUNCE' && !r.includes('S3') && !r.includes('R3')) return false;
+                    if (!matchSetupFilter(item, setupFilter)) return false;
 
                     return true;
                 });
@@ -11585,10 +11698,14 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
 
                     // Setup badge style
                     let setupBadgeClass = 'badge-other';
-                    if (r.includes('nPOC')) setupBadgeClass = 'badge-npoc';
-                    else if (r.includes('mVAL') || r.includes('mVAH')) setupBadgeClass = 'badge-macro';
-                    else if (r.includes('Breakout') || r.includes('Breakdown')) setupBadgeClass = 'badge-breakout';
-                    else if (r.includes('S3') || r.includes('R3')) setupBadgeClass = 'badge-bounce';
+                    const sClass = classifyTradeSetup(h);
+                    if (sClass === 'NPOC') setupBadgeClass = 'badge-npoc';
+                    else if (sClass === 'MACRO') setupBadgeClass = 'badge-macro';
+                    else if (sClass === 'CAM_BO') setupBadgeClass = 'badge-breakout';
+                    else if (sClass === 'BREAKDOWN') setupBadgeClass = 'badge-hard';
+                    else if (sClass === 'CAM_BOUNCE') setupBadgeClass = 'badge-bounce';
+                    else if (sClass === 'RETEST') setupBadgeClass = 'badge-macro';
+                    else if (sClass === 'RECLAIM') setupBadgeClass = 'badge-breakout';
 
                     // Exit badge style
                     let exitBadgeClass = 'badge-time';
@@ -11607,11 +11724,11 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                         <td style="color:#94a3b8; font-size:12px; white-space:nowrap;">⏱️ ${duration}</td>
                         <td><b style="color:#ffffff; font-size:13.5px; cursor:pointer;" onclick="openTradingViewModal('${symClean}')" title="${symClean} Göstergeli Grafiğini Aç">${symClean}</b></td>
                         <td><span class="pos-badge ${side === 'LONG' ? 'pos-long' : 'pos-short'}" style="font-size:11px; padding:2px 8px;">${(Number(lev) >= 7 ? '💎 ' : (Number(lev) <= 3 ? '🛡️ ' : ''))}${lev}x ${side}</span></td>
-                        <td>$${entryP}</td>
-                        <td>$${exitP}</td>
+                        <td>$${formatSmartPrice(entryP)}</td>
+                        <td>$${formatSmartPrice(exitP)}</td>
                         <td>
                             <span class="history-pnl-pill ${isWin ? 'pnl-win' : 'pnl-loss'}">
-                                ${netPnl >= 0 ? '+' : ''}$${netPnl.toFixed(2)}
+                                ${netPnl >= 0 ? '+' : '-'}$${Math.abs(netPnl).toFixed(2)}
                             </span>
                         </td>
                         <td>
@@ -11693,13 +11810,19 @@ function downloadExcelReport() {
                     return;
                 }
 
-                const symFilter = document.getElementById('filter-symbol').value;
-                const statusFilter = document.getElementById('filter-status').value;
+                const symFilter = document.getElementById('filter-symbol') ? document.getElementById('filter-symbol').value : 'ALL';
+                const setupFilter = document.getElementById('filter-setup') ? document.getElementById('filter-setup').value : 'ALL';
+                const statusFilter = document.getElementById('filter-status') ? document.getElementById('filter-status').value : 'ALL';
 
                 let filtered = hList.filter(item => {
-                    if (symFilter !== 'ALL' && item.symbol !== symFilter) return false;
-                    if (statusFilter === 'WIN' && item.net_pnl < 0) return false;
-                    if (statusFilter === 'LOSS' && item.net_pnl >= 0) return false;
+                    if (!item) return false;
+                    const itemSym = (item.symbol || '').replace('/USDT', '');
+                    const cleanSymFilter = (symFilter || '').replace('/USDT', '');
+                    if (cleanSymFilter !== 'ALL' && itemSym !== cleanSymFilter && item.symbol !== symFilter) return false;
+                    const pnlNum = Number(item.net_pnl || 0.0);
+                    if (statusFilter === 'WIN' && pnlNum < 0) return false;
+                    if (statusFilter === 'LOSS' && pnlNum >= 0) return false;
+                    if (!matchSetupFilter(item, setupFilter)) return false;
                     return true;
                 });
 
@@ -12211,7 +12334,7 @@ function downloadExcelReport() {
                         snapHtml += `
                         <div style="background:rgba(255,255,255,0.04); border:1px solid var(--border); padding:8px 12px; border-radius:8px; font-size:12px; display:flex; justify-content:space-between; align-items:center;">
                             <span style="color:#94a3b8; font-weight:700;">${key}:</span>
-                            <b style="color:#fff; font-family:'JetBrains Mono';">$${val.toFixed(4)}</b>
+                            <b style="color:#fff; font-family:'JetBrains Mono';">$${formatSmartPrice(val)}</b>
                         </div>`;
                     }
                 }
@@ -12251,8 +12374,8 @@ function downloadExcelReport() {
                             🎯 STRATEJİ, TREND REJİMİ & PİYASA KOŞULLARI
                         </div>
                         <div style="font-size:12.5px; color:#f1f5f9; line-height:1.7;">
-                            <b>• Giriş Gerekçesi / Formasyon:</b> <span style="color:#ffffff;">${item.reason}</span><br>
-                            <b>• Kapanış Tetikleyicisi:</b> <span style="color:#fbc531;">${item.close_reason}</span><br>
+                            <b>• Giriş Gerekçesi / Formasyon:</b> <span style="color:#ffffff;">${item.reason || 'Strateji Sinyali'}</span><br>
+                            <b>• Kurumsal Kurulum (Setup):</b> <span style="color:var(--cyan); font-weight:700; font-family:'JetBrains Mono';">${item.setup_id || classifyTradeSetup(item)}</span> | <b>Kapanış Tetikleyicisi:</b> <span style="color:#fbc531;">${item.close_reason || 'Kapanış'}</span><br>
                             <b>• Giriş Anı Trend Rejimi:</b> <span style="color:#a5f3fc; font-weight:700;">${item.trend_regime || 'Belirleniyor'}</span> | <b>Volatilite (ATR):</b> <span style="color:#fde047; font-weight:700;">%${item.atr_pct !== undefined ? item.atr_pct : '1.2'}</span><br>
                             <b>• Hacim Patlama Katsayısı:</b> <span style="color:#38bdf8; font-weight:700;">${item.volume_surge || '1.0'}x Ort. Hacim</span> | <b>Confluence Güç Skoru:</b> <span style="color:#c084fc; font-weight:700;">${item.confluence_score || '2/4'}</span><br>
                             <b>• Makro Uyum (1H/4H):</b> <span style="color:#fcd34d; font-weight:700;">${item.htf_alignment || 'Nötr'}</span> | <b>Piyasa Seansı:</b> <span style="color:#e2e8f0;">${item.session || 'Küresel Seans'}</span><br>
