@@ -487,6 +487,19 @@ class PaperTrader:
         risk_dist = abs(entry_price - stop_level) if stop_level > 0 else (entry_price * 0.015)
         stop_dist_pct = (risk_dist / entry_price) if entry_price > 0 else 0.015
 
+        # Sniper Stop Mesafesi Güvenlik Kalkanı (Seviye Dibi Teyitsiz Giriş Engeli)
+        try:
+            from config import ENABLE_MAX_STOP_DIST_GATE, MAX_ENTRY_STOP_DIST_PCT
+            if ENABLE_MAX_STOP_DIST_GATE and stop_dist_pct > (MAX_ENTRY_STOP_DIST_PCT / 100.0) and not kwargs.get("bypass_stop_gate", False):
+                print(f">> [PAPER TRADER ENGELLEDİ] {symbol}: Stop mesafesi (%{stop_dist_pct*100:.2f} > %{MAX_ENTRY_STOP_DIST_PCT:.2f}) çok geniş!")
+                return {
+                    "error": "STOP_DISTANCE_TOO_WIDE",
+                    "stop_dist_pct": round(stop_dist_pct * 100.0, 2),
+                    "max_allowed": MAX_ENTRY_STOP_DIST_PCT
+                }
+        except Exception:
+            pass
+
         # Kurumsal Risk Paritesi: Kasanın %0.80'i net dolar riski olarak hedeflenir
         if custom_margin is not None:
             margin = float(custom_margin)

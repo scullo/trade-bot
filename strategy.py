@@ -26,7 +26,9 @@ from config import (
     ENABLE_OI_VELOCITY_RADAR, OI_EXPANSION_THRESHOLD_PCT, OI_SQUEEZE_EXHAUSTION_PCT,
     ENABLE_COINBASE_LEAD_LAG, COINBASE_LEAD_SPREAD_BPS,
     ENABLE_DYNAMIC_LEVERAGE, MIN_LEVERAGE, MAX_LEVERAGE, DEFAULT_LEVERAGE,
-    LEVERAGE_LOW_ATR_THRESHOLD, LEVERAGE_HIGH_ATR_THRESHOLD, LEVERAGE_EXTREME_ATR_THRESHOLD
+    LEVERAGE_LOW_ATR_THRESHOLD, LEVERAGE_HIGH_ATR_THRESHOLD, LEVERAGE_EXTREME_ATR_THRESHOLD,
+    ENABLE_MAX_STOP_DIST_GATE, MAX_ENTRY_STOP_DIST_PCT,
+    ENABLE_MEME_DEFENSIVE_MODE, MEME_SYMBOLS, MEME_MAX_LEVERAGE, MEME_MAX_MARGIN, MEME_MAX_STOP_DIST_PCT
 )
 
 
@@ -1980,9 +1982,26 @@ class StrategyEngine:
         dyn_max_margin_bound = max(float(MAX_POSITION_MARGIN), cur_vault_balance * 0.050)
         max_margin_cap = dyn_max_margin_bound if (has_whale_flow or c_count >= 4) else (dyn_max_margin_bound * 0.85)
 
+        # 🛡️ MEME & YÜKSEK BETA SERMAYE ZIRHI
+        is_meme_coin = ENABLE_MEME_DEFENSIVE_MODE and (
+            symbol in MEME_SYMBOLS or any(m in symbol for m in ["WIF", "PEPE", "TURBO", "FLOKI", "BONK", "COTI", "ONG", "POPCAT", "NEIRO"])
+        )
+        if is_meme_coin:
+            dyn_leverage = min(dyn_leverage, int(MEME_MAX_LEVERAGE))
+            max_margin_cap = min(max_margin_cap, float(MEME_MAX_MARGIN))
+            dyn_min_margin_bound = min(dyn_min_margin_bound, 100.0)
+            reason += f" [🛡️ Meme Zırhı ({dyn_leverage}x / ${MEME_MAX_MARGIN}m)]"
+            if confluence_list is not None and isinstance(confluence_list, list):
+                confluence_list.append("🛡️_Meme_Sermaye_Zırhı")
+
         dyn_margin = round(max(dyn_min_margin_bound, min(max_margin_cap, base_calc_margin * kelly_mult * getattr(self, 'margin_multiplier', 1.0))), 2)
 
+        # Katı Dolar Riski Tavanı (Maksimum $25 Dolar Riski Kalkanı - Hiçbir işlem $25'ten fazla riske atamaz)
         calculated_dollar_risk = round(dyn_margin * float(dyn_leverage) * effective_stop_pct, 2)
+        if calculated_dollar_risk > 25.0 and effective_stop_pct > 0:
+            capped_pos_val = 25.0 / effective_stop_pct
+            dyn_margin = round(max(dyn_min_margin_bound, min(max_margin_cap, capped_pos_val / float(dyn_leverage))), 2)
+            calculated_dollar_risk = round(dyn_margin * float(dyn_leverage) * effective_stop_pct, 2)
 
         # Kaldıraç Rozeti ve Confluence Etiketi
         if dyn_leverage >= 7:
@@ -2452,6 +2471,16 @@ class StrategyEngine:
         except Exception as e:
             # Sistemi bozma ilkesi: Beklenmedik hatada akışı kesme, güvenle devam et
             print(f">> [UYARI - QUANT GEOMETRY ATLANDI] {symbol}: {e}")
+
+        # ── 8c2. ÇİFT KATMANLI SNIPER STOP MESAFESİ KORUMASI ──
+        if ENABLE_MAX_STOP_DIST_GATE and entry_price > 0 and hard_stop > 0:
+            calc_stop_dist_pct = abs(entry_price - hard_stop) / entry_price * 100.0
+            allowed_max_stop = float(MEME_MAX_STOP_DIST_PCT if is_meme_coin else MAX_ENTRY_STOP_DIST_PCT)
+            if calc_stop_dist_pct > allowed_max_stop:
+                rej_msg = f"🎯 Sniper Stop Limiti: Stop mesafesi (%{calc_stop_dist_pct:.2f} > %{allowed_max_stop:.2f}) çok geniş! Seviye dibi değil."
+                print(f">> [RED - SNIPER STOP] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, reason, rej_msg, planned_r=0.0)
+                return {"error": "STOP_DISTANCE_TOO_WIDE", "reason": rej_msg}
 
         # ── 8d. 4 GİZLİ SİLAH TELEMETRİSİ (CVD DIVERGENCE, RVOL, MAKRO DOMİNANS) ──
         cvd_div_tag = "⚪ UYUMLU_AKIS (Normal)"

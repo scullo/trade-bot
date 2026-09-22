@@ -167,8 +167,10 @@ ENABLE_HMM_SWEEP_SHIELD = True   # Simons HMM Manipülasyon/Stop Avı Kalkanı
 HMM_SWEEP_SHIELD_MULT = 1.35     # Manipülasyon anında 1.35x stop nefes payı
 ENABLE_LONDON_SWEEP_SHIELD = True# Londra seansı sabah dip/tepe süpürme kalkanı (12:00 - 16:30 UTC+3)
 LONDON_SWEEP_SHIELD_MULT = 1.25  # Londra seansı süpürme çarpanı (1.25x)
-MAX_ABSOLUTE_STOP_PCT = 1.60     # Mutlak acil felaket stop tavanı (%1.60 - Sermaye zırhı)
-ENABLE_FAKEOUT_RECLAIM = True    # Sahte Kırılım / Ayı-Boğa Tuzağı İntikam Modülü (Reclaim Sniper)
+ENABLE_MAX_STOP_DIST_GATE = True  # Stop mesafesi > %0.80 olan tüm geniş stoplu işlemleri eleyen Sniper Kapısı
+MAX_ENTRY_STOP_DIST_PCT = 0.80    # Azami giriş stop mesafesi tavanı (%0.80 - Sniper Seviye Dibi Filtresi)
+MAX_ABSOLUTE_STOP_PCT = 0.95      # Mutlak acil felaket stop tavanı (%0.95 - Kayma ve Ani Düşüş Sermaye Zırhı)
+ENABLE_FAKEOUT_RECLAIM = True   # Sahte Kırılım / Ayı-Boğa Tuzağı İntikam Modülü (Reclaim Sniper)
 FAKEOUT_RECLAIM_MAX_CANDLES = 4  # İntikam takip penceresi: 4 mum (20 dakika)
 
 # 7. Açık Pozisyon (Open Interest) & Türev Yakıt Radarı
@@ -223,4 +225,15 @@ MIN_RUNWAY_OBSTACLE_R = 1.40          # Hedefe giden yolda ilk engel en az 1.4R 
 ENABLE_REGIME_DIRECTIONAL_GATE = True # Boğa rejiminde zayıf CVD'li counter-trend shortları engelle
 BULL_SHORT_MIN_CVD_PCT = 52.0         # Boğada short için gereken asgari satıcı CVD üstünlüğü (%52)
 ENABLE_CHANDELIER_BREATHING = True    # Erken Breakeven boğulmasını önleyen nefes payı
+
+# 10. Meme & Yüksek Beta Sermaye Kalkanı (Meme Defensive Risk Shield)
+ENABLE_MEME_DEFENSIVE_MODE = True
+MEME_SYMBOLS = [
+    "WIF/USDT", "PEPE/USDT", "TURBO/USDT", "FLOKI/USDT", "BONK/USDT",
+    "DOGE/USDT", "SHIB/USDT", "1000PEPE/USDT", "1000FLOKI/USDT", "1000BONK/USDT",
+    "MEME/USDT", "NEIRO/USDT", "POPCAT/USDT", "COTI/USDT", "ONG/USDT"
+]
+MEME_MAX_LEVERAGE = 3              # Meme paritelerde azami defansif kaldıraç (3x)
+MEME_MAX_MARGIN = 200.0            # Meme paritelerde azami marjin ($200)
+MEME_MAX_STOP_DIST_PCT = 0.70      # Meme paritelerde azami stop mesafesi (%0.70)
 

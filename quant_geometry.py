@@ -22,6 +22,11 @@ try:
         MIN_RUNWAY_OBSTACLE_R,
         ENABLE_REGIME_DIRECTIONAL_GATE,
         BULL_SHORT_MIN_CVD_PCT,
+        ENABLE_MAX_STOP_DIST_GATE,
+        MAX_ENTRY_STOP_DIST_PCT,
+        ENABLE_MEME_DEFENSIVE_MODE,
+        MEME_SYMBOLS,
+        MEME_MAX_STOP_DIST_PCT,
     )
 except ImportError:
     # Güvenli varsayılan değerler (Fail-Safe Fallback)
@@ -31,6 +36,11 @@ except ImportError:
     MIN_RUNWAY_OBSTACLE_R = 1.40
     ENABLE_REGIME_DIRECTIONAL_GATE = True
     BULL_SHORT_MIN_CVD_PCT = 52.0
+    ENABLE_MAX_STOP_DIST_GATE = True
+    MAX_ENTRY_STOP_DIST_PCT = 0.80
+    ENABLE_MEME_DEFENSIVE_MODE = True
+    MEME_SYMBOLS = ["WIF/USDT", "PEPE/USDT", "TURBO/USDT", "FLOKI/USDT", "BONK/USDT", "COTI/USDT", "ONG/USDT"]
+    MEME_MAX_STOP_DIST_PCT = 0.70
 
 
 def calculate_geometric_r(entry_p: float, stop_p: float, tp1_p: float) -> float:
@@ -139,6 +149,28 @@ def validate_pre_trade_clearance(
         "market_regime": market_regime or "UNKNOWN",
         "cvd_taker_pct": cvd_taker_pct or 50.0,
     }
+
+    # ── 0. STOP MESAFESİ SNIPER KONTROLÜ (HARD GATE) ─────────────────────────
+    # Stop mesafesi %0.80'den (Meme paritelerde %0.70'den) geniş olan işlemler yapısal seviye dibi değildir.
+    # Bu işlemler tüm piyasa rejimlerinde (yatay, boğa, asya) kasanın erimesine yol açtığı için derhal elenir.
+    if ENABLE_MAX_STOP_DIST_GATE:
+        if entry_p > 0 and stop_p > 0:
+            stop_dist_pct = abs(entry_p - stop_p) / entry_p * 100.0
+            is_meme = ENABLE_MEME_DEFENSIVE_MODE and (
+                symbol in MEME_SYMBOLS or any(m in symbol for m in ["WIF", "PEPE", "TURBO", "FLOKI", "BONK", "COTI", "ONG", "POPCAT", "NEIRO"])
+            )
+            max_allowed_stop = float(MEME_MAX_STOP_DIST_PCT if is_meme else MAX_ENTRY_STOP_DIST_PCT)
+            metrics["stop_dist_pct"] = round(stop_dist_pct, 3)
+            metrics["max_allowed_stop_pct"] = max_allowed_stop
+            
+            if stop_dist_pct > max_allowed_stop:
+                type_str = "Meme Parite Kalkanı" if is_meme else "Sniper Stop Kalkanı"
+                rej_msg = (
+                    f"🎯 {type_str}: Stop mesafesi (%{stop_dist_pct:.2f}) azami "
+                    f"sınırın (%{max_allowed_stop:.2f}) üstünde. Sadece dar stoplu "
+                    f"seviye dibi sniper kurulumlara izin verilir."
+                )
+                return False, rej_msg, metrics
 
     # ── 1. GEOMETRİK R KONTROLÜ (HARD GATE) ──────────────────────────────────
     if ENABLE_GEOMETRIC_R_GATE:

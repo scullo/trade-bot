@@ -9,6 +9,7 @@ from strategy import StrategyEngine
 class TestCapitalManagement(unittest.TestCase):
     def setUp(self):
         self.paper_trader = PaperTrader(initial_balance=10000.0, leverage=5, margin_per_trade=300.0)
+        self.paper_trader.open_positions = {}
         self.paper_trader.save_history = MagicMock()
         self.paper_trader.save_local_history = MagicMock()
         self.paper_trader._push_to_github = MagicMock()
@@ -75,7 +76,8 @@ class TestCapitalManagement(unittest.TestCase):
         # %1 stop mesafesi -> $80 / 0.01 = $8000 pozisyon -> $8000 / 5 = $1600 marjin -> max_cap $500 ile sınırlandırılır
         pos = self.paper_trader.open_position(
             symbol="BTC/USDT", side="LONG", entry_price=60000.0,
-            reason="Test", soft_stop=59400.0, hard_stop=59400.0, tp1=61200.0
+            reason="Test", soft_stop=59400.0, hard_stop=59400.0, tp1=61200.0,
+            bypass_stop_gate=True
         )
         self.assertIsNotNone(pos)
         self.assertGreaterEqual(pos["margin"], 150.0)
@@ -138,6 +140,32 @@ class TestCapitalManagement(unittest.TestCase):
             self.assertGreater(tp1_rec["net_pnl"], 5.0)
 
         asyncio.run(run_test())
+
+    def test_07_sniper_stop_gate(self):
+        """Giriş stop mesafesi %0.80'den geniş olan işlemlerin reddedilmesi"""
+        # %1.5 stop mesafesi (60000 -> 59100) -> Reddedilmeli
+        res_wide = self.paper_trader.open_position(
+            symbol="BTC/USDT", side="LONG", entry_price=60000.0,
+            reason="Test", soft_stop=59100.0, hard_stop=59100.0, tp1=61800.0
+        )
+        self.assertIsInstance(res_wide, dict)
+        self.assertEqual(res_wide.get("error"), "STOP_DISTANCE_TOO_WIDE")
+
+        # %0.5 stop mesafesi (60000 -> 59700) -> Kabul edilmeli
+        pos_tight = self.paper_trader.open_position(
+            symbol="BTC/USDT", side="LONG", entry_price=60000.0,
+            reason="Test", soft_stop=59700.0, hard_stop=59700.0, tp1=60900.0
+        )
+        self.assertIsNotNone(pos_tight)
+        self.assertNotIn("error", pos_tight)
+
+    def test_08_meme_defensive_mode(self):
+        """Meme paritelerde koruma parametrelerinin doğrulanması"""
+        self.assertTrue(config.ENABLE_MEME_DEFENSIVE_MODE)
+        self.assertEqual(config.MEME_MAX_LEVERAGE, 3)
+        self.assertEqual(config.MEME_MAX_MARGIN, 200.0)
+        self.assertEqual(config.MEME_MAX_STOP_DIST_PCT, 0.70)
+        self.assertIn("WIF/USDT", config.MEME_SYMBOLS)
 
 if __name__ == '__main__':
     unittest.main()
