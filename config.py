@@ -1,4 +1,5 @@
 # config.py - Trade Bot Genel Yapilandirmasi
+import os
 
 # 1. Takip Edilecek Coinler (Binance USDT Perpetual - Top 100 Hacimli Saf Kripto Parite)
 ALL_AVAILABLE_SYMBOLS = [
@@ -214,8 +215,8 @@ MIN_L2_DEPTH_USD_03 = 12000.0    # Fiyatın %0.3 derinliğinde bulunması gereke
 
 # 8. Telegram Bildirim Ayarlari
 TELEGRAM_ENABLED = True
-TELEGRAM_BOT_TOKEN = "8893395987:AAGKAzD4sUg5LwMLLWHSt5U1VRRS7JE-m9c"
-TELEGRAM_CHAT_ID = "829687700"
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8893395987:AAGo285LhPhMKEfBpg3pyZAdO13sHC2y18U")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "829687700")
 
 # 9. Geometrik Kuant & Asimetrik 2R Motoru (Valkyrie Grand Quant Engine)
 ENABLE_GEOMETRIC_R_GATE = True        # R >= 1.80x Geometrik Ön-Onay Kapısı (Dün -$457 yazan 25 sıkışık işlemi eler)
