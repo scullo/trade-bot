@@ -2111,12 +2111,12 @@ class StrategyEngine:
         safe_atr_pct = max(0.60, min(3.5, atr_pct))
         stop_mult = persona.get("stop_loss_atr_mult", 1.0)
         
-        # Stop tabanı: Iceberg hücumunda %0.25, standartta %0.80 * sweep_mult
-        base_floor = 0.25 if is_ice_sniper_order else 0.80
-        min_stop_floor = base_floor * (1.0 if is_ice_sniper_order else sweep_mult)
-        effective_stop_pct = max(min_stop_floor, min(MAX_ABSOLUTE_STOP_PCT, safe_atr_pct * (0.35 if is_ice_sniper_order else 0.90) * stop_mult * sweep_mult))
+        # Stop tabanı: Iceberg hücumunda %0.25, standart sniper'da %0.35 * sweep_mult
+        base_floor = 0.25 if is_ice_sniper_order else 0.35
+        min_stop_floor = base_floor * (1.0 if is_ice_sniper_order else min(1.25, sweep_mult))
+        effective_stop_pct = max(min_stop_floor, min(MAX_ENTRY_STOP_DIST_PCT, safe_atr_pct * (0.35 if is_ice_sniper_order else 0.65) * stop_mult))
         stop_dist = entry_price * (effective_stop_pct / 100.0)
-        min_allowed_stop_dist = entry_price * (0.0025 if is_ice_sniper_order else (0.0080 * sweep_mult))
+        min_allowed_stop_dist = entry_price * 0.0020
 
         # 2. Swing Extreme + 0.5x ATR Akıllı Stop Hesaplaması
         swing_stop = None
@@ -2144,15 +2144,22 @@ class StrategyEngine:
 
         if side == "LONG":
             atr_hard_stop = round(entry_price - stop_dist, 6)
-            chosen_stop = atr_hard_stop
+            
+            # 1. Öncelik: Kurulumun kendi yapısal seviye stopu (Camarilla S4, AVWAP, nPOC)
             if caller_hard_stop and 0 < caller_hard_stop <= (entry_price - min_allowed_stop_dist):
-                chosen_stop = min(atr_hard_stop, caller_hard_stop)
+                caller_dist_pct = abs(entry_price - caller_hard_stop) / entry_price * 100.0
+                if caller_dist_pct <= MAX_ENTRY_STOP_DIST_PCT:
+                    chosen_stop = caller_hard_stop
+                else:
+                    chosen_stop = atr_hard_stop
+            else:
+                chosen_stop = atr_hard_stop
+
+            # 2. Öncelik: Swing Low arkasına gizleme (Sadece sniper sınırları içindeyse)
+            if swing_stop and (entry_price - min_allowed_stop_dist) >= swing_stop >= (entry_price * (1.0 - MAX_ENTRY_STOP_DIST_PCT / 100.0)):
+                chosen_stop = max(chosen_stop, swing_stop)
             
-            # Swing Low arkasına gizleme (Akıllı Stop)
-            if swing_stop and swing_stop < entry_price:
-                chosen_stop = min(chosen_stop, swing_stop)
-            
-            # Mutlak Sermaye Zırhı: MAX_ABSOLUTE_STOP_PCT (%1.60) tavanını aşamaz
+            # Mutlak Sermaye Zırhı: MAX_ABSOLUTE_STOP_PCT tavanını aşamaz
             absolute_floor = round(entry_price * (1.0 - (MAX_ABSOLUTE_STOP_PCT / 100.0)), 6)
             hard_stop = max(chosen_stop, absolute_floor)
             soft_stop = hard_stop
@@ -2181,15 +2188,22 @@ class StrategyEngine:
                 tp2 = round(max(tp1 * 1.015, entry_price + tp2_dist), 6)
         else:
             atr_hard_stop = round(entry_price + stop_dist, 6)
-            chosen_stop = atr_hard_stop
+            
+            # 1. Öncelik: Kurulumun kendi yapısal seviye stopu (Camarilla R4, AVWAP, nPOC)
             if caller_hard_stop and caller_hard_stop >= (entry_price + min_allowed_stop_dist):
-                chosen_stop = max(atr_hard_stop, caller_hard_stop)
+                caller_dist_pct = abs(caller_hard_stop - entry_price) / entry_price * 100.0
+                if caller_dist_pct <= MAX_ENTRY_STOP_DIST_PCT:
+                    chosen_stop = caller_hard_stop
+                else:
+                    chosen_stop = atr_hard_stop
+            else:
+                chosen_stop = atr_hard_stop
+
+            # 2. Öncelik: Swing High arkasına gizleme (Sadece sniper sınırları içindeyse)
+            if swing_stop and (entry_price + min_allowed_stop_dist) <= swing_stop <= (entry_price * (1.0 + MAX_ENTRY_STOP_DIST_PCT / 100.0)):
+                chosen_stop = min(chosen_stop, swing_stop)
             
-            # Swing High arkasına gizleme (Akıllı Stop)
-            if swing_stop and swing_stop > entry_price:
-                chosen_stop = max(chosen_stop, swing_stop)
-            
-            # Mutlak Sermaye Zırhı: MAX_ABSOLUTE_STOP_PCT (%1.60) tavanını aşamaz
+            # Mutlak Sermaye Zırhı: MAX_ABSOLUTE_STOP_PCT tavanını aşamaz
             absolute_ceiling = round(entry_price * (1.0 + (MAX_ABSOLUTE_STOP_PCT / 100.0)), 6)
             hard_stop = min(chosen_stop, absolute_ceiling)
             soft_stop = hard_stop
