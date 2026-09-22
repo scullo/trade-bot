@@ -269,13 +269,13 @@ class MarketDataManager:
                     gh_sha = gh_sha[:8]
 
             # 12. 100 Parite Kuant DNA & Persona Baseline
-            dna_count = len(getattr(strategy, 'persona_matrix', {})) if strategy else len(self.all_symbols)
+            dna_count = len(getattr(strategy, 'dna_baseline', {})) if (strategy and hasattr(strategy, 'dna_baseline') and strategy.dna_baseline) else (len(getattr(strategy, 'persona_matrix', {})) if strategy else len(self.all_symbols))
             dna_loaded = (dna_count >= total_syms * 0.90)
 
-            # Toplam Puanlama
-            checks = [levels_ok, ws_ok, scan_active, obi_ok, cvd_ok, spot_ok, ram_ok, gh_synced]
+            # Toplam Puanlama (Tam 10 Kuant Alt Sistem Denetimi)
+            checks = [levels_ok, ws_ok, scan_active, obi_ok, cvd_ok, spot_ok, ram_ok, gh_synced, dna_loaded, liq_ok]
             passed = sum(1 for c in checks if c)
-            is_perfect = (passed >= 7)
+            is_perfect = (passed >= 9)
 
             status_text = f"{passed}/{len(checks)} TAM SAĞLIKLI (KURUMSAL QUANT KOKPİTİ)" if is_perfect else f"⚠️ UYARI: {len(checks) - passed} Alt Sistemde Gecikme"
 
@@ -833,9 +833,13 @@ class MarketDataManager:
         avg_buy = round(sum(ratios) / len(ratios), 1) if ratios else 50.0
         avg_sell = round(100.0 - avg_buy, 1)
 
-        sorted_by_ratio = sorted(active_items, key=lambda x: x.get('ratio_60s', 50.0), reverse=True)
-        top_buyers = sorted_by_ratio[:15]
-        top_sellers = sorted_by_ratio[-15:][::-1] if len(sorted_by_ratio) >= 15 else sorted_by_ratio[::-1]
+        # Asgari Hacim & Likidite Filtresi: $40'lik tekil emirlerin lider olmasini engelle
+        # Son 60s hacmi >= $500 veya net deltasi >= $250 olan pariteler onceliklidir
+        valid_volume_items = [x for x in active_items if (x.get('taker_buy_usd', 0.0) + x.get('taker_sell_usd', 0.0)) >= 500.0 or abs(x.get('delta_60s', 0.0)) >= 250.0]
+        pool = valid_volume_items if len(valid_volume_items) >= 10 else active_items
+
+        top_buyers = sorted(pool, key=lambda x: (x.get('ratio_60s', 50.0), x.get('delta_60s', 0.0)), reverse=True)[:15]
+        top_sellers = sorted(pool, key=lambda x: (x.get('ratio_60s', 50.0), -x.get('delta_60s', 0.0)))[:15]
 
         top_buy = top_buyers[0] if top_buyers else {}
         top_sell = top_sellers[0] if top_sellers else {}

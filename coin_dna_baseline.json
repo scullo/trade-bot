@@ -63,14 +63,14 @@
     "strategy_permission": "Yalnızca S3/R3/nPOC Dip Pusu (Kırılım Kilitli 🔒, Marjin %50)",
     "is_baseline": true
   },
-  "AMPUSDT": {
-    "symbol": "AMP/USDT",
+  "HYPEUSDT": {
+    "symbol": "HYPE/USDT",
     "persona_class": "STANDARD",
-    "persona_name": "⚪ Standart / Dengeli",
+    "persona_name": "⚪ Standart / Yüksek Volatilite",
     "trades_count": 20,
     "win_rate": 55.0,
-    "fakeout_rate": 35.0,
-    "net_pnl": -12.95,
+    "fakeout_rate": 30.0,
+    "net_pnl": 14.85,
     "allow_breakout": true,
     "allow_bounce": true,
     "margin_scale": 1.0,

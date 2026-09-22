@@ -107,11 +107,21 @@ HEADERS_GRANULAR = [
 ]
 headers_granular = HEADERS_GRANULAR
 
-def create_styled_excel_report(history_data: list, current_balance: float = 10000.0, initial_balance: float = 10000.0) -> io.BytesIO:
+def create_styled_excel_report(history_data: list, current_balance: float = 10000.0, initial_balance: float = 10000.0, funding_data: dict = None) -> io.BytesIO:
     with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp:
         tmp_path = tmp.name
         
     workbook = xlsxwriter.Workbook(tmp_path)
+
+    # 🧬 3,615 Baz DNA Veritabanini Yukle (Tum 100 Parite Bütünlüğü)
+    base_dna_map = {}
+    try:
+        dna_p = os.path.join(os.path.dirname(__file__), 'coin_dna_baseline.json')
+        if os.path.exists(dna_p):
+            with open(dna_p, 'r', encoding='utf-8') as f_dna:
+                base_dna_map = json.load(f_dna)
+    except Exception:
+        pass
 
     # ==================== FORMATLAR ====================
     title_fmt = workbook.add_format({
@@ -388,7 +398,10 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
 
 
     def _get_coin_persona(sym, st):
-        if st['trades'] < 3:
+        clean_s = str(sym).replace('/', '').replace(':USDT', '').upper()
+        if st.get('trades', 0) < 3:
+            if base_dna_map and clean_s in base_dna_map:
+                return base_dna_map[clean_s].get('persona_name', "⚪ Standart / Dengeli")
             return "⚪ Standart / Dengeli"
         wr = (st['wins'] / st['trades'] * 100) if st['trades'] > 0 else 0
         net = st['net_pnl']
@@ -825,29 +838,93 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ws7.write(4, col_idx, d_name, th_purple_fmt)
 
     dna_row = 5
-    for sym, st in sorted(pair_stats.items(), key=lambda x: x[1]['net_pnl'], reverse=True):
-        ws7.set_row(dna_row, 20)
-        c_wr = (st['wins'] / st['trades'] * 100) if st['trades'] > 0 else 0.0
-        c_fake_rate = (st['fakeouts'] / st['trades'] * 100) if st['trades'] > 0 else 0.0
-        c_atr = st['atr_sum'] / st['trades'] if st['trades'] > 0 else 1.2
-        persona_tag = _get_coin_persona(sym, st)
+    # Tüm 100 Pariteyi Dahil Et (Baz DNA + Canlı İstatistikler)
+    from collections import OrderedDict
+    all_symbols_map = OrderedDict()
+    try:
+        from config import SYMBOLS
+        for s in SYMBOLS:
+            all_symbols_map[s] = s
+    except Exception:
+        pass
 
-        # Önerilen Mod
-        if "Altın" in persona_tag:
+    if base_dna_map:
+        for b_sym in base_dna_map.keys():
+            # Format to BTC/USDT style if needed
+            clean_display = b_sym if '/' in b_sym else (b_sym[:-4] + '/USDT' if b_sym.endswith('USDT') else b_sym)
+            if clean_display not in all_symbols_map:
+                all_symbols_map[clean_display] = clean_display
+
+    for p_sym in pair_stats.keys():
+        if p_sym not in all_symbols_map:
+            all_symbols_map[p_sym] = p_sym
+
+    dna_rows_data = []
+    for sym_display in all_symbols_map.keys():
+        clean_s = str(sym_display).replace('/', '').replace(':USDT', '').upper()
+        # pair_stats eşleşmesi kontrolü
+        st = pair_stats.get(sym_display)
+        if not st:
+            for pk, pv in pair_stats.items():
+                if str(pk).replace('/', '').replace(':USDT', '').upper() == clean_s:
+                    st = pv
+                    break
+
+        has_live = st is not None and st.get('trades', 0) >= 3
+        base_info = base_dna_map.get(clean_s, {}) if base_dna_map else {}
+
+        if has_live:
+            t_cnt = st['trades']
+            wr = (st['wins'] / t_cnt * 100) if t_cnt > 0 else 0.0
+            pnl = st['net_pnl']
+            fake_rate = (st['fakeouts'] / t_cnt * 100) if t_cnt > 0 else 0.0
+            atr = st['atr_sum'] / t_cnt if t_cnt > 0 else 1.2
+            persona_tag = _get_coin_persona(sym_display, st) + " [Canlı]"
+        else:
+            t_cnt = base_info.get('trades_count', 0)
+            wr = float(base_info.get('win_rate', 50.0))
+            pnl = float(base_info.get('net_pnl', 0.0))
+            fake_rate = float(base_info.get('fakeout_rate', 25.0))
+            atr = 1.45
+            persona_tag = base_info.get('persona_name', "⚪ Standart / Dengeli") + " [Baz DNA]"
+
+        if "Altın" in persona_tag or "GOLD" in persona_tag:
             rec_mod = "👑 Kırılım + Pusu Öncelikli (x1.3 Marjin)"
-        elif "Tuzakçı" in persona_tag:
+        elif "Tuzakçı" in persona_tag or "WHIPSAW" in persona_tag:
             rec_mod = "🛡️ Kırılım Kilitli 🔒 | Yalnızca S3/R3/nPOC Sekmesi (x0.5 Marjin)"
+        elif "Süper" in persona_tag or "SUPER" in persona_tag:
+            rec_mod = "🚀 Agresif Trend Takipçisi (x1.4 Marjin)"
+        elif "Scalp" in persona_tag or "SCALP" in persona_tag:
+            rec_mod = "⚡ Hızlı Scalp & Erken TP (x1.1 Marjin)"
+        elif "Durgun" in persona_tag or "STAGNANT" in persona_tag:
+            rec_mod = "⏳ Düşük Marjin & Erken Çürüme (x0.7 Marjin)"
         else:
             rec_mod = "⚪ Dengeli Kırılım + Pusu (x1.0 Marjin)"
 
-        ws7.write(dna_row, 1, sym, cell_left)
-        ws7.write(dna_row, 2, persona_tag, cell_left)
-        ws7.write(dna_row, 3, st['trades'], cell_center)
+        dna_rows_data.append({
+            'sym': sym_display,
+            'persona': persona_tag,
+            'trades': t_cnt,
+            'wr': wr,
+            'pnl': pnl,
+            'atr': atr,
+            'fake_rate': fake_rate,
+            'rec_mod': rec_mod
+        })
+
+    dna_rows_data.sort(key=lambda x: x['pnl'], reverse=True)
+
+    for item in dna_rows_data:
+        ws7.set_row(dna_row, 20)
+        c_wr = item['wr']
+        ws7.write(dna_row, 1, item['sym'], cell_left)
+        ws7.write(dna_row, 2, item['persona'], cell_left)
+        ws7.write(dna_row, 3, item['trades'], cell_center)
         ws7.write(dna_row, 4, f"%{c_wr:.1f}", cell_roe_green if c_wr >= 50 else cell_roe_red)
-        ws7.write(dna_row, 5, st['net_pnl'], cell_green if st['net_pnl'] >= 0 else cell_red)
-        ws7.write(dna_row, 6, f"%{c_atr:.2f}", cell_center)
-        ws7.write(dna_row, 7, f"%{c_fake_rate:.1f}", cell_center)
-        ws7.write(dna_row, 8, rec_mod, cell_left)
+        ws7.write(dna_row, 5, item['pnl'], cell_green if item['pnl'] >= 0 else cell_red)
+        ws7.write(dna_row, 6, f"%{item['atr']:.2f}", cell_center)
+        ws7.write(dna_row, 7, f"%{item['fake_rate']:.1f}", cell_center)
+        ws7.write(dna_row, 8, item['rec_mod'], cell_left)
         dna_row += 1
 
     # ==================== SHEET 8: 🚨 SAHTE KIRILIM & LİKİDİTE LAB ====================
@@ -895,6 +972,75 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ws8.write(fake_row, 6, f"-%{mae_val:.2f}", cell_center)
         ws8.write(fake_row, 7, reclaim_profit, cell_green)
         fake_row += 1
+
+    # ==================== SHEET 9: ⚡ FONLAMA & SQUEEZE RADARI ====================
+    if funding_data and isinstance(funding_data, dict) and len(funding_data) > 0:
+        ws9 = workbook.add_worksheet('⚡ FONLAMA & SQUEEZE')
+        ws9.set_column('A:A', 3)
+        ws9.set_column('B:B', 15)
+        ws9.set_column('C:C', 18)
+        ws9.set_column('D:D', 18)
+        ws9.set_column('E:E', 28)
+        ws9.set_column('F:F', 26)
+        ws9.set_column('G:G', 16)
+
+        ws9.merge_range('B2:G2', '⚡ CANLI FONLAMA ORANLARI & SQUEEZE RADARI (100 PARİTE)', title_fmt)
+        ws9.set_row(1, 28)
+
+        fund_headers = [
+            ('Parite', 15),
+            ('8s Fonlama Oranı (%)', 18),
+            ('Mark Fiyatı ($)', 18),
+            ('Squeeze Riski & Durumu', 28),
+            ('İzin Verilen Pozisyon Yönü', 26),
+            ('Sıradaki Fonlama', 16)
+        ]
+
+        ws9.set_row(4, 24)
+        for col_idx, (f_title, width) in enumerate(fund_headers, start=1):
+            ws9.write(4, col_idx, f_title, th_gold_fmt)
+
+        f_row = 5
+        sorted_funds = sorted(funding_data.values(), key=lambda x: x.get('rate_pct', 0.0))
+        for f_item in sorted_funds:
+            ws9.set_row(f_row, 20)
+            f_sym = f_item.get('symbol', '-')
+            r_pct = f_item.get('rate_pct', 0.0)
+            mark_p = f_item.get('mark_price', 0.0)
+            sq_status = f_item.get('squeeze_status', 'BALANCED')
+            dir_all = f_item.get('direction_allowed', 'ALL')
+            cd_str = f_item.get('next_funding_countdown', '--:--')
+
+            if 'SHORT_SQUEEZE' in sq_status:
+                sq_label = "🚨 SHORT SQUEEZE TEHLİKESİ"
+                sq_fmt = cell_red
+            elif 'LONG_OVERHEATED' in sq_status:
+                sq_label = "🔥 AŞIRI LONG ISINMASI"
+                sq_fmt = cell_roe_red
+            elif 'MODERATE_NEGATIVE' in sq_status:
+                sq_label = "⚠️ Negatif Eğim (Short Ağır)"
+                sq_fmt = cell_center
+            elif 'MODERATE_POSITIVE' in sq_status:
+                sq_label = "📈 Pozitif Eğim (Long Ağır)"
+                sq_fmt = cell_center
+            else:
+                sq_label = "⚖️ Dengeli / Nötr"
+                sq_fmt = cell_center
+
+            if dir_all == 'LONG_ONLY':
+                dir_label = "🟢 YALNIZCA LONG (Korumalı)"
+            elif dir_all == 'SHORT_ONLY':
+                dir_label = "🔴 YALNIZCA SHORT (Korumalı)"
+            else:
+                dir_label = "⚪ SERBEST (İki Yön)"
+
+            ws9.write(f_row, 1, f_sym, cell_left)
+            ws9.write(f_row, 2, f"%{r_pct:+.4f}", cell_roe_red if r_pct < -0.05 else (cell_roe_green if r_pct > 0.05 else cell_center))
+            ws9.write(f_row, 3, mark_p, cell_currency)
+            ws9.write(f_row, 4, sq_label, sq_fmt)
+            ws9.write(f_row, 5, dir_label, cell_left)
+            ws9.write(f_row, 6, cd_str, cell_center)
+            f_row += 1
 
     
     workbook.close()

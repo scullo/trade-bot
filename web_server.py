@@ -3291,7 +3291,7 @@ HTML_PAGE = """
                 <button class="nav-tab-btn" id="tab-btn-health" onclick="switchMainTab('health')" title="8. Aegis Sentinel Sistem Sağlığı">
                     <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg></span>
                     <span class="tab-btn-text">8. Sağlık</span>
-                    <span class="tab-badge-sub" id="nav-health-tab-badge" style="background:rgba(14,203,129,0.15); color:#22c55e; border:1px solid rgba(14,203,129,0.3);">8/8 Kusursuz</span>
+                    <span class="tab-badge-sub" id="nav-health-tab-badge" style="background:rgba(14,203,129,0.15); color:#22c55e; border:1px solid rgba(14,203,129,0.3);">10/10 Kusursuz</span>
                 </button>
 
                 <button class="nav-tab-btn" id="tab-btn-admin" onclick="switchMainTab('admin'); loadAdminMetrics();" style="border-color:rgba(0,242,254,0.35); display:none;" title="9. Yönetim Masası">
@@ -5618,8 +5618,11 @@ async function loadAdminMetrics() {
                     const item = matrix[s];
                     if (personaFilter !== 'ALL' && item.persona_class !== personaFilter) return false;
                     if (personaSearchQuery) {
+                        const q = personaSearchQuery.toUpperCase();
                         const clean = s.replace('/USDT', '').replace('USDT', '').toUpperCase();
-                        return clean.includes(personaSearchQuery) || s.toUpperCase().includes(personaSearchQuery);
+                        const pName = (item.persona_name || '').toUpperCase();
+                        const pClass = (item.persona_class || '').toUpperCase();
+                        return clean.includes(q) || s.toUpperCase().includes(q) || pName.includes(q) || pClass.includes(q);
                     }
                     return true;
                 });
@@ -5646,15 +5649,22 @@ async function loadAdminMetrics() {
                     const symClean = s.replace('/USDT', '').replace('USDT', '');
                     const isGold = item.persona_class === 'GOLD';
                     const isWhipsaw = item.persona_class === 'WHIPSAW';
+                    const isBaseline = item.is_baseline !== false && item.is_baseline !== undefined;
+
+                    // Source Badge: Baz DNA vs Canli
+                    const sourceBadge = isBaseline
+                        ? `<span style="background:rgba(148,163,184,0.15); color:#94a3b8; border:1px solid rgba(148,163,184,0.3); font-size:9.5px; padding:2px 6px; border-radius:4px; margin-left:6px; font-weight:700;">BAZ DNA</span>`
+                        : `<span style="background:rgba(34,197,94,0.18); color:#22c55e; border:1px solid rgba(34,197,94,0.4); font-size:9.5px; padding:2px 6px; border-radius:4px; margin-left:6px; font-weight:800;">CANLI</span>`;
 
                     // Lig Badge
                     let badgeHtml = '';
+                    const displayName = item.persona_name || (isGold ? '👑 Altın Lig (Pusu Ustası)' : (isWhipsaw ? '⚠️ Whipsaw (Tuzakçı)' : '⚪ Standart / Dengeli'));
                     if (isGold) {
-                        badgeHtml = `<span style="background:rgba(251,197,49,0.15); color:#fbc531; border:1px solid #fbc531; padding:4px 10px; border-radius:6px; font-weight:800; font-size:11.5px; font-family:'JetBrains Mono';">👑 Altın Lig (Pusu Ustası)</span>`;
+                        badgeHtml = `<span style="background:rgba(251,197,49,0.15); color:#fbc531; border:1px solid #fbc531; padding:4px 10px; border-radius:6px; font-weight:800; font-size:11.5px; font-family:'JetBrains Mono';">${displayName}</span>`;
                     } else if (isWhipsaw) {
-                        badgeHtml = `<span style="background:rgba(244,63,94,0.15); color:#f43f5e; border:1px solid #f43f5e; padding:4px 10px; border-radius:6px; font-weight:800; font-size:11.5px; font-family:'JetBrains Mono';">⚠️ Whipsaw (Tuzakçı)</span>`;
+                        badgeHtml = `<span style="background:rgba(244,63,94,0.15); color:#f43f5e; border:1px solid #f43f5e; padding:4px 10px; border-radius:6px; font-weight:800; font-size:11.5px; font-family:'JetBrains Mono';">${displayName}</span>`;
                     } else {
-                        badgeHtml = `<span style="background:rgba(255,255,255,0.06); color:#cbd5e1; border:1px solid rgba(255,255,255,0.14); padding:4px 10px; border-radius:6px; font-weight:700; font-size:11.5px; font-family:'JetBrains Mono';">⚪ Standart / Dengeli</span>`;
+                        badgeHtml = `<span style="background:rgba(255,255,255,0.06); color:#cbd5e1; border:1px solid rgba(255,255,255,0.14); padding:4px 10px; border-radius:6px; font-weight:700; font-size:11.5px; font-family:'JetBrains Mono';">${displayName}</span>`;
                     }
 
                     // Win rate color
@@ -5676,14 +5686,16 @@ async function loadAdminMetrics() {
                         stratHtml = `<span style="color:#38bdf8; font-weight:700; font-size:11.5px;">🟢 Kırılım + Sekme Açık</span>`;
                     }
 
-                    // Margin & Stop Setting
+                    // Dynamic Margin & Stop Setting
+                    const mScale = item.margin_scale != null ? Number(item.margin_scale) : (isGold ? 1.3 : (isWhipsaw ? 0.5 : 1.0));
+                    const atrMult = item.stop_loss_atr_mult != null ? Number(item.stop_loss_atr_mult) : (isWhipsaw ? 1.5 : 1.0);
                     let riskHtml = '';
                     if (isWhipsaw) {
-                        riskHtml = `<span style="color:#cbd5e1; font-family:'JetBrains Mono'; font-size:11.5px;">x0.5 ($8 taban) | 1.5x ATR Stop</span>`;
+                        riskHtml = `<span style="color:#f43f5e; font-family:'JetBrains Mono'; font-size:11.5px; font-weight:700;">x${mScale.toFixed(1)} ($8 taban) | ${atrMult.toFixed(1)}x ATR Stop</span>`;
                     } else if (isGold) {
-                        riskHtml = `<span style="color:#fbc531; font-family:'JetBrains Mono'; font-size:11.5px; font-weight:700;">x1.3 Marjin | 1.0x ATR Stop</span>`;
+                        riskHtml = `<span style="color:#fbc531; font-family:'JetBrains Mono'; font-size:11.5px; font-weight:700;">x${mScale.toFixed(1)} Marjin | ${atrMult.toFixed(1)}x ATR Stop</span>`;
                     } else {
-                        riskHtml = `<span style="color:#94a3b8; font-family:'JetBrains Mono'; font-size:11.5px;">x1.0 Marjin | 1.0x ATR Stop</span>`;
+                        riskHtml = `<span style="color:#94a3b8; font-family:'JetBrains Mono'; font-size:11.5px;">x${mScale.toFixed(1)} Marjin | ${atrMult.toFixed(1)}x ATR Stop</span>`;
                     }
 
                     html += `
@@ -5693,7 +5705,7 @@ async function loadAdminMetrics() {
                             <span style="color:#64748b; font-size:11px;">/USDT</span>
                         </td>
                         <td>${badgeHtml}</td>
-                        <td style="color:#cbd5e1; font-family:'JetBrains Mono'; font-size:12px;">${item.trades_count} İşlem</td>
+                        <td style="color:#cbd5e1; font-family:'JetBrains Mono'; font-size:12px;">${item.trades_count || 0} İşlem ${sourceBadge}</td>
                         <td style="color:${wrColor}; font-weight:800; font-family:'JetBrains Mono';">
                             %${item.win_rate.toFixed(1)}
                         </td>
@@ -5822,8 +5834,11 @@ async function loadAdminMetrics() {
                     if (fundingFilter === 'BALANCED' && item.squeeze_status !== 'BALANCED') return false;
 
                     if (fundingSearchQuery) {
+                        const q = fundingSearchQuery.toUpperCase();
                         const clean = s.replace('/USDT', '').replace('USDT', '').toUpperCase();
-                        return clean.includes(fundingSearchQuery) || s.toUpperCase().includes(fundingSearchQuery);
+                        const sqStatus = (item.squeeze_status || '').toUpperCase();
+                        const dirAllowed = (item.direction_allowed || '').toUpperCase();
+                        return clean.includes(q) || s.toUpperCase().includes(q) || sqStatus.includes(q) || dirAllowed.includes(q);
                     }
                     return true;
                 });
@@ -5873,7 +5888,7 @@ async function loadAdminMetrics() {
                         ruleDesc = `<span style="color:#94a3b8; font-size:11.5px;">Standart kurumsal Camarilla & nPOC pusu kuralları devrede.</span>`;
                     }
 
-                    const markPriceStr = item.mark_price ? '$' + Number(item.mark_price).toFixed(item.mark_price < 1 ? 4 : 2) : '-';
+                    const markPriceStr = item.mark_price ? '$' + (typeof formatSmartPrice === 'function' ? formatSmartPrice(item.mark_price) : Number(item.mark_price).toFixed(item.mark_price < 1 ? 4 : 2)) : '-';
 
                     html += `
                     <tr>
@@ -5961,7 +5976,7 @@ async function loadAdminMetrics() {
                 }
 
                 let html = '';
-                recentLiqs.forEach(item => {
+                recentLiqs.slice().reverse().forEach(item => {
                     const symClean = (item.symbol || '').replace('/USDT', '');
                     const isLongLiq = item.side === 'LONG';
                     const sideBadge = isLongLiq 
@@ -5980,6 +5995,8 @@ async function loadAdminMetrics() {
                         ? `<span style="color:#38bdf8;">🔻 Destekte Satış Emildi → Sekme (Bounce Long) Teyidi</span>`
                         : `<span style="color:#fbbf24;">🔺 Dirençte Alış Emildi → Tepe Reddi (Reject Short) Teyidi</span>`;
 
+                    const priceFormatted = typeof formatSmartPrice === 'function' ? formatSmartPrice(price) : price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 6});
+
                     html += `
                     <tr style="border-bottom:1px solid rgba(255,255,255,0.04); font-family:'JetBrains Mono'; font-size:12px;">
                         <td style="color:#94a3b8;">${timeStr}</td>
@@ -5987,10 +6004,11 @@ async function loadAdminMetrics() {
                         <td>${sideBadge}</td>
                         <td>${forceOrderBadge}</td>
                         <td style="font-weight:800; color:#fbbf24;">$${Math.round(usdSize).toLocaleString('en-US')}</td>
-                        <td style="color:#e2e8f0;">$${price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 6})}</td>
+                        <td style="color:#e2e8f0;">$${priceFormatted}</td>
                         <td>${interp}</td>
                     </tr>
                     `;
+                });
                 });
 
                 tbody.innerHTML = html;
@@ -6037,6 +6055,17 @@ async function loadAdminMetrics() {
                     barShort.style.width = `${sellPct}%`;
                 }
 
+                // Update nav badge
+                const navCvdBadge = document.getElementById('nav-cvd-badge');
+                if (navCvdBadge && cvdSummary.avg_buy_ratio != null) {
+                    const buyPct = Number(cvdSummary.avg_buy_ratio).toFixed(1);
+                    const isBull = cvdSummary.avg_buy_ratio >= 50;
+                    navCvdBadge.innerText = `%${buyPct} ${isBull ? '🟢' : '🔴'}`;
+                    navCvdBadge.style.color = isBull ? '#22c55e' : '#ef4444';
+                    navCvdBadge.style.background = isBull ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)';
+                    navCvdBadge.style.borderColor = isBull ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)';
+                }
+
                 const topBuyerSymEl = document.getElementById('cvd-top-buyer-sym');
                 const topBuyerDeltaEl = document.getElementById('cvd-top-buyer-delta');
                 if (topBuyerSymEl && topBuyerDeltaEl) {
@@ -6045,8 +6074,9 @@ async function loadAdminMetrics() {
                     const topBRatio = Number(cvdSummary.top_buy_ratio || 50).toFixed(1);
                     if (topB && topB !== '-') {
                         const cleanB = topB.replace('/USDT', '');
+                        const deltaStr = (Math.abs(topBDelta) > 0 && Math.abs(topBDelta) < 100) ? topBDelta.toFixed(2) : Math.round(topBDelta).toLocaleString('en-US');
                         topBuyerSymEl.innerHTML = `${cleanB} <span style="font-size:13px; color:#fff; font-weight:600;">(%${topBRatio})</span>`;
-                        topBuyerDeltaEl.innerText = `Net Para Girişi: +$${Math.round(topBDelta).toLocaleString('en-US')}`;
+                        topBuyerDeltaEl.innerText = `Net Para Girişi: +$${deltaStr}`;
                     } else {
                         topBuyerSymEl.innerText = '-';
                         topBuyerDeltaEl.innerText = 'Net Para Girişi: +$0';
@@ -6061,8 +6091,9 @@ async function loadAdminMetrics() {
                     const topSRatio = Number(cvdSummary.top_sell_ratio || 50).toFixed(1);
                     if (topS && topS !== '-') {
                         const cleanS = topS.replace('/USDT', '');
+                        const deltaStr = (Math.abs(topSDelta) > 0 && Math.abs(topSDelta) < 100) ? Math.abs(topSDelta).toFixed(2) : Math.abs(Math.round(topSDelta)).toLocaleString('en-US');
                         topSellerSymEl.innerHTML = `${cleanS} <span style="font-size:13px; color:#fff; font-weight:600;">(%${topSRatio})</span>`;
-                        topSellerDeltaEl.innerText = `Net Para Çıkışı: -$${Math.abs(Math.round(topSDelta)).toLocaleString('en-US')}`;
+                        topSellerDeltaEl.innerText = `Net Para Çıkışı: -$${deltaStr}`;
                     } else {
                         topSellerSymEl.innerText = '-';
                         topSellerDeltaEl.innerText = 'Net Para Çıkışı: -$0';
@@ -6084,6 +6115,8 @@ async function loadAdminMetrics() {
                             const sellRatio = (100 - Number(ratio)).toFixed(1);
                             const delta = Number(item.delta_60s || 0);
                             const price = Number(item.last_price || 0);
+                            const deltaFormatted = (Math.abs(delta) > 0 && Math.abs(delta) < 100) ? delta.toFixed(2) : Math.round(delta).toLocaleString('en-US');
+                            const priceFormatted = typeof formatSmartPrice === 'function' ? formatSmartPrice(price) : price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 6});
                             
                             let stratBadge = `<span title="Alıcı/Satıcı dengede. Standart pusu kuralları bekleniyor." style="color:#94a3b8; font-size:11px;">⚪ Nötr Akış</span>`;
                             if (ratio >= 62) {
@@ -6101,8 +6134,8 @@ async function loadAdminMetrics() {
                                     <span style="font-weight:800; color:#22c55e;">%${ratio} Alıcı</span> 
                                     <span style="font-size:10px; color:#64748b;">(%${sellRatio} Satıcı)</span>
                                 </td>
-                                <td style="color:#4ade80; font-weight:700;">+$${Math.round(delta).toLocaleString('en-US')}</td>
-                                <td style="color:#e2e8f0;">$${price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 6})}</td>
+                                <td style="color:#4ade80; font-weight:700;">+$${deltaFormatted}</td>
+                                <td style="color:#e2e8f0;">$${priceFormatted}</td>
                                 <td>${stratBadge}</td>
                             </tr>
                             `;
@@ -6125,6 +6158,8 @@ async function loadAdminMetrics() {
                             const sellRatio = (100 - Number(ratio)).toFixed(1);
                             const delta = Number(item.delta_60s || 0);
                             const price = Number(item.last_price || 0);
+                            const deltaFormatted = (Math.abs(delta) > 0 && Math.abs(delta) < 100) ? Math.abs(delta).toFixed(2) : Math.abs(Math.round(delta)).toLocaleString('en-US');
+                            const priceFormatted = typeof formatSmartPrice === 'function' ? formatSmartPrice(price) : price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 6});
                             
                             let stratBadge = `<span title="Alıcı/Satıcı dengede. Standart pusu kuralları bekleniyor." style="color:#94a3b8; font-size:11px;">⚪ Nötr Akış</span>`;
                             if (ratio <= 38) {
@@ -6142,8 +6177,8 @@ async function loadAdminMetrics() {
                                     <span style="font-weight:800; color:#ef4444;">%${sellRatio} Satıcı</span> 
                                     <span style="font-size:10px; color:#64748b;">(%${ratio} Alıcı)</span>
                                 </td>
-                                <td style="color:#f87171; font-weight:700;">-$${Math.abs(Math.round(delta)).toLocaleString('en-US')}</td>
-                                <td style="color:#e2e8f0;">$${price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 6})}</td>
+                                <td style="color:#f87171; font-weight:700;">-$${deltaFormatted}</td>
+                                <td style="color:#e2e8f0;">$${priceFormatted}</td>
                                 <td>${stratBadge}</td>
                             </tr>
                             `;
@@ -9867,7 +9902,7 @@ async function loadAdminMetrics() {
                     const totalC = Object.keys(appState.symbols).length;
                     navActiveBadge.innerText = `${totalC}/100`;
                 }
-                const navHealthBadge = document.getElementById('nav-health-tab-badge');
+                const navHealthBadge = document.getElementById('nav-health-tab-badge') || document.getElementById('nav-health-badge');
                 if (navHealthBadge && appState && appState.system_health) {
                     const sys = appState.system_health;
                     if (sys.is_perfect) {
@@ -12581,7 +12616,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             buf = create_styled_excel_report(
                 history_data=trader_manager.history,
                 current_balance=trader_manager.balance,
-                initial_balance=INITIAL_BALANCE
+                initial_balance=INITIAL_BALANCE,
+                funding_data=market_data.funding_rates if market_data else None
             )
             filename = f"Valkyrie_Ticaret_Raporu_{datetime.now(timezone(timedelta(hours=3))).strftime('%Y%m%d_%H%M')}.xlsx"
             import gc

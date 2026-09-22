@@ -386,7 +386,8 @@ class StrategyEngine:
                 "margin_scale": 1.0,
                 "stop_loss_atr_mult": 1.0,
                 "status_badge": "🟢 Kırılım + Sekme Açık",
-                "strategy_permission": "Tüm Stratejiler Açık (Kırılım + Pusu)"
+                "strategy_permission": "Tüm Stratejiler Açık (Kırılım + Pusu)",
+                "is_baseline": False
             }
 
         wins = sum(1 for t in recent if t['pnl'] > 0)
@@ -414,11 +415,15 @@ class StrategyEngine:
                 "margin_scale": 0.5,
                 "stop_loss_atr_mult": 1.5,
                 "status_badge": "⚠️ Whipsaw (Kırılım Kilitli 🔒, Marjin %50)",
-                "strategy_permission": "Yalnızca S3/R3/nPOC Dip-Tepe Sekmesi (Kırılım Kilitli 🔒, Marjin %50)"
+                "strategy_permission": "Yalnızca S3/R3/nPOC Dip-Tepe Sekmesi (Kırılım Kilitli 🔒, Marjin %50)",
+                "is_baseline": False
             }
 
         # Sınıflandırma
-        if net_pnl > 3.0 and wr >= 60.0 and fakeout_rate <= 25.0:
+        base_class = self.dna_baseline.get(clean_sym, {}).get("persona_class", "STANDARD") if hasattr(self, 'dna_baseline') else "STANDARD"
+
+        # Eğer parite geçmişte WHIPSAW ise, canlıda en az 5 işlem görmeden erken GOLD terfisi yapılmaz (Yumuşak Geçiş Kalkanı)
+        if net_pnl > 3.0 and wr >= 60.0 and fakeout_rate <= 25.0 and (total_t >= 5 or base_class != "WHIPSAW"):
             return {
                 "symbol": symbol,
                 "persona_class": "GOLD",
@@ -432,9 +437,10 @@ class StrategyEngine:
                 "margin_scale": 1.3,
                 "stop_loss_atr_mult": 1.0,
                 "status_badge": "👑 Altın Lig (Marjin x1.3)",
-                "strategy_permission": "Öncelikli Kırılım + Pusu (Marjin x1.3)"
+                "strategy_permission": "Öncelikli Kırılım + Pusu (Marjin x1.3)",
+                "is_baseline": False
             }
-        elif fakeout_rate >= 45.0 or (net_pnl < -5.0 and wr < 45.0):
+        elif fakeout_rate >= 45.0 or (net_pnl < -5.0 and wr < 45.0) or (base_class == "WHIPSAW" and total_t < 5 and wr < 60.0):
             return {
                 "symbol": symbol,
                 "persona_class": "WHIPSAW",
@@ -448,7 +454,8 @@ class StrategyEngine:
                 "margin_scale": 0.5,
                 "stop_loss_atr_mult": 1.5,
                 "status_badge": "⚠️ Whipsaw (Kırılım Kilitli 🔒)",
-                "strategy_permission": "Yalnızca S3/R3/nPOC Dip-Tepe Sekmesi (Kırılım Kilitli 🔒)"
+                "strategy_permission": "Yalnızca S3/R3/nPOC Dip-Tepe Sekmesi (Kırılım Kilitli 🔒)",
+                "is_baseline": False
             }
         else:
             return {
@@ -464,7 +471,8 @@ class StrategyEngine:
                 "margin_scale": 1.0,
                 "stop_loss_atr_mult": 1.0,
                 "status_badge": "🟢 Kırılım + Sekme Açık",
-                "strategy_permission": "Dengeli Kırılım + Pusu"
+                "strategy_permission": "Dengeli Kırılım + Pusu",
+                "is_baseline": False
             }
 
     def get_all_coin_personas(self, all_symbols: list = None) -> dict:
