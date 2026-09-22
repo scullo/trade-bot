@@ -6009,7 +6009,6 @@ async function loadAdminMetrics() {
                     </tr>
                     `;
                 });
-                });
 
                 tbody.innerHTML = html;
             } catch (err) {
