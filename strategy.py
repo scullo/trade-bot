@@ -3410,12 +3410,22 @@ class StrategyEngine:
                 return
 
             # 🛡️ MAKRO AYI DÖKÜLMESİ KALKANI: BTC/ETH Ana Destekleri Kırarken Bıçak Tutma Engeli
-            # 🛡️ MAKRO VE TREND DÜŞÜŞÜ KALKANI: BTC düşerken veya genel satışta bıçak tutma engeli
+            # Kalibrasyon: BTC 1S %-0.75 gerçek satış baskısı eşiği (%-0.25 olağan gürültüdür)
+            # Eğer coinin kendisinde güçlü alıcı emilimi varsa (CVD >= 58%) destek sekmesine izin verilir
             btc_chg_1h = macro.get("btc_chg_1h", 0.0)
-            if is_bear_dump or (btc_chg_1h < -0.25 and coin_rs_score < 0.5):
+            cvd_data_macro = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+            cvd_ratio_macro = float(cvd_data_macro.get('ratio_60s', 50.0))
+            has_strong_buyer_escape = (cvd_ratio_macro >= 58.0 and coin_rs_score >= 0.0)
+            if is_bear_dump and not has_strong_buyer_escape:
                 self.log_rejection(
                     symbol, "SETUP 3 S3 Destek",
-                    f"Makro Düşüş Kalkanı (BTC 1S: %{btc_chg_1h:+.2f}, RS: {coin_rs_score:+.2f}); Piyasa genel düşüşündeyken S3 destek sekmesi engellendi."
+                    f"Makro Düşüş Kalkanı (BTC 1S: %{btc_chg_1h:+.2f}, RS: {coin_rs_score:+.2f}); Piyasa çöküşündeyken S3 destek sekmesi engellendi."
+                )
+                return
+            elif btc_chg_1h < -0.75 and coin_rs_score < -0.30 and not has_strong_buyer_escape:
+                self.log_rejection(
+                    symbol, "SETUP 3 S3 Destek",
+                    f"Makro Düşüş Kalkanı (BTC 1S: %{btc_chg_1h:+.2f}, RS: {coin_rs_score:+.2f}); Piyasa düşüşünde zayıf paritede S3 sekmesi engellendi."
                 )
                 return
 
@@ -3526,14 +3536,24 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 4 R3 Direnç", struct_reason)
                 return
 
-            # 🛡️ BOĞA TRENDİ VE SQUEEZE KALKANI: Boğa rejimindeyken R3 direncine kafa atılmaz
-            if "BOĞA" in trend_regime or macro.get("btc_chg_1h", 0.0) > 0.15:
+            # 🛡️ BOĞA TRENDİ VE SQUEEZE KALKANI: Güçlü Boğa rejimindeyken R3 direncine kafa atılmaz
+            # Kalibrasyon: Yalnızca GÜÇLÜ BOĞA'da koşulsuz engel; ILIMLI BOĞA'da satıcı teyiti (CVD < 45) varsa izin
+            # Excel Verisi: SHORT WR=%70, Ort PnL=+$0.53 → Shortlar en kârlı yön, gereksiz engel fırsat kaçırır
+            cvd_data_r3 = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+            cvd_ratio_r3 = float(cvd_data_r3.get('ratio_60s', 50.0))
+            if "GÜÇLÜ BOĞA" in trend_regime and macro.get("btc_chg_1h", 0.0) > 0.30:
                 self.log_rejection(symbol, "SETUP 4 R3 Direnç", f"Piyasa {trend_regime} rejimindeyken R3 direncinden SHORT açılmadı (Short Squeeze Koruması)")
+                return
+            elif "BOĞA" in trend_regime:
+                # Ilımlı Boğa'da satıcı teyiti varsa izin ver, yoksa engelle
+                if cvd_ratio_r3 >= 48.0 and coin_rs_score >= 0.3:
+                    self.log_rejection(symbol, "SETUP 4 R3 Direnç", f"Piyasa {trend_regime} rejimindeyken R3 direncinde satıcı teyidi yetersiz (CVD: %{cvd_ratio_r3:.1f}, RS: {coin_rs_score:+.2f})")
+                    return
+            elif macro.get("btc_chg_1h", 0.0) > 0.50:
+                self.log_rejection(symbol, "SETUP 4 R3 Direnç", f"BTC güçlü yükselişte (1S: %{macro.get('btc_chg_1h', 0.0):+.2f}), R3 shortu engellendi")
                 return
 
             # 🛡️ CVD BOĞA İTİŞİ KALKANI (Taker Alıcı Aşırılığı)
-            cvd_data_r3 = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
-            cvd_ratio_r3 = float(cvd_data_r3.get('ratio_60s', 50.0))
             if cvd_ratio_r3 > 65.0:
                 self.log_rejection(symbol, "SETUP 4 R3 Direnç", f"CVD Boğa İtişi Kalkanı: R3 test ediliyor fakat taker alıcı baskısı (%{cvd_ratio_r3:.1f} alıcı) aşırı agresif. Tepeye kafa atılmadı.")
                 return
@@ -3594,9 +3614,10 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 5 R4 Support Flip", struct_reason)
                 return
 
-            # 🛡️ TEPE AVWAP & AŞIRI ZAYIF KORUMASI: Fiyat Tepe AVWAP altında kaldıysa tepede arz birikmiştir (Bull Trap)
-            if tepe_avwap > 0 and close_price < tepe_avwap:
-                self.log_rejection(symbol, "SETUP 5 R4 Support Flip", f"Retest Tepe AVWAP (${tepe_avwap:.4f}) altında kaldı (Tepede sıkışan arz baskısı)")
+            # 🛡️ TEPE AVWAP & AŞIRI ZAYIF KORUMASI: Fiyat Tepe AVWAP'ın önemli ölçüde altındaysa tepede arz birikmiştir
+            # Kalibrasyon: R4 desteği sağlamsa, Tepe AVWAP'ın birkaç tick altında kalmak veto değil uyarıdır
+            if tepe_avwap > 0 and close_price < tepe_avwap * 0.997:
+                self.log_rejection(symbol, "SETUP 5 R4 Support Flip", f"Retest Tepe AVWAP (${tepe_avwap:.4f}) altında kaldı (%{(1 - close_price/tepe_avwap)*100:.2f} fark - Tepede sıkışan arz baskısı)")
                 return
             if is_severely_weak:
                 self.log_rejection(symbol, "SETUP 5 R4 Support Flip", f"Parite Aşırı Zayıf (RS: {coin_rs_score:+.2f}); zayıf paritede R4 retest desteği tutunamaz")
@@ -3803,11 +3824,22 @@ class StrategyEngine:
                 return
 
             # 🛡️ MAKRO VE TREND DÜŞÜŞÜ KALKANI: BTC düşerken veya genel dökülmede bıçak tutma engeli
+            # Kalibrasyon: BTC 1S %-0.75 gerçek satış baskısı eşiği (%-0.25 olağan gürültüdür)
+            # Eğer coinin kendisinde güçlü alıcı emilimi varsa (CVD >= 58%) sekmeye izin verilir
             btc_chg_1h = macro.get("btc_chg_1h", 0.0)
-            if is_bear_dump or (btc_chg_1h < -0.25 and coin_rs_score < 0.5):
+            cvd_data_macro_npoc = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+            cvd_ratio_macro_npoc = float(cvd_data_macro_npoc.get('ratio_60s', 50.0))
+            has_strong_buyer_escape_npoc = (cvd_ratio_macro_npoc >= 58.0 and coin_rs_score >= 0.0)
+            if is_bear_dump and not has_strong_buyer_escape_npoc:
                 self.log_rejection(
                     symbol, "SETUP 9 nPOC Sekmesi",
-                    f"Makro Düşüş Kalkanı (BTC 1S: %{btc_chg_1h:+.2f}, RS: {coin_rs_score:+.2f}); Piyasa düşüşündeyken nPOC likidite sekmesi engellendi."
+                    f"Makro Düşüş Kalkanı (BTC 1S: %{btc_chg_1h:+.2f}, RS: {coin_rs_score:+.2f}); Piyasa çöküşündeyken nPOC likidite sekmesi engellendi."
+                )
+                return
+            elif btc_chg_1h < -0.75 and coin_rs_score < -0.30 and not has_strong_buyer_escape_npoc:
+                self.log_rejection(
+                    symbol, "SETUP 9 nPOC Sekmesi",
+                    f"Makro Düşüş Kalkanı (BTC 1S: %{btc_chg_1h:+.2f}, RS: {coin_rs_score:+.2f}); Piyasa düşüşünde zayıf paritede nPOC sekmesi engellendi."
                 )
                 return
 
@@ -3922,10 +3954,12 @@ class StrategyEngine:
                 return
 
             # 🛡️ BOĞA TRENDİ VE SQUEEZE KALKANI: Güçlü Boğa rejimindeyken yukarı nPOC'ye kafa atılmaz (Short Squeeze Koruması)
+            # Kalibrasyon: Güçlü Boğa + BTC aktif yükseliş → koşulsuz engel
+            # Ilımlı Boğa'da kurumsal satıcı teyiti varsa → izin ver
             btc_chg_1h = macro.get("btc_chg_1h", 0.0)
             is_ice_sniper_sell = sym_met.get("is_iceberg_sniper_sell", False)
             is_trapped_longs_check = (sym_met.get("trapped_status") == "TRAPPED_LONGS")
-            if "GÜÇLÜ BOĞA" in trend_regime or (btc_chg_1h > 0.80 and "AYI" not in trend_regime):
+            if "GÜÇLÜ BOĞA" in trend_regime and btc_chg_1h > 0.30:
                 self.log_rejection(symbol, "Yukarı nPOC Reddi", f"Piyasa {trend_regime} rejimindeyken Yukarı nPOC'den SHORT açılmadı (Short Squeeze Koruması)")
                 return
             elif "BOĞA" in trend_regime:
@@ -4023,10 +4057,13 @@ class StrategyEngine:
             else:
                 cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
                 cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
-                is_strong_bull_mkt = ("GÜÇLÜ BOĞA" in trend_regime) or (macro.get("btc_chg_1h", 0.0) > 0.80 and "AYI" not in trend_regime)
-                is_weak_outlier = (coin_rs_score <= -0.60 and cvd_ratio <= 44.0)
-                if (is_strong_bull_mkt and not is_weak_outlier) or (coin_rs_score >= 0.5 and not is_bear_dump) or ("BOĞA" in trend_regime and not is_weak_outlier):
+                # Kalibrasyon: Yalnızca GÜÇLÜ BOĞA + BTC aktif yükselişte koşulsuz engel
+                # ILIMLI BOĞA'da coin bazlı satıcı akışı teyiti varsa izin ver
+                is_strong_bull_mkt = ("GÜÇLÜ BOĞA" in trend_regime) and (macro.get("btc_chg_1h", 0.0) > 0.30)
+                if is_strong_bull_mkt:
                     self.log_rejection(symbol, f"SETUP 11 {resist_tag} Retest Reddi", f"Piyasa {trend_regime} rejimindeyken (RS: {coin_rs_score:+.2f}) direnç retest shortu açılmadı.")
+                elif "BOĞA" in trend_regime and cvd_ratio >= 52.0 and coin_rs_score >= 0.30:
+                    self.log_rejection(symbol, f"SETUP 11 {resist_tag} Retest Reddi", f"Piyasa {trend_regime} rejimindeyken satıcı teyidi yetersiz (CVD: %{cvd_ratio:.1f}, RS: {coin_rs_score:+.2f})")
                 else:
                     c_high = current_candle.get('high', close_price)
                     c_low = current_candle.get('low', close_price)
