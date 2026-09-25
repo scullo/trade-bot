@@ -251,8 +251,8 @@ SYMBOL_MIN_COOLDOWN_MINUTES = 0           # Kârlı trendlerde ve A+ Elit sinyal
 # 12. Sistem Mimarisi & Güvenlik Yapılandırması (15 Reform Paketi)
 ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "valkyrie-quant-2025-secure")
 ENABLE_CHANDELIER_BE_NOTIFY = True        # Breakeven kilitlendiğinde Telegram anlık bildirim kalkanı
-ENABLE_DAILY_CIRCUIT_BREAKER = True       # Günlük net kayıp %3'ü aştığında yeni işlem açılışını kilitle
-MAX_DAILY_LOSS_PCT = 0.03                 # Azami günlük kabul edilebilir portföy kaybı (%3.0)
+ENABLE_DAILY_CIRCUIT_BREAKER = False      # Fırsat kaçırmamak için günlük devre kesici engellemesi KAPALI (Yalnızca telemetri)
+MAX_DAILY_LOSS_PCT = 0.05                 # Azami günlük referans takip eşiği (%5.0)
 
 SECTOR_CLUSTERS = {
     "MEME": {"DOGE/USDT", "PEPE/USDT", "SHIB/USDT", "WIF/USDT", "BONK/USDT", "FLOKI/USDT", "TURBO/USDT", "BOME/USDT", "PUMP/USDT", "1000PEPE/USDT", "1000SHIB/USDT", "1000BONK/USDT", "1000FLOKI/USDT", "NEIRO/USDT"},

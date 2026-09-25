@@ -939,11 +939,9 @@ class StrategyEngine:
             return {"error": "MAX_SLOTS_REACHED"}
 
         # Kural 3: Beta Sektör & Ekosistem Korelasyon Kalkanı (Cluster Exposure Shield)
-        # Dinamik Limit: Dead Zone / Sıkışmada 1, Normal / Trend Piyasada 2
+        # Fırsat kaçırmamak için her sektörde standart en az 2 pozisyona izin verilir (Güçlü trendde 3)
         CLUSTERS = SECTOR_CLUSTERS
-        macro_climate = getattr(self.market_data, 'macro_climate', 'NORMAL') if self.market_data else 'NORMAL'
-        is_macro_dz = (macro_climate == "DEAD_ZONE")
-        max_cluster_allowed = 1 if is_macro_dz else 2
+        max_cluster_allowed = 3 if "GÜÇLÜ" in trend_regime else 2
 
         for c_name, c_symbols in CLUSTERS.items():
             if symbol in c_symbols:
@@ -3135,22 +3133,19 @@ class StrategyEngine:
         if tot_open_margin >= max_margin_budget:
             return
 
-        # 🛡️ GÜVENLİK ZIRHI 1: GÜNLÜK DEVRE KESİCİ (Circuit Breaker - Portföy Koruma Kilidi)
-        if ENABLE_DAILY_CIRCUIT_BREAKER:
-            user_daily_loss_pct = getattr(self.paper_trader, 'max_daily_drawdown_pct', MAX_DAILY_LOSS_PCT)
-            cb_ok, cb_msg = self.vault.check_daily_circuit_breaker(
-                getattr(self.paper_trader, 'history', []),
-                getattr(self.paper_trader, 'balance', 10000.0),
-                max_loss_pct=user_daily_loss_pct
-            )
-            if not cb_ok:
-                rej_msg = f"🛡️ GÜNLÜK DEVRE KESİCİ AKTİF: {cb_msg}"
-                print(f">> [DEVRE KESİCİ ENGELLEDİ] {symbol}: {rej_msg}")
-                self.log_rejection(symbol, "CIRCUIT_BREAKER", rej_msg)
-                return
+        # 🛡️ GÜVENLİK ZIRHI 1: GÜNLÜK DEVRE KESİCİ TELEMETRİSİ (Fırsat Kaçırmamak İçin İşlemi Asla Durdurmaz)
+        user_daily_loss_pct = getattr(self.paper_trader, 'max_daily_drawdown_pct', 0.05)
+        cb_ok, cb_msg = self.vault.check_daily_circuit_breaker(
+            getattr(self.paper_trader, 'history', []),
+            getattr(self.paper_trader, 'balance', 10000.0),
+            max_loss_pct=user_daily_loss_pct
+        )
+        if not cb_ok:
+            # Fırsat kaçırmamak ve veri toplamayı kesintisiz sürdürmek için işlemi engellemez, yalnızca telemetri kaydeder
+            print(f">> [DEVRE KESİCİ TELEMETRİ BİLDİRİMİ] {cb_msg}")
 
-        # 🛡️ GÜVENLİK ZIRHI 2: PORTFÖY MARJİN TAVAN KİLİDİ
-        user_margin_cap_pct = getattr(self.paper_trader, 'max_portfolio_margin_pct', (MAX_PORTFOLIO_MARGIN_PCT / 100.0))
+        # 🛡️ GÜVENLİK ZIRHI 2: PORTFÖY MARJİN TAVAN KONTROLÜ
+        user_margin_cap_pct = getattr(self.paper_trader, 'max_portfolio_margin_pct', 0.80)
         pos_size = getattr(self.paper_trader, 'margin_per_trade', getattr(self.paper_trader, 'position_size', 100.0))
         mc_ok, mc_msg = self.vault.check_margin_cap(
             getattr(self.paper_trader, 'open_positions', {}),
@@ -3159,10 +3154,7 @@ class StrategyEngine:
             max_cap_pct=user_margin_cap_pct
         )
         if not mc_ok:
-            rej_msg = f"🛡️ Portföy Marjin Tavanı Aşıldı: {mc_msg}"
-            print(f">> [MARJİN TAVAN ENGELLEDİ] {symbol}: {rej_msg}")
-            self.log_rejection(symbol, "MARGIN_CAP", rej_msg)
-            return
+            print(f">> [MARJİN TAVAN UYARISI] {mc_msg}")
 
         r3, r4, r5 = cam.get("R3", 0), cam.get("R4", 0), cam.get("R5", 0)
         s3, s4, s5 = cam.get("S3", 0), cam.get("S4", 0), cam.get("S5", 0)
