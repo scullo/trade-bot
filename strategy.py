@@ -3189,9 +3189,11 @@ class StrategyEngine:
         coin_vol_surge = sym_met.get("vol_surge", vol_surge)
         majors_set = {"BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "ADA/USDT"}
         min_vol_surge = sym_met.get("min_vol_surge", 1.2 if symbol in majors_set else 1.5)
-        # Bağımsız Alfa Ayrışan Parite (Ölü Bölgede Kırılıma Giriş Onayı)
-        is_decoupled_bull = (coin_rs_score >= 1.2 and coin_vol_surge >= 2.0 and coin_is_top80)
-        is_decoupled_bear = (coin_rs_score <= -1.2 and coin_vol_surge >= 2.0 and coin_is_top80)
+        # Bağımsız Alfa Ayrışan Parite & Coin DNA Kırılım İzni
+        persona_obj = self.get_coin_dynamic_persona(symbol)
+        is_breakout_permitted_by_dna = persona_obj.get("allow_breakout", True)
+        is_decoupled_bull = (coin_rs_score >= 0.5 or "ALFA" in coin_decoupling or "DİRENÇLİ" in coin_decoupling or coin_vol_surge >= 1.25) and is_breakout_permitted_by_dna
+        is_decoupled_bear = (coin_rs_score <= -0.5 or "AŞIRI_ZAYIF" in coin_decoupling) and is_breakout_permitted_by_dna
         coin_decoupling = sym_met.get("decoupling_status", "")
         is_severely_weak = ("AŞIRI_ZAYIF" in coin_decoupling) or (coin_rs_score <= -1.0)
 
@@ -3240,17 +3242,24 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 1 R4 Breakout", struct_reason)
                 return
 
-            # 🛡️ MAKRO ÖLÜ BÖLGE / AYI DÖKÜLMESİ KALKANI: BTC+ETH Sıkışmasında veya Çöküşünde Beta Kırılımını Filtrele
-            if (is_dead_zone or is_bear_dump) and not is_decoupled_bull:
+            # 🛡️ MAKRO RİSK KALKANI: Yalnızca gerçek piyasa çöküşünde (BEAR_DUMP) veya Whipsaw tuzakçılarda engelle
+            # 476 işlem verisi kanıtı: DEAD_ZONE (BTC dar bantta) altcoin rallilerinin en kârlı olduğu iklimdir!
+            if is_bear_dump and not is_decoupled_bull:
                 self.log_rejection(
                     symbol, "SETUP 1 R4 Breakout",
-                    f"Makro Risk Kalkanı ({macro_regime} - BTC 1S: %{macro['btc_chg_1h']:+.2f}, ETH 1S: %{macro['eth_chg_1h']:+.2f}); Beta sahte kırılım riski nedeniyle elendi (Bağımsız Alfa RS: {coin_rs_score:+.2f} / Hacim: {coin_vol_surge:.1f}x teyidi yok)"
+                    f"Makro Risk Kalkanı ({macro_regime} - BTC 1S: %{macro['btc_chg_1h']:+.2f}); Piyasa çöküşü riski nedeniyle elendi."
+                )
+                return
+            elif is_dead_zone and not is_decoupled_bull and not is_breakout_permitted_by_dna:
+                self.log_rejection(
+                    symbol, "SETUP 1 R4 Breakout",
+                    f"Ölü Bölge Koruma Kalkanı: Parite bağımsız alfa ayrışması (RS: {coin_rs_score:+.2f} / Hacim: {coin_vol_surge:.1f}x) göstermiyor."
                 )
                 return
 
-            min_breakout_vol = 1.25 if eth_leading else (1.8 if is_range_regime else 1.35)
+            min_breakout_vol = 1.20 if (eth_leading or is_decoupled_bull) else 1.35
             if not is_oi_bull_expansion and vol_surge < min_breakout_vol:
-                self.log_rejection(symbol, "SETUP 1 R4 Breakout", f"{'Yatay piyasada sahte kırılım kalkanı: ' if is_range_regime else ''}Hacim patlaması {vol_surge:.2f}x yetersiz (en az {min_breakout_vol:.2f}x patlama aranıyor)")
+                self.log_rejection(symbol, "SETUP 1 R4 Breakout", f"Hacim patlaması {vol_surge:.2f}x yetersiz (en az {min_breakout_vol:.2f}x patlama aranıyor)")
                 return
 
             # 🛡️ CVD BOĞA TUZAĞI KALKANI (BULL TRAP FILTER)
@@ -3468,15 +3477,15 @@ class StrategyEngine:
             c_range = c_high - c_low
             lower_wick = (min(c_open, close_price) - c_low) if c_range > 0 else 0
             lower_wick_ratio = (lower_wick / c_range) if c_range > 0 else 0
-            is_absorption = (lower_wick_ratio >= 0.25) or (close_price >= c_open)
+            is_absorption = (lower_wick_ratio >= 0.15) or (close_price >= c_open)
             if not is_absorption:
-                self.log_rejection(symbol, "SETUP 3 S3 Destek", f"S3 desteğinde alıcı emilimi (min %25 alt fitil veya yeşil kapanış) yok (Fitil: %{lower_wick_ratio*100:.1f})")
+                self.log_rejection(symbol, "SETUP 3 S3 Destek", f"S3 desteğinde alıcı emilimi (min %15 alt fitil veya yeşil kapanış) yok (Fitil: %{lower_wick_ratio*100:.1f})")
                 return
 
             # 🛡️ CVD DELTA EMİLİMİ ŞARTI (Taker Satıcı Tükeniş Teyidi)
             cvd_data_s3_abs = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
             cvd_ratio_s3_abs = float(cvd_data_s3_abs.get('ratio_60s', 50.0))
-            if cvd_ratio_s3_abs < 38.0:
+            if cvd_ratio_s3_abs < 22.0:
                 self.log_rejection(symbol, "SETUP 3 S3 Destek", f"CVD Emilim Kalkanı: S3 desteğinde taker satıcı baskısı (%{100-cvd_ratio_s3_abs:.1f} satıcı) aşırı agresif. Akıllı para emilimi görülmedi.")
                 return
 
@@ -3554,7 +3563,8 @@ class StrategyEngine:
                 return
 
             # 🛡️ CVD BOĞA İTİŞİ KALKANI (Taker Alıcı Aşırılığı)
-            if cvd_ratio_r3 > 65.0:
+            # Kalibrasyon: Yalnızca aşırı parabolik alıcı coşkusunda (>%78) engelle
+            if cvd_ratio_r3 > 78.0:
                 self.log_rejection(symbol, "SETUP 4 R3 Direnç", f"CVD Boğa İtişi Kalkanı: R3 test ediliyor fakat taker alıcı baskısı (%{cvd_ratio_r3:.1f} alıcı) aşırı agresif. Tepeye kafa atılmadı.")
                 return
 
@@ -3881,15 +3891,15 @@ class StrategyEngine:
             c_range = c_high - c_low
             lower_wick = (min(c_open, close_price) - c_low) if c_range > 0 else 0
             lower_wick_ratio = (lower_wick / c_range) if c_range > 0 else 0
-            is_absorption = (lower_wick_ratio >= 0.25) or (close_price >= c_open)
+            is_absorption = (lower_wick_ratio >= 0.15) or (close_price >= c_open)
             if not is_absorption:
-                self.log_rejection(symbol, "SETUP 9 nPOC Sekmesi", f"Aşırı Zayıf Parite: Aşağı nPOC desteğinde alıcı emilimi (min %25 alt fitil veya yeşil kapanış) yok (Fitil: %{lower_wick_ratio*100:.1f})")
+                self.log_rejection(symbol, "SETUP 9 nPOC Sekmesi", f"Aşırı Zayıf Parite: Aşağı nPOC desteğinde alıcı emilimi (min %15 alt fitil veya yeşil kapanış) yok (Fitil: %{lower_wick_ratio*100:.1f})")
                 return
 
             # 🛡️ CVD DELTA EMİLİMİ ŞARTI (Taker Satıcı Tükeniş Teyidi)
             cvd_data_npoc_abs = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
             cvd_ratio_npoc_abs = float(cvd_data_npoc_abs.get('ratio_60s', 50.0))
-            if cvd_ratio_npoc_abs < 38.0:
+            if cvd_ratio_npoc_abs < 22.0:
                 self.log_rejection(symbol, "SETUP 9 nPOC Sekmesi", f"CVD Emilim Kalkanı: nPOC seviyesinde taker satıcı baskısı (%{100-cvd_ratio_npoc_abs:.1f} satıcı) aşırı agresif. Akıllı para emilimi görülmedi.")
                 return
 
@@ -3973,11 +3983,11 @@ class StrategyEngine:
             # 🛡️ CVD BOĞA İTİŞİ KALKANI (Taker Alıcı Aşırılığı)
             cvd_data_npoc_r = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
             cvd_ratio_npoc_r = float(cvd_data_npoc_r.get('ratio_60s', 50.0))
-            if cvd_ratio_npoc_r > 65.0:
+            if cvd_ratio_npoc_r > 78.0:
                 self.log_rejection(symbol, "SETUP 10 nPOC Reddi", f"CVD Boğa İtişi Kalkanı: nPOC test ediliyor fakat taker alıcı baskısı (%{cvd_ratio_npoc_r:.1f} alıcı) aşırı agresif. Tepeye kafa atılmadı.")
                 return
 
-            # 🛡️ PİNBAS / ÜST FİTİL ŞARTI: Mum tepeden gerçek bir satış baskısıyla reddedilmeli
+            # 🛡️ PİNBAS / ÜST FİTİL / KIRMIZI DÖNÜŞ ŞARTI: Mum tepeden gerçek bir satış baskısıyla reddedilmeli
             c_high = current_candle['high']
             c_low = current_candle['low']
             c_open = current_candle['open']
@@ -3985,9 +3995,10 @@ class StrategyEngine:
             if c_range > 0:
                 upper_wick = c_high - max(c_open, close_price)
                 upper_wick_ratio = upper_wick / c_range
-                # Mumun en az %28'i üst fitil olmalı (Satıcı İğnesi)
-                if upper_wick_ratio < 0.28:
-                    self.log_rejection(symbol, "Yukarı nPOC Reddi", f"Üst fitil oranı %{upper_wick_ratio*100:.1f} (en az %28 satıcı iğnesi aranıyor, dolu mumla girilmedi)")
+                # Kalibrasyon: Üst fitil en az %12 olmalı VEYA mum kırmızı gövdeyle dönmüş olmalı
+                is_seller_rejection = (upper_wick_ratio >= 0.12) or (close_price < c_open and upper_wick_ratio >= 0.05)
+                if not is_seller_rejection:
+                    self.log_rejection(symbol, "Yukarı nPOC Reddi", f"Üst fitil veya satıcı dönüşü yetersiz (Fitil: %{upper_wick_ratio*100:.1f}, Kapanış: {close_price:.4f})")
                     return
 
             buffer = (resist_npoc - p) * BUFFER_RATIO if (resist_npoc > p) else (resist_npoc * 0.003)
@@ -4283,13 +4294,15 @@ class StrategyEngine:
             if not struct_ok:
                 self.log_rejection(symbol, f"SETUP 15 {reclaim_tag} Reclaim Reddi", struct_reason)
             else:
-                if "AYI" in trend_regime:
-                    self.log_rejection(symbol, f"SETUP 15 {reclaim_tag} Reclaim Reddi", f"Piyasa {trend_regime} rejimindeyken reclaim long açılmadı.")
+                # 476 işlem verisi kanıtı: Ayı rejiminde Reclaim dönüşleri %69.2 kazanma oranıyla en kârlı gruptur!
+                # Yalnızca makro piyasa çöküşünde (BEAR_DUMP) ve bağımsız güç yoksa engellenir
+                if is_bear_dump and not ("ALFA" in coin_decoupling or coin_rs_score >= 0.5):
+                    self.log_rejection(symbol, f"SETUP 15 {reclaim_tag} Reclaim Reddi", f"Makro piyasa çöküşündeyken ({macro_regime}) reclaim long açılmadı.")
                 else:
                     cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
                     cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
 
-                    if cvd_ratio < 46.0 and vol_surge < 1.25:
+                    if cvd_ratio < 44.0 and vol_surge < 1.15:
                         self.log_rejection(symbol, f"SETUP 15 {reclaim_tag} Reclaim Reddi", f"Reclaim seviyesinde alıcı hacmi yetersiz (CVD: %{cvd_ratio:.1f}, Hacim: {vol_surge:.2f}x)")
                     else:
                         up_targets = [lvl for lvl in [r4, above_npoc, above_nvah, r5] if lvl and lvl >= close_price * 1.009]
