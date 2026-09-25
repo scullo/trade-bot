@@ -101,8 +101,8 @@ class StrategyEngine:
         if not symbol:
             return
         net_pnl = float(record.get("net_pnl", 0.0))
-        close_reason = str(record.get("close_reason", ""))
-        if net_pnl < 0 or "Stop" in close_reason or "Zaman" in close_reason:
+        is_breakeven = "Breakeven" in close_reason or "Başa Baş" in close_reason or "Başa-Baş" in close_reason
+        if net_pnl < 0 and not is_breakeven:
             self.failed_levels[symbol] = {
                 "side": record.get("side"),
                 "setup_id": record.get("setup_id", ""),
@@ -634,17 +634,32 @@ class StrategyEngine:
         entry_p = float(pos.get("entry_price", current_price))
         abs_max_stop_pct = MAX_ABSOLUTE_STOP_PCT / 100.0
 
-        if pos.get("is_half_closed", False):
-            # TP1 sonrası: Breakeven / Kâr Koruma Stopu tick düzeyinde anında korunur
+        # ── 0b. CHANDELIER ANLIK TICK ERKEN BREAKEVEN KİLİDİ ──
+        if ENABLE_CHANDELIER_EARLY_BE_LOCK and not pos.get("is_half_closed", False):
+            be_threshold = float(CHANDELIER_EARLY_BE_THRESHOLD_PCT) / 100.0  # 0.0080
+            cur_price_pct = (current_price - entry_p) / entry_p if side == "LONG" else (entry_p - current_price) / entry_p
+            if cur_price_pct >= be_threshold:
+                fee_buffer = 0.0012  # Giriş-çıkış komisyon tamponu (%0.12)
+                be_price = entry_p * (1.0 + fee_buffer) if side == "LONG" else entry_p * (1.0 - fee_buffer)
+                cur_stop = pos.get("hard_stop") or pos.get("soft_stop", 0.0)
+                should_lock = (side == "LONG" and cur_stop < be_price) or (side == "SHORT" and (cur_stop == 0.0 or cur_stop > be_price))
+                if should_lock:
+                    pos['hard_stop'] = be_price
+                    pos['soft_stop'] = be_price
+                    pos['early_be_locked'] = True
+                    print(f">> [CHANDELIER TICK BE KİLİDİ] {symbol} {side}: Anlık kâr +%{cur_price_pct*100:.2f} -> Stop başa başa kilitlendi (${be_price:.4f})")
+
+        if pos.get("is_half_closed", False) or pos.get("early_be_locked", False):
+            # TP1 sonrası veya Erken Chandelier Kilidi: Breakeven / Kâr Koruma Stopu tick düzeyinde anında korunur
             be_stop = float(pos.get("hard_stop") or pos.get("soft_stop") or entry_p)
             if side == "LONG" and current_price <= be_stop:
-                record = await self._safe_close_position(symbol, current_price, f"🛡️ Breakeven Stop Tetiklendi (${be_stop:.4f})")
+                record = await self._safe_close_position(symbol, current_price, f"🛡️ Breakeven Koruması Tetiklendi (${be_stop:.4f})")
                 if record:
                     await self._notify_close(record, levels=levels)
                     self._cleanup_tracking(symbol)
                 return
             elif side == "SHORT" and current_price >= be_stop:
-                record = await self._safe_close_position(symbol, current_price, f"🛡️ Breakeven Stop Tetiklendi (${be_stop:.4f})")
+                record = await self._safe_close_position(symbol, current_price, f"🛡️ Breakeven Koruması Tetiklendi (${be_stop:.4f})")
                 if record:
                     await self._notify_close(record, levels=levels)
                     self._cleanup_tracking(symbol)
@@ -1007,7 +1022,7 @@ class StrategyEngine:
         # Tuzakçı/çalkantılı hareket eden paritelerde hacimsiz kırılımlar elenir, asgari 4 confluence veya kurumsal balina akışı şartı aranır.
         persona = self.get_coin_dynamic_persona(symbol)
         p_class = persona.get("persona_class", "STANDARD")
-        is_breakout = (trade_type == "BREAKOUT" or "Breakout" in reason or "Breakdown" in reason or "Kırılım" in reason)
+        is_breakout = (trade_type == "BREAKOUT" or "BREAKOUT" in str(setup_id) or "BREAKDOWN" in str(setup_id) or "Breakout" in reason or "Breakdown" in reason or "Kırılım" in reason)
         
         if ENABLE_DYNAMIC_COIN_AUDIT and p_class == "WHIPSAW":
             c_cnt = len(confluence_list or [])
