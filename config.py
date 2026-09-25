@@ -244,6 +244,6 @@ PERSONA_ALLOWED_CLASSES = ["GOLD", "STANDARD"] # Yalnızca kanıtlanmış kârl�
 ENABLE_CHANDELIER_EARLY_BE_LOCK = True    # +%0.80 MFE (+%4.0 ROE) kâr gören pozisyona erken Breakeven kilidi
 CHANDELIER_EARLY_BE_THRESHOLD_PCT = 0.80  # Erken BE için gereken asgari fiyat lehte hareket eşiği (%0.80)
 ENABLE_ASIA_SELECTIVE_SHIELD = True       # Asya seansında (TSİ 02:00-09:00) düşük likidite tuzak filtresi
-ENABLE_COOLDOWN_THROTTLE = True           # Aşırı işlem (Over-trading) ve komisyon freni
-SYMBOL_MIN_COOLDOWN_MINUTES = 30          # Aynı paritede ardışık işlemler arası en az 30 dakika soğuma
+ENABLE_COOLDOWN_THROTTLE = False          # Fırsat kaçırmamak için genel soğuma KAPALI (Zararlarda zaten 45dk stop kalkanı ve 2 stop sınırı devrededir)
+SYMBOL_MIN_COOLDOWN_MINUTES = 0           # Kârlı trendlerde ve A+ Elit sinyallerde anında yeniden işlem açılabilir (0 dk)
 
