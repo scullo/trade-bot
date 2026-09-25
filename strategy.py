@@ -26,9 +26,11 @@ from config import (
     ENABLE_OI_VELOCITY_RADAR, OI_EXPANSION_THRESHOLD_PCT, OI_SQUEEZE_EXHAUSTION_PCT,
     ENABLE_COINBASE_LEAD_LAG, COINBASE_LEAD_SPREAD_BPS,
     ENABLE_DYNAMIC_LEVERAGE, MIN_LEVERAGE, MAX_LEVERAGE, DEFAULT_LEVERAGE,
-    LEVERAGE_LOW_ATR_THRESHOLD, LEVERAGE_HIGH_ATR_THRESHOLD, LEVERAGE_EXTREME_ATR_THRESHOLD,
     ENABLE_MAX_STOP_DIST_GATE, MAX_ENTRY_STOP_DIST_PCT,
-    ENABLE_MEME_DEFENSIVE_MODE, MEME_SYMBOLS, MEME_MAX_LEVERAGE, MEME_MAX_MARGIN, MEME_MAX_STOP_DIST_PCT
+    ENABLE_MEME_DEFENSIVE_MODE, MEME_SYMBOLS, MEME_MAX_LEVERAGE, MEME_MAX_MARGIN, MEME_MAX_STOP_DIST_PCT,
+    ENABLE_WHIPSAW_TRADING_FILTER, PERSONA_ALLOWED_CLASSES,
+    ENABLE_CHANDELIER_EARLY_BE_LOCK, CHANDELIER_EARLY_BE_THRESHOLD_PCT,
+    ENABLE_ASIA_SELECTIVE_SHIELD, ENABLE_COOLDOWN_THROTTLE, SYMBOL_MIN_COOLDOWN_MINUTES
 )
 
 
@@ -405,17 +407,18 @@ class StrategyEngine:
             return {
                 "symbol": symbol,
                 "persona_class": "WHIPSAW",
-                "persona_name": "⚠️ Volatil & Tuzakçı (Whipsaw - 2x Stop Pusu Modu)",
+                "persona_name": "⚠️ Volatil & Tuzakçı (Whipsaw - 2x Stop Karantina)",
                 "trades_count": total_t,
                 "win_rate": round(wr, 1),
                 "fakeout_rate": round(fakeout_rate, 1),
                 "net_pnl": round(net_pnl, 2),
                 "allow_breakout": False,
-                "allow_bounce": True,
-                "margin_scale": 0.5,
+                "allow_bounce": False,
+                "is_trading_allowed": False,
+                "margin_scale": 0.0,
                 "stop_loss_atr_mult": 1.5,
-                "status_badge": "⚠️ Whipsaw (Kırılım Kilitli 🔒, Marjin %50)",
-                "strategy_permission": "Yalnızca S3/R3/nPOC Dip-Tepe Sekmesi (Kırılım Kilitli 🔒, Marjin %50)",
+                "status_badge": "🛑 Whipsaw (Karantinada 🔒)",
+                "strategy_permission": "Yüksek Tuzak Riski - Yeni İşleme Kapalı 🔒",
                 "is_baseline": False
             }
 
@@ -434,6 +437,7 @@ class StrategyEngine:
                 "net_pnl": round(net_pnl, 2),
                 "allow_breakout": True,
                 "allow_bounce": True,
+                "is_trading_allowed": True,
                 "margin_scale": 1.3,
                 "stop_loss_atr_mult": 1.0,
                 "status_badge": "👑 Altın Lig (Marjin x1.3)",
@@ -450,11 +454,12 @@ class StrategyEngine:
                 "fakeout_rate": round(fakeout_rate, 1),
                 "net_pnl": round(net_pnl, 2),
                 "allow_breakout": False,
-                "allow_bounce": True,
-                "margin_scale": 0.5,
+                "allow_bounce": False,
+                "is_trading_allowed": False,
+                "margin_scale": 0.0,
                 "stop_loss_atr_mult": 1.5,
-                "status_badge": "⚠️ Whipsaw (Kırılım Kilitli 🔒)",
-                "strategy_permission": "Yalnızca S3/R3/nPOC Dip-Tepe Sekmesi (Kırılım Kilitli 🔒)",
+                "status_badge": "🛑 Whipsaw (Karantinada 🔒)",
+                "strategy_permission": "Yüksek Tuzak Riski - Yeni İşleme Kapalı 🔒",
                 "is_baseline": False
             }
         else:
@@ -778,8 +783,13 @@ class StrategyEngine:
                 pass
 
     def _cleanup_tracking(self, symbol: str):
-        """Pozisyon kapandiginda tracking verilerini temizle."""
+        """Pozisyon kapandiginda tracking verilerini temizle ve komisyon freni soğumasını başlat."""
         self.peak_prices.pop(symbol, None)
+        if ENABLE_COOLDOWN_THROTTLE:
+            if not hasattr(self, 'symbol_trade_cooldown'):
+                self.symbol_trade_cooldown = {}
+            cooldown_sec = float(SYMBOL_MIN_COOLDOWN_MINUTES) * 60.0
+            self.symbol_trade_cooldown[symbol] = time.time() + cooldown_sec
 
     def calculate_dynamic_leverage(self, symbol: str, atr_pct: float, confluence_count: int, has_whale_flow: bool = False, is_dead_zone: bool = False, is_major: bool = False, confluence_list: list = None) -> int:
         """
@@ -853,6 +863,16 @@ class StrategyEngine:
             print(f">> [RED - SOĞUMA KALKANI] {symbol}: {rej_msg}")
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "SYMBOL_STOP_COOLDOWN_ACTIVE"}
+
+        # ── 0a-2. AŞIRI İŞLEM (OVER-TRADING) & KOMİSYON FRENİ COOLDOWN ──
+        if ENABLE_COOLDOWN_THROTTLE and not is_fakeout_reclaim:
+            trade_cd = getattr(self, 'symbol_trade_cooldown', {}).get(symbol, 0.0)
+            if now_ts < trade_cd:
+                rem_mins = max(1, int((trade_cd - now_ts) // 60))
+                rej_msg = f"🛡️ Komisyon Freni: {symbol} kısa süre önce işlem tamamladı. Aşırı işlem ve gereksiz komisyon yükünü önlemek için {rem_mins} dk soğumada."
+                print(f">> [RED - KOMİSYON FRENİ] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, reason, rej_msg)
+                return {"error": "SYMBOL_TRADE_COOLDOWN_ACTIVE"}
 
         today_str = datetime.now().strftime("%Y-%m-%d")
         if getattr(self, 'symbol_daily_loss_date', None) != today_str:
@@ -982,16 +1002,17 @@ class StrategyEngine:
             if met:
                 vol_surge = met.get("vol_surge", vol_surge)
                 is_top_80 = met.get("is_top_80", is_top_80)
-        # ── 1b. OTONOM COIN DNA VE DİNAMİK PERSONA KALKANI (ERKEN ELEME) ──
+        # ── 1b. OTONOM COIN DNA VE DİNAMİK PERSONA KALKANI (WHIPSAW TAM ENGELLEME) ──
         persona = self.get_coin_dynamic_persona(symbol)
+        p_class = persona.get("persona_class", "STANDARD")
         is_breakout = (trade_type == "BREAKOUT" or "Breakout" in reason or "Breakdown" in reason or "Kırılım" in reason)
         
-        # 1. Tuzakçı (Whipsaw) Kırılım Kilidi: Sahte fitil üreten coinlerin breakout'larını anında engelle
-        if is_breakout and not persona.get("allow_breakout", True):
-            rej_msg = f"🛡️ Whipsaw Kalkanı: Son {persona.get('trades_count')} işlemde %{persona.get('fakeout_rate', 0):.0f} tuzak fitil üretti. Kırılım kilitli (Yalnızca S3/R3/nPOC dip-tepe sekmeleri pusuda)."
-            print(f">> [RED - WHIPSAW KALKANI] {symbol}: {rej_msg}")
+        # 1. Tuzakçı (Whipsaw) Kutsal Kalkanı: 476 işlemde %28 WR ve -$1,210 zarar üreten Whipsaw pariteleri TAMAMEN ENGELLE!
+        if ENABLE_WHIPSAW_TRADING_FILTER and (p_class not in PERSONA_ALLOWED_CLASSES or not persona.get("is_trading_allowed", True)):
+            rej_msg = f"🛡️ Whipsaw Kalkanı: {symbol} tuzakçı/volatil parite sınıfında (Tarihsel %28.0 WR, -$1,210 kayıp). Sermaye koruma kalkanı devrede, yeni işlem TAMAMEN ENGELLENDİ."
+            print(f">> [RED - WHIPSAW TAM ENGEL] {symbol}: {rej_msg}")
             self.log_rejection(symbol, reason, rej_msg)
-            return {"error": "WHIPSAW_BREAKOUT_BLOCKED"}
+            return {"error": "WHIPSAW_TRADING_BLOCKED"}
 
         # 2. Geç Kovalama (Breakout Chase) & Likidasyon İğnesi Kalkanı (PEPE, LINK, GALA Koruması)
         if self.market_data and symbol in self.market_data.candles_5m:
@@ -1692,24 +1713,41 @@ class StrategyEngine:
         else:
             session_str = "🗽 NEW YORK (ABD)"
 
-        # ── 3b. AKILLI ASYA SEANSI LONG FİLTRESİ (SMART ASIA REGIME & CONFIRMATION SHIELD) ──
+        # ── 3b. AKILLI ASYA SEANSI DEFANS KALKANI (SMART ASIA REGIME & CONFIRMATION SHIELD) ──
         # Asya seansı tamamen engellenmez (gece patlayan alfa coinleri kaçırılmaz).
-        # Ancak sığ gece likiditesinde ayı trendinde nPOC dip sekmesi aramak veya zayıf alıcı akışına girmek engellenir.
-        if session_str == "🌏 ASYA (Tokyo/Singapur)" and side == "LONG":
-            # 1. Ayı Trendi Dip Sekmesi Kalkanı: Ayı rejiminde sığ Asya tahtasında nPOC sekmesi tutunamaz
-            if ("AYI" in trend_regime or (p_val > 0 and entry_price < p_val)) and ("nPOC" in reason or "Sekmesi" in reason or "Destek" in reason):
-                rej_msg = f"🛡️ Asya Ayı Trendi Dip Kalkanı: Gece Asya seansında ayı trendinde ({trend_regime}, Fiyat < Pivot P) dip sekmesi tutunamaz. Gece düşen bıçağa karşı LONG engellendi."
-                print(f">> [RED - ASYA AYI DİP KALKANI] {symbol}: {rej_msg}")
-                self.log_rejection(symbol, reason, rej_msg)
-                return {"error": "ASIA_BEAR_BOUNCE_BLOCKED"}
-            
-            # 2. Alıcı Akışı & Tahta Duvarı Teyidi: Asya'da LONG için gerçek alıcı üstünlüğü (%55+ CVD veya Alıcı Duvarı veya Hacim Patlaması) şarttır
-            has_asia_buyer = (cvd_ratio_60s >= 55.0 or "ALICI DUVARI" in obi_wall_side or "BID_WALL" in obi_wall_side or vol_surge >= 2.0)
-            if not has_asia_buyer:
-                rej_msg = f"🛡️ Asya Alıcı Teyidi Kalkanı: Gece sığ piyasasında alıcı üstünlüğü (Alıcı CVD: %{cvd_ratio_60s:.0f} < %55) veya tahta alıcı duvarı ({obi_wall_side}) yok. Hacimsiz gece tuzağına karşı LONG engellendi."
-                print(f">> [RED - ASYA ALICI TEYİT KALKANI] {symbol}: {rej_msg}")
-                self.log_rejection(symbol, reason, rej_msg)
-                return {"error": "ASIA_LOW_BUYER_CONFIRMATION_BLOCKED"}
+        # Ancak 476 işlem analizinde Asya seansı -$441 net zarar yazmıştır.
+        # Bu nedenle sığ gece likiditesinde trend tersi işlemler ve teyitsiz emir akışları engellenir.
+        if ENABLE_ASIA_SELECTIVE_SHIELD and session_str == "🌏 ASYA (Tokyo/Singapur)":
+            if side == "LONG":
+                # 1. Ayı Trendi Dip Sekmesi Kalkanı: Ayı rejiminde sığ Asya tahtasında nPOC sekmesi tutunamaz
+                if ("AYI" in trend_regime or (p_val > 0 and entry_price < p_val)) and ("nPOC" in reason or "Sekmesi" in reason or "Destek" in reason):
+                    rej_msg = f"🛡️ Asya Ayı Trendi Dip Kalkanı: Gece Asya seansında ayı trendinde ({trend_regime}, Fiyat < Pivot P) dip sekmesi tutunamaz. Gece düşen bıçağa karşı LONG engellendi."
+                    print(f">> [RED - ASYA AYI DİP KALKANI] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg)
+                    return {"error": "ASIA_BEAR_BOUNCE_BLOCKED"}
+                
+                # 2. Alıcı Akışı & Tahta Duvarı Teyidi: Asya'da LONG için gerçek alıcı üstünlüğü (%55+ CVD veya Alıcı Duvarı veya Hacim Patlaması) şarttır
+                has_asia_buyer = (cvd_ratio_60s >= 55.0 or "ALICI DUVARI" in obi_wall_side or "BID_WALL" in obi_wall_side or vol_surge >= 2.0)
+                if not has_asia_buyer:
+                    rej_msg = f"🛡️ Asya Alıcı Teyidi Kalkanı: Gece sığ piyasasında alıcı üstünlüğü (Alıcı CVD: %{cvd_ratio_60s:.0f} < %55) veya tahta alıcı duvarı ({obi_wall_side}) yok. Hacimsiz gece tuzağına karşı LONG engellendi."
+                    print(f">> [RED - ASYA ALICI TEYİT KALKANI] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg)
+                    return {"error": "ASIA_LOW_BUYER_CONFIRMATION_BLOCKED"}
+            elif side == "SHORT":
+                # 1. Boğa Trendi Tepe Reddi Kalkanı: Gece Asya seansında boğa trendinde tepe reddi aramak ezilmeye yol açar
+                if ("BOĞA" in trend_regime or (p_val > 0 and entry_price > p_val)) and ("nPOC" in reason or "Reddi" in reason or "Direnç" in reason):
+                    rej_msg = f"🛡️ Asya Boğa Trendi Tepe Kalkanı: Gece Asya seansında boğa trendinde ({trend_regime}, Fiyat > Pivot P) tepe reddi tutunamaz. Gece yükselen rokete karşı SHORT engellendi."
+                    print(f">> [RED - ASYA BOĞA TEPE KALKANI] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg)
+                    return {"error": "ASIA_BULL_REJECTION_BLOCKED"}
+                
+                # 2. Satıcı Akışı & Tahta Duvarı Teyidi: Asya'da SHORT için gerçek satıcı üstünlüğü (%55+ Satıcı CVD veya Satıcı Duvarı) şarttır
+                has_asia_seller = (cvd_ratio_60s <= 45.0 or "SATICI DUVARI" in obi_wall_side or "ASK_WALL" in obi_wall_side or vol_surge >= 2.0)
+                if not has_asia_seller:
+                    rej_msg = f"🛡️ Asya Satıcı Teyidi Kalkanı: Gece sığ piyasasında satıcı üstünlüğü (Satıcı CVD: %{100-cvd_ratio_60s:.0f} < %55) veya tahta satıcı duvarı ({obi_wall_side}) yok. Hacimsiz gece tuzağına karşı SHORT engellendi."
+                    print(f">> [RED - ASYA SATICI TEYİT KALKANI] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg)
+                    return {"error": "ASIA_LOW_SELLER_CONFIRMATION_BLOCKED"}
 
         # ── 4. HACIM PATLAMA KATSAYISI (Volume Surge Ratio) ──
         # Zaten yukarida df_5m'den guvenle hesaplandi (varsayilan 1.0x)
@@ -2849,17 +2887,35 @@ class StrategyEngine:
             is_warming_up = (time.time() - getattr(self, "boot_time", 0)) < getattr(self, "warmup_seconds", 45.0)
 
             if not is_warming_up:
+                # ── REFORM 2: CHANDELIER ERKEN KÂR KORUMA & BREAKEVEN KİLİDİ ──
+                # 476 işlem analizinde kanıtlandı: Kaybeden 248 işlemin %50.4'ü (125 işlem) en az +%1.00 (+%5 ROE) kâra ulaşmıştı!
+                # Bu işlemler kârı kilitleyen mekanizma olmadığı için geri dönüp stop oluyordu.
+                # Eğer pozisyon lehimize >= +%0.80 (+%4 ROE) kâr görmüşse, stop seviyesi derhal 'Giriş + Komisyon Tamponu'na kilitlenir!
+                if ENABLE_CHANDELIER_EARLY_BE_LOCK and not is_half:
+                    be_threshold = float(CHANDELIER_EARLY_BE_THRESHOLD_PCT) / 100.0  # 0.0080
+                    if price_pct >= be_threshold:
+                        fee_buffer = 0.0012  # Giriş-çıkış komisyon tamponu (%0.12)
+                        be_price = entry_p * (1.0 + fee_buffer) if side == "LONG" else entry_p * (1.0 - fee_buffer)
+                        cur_stop = pos.get("hard_stop") or pos.get("soft_stop", 0.0)
+                        should_lock = (side == "LONG" and cur_stop < be_price) or (side == "SHORT" and cur_stop > be_price)
+                        if should_lock:
+                            pos['hard_stop'] = be_price
+                            pos['soft_stop'] = be_price
+                            pos['early_be_locked'] = True
+                            print(f">> [CHANDELIER BE KİLİDİ] {symbol} {side}: Zirve kâr +%{price_pct*100:.2f} (+%{current_roe:.1f} ROE) -> Stop başa başa kilitlendi (${be_price:.4f})")
+
                 # 1c. DINAMIK ATR / BREAKEVEN STOP KONTROLU
                 active_stop = pos.get("hard_stop") or pos.get("soft_stop", 0.0)
+                is_be_stop = is_half or pos.get("early_be_locked", False)
                 if side == "LONG" and active_stop > 0 and close_price <= active_stop:
-                    reason_stop = "🛡️ Breakeven Koruması Tetiklendi" if is_half else f"🛑 Dinamik ATR Stopu Tetiklendi (${active_stop:.4f})"
+                    reason_stop = "🛡️ Breakeven Koruması Tetiklendi" if is_be_stop else f"🛑 Dinamik ATR Stopu Tetiklendi (${active_stop:.4f})"
                     record = await self._safe_close_position(symbol, close_price, reason_stop)
                     if record:
                         await self._notify_close(record, levels=levels)
                         self._cleanup_tracking(symbol)
                     return
                 elif side == "SHORT" and active_stop > 0 and close_price >= active_stop:
-                    reason_stop = "🛡️ Breakeven Koruması Tetiklendi" if is_half else f"🛑 Dinamik ATR Stopu Tetiklendi (${active_stop:.4f})"
+                    reason_stop = "🛡️ Breakeven Koruması Tetiklendi" if is_be_stop else f"🛑 Dinamik ATR Stopu Tetiklendi (${active_stop:.4f})"
                     record = await self._safe_close_position(symbol, close_price, reason_stop)
                     if record:
                         await self._notify_close(record, levels=levels)
