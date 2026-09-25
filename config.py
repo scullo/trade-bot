@@ -239,8 +239,9 @@ MEME_MAX_MARGIN = 200.0            # Meme paritelerde azami marjin ($200)
 MEME_MAX_STOP_DIST_PCT = 0.70      # Meme paritelerde azami stop mesafesi (%0.70)
 
 # 11. Valkyrie Sürdürülebilir Kuant Alpha Reformları (476 İşlem Sonrası)
-ENABLE_WHIPSAW_TRADING_FILTER = True      # ⚠️ Volatil & Tuzakçı (Whipsaw) pariteleri tamamen engelle (%28 WR, -$1,210 zararı kes)
-PERSONA_ALLOWED_CLASSES = ["GOLD", "STANDARD"] # Yalnızca kanıtlanmış kârlı (%73 WR) ve dengeli pariteler
+ENABLE_WHIPSAW_TRADING_FILTER = False     # Parite çıkarma / yasaklama KAPALI (Hiçbir coin sepetten çıkarılmaz, tüm 100 coin taranır)
+PERSONA_ALLOWED_CLASSES = ["GOLD", "STANDARD", "WHIPSAW"] # Tüm parite sınıfları aktiftir; bot her coini anlık verisine göre denetler
+ENABLE_DYNAMIC_COIN_AUDIT = True          # Her coinde anlık kuant ve veri süzgeci denetimi (Hacimsiz kırılım eleme, 4+ Confluence)
 ENABLE_CHANDELIER_EARLY_BE_LOCK = True    # +%0.80 MFE (+%4.0 ROE) kâr gören pozisyona erken Breakeven kilidi
 CHANDELIER_EARLY_BE_THRESHOLD_PCT = 0.80  # Erken BE için gereken asgari fiyat lehte hareket eşiği (%0.80)
 ENABLE_ASIA_SELECTIVE_SHIELD = True       # Asya seansında (TSİ 02:00-09:00) düşük likidite tuzak filtresi

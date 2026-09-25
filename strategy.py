@@ -28,7 +28,7 @@ from config import (
     ENABLE_DYNAMIC_LEVERAGE, MIN_LEVERAGE, MAX_LEVERAGE, DEFAULT_LEVERAGE,
     ENABLE_MAX_STOP_DIST_GATE, MAX_ENTRY_STOP_DIST_PCT,
     ENABLE_MEME_DEFENSIVE_MODE, MEME_SYMBOLS, MEME_MAX_LEVERAGE, MEME_MAX_MARGIN, MEME_MAX_STOP_DIST_PCT,
-    ENABLE_WHIPSAW_TRADING_FILTER, PERSONA_ALLOWED_CLASSES,
+    ENABLE_WHIPSAW_TRADING_FILTER, PERSONA_ALLOWED_CLASSES, ENABLE_DYNAMIC_COIN_AUDIT,
     ENABLE_CHANDELIER_EARLY_BE_LOCK, CHANDELIER_EARLY_BE_THRESHOLD_PCT,
     ENABLE_ASIA_SELECTIVE_SHIELD, ENABLE_COOLDOWN_THROTTLE, SYMBOL_MIN_COOLDOWN_MINUTES
 )
@@ -407,18 +407,18 @@ class StrategyEngine:
             return {
                 "symbol": symbol,
                 "persona_class": "WHIPSAW",
-                "persona_name": "⚠️ Volatil & Tuzakçı (Whipsaw - 2x Stop Karantina)",
+                "persona_name": "⚠️ Volatil & Tuzakçı (Whipsaw - 2x Stop Pusu Modu)",
                 "trades_count": total_t,
                 "win_rate": round(wr, 1),
                 "fakeout_rate": round(fakeout_rate, 1),
                 "net_pnl": round(net_pnl, 2),
                 "allow_breakout": False,
-                "allow_bounce": False,
-                "is_trading_allowed": False,
-                "margin_scale": 0.0,
-                "stop_loss_atr_mult": 1.5,
-                "status_badge": "🛑 Whipsaw (Karantinada 🔒)",
-                "strategy_permission": "Yüksek Tuzak Riski - Yeni İşleme Kapalı 🔒",
+                "allow_bounce": True,
+                "is_trading_allowed": True,
+                "margin_scale": 0.6,
+                "stop_loss_atr_mult": 1.4,
+                "status_badge": "🛡️ Whipsaw (Pusu & Elit Teyit Modu, Marjin %60)",
+                "strategy_permission": "Yalnızca S3/R3/nPOC Dip Pusu veya Elit Kırılım (Marjin %60)",
                 "is_baseline": False
             }
 
@@ -454,12 +454,12 @@ class StrategyEngine:
                 "fakeout_rate": round(fakeout_rate, 1),
                 "net_pnl": round(net_pnl, 2),
                 "allow_breakout": False,
-                "allow_bounce": False,
-                "is_trading_allowed": False,
-                "margin_scale": 0.0,
-                "stop_loss_atr_mult": 1.5,
-                "status_badge": "🛑 Whipsaw (Karantinada 🔒)",
-                "strategy_permission": "Yüksek Tuzak Riski - Yeni İşleme Kapalı 🔒",
+                "allow_bounce": True,
+                "is_trading_allowed": True,
+                "margin_scale": 0.6,
+                "stop_loss_atr_mult": 1.4,
+                "status_badge": "🛡️ Whipsaw (Pusu & Elit Teyit Modu, Marjin %60)",
+                "strategy_permission": "Yalnızca S3/R3/nPOC Dip Pusu veya Elit Kırılım (Marjin %60)",
                 "is_baseline": False
             }
         else:
@@ -1002,17 +1002,32 @@ class StrategyEngine:
             if met:
                 vol_surge = met.get("vol_surge", vol_surge)
                 is_top_80 = met.get("is_top_80", is_top_80)
-        # ── 1b. OTONOM COIN DNA VE DİNAMİK PERSONA KALKANI (WHIPSAW TAM ENGELLEME) ──
+        # ── 1b. HER COİNDE OTONOM DİNAMİK VERİ SÜZGECİ & KUANT KALİTE DENETİMİ ──
+        # Pariteleri sepetten veya tarayıcıdan çıkarmak yerine, HER COİN anlık verisine ve piyasa karakterine göre denetlenir:
+        # Tuzakçı/çalkantılı hareket eden paritelerde hacimsiz kırılımlar elenir, asgari 4 confluence veya kurumsal balina akışı şartı aranır.
         persona = self.get_coin_dynamic_persona(symbol)
         p_class = persona.get("persona_class", "STANDARD")
         is_breakout = (trade_type == "BREAKOUT" or "Breakout" in reason or "Breakdown" in reason or "Kırılım" in reason)
         
-        # 1. Tuzakçı (Whipsaw) Kutsal Kalkanı: 476 işlemde %28 WR ve -$1,210 zarar üreten Whipsaw pariteleri TAMAMEN ENGELLE!
-        if ENABLE_WHIPSAW_TRADING_FILTER and (p_class not in PERSONA_ALLOWED_CLASSES or not persona.get("is_trading_allowed", True)):
-            rej_msg = f"🛡️ Whipsaw Kalkanı: {symbol} tuzakçı/volatil parite sınıfında (Tarihsel %28.0 WR, -$1,210 kayıp). Sermaye koruma kalkanı devrede, yeni işlem TAMAMEN ENGELLENDİ."
-            print(f">> [RED - WHIPSAW TAM ENGEL] {symbol}: {rej_msg}")
-            self.log_rejection(symbol, reason, rej_msg)
-            return {"error": "WHIPSAW_TRADING_BLOCKED"}
+        if ENABLE_DYNAMIC_COIN_AUDIT and p_class == "WHIPSAW":
+            c_cnt = len(confluence_list or [])
+            has_whale = any("Balina" in str(c) or "Whale" in str(c) or "Iceberg" in str(c) or "Buzdağı" in str(c) for c in (confluence_list or []))
+            has_vol = vol_surge >= 1.8
+            has_wall = any("DUVARI" in str(c) or "WALL" in str(c) for c in (confluence_list or []))
+            
+            # a. Hacimsiz Kırılım Tuzağı Denetimi: Volatil paritede kurumsal hacim patlaması yoksa fakeout kırılımı engelle
+            if is_breakout and not (has_vol and (has_whale or has_wall)):
+                rej_msg = f"🛡️ Kuant Veri Süzgeci Denetimi: {symbol} volatil/çalkantılı rejimde. Hacimsiz kırılım tuzağını önlemek için (Hacim: {vol_surge:.1f}x < 1.8x veya Emir Akışı Yok) kırılım elendi. Yalnızca dip/tepe pusu veya hacimli kurumsal kırılımlara izin verilir."
+                print(f">> [RED - DİNAMİK VERİ SÜZGECİ] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, reason, rej_msg)
+                return {"error": "WHIPSAW_BREAKOUT_AUDIT_BLOCKED"}
+            
+            # b. Sıkı Confluence Eşiği Denetimi: Çalkantılı coinlerde rastgele 2-3 teyitle işlem açılamaz; asgari 4 teyit veya net balina akışı aranır
+            if c_cnt < 4 and not has_whale:
+                rej_msg = f"🛡️ Kuant Confluence Denetimi: {symbol} yüksek gürültülü piyasa yapısında. En doğru zamanlama için asgari 4 teyit şarttır (Mevcut: {c_cnt}/4). Zayıf sinyal elendi."
+                print(f">> [RED - SIKI CONFLUENCE DENETİMİ] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, reason, rej_msg)
+                return {"error": "WHIPSAW_LOW_CONFLUENCE_BLOCKED"}
 
         # 2. Geç Kovalama (Breakout Chase) & Likidasyon İğnesi Kalkanı (PEPE, LINK, GALA Koruması)
         if self.market_data and symbol in self.market_data.candles_5m:
