@@ -222,6 +222,22 @@ class TelegramNotifier:
         else:
             await self.send_message(msg)
 
+    async def notify_be_lock(self, symbol: str, side: str, entry_price: float, be_price: float, cur_profit_pct: float, leverage: int = 5):
+        """Chandelier anlık tick erken Breakeven kâr kilidi tetiklendiğinde Telegram bildirimi iletir."""
+        if not self.token or not self.chat_id:
+            return
+        clean_sym = symbol.replace("/USDT", "")
+        roe_pct = cur_profit_pct * float(leverage)
+        msg = f"""🛡️🛡️🛡️ <b>BREAKEVEN KÂR KİLİDİ AKTİF</b> 🛡️🛡️🛡️
+🪙 <b>#{clean_sym}/USDT</b> │ <b>{side} ({leverage}x)</b>
+━━━━━━━━━━━━━━━━━━━━
+💵 <b>Giriş:</b> <code>{self._fmt_price(entry_price)}</code>
+🔒 <b>Kilitli Stop:</b> <code>{self._fmt_price(be_price)}</code>
+📈 <b>Görülen Kâr:</b> <code>+%{cur_profit_pct:.2f} (+%{roe_pct:.2f} ROE)</code>
+────────────────────
+🛡️ <i>Sermaye Zırhı Devrede: Pozisyon artık sıfır risk ile koşuyor!</i>"""
+        await self.send_message(msg)
+
     async def notify_position_closed(self, record: dict, is_manual: bool = False, df_5m = None, levels: dict = None):
         net_pnl = float(record.get("net_pnl", 0.0))
         roe = float(record.get("roe_pct", 0.0))
@@ -529,7 +545,7 @@ class TelegramNotifier:
 
                 await asyncio.sleep(seconds_to_wait)
 
-                current_hour = (datetime.utcnow().hour + 3) % 24
+                current_hour = datetime.now(timezone(timedelta(hours=3))).hour
                 mode = getattr(trader_manager, 'mode', 'DEMO')
 
                 # 1) Excel raporu olustur ve Telegram uzerinden gonder (Sifir yer kaplar, %100 bulut yedek)
@@ -667,12 +683,56 @@ class TelegramNotifier:
 
                                 print(f">> [TELEGRAM ASİSTAN KOMUT ALINDI]: '{raw_text}' (Chat ID: {sender_chat_id})")
 
+                                # 🛡️ YETKİ KONTROLÜ: Yalnızca yetkili chat_id komut çalıştırabilir
+                                if self.chat_id and str(sender_chat_id) != str(self.chat_id):
+                                    await self.send_message("⛔ <b>Yetkisiz Erişim:</b> Bu bot yalnızca sistem yöneticisine özeldir.", chat_id=sender_chat_id)
+                                    continue
+
+                                # 🕹️ 1. MANUEL POZİSYON KAPATMA KOMUTU: /kapat <SEMBOLE>
+                                if text.startswith("/kapat") or text.startswith("kapat") or text.startswith("/close"):
+                                    parts = raw_text.split()
+                                    if len(parts) >= 2:
+                                        target_sym_raw = parts[1].upper().strip()
+                                        target_sym = target_sym_raw if "/" in target_sym_raw else f"{target_sym_raw.replace('USDT', '')}/USDT"
+                                        open_p = getattr(trader_manager, 'open_positions', {})
+                                        if target_sym in open_p:
+                                            prices = getattr(market_data, 'current_prices', {}) if market_data else {}
+                                            cur_price = float(prices.get(target_sym, open_p[target_sym].get("entry_price", 0.0)))
+                                            close_fn = getattr(trader_manager, 'close_position', None)
+                                            if close_fn:
+                                                if asyncio.iscoroutinefunction(close_fn):
+                                                    rec = await close_fn(target_sym, cur_price, "🕹️ Telegram Manuel Kapatma Komutu")
+                                                else:
+                                                    rec = close_fn(target_sym, cur_price, "🕹️ Telegram Manuel Kapatma Komutu")
+                                                if rec:
+                                                    await self.notify_position_closed(rec, is_manual=True)
+                                                    await self.send_message(f"✅ <b>#{target_sym}</b> pozisyonu başarıyla kapatıldı! Çıkış Fiyatı: <code>${cur_price:.4f}</code>", chat_id=sender_chat_id)
+                                                else:
+                                                    await self.send_message(f"⚠️ <b>#{target_sym}</b> kapatılamadı.", chat_id=sender_chat_id)
+                                        else:
+                                            open_list = ", ".join(s.replace("/USDT", "") for s in open_p.keys()) or "Yok"
+                                            await self.send_message(f"⚠️ <b>#{target_sym}</b> adında açık pozisyon bulunamadı.\nAktif Pozisyonlar: <code>{open_list}</code>", chat_id=sender_chat_id)
+                                    else:
+                                        await self.send_message("ℹ️ Kullanım: <code>/kapat BTC</code> veya <code>/kapat SOL/USDT</code>", chat_id=sender_chat_id)
+                                    continue
+
+                                # ℹ️ 2. YARDIM VE KOMUT LİSTESİ
+                                if text in ["/yardim", "yardim", "/help", "help", "komut"]:
+                                    help_msg = """🤖 <b>VALKYRIE QUANT ASİSTAN KOMUTLARI:</b>
+━━━━━━━━━━━━━━━━━━━━
+• <code>/kasa</code> veya <code>kasa</code>: Bakiye, büyüme oranı, win rate ve kokpit raporu
+• <code>/durum</code>: Açık pozisyonlar ve anlık canlı kâr/zarar
+• <code>/kapat BTC</code>: Açık pozisyonu anında piyasa fiyatından kapatır
+• <code>/yardim</code>: Bu komut menüsünü gösterir"""
+                                    await self.send_message(help_msg, chat_id=sender_chat_id)
+                                    continue
+
                                 is_kasa_cmd = any(w in text for w in [
-                                    "kasa", "aksa", "bakiye", "durum", "start", "help",
+                                    "kasa", "aksa", "bakiye", "durum", "start",
                                     "rapor", "pnl", "portfoy", "özet", "ozet", "pozisyon",
-                                    "yardim", "yardım", "komut", "info",
+                                    "info",
                                     "/kasa", "/aksa", "/durum", "/bakiye", "/ozet", "/özet",
-                                    "/start", "/help", "/rapor", "/pnl", "/portfoy"
+                                    "/start", "/rapor", "/pnl", "/portfoy"
                                 ])
                                 if is_kasa_cmd:
                                     init_bal = 10000.0

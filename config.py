@@ -248,3 +248,24 @@ ENABLE_ASIA_SELECTIVE_SHIELD = True       # Asya seansında (TSİ 02:00-09:00) d
 ENABLE_COOLDOWN_THROTTLE = False          # Fırsat kaçırmamak için genel soğuma KAPALI (Zararlarda zaten 45dk stop kalkanı ve 2 stop sınırı devrededir)
 SYMBOL_MIN_COOLDOWN_MINUTES = 0           # Kârlı trendlerde ve A+ Elit sinyallerde anında yeniden işlem açılabilir (0 dk)
 
+# 12. Sistem Mimarisi & Güvenlik Yapılandırması (15 Reform Paketi)
+ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "valkyrie-quant-2025-secure")
+ENABLE_CHANDELIER_BE_NOTIFY = True        # Breakeven kilitlendiğinde Telegram anlık bildirim kalkanı
+ENABLE_DAILY_CIRCUIT_BREAKER = True       # Günlük net kayıp %3'ü aştığında yeni işlem açılışını kilitle
+MAX_DAILY_LOSS_PCT = 0.03                 # Azami günlük kabul edilebilir portföy kaybı (%3.0)
+
+SECTOR_CLUSTERS = {
+    "MEME": {"DOGE/USDT", "PEPE/USDT", "SHIB/USDT", "WIF/USDT", "BONK/USDT", "FLOKI/USDT", "TURBO/USDT", "BOME/USDT", "PUMP/USDT", "1000PEPE/USDT", "1000SHIB/USDT", "1000BONK/USDT", "1000FLOKI/USDT", "NEIRO/USDT"},
+    "SOL_ECO": {"SOL/USDT", "JTO/USDT", "JUP/USDT", "PYTH/USDT", "RAY/USDT", "KMNO/USDT"},
+    "AI_DATA": {"FET/USDT", "RENDER/USDT", "TAO/USDT", "NEAR/USDT", "VIRTUAL/USDT", "WLD/USDT"},
+    "DEFI_L1": {"ETH/USDT", "AAVE/USDT", "UNI/USDT", "CRV/USDT", "PENDLE/USDT", "ENA/USDT", "LDO/USDT"}
+}
+
+TOP_LIQUIDITY_SYMBOLS = [
+    "BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "DOGE/USDT", "BNB/USDT",
+    "SUI/USDT", "PEPE/USDT", "AVAX/USDT", "LINK/USDT", "NEAR/USDT", "ADA/USDT",
+    "LTC/USDT", "TRX/USDT", "DOT/USDT", "AAVE/USDT", "UNI/USDT", "SHIB/USDT",
+    "WIF/USDT", "FET/USDT"
+]
+
+

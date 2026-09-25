@@ -2,7 +2,7 @@ from security_vault import SecurityVault
 import os
 import json
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import pandas as pd
 import numpy as np
 from indicators import calculate_fractional_kelly, calculate_hurst_exponent, estimate_hmm_market_phase
@@ -13,7 +13,7 @@ from config import (
     ELITE_SLOT_BASE, ELITE_SLOT_MAX,
     STAGNATION_CANDLES_MEME, STAGNATION_CANDLES_MAJOR,
     FIXED_DOLLAR_RISK, MIN_POSITION_MARGIN, MAX_POSITION_MARGIN,
-    RISK_EQUITY_PCT, MIN_TP1_GAIN_PCT,
+    RISK_EQUITY_PCT, MIN_TP1_GAIN_PCT, COMMISSION_RATE,
     BTC_SHOCK_60S_PCT, BTC_SHOCK_COOLDOWN_SEC,
     WALL_MIN_AGE_SEC, WALL_ANCHOR_AGE_SEC,
     BASIS_BUBBLE_BPS, BASIS_ABSORPTION_BPS,
@@ -30,7 +30,9 @@ from config import (
     ENABLE_MEME_DEFENSIVE_MODE, MEME_SYMBOLS, MEME_MAX_LEVERAGE, MEME_MAX_MARGIN, MEME_MAX_STOP_DIST_PCT,
     ENABLE_WHIPSAW_TRADING_FILTER, PERSONA_ALLOWED_CLASSES, ENABLE_DYNAMIC_COIN_AUDIT,
     ENABLE_CHANDELIER_EARLY_BE_LOCK, CHANDELIER_EARLY_BE_THRESHOLD_PCT,
-    ENABLE_ASIA_SELECTIVE_SHIELD, ENABLE_COOLDOWN_THROTTLE, SYMBOL_MIN_COOLDOWN_MINUTES
+    ENABLE_ASIA_SELECTIVE_SHIELD, ENABLE_COOLDOWN_THROTTLE, SYMBOL_MIN_COOLDOWN_MINUTES,
+    ENABLE_CHANDELIER_BE_NOTIFY, ENABLE_DAILY_CIRCUIT_BREAKER, MAX_DAILY_LOSS_PCT,
+    SECTOR_CLUSTERS, TOP_LIQUIDITY_SYMBOLS
 )
 
 
@@ -639,7 +641,7 @@ class StrategyEngine:
             be_threshold = float(CHANDELIER_EARLY_BE_THRESHOLD_PCT) / 100.0  # 0.0080
             cur_price_pct = (current_price - entry_p) / entry_p if side == "LONG" else (entry_p - current_price) / entry_p
             if cur_price_pct >= be_threshold:
-                fee_buffer = 0.0012  # Giriş-çıkış komisyon tamponu (%0.12)
+                fee_buffer = (float(COMMISSION_RATE) * 2.0) + 0.0002  # Dinamik giriş-çıkış komisyon tamponu + slipaj koruması
                 be_price = entry_p * (1.0 + fee_buffer) if side == "LONG" else entry_p * (1.0 - fee_buffer)
                 cur_stop = pos.get("hard_stop") or pos.get("soft_stop", 0.0)
                 should_lock = (side == "LONG" and cur_stop < be_price) or (side == "SHORT" and (cur_stop == 0.0 or cur_stop > be_price))
@@ -647,7 +649,22 @@ class StrategyEngine:
                     pos['hard_stop'] = be_price
                     pos['soft_stop'] = be_price
                     pos['early_be_locked'] = True
+                    if hasattr(self.paper_trader, 'save_local_history'):
+                        self.paper_trader.save_local_history()
                     print(f">> [CHANDELIER TICK BE KİLİDİ] {symbol} {side}: Anlık kâr +%{cur_price_pct*100:.2f} -> Stop başa başa kilitlendi (${be_price:.4f})")
+                    if ENABLE_CHANDELIER_BE_NOTIFY and getattr(self, 'notifier', None) and hasattr(self.notifier, 'notify_be_lock'):
+                        try:
+                            import asyncio
+                            asyncio.create_task(self.notifier.notify_be_lock(
+                                symbol=symbol,
+                                side=side,
+                                entry_price=entry_p,
+                                be_price=be_price,
+                                cur_profit_pct=cur_price_pct * 100.0,
+                                leverage=int(pos.get('leverage', 5))
+                            ))
+                        except Exception:
+                            pass
 
         if pos.get("is_half_closed", False) or pos.get("early_be_locked", False):
             # TP1 sonrası veya Erken Chandelier Kilidi: Breakeven / Kâr Koruma Stopu tick düzeyinde anında korunur
@@ -794,8 +811,9 @@ class StrategyEngine:
         if hasattr(self.paper_trader, "update_tick_telemetry"):
             try:
                 self.paper_trader.update_tick_telemetry(symbol, current_price)
-            except Exception:
-                pass
+            except Exception as e:
+                if getattr(self, 'debug', False):
+                    print(f">> [TELEMETRY ERROR]: {e}")
 
     def _cleanup_tracking(self, symbol: str):
         """Pozisyon kapandiginda tracking verilerini temizle ve komisyon freni soğumasını başlat."""
@@ -921,18 +939,17 @@ class StrategyEngine:
             return {"error": "MAX_SLOTS_REACHED"}
 
         # Kural 3: Beta Sektör & Ekosistem Korelasyon Kalkanı (Cluster Exposure Shield)
-        # Aynı yüksek korelasyonlu kümeden aynı anda en fazla 2 pozisyon açılmasına izin verilir.
-        CLUSTERS = {
-            "MEME": {"DOGE/USDT", "PEPE/USDT", "SHIB/USDT", "WIF/USDT", "BONK/USDT", "FLOKI/USDT", "TURBO/USDT", "BOME/USDT", "PUMP/USDT", "1000PEPE/USDT", "1000SHIB/USDT", "1000BONK/USDT", "1000FLOKI/USDT", "NEIRO/USDT"},
-            "SOL_ECO": {"SOL/USDT", "JTO/USDT", "JUP/USDT", "PYTH/USDT", "RAY/USDT", "KMNO/USDT"},
-            "AI_DATA": {"FET/USDT", "RENDER/USDT", "TAO/USDT", "NEAR/USDT", "VIRTUAL/USDT", "WLD/USDT"},
-            "DEFI_L1": {"ETH/USDT", "AAVE/USDT", "UNI/USDT", "CRV/USDT", "PENDLE/USDT", "ENA/USDT", "LDO/USDT"}
-        }
+        # Dinamik Limit: Dead Zone / Sıkışmada 1, Normal / Trend Piyasada 2
+        CLUSTERS = SECTOR_CLUSTERS
+        macro_climate = getattr(self.market_data, 'macro_climate', 'NORMAL') if self.market_data else 'NORMAL'
+        is_macro_dz = (macro_climate == "DEAD_ZONE")
+        max_cluster_allowed = 1 if is_macro_dz else 2
+
         for c_name, c_symbols in CLUSTERS.items():
             if symbol in c_symbols:
                 c_open = sum(1 for s in open_positions if s in c_symbols)
-                if c_open >= 2:
-                    rej_msg = f"🛡️ Sektör Korelasyon Kalkanı ({c_name}): Bu kümede zaten 2 açık pozisyon var ({c_open}). Beta aşırı riskini önlemek için 3. pozisyon engellendi."
+                if c_open >= max_cluster_allowed:
+                    rej_msg = f"🛡️ Sektör Korelasyon Kalkanı ({c_name}): Bu kümede zaten {c_open} açık pozisyon var (İzin Verilen: {max_cluster_allowed}). Beta aşırı riskini önlemek için işlem engellendi."
                     print(f">> [RED - SEKTÖR KÜMELENMESİ] {symbol}: {rej_msg}")
                     self.log_rejection(symbol, reason, rej_msg)
                     return {"error": f"CLUSTER_LIMIT_{c_name}"}
@@ -1000,7 +1017,7 @@ class StrategyEngine:
                             vol_80th = df['volume'].iloc[:-1].quantile(0.80) if len(df) > 1 else 0
                         is_top_80 = (cur_vol >= vol_80th)
                         
-                        top_20 = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "DOGE/USDT", "BNB/USDT", "SUI/USDT", "PEPE/USDT", "AVAX/USDT", "LINK/USDT", "NEAR/USDT", "ADA/USDT", "LTC/USDT", "TRX/USDT", "DOT/USDT", "AAVE/USDT", "UNI/USDT", "SHIB/USDT", "WIF/USDT", "FET/USDT"]
+                        top_20 = TOP_LIQUIDITY_SYMBOLS
                         if symbol in top_20:
                             min_vol_surge = 1.35
                         elif is_top_80:
@@ -1734,8 +1751,8 @@ class StrategyEngine:
         else:
             trend_regime = "⚪ YATAY / SIKIŞMA (Ranging)"
 
-        # ── 3. SEANS HESABI ──
-        h_hour = datetime.now().hour
+        # ── 3. SEANS HESABI (TSİ UTC+3 Senkronizasyonu) ──
+        h_hour = datetime.now(timezone(timedelta(hours=3))).hour
         if 0 <= h_hour < 9:
             session_str = "🌏 ASYA (Tokyo/Singapur)"
         elif 9 <= h_hour < 16:
@@ -2050,7 +2067,13 @@ class StrategyEngine:
         base_calc_margin = target_notional_usd / float(dyn_leverage)
 
         # 🎲 ED THORP FRAKSİYONEL KELLY KRİTERİ İLE MARJİN MODÜLASYONU
-        est_win_rate = 72.0 if (has_whale_flow or c_count >= 4) else (60.0 if c_count >= 3 else 52.0)
+        # Paritenin gerçek rolling geçmişi varsa onu kullan, yoksa teyit tabanlı beklentiyi baz al
+        persona_wr = persona.get("win_rate") if isinstance(persona, dict) else None
+        persona_trades = persona.get("total_trades", 0) if isinstance(persona, dict) else 0
+        if persona_wr is not None and persona_trades >= 3:
+            est_win_rate = max(40.0, min(85.0, float(persona_wr)))
+        else:
+            est_win_rate = 72.0 if (has_whale_flow or c_count >= 4) else (60.0 if c_count >= 3 else 52.0)
         kelly_mult = calculate_fractional_kelly(win_rate_pct=est_win_rate, reward_risk_ratio=2.0, fraction=0.25)
 
         # Dinamik Kasa Taban ve Tavan Sınırları (10k Kasada Min $150, Max $450-$500):
@@ -2924,7 +2947,7 @@ class StrategyEngine:
                 if ENABLE_CHANDELIER_EARLY_BE_LOCK and not is_half:
                     be_threshold = float(CHANDELIER_EARLY_BE_THRESHOLD_PCT) / 100.0  # 0.0080
                     if price_pct >= be_threshold:
-                        fee_buffer = 0.0012  # Giriş-çıkış komisyon tamponu (%0.12)
+                        fee_buffer = (float(COMMISSION_RATE) * 2.0) + 0.0002  # Dinamik giriş-çıkış komisyon tamponu + slipaj koruması
                         be_price = entry_p * (1.0 + fee_buffer) if side == "LONG" else entry_p * (1.0 - fee_buffer)
                         cur_stop = pos.get("hard_stop") or pos.get("soft_stop", 0.0)
                         should_lock = (side == "LONG" and cur_stop < be_price) or (side == "SHORT" and cur_stop > be_price)
@@ -2932,7 +2955,22 @@ class StrategyEngine:
                             pos['hard_stop'] = be_price
                             pos['soft_stop'] = be_price
                             pos['early_be_locked'] = True
+                            if hasattr(self.paper_trader, 'save_local_history'):
+                                self.paper_trader.save_local_history()
                             print(f">> [CHANDELIER BE KİLİDİ] {symbol} {side}: Zirve kâr +%{price_pct*100:.2f} (+%{current_roe:.1f} ROE) -> Stop başa başa kilitlendi (${be_price:.4f})")
+                            if ENABLE_CHANDELIER_BE_NOTIFY and getattr(self, 'notifier', None) and hasattr(self.notifier, 'notify_be_lock'):
+                                try:
+                                    import asyncio
+                                    asyncio.create_task(self.notifier.notify_be_lock(
+                                        symbol=symbol,
+                                        side=side,
+                                        entry_price=entry_p,
+                                        be_price=be_price,
+                                        cur_profit_pct=price_pct * 100.0,
+                                        leverage=int(pos.get('leverage', 5))
+                                    ))
+                                except Exception:
+                                    pass
 
                 # 1c. DINAMIK ATR / BREAKEVEN STOP KONTROLU
                 active_stop = pos.get("hard_stop") or pos.get("soft_stop", 0.0)
@@ -3097,19 +3135,22 @@ class StrategyEngine:
         if tot_open_margin >= max_margin_budget:
             return
 
-        # 🛡️ GÜVENLİK ZIRHI 1: GÜNLÜK DEVRE KESİCİ TELEMETRİSİ (7 Günlük Test/Veri Toplama Modunda İşlemi Durdurmaz)
-        user_daily_loss_pct = getattr(self.paper_trader, 'max_daily_drawdown_pct', 0.05)
-        cb_ok, cb_msg = self.vault.check_daily_circuit_breaker(
-            getattr(self.paper_trader, 'history', []),
-            getattr(self.paper_trader, 'balance', 10000.0),
-            max_loss_pct=user_daily_loss_pct
-        )
-        if not cb_ok:
-            # 7 Günlük Araştırma Laboratuvarında veri toplamayı kesintisiz sürdürür, adli log kaydeder
-            print(f">> [DEVRE KESİCİ TELEMETRİ BİLDİRİMİ] {cb_msg}")
+        # 🛡️ GÜVENLİK ZIRHI 1: GÜNLÜK DEVRE KESİCİ (Circuit Breaker - Portföy Koruma Kilidi)
+        if ENABLE_DAILY_CIRCUIT_BREAKER:
+            user_daily_loss_pct = getattr(self.paper_trader, 'max_daily_drawdown_pct', MAX_DAILY_LOSS_PCT)
+            cb_ok, cb_msg = self.vault.check_daily_circuit_breaker(
+                getattr(self.paper_trader, 'history', []),
+                getattr(self.paper_trader, 'balance', 10000.0),
+                max_loss_pct=user_daily_loss_pct
+            )
+            if not cb_ok:
+                rej_msg = f"🛡️ GÜNLÜK DEVRE KESİCİ AKTİF: {cb_msg}"
+                print(f">> [DEVRE KESİCİ ENGELLEDİ] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, "CIRCUIT_BREAKER", rej_msg)
+                return
 
         # 🛡️ GÜVENLİK ZIRHI 2: PORTFÖY MARJİN TAVAN KİLİDİ
-        user_margin_cap_pct = getattr(self.paper_trader, 'max_portfolio_margin_pct', 0.80)
+        user_margin_cap_pct = getattr(self.paper_trader, 'max_portfolio_margin_pct', (MAX_PORTFOLIO_MARGIN_PCT / 100.0))
         pos_size = getattr(self.paper_trader, 'margin_per_trade', getattr(self.paper_trader, 'position_size', 100.0))
         mc_ok, mc_msg = self.vault.check_margin_cap(
             getattr(self.paper_trader, 'open_positions', {}),
@@ -3118,7 +3159,10 @@ class StrategyEngine:
             max_cap_pct=user_margin_cap_pct
         )
         if not mc_ok:
-            print(f">> [MARJİN TAVAN UYARISI] {mc_msg}")
+            rej_msg = f"🛡️ Portföy Marjin Tavanı Aşıldı: {mc_msg}"
+            print(f">> [MARJİN TAVAN ENGELLEDİ] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, "MARGIN_CAP", rej_msg)
+            return
 
         r3, r4, r5 = cam.get("R3", 0), cam.get("R4", 0), cam.get("R5", 0)
         s3, s4, s5 = cam.get("S3", 0), cam.get("S4", 0), cam.get("S5", 0)

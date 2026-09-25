@@ -12720,7 +12720,15 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "symbol_oi": getattr(market_data, 'symbol_oi', {}) if market_data else {},
                 "server_start_ts": SERVER_START_TS,
                 "server_uptime_sec": int(time.time() - SERVER_START_TS),
-                "macro_climate": strategy.get_macro_climate() if strategy and hasattr(strategy, 'get_macro_climate') else {}
+                "macro_climate": strategy.get_macro_climate() if strategy and hasattr(strategy, 'get_macro_climate') else {},
+                "reforms": {
+                    "dynamic_coin_audit": True,
+                    "chandelier_early_be_lock": True,
+                    "asia_selective_shield": True,
+                    "circuit_breaker_active": getattr(strategy.vault, '_circuit_breaker_active', False) if (strategy and hasattr(strategy, 'vault')) else False,
+                    "be_locked_count": sum(1 for p in getattr(trader_manager, 'open_positions', {}).values() if p.get("early_be_locked", False)),
+                    "emergency_alert": getattr(trader_manager, 'emergency_alert', None)
+                }
             }, dumps=lambda obj: json.dumps(obj, default=str))
         except Exception as e:
             hist_full = trader_manager.history
@@ -12733,6 +12741,14 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "history_summary": {"total_realized_pnl": 0, "total_fees": 0, "total_trades": len(hist_full), "wins": 0, "losses": 0, "win_pnl_sum": 0, "loss_pnl_sum": 0},
                 "symbols": {},
                 "all_coins": [],
+                "reforms": {
+                    "dynamic_coin_audit": True,
+                    "chandelier_early_be_lock": True,
+                    "asia_selective_shield": True,
+                    "circuit_breaker_active": False,
+                    "be_locked_count": 0,
+                    "emergency_alert": None
+                },
                 "coinbase_lead_lag": {},
                 "oi_summary": {},
                 "symbol_oi": {},
@@ -12763,6 +12779,14 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
 
     async def api_reset_trading_state(request):
         try:
+            from config import ADMIN_SECRET
+            token = request.headers.get("X-Admin-Token") or request.query.get("key")
+            if not token or token != ADMIN_SECRET:
+                return web.json_response({
+                    "status": "error",
+                    "message": "Yetkisiz Erişim: Bu işlemi gerçekleştirmek için geçerli X-Admin-Token başlığı gereklidir."
+                }, status=401)
+
             if trader_manager and hasattr(trader_manager, 'paper_trader') and trader_manager.paper_trader:
                 trader_manager.paper_trader.balance = 10000.0
                 trader_manager.paper_trader.open_positions = {}

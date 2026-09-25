@@ -56,6 +56,8 @@ class PaperTrader:
         self._last_push_ok = True
         self._pending_state = None  # Başarısız push'ları yeniden denemek için
         self._push_lock = threading.Lock()
+        self._open_lock = threading.Lock()  # Eşzamanlı pozisyon açılışlarında mükerrer girişi önleyen atomik kilit
+        self.emergency_alert = None  # Bakiye ve sistem anomalisi kritik uyarı bayrağı
         self.load_history()
 
     def reset_state(self):
@@ -475,7 +477,11 @@ class PaperTrader:
         print(f">> [PYRAMID EKLENDİ] {symbol} {side} @ {current_price} | +${add_margin} Marjin (Komisyon: ${add_fee:.3f}) | Yeni Giriş: {new_entry_price:.4f} | Stop: {pos.get('soft_stop')}")
         return True
 
-    def open_position(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None, atr_pct: float = 1.0, trend_regime: str = "YATAY", session: str = "LONDRA", volume_surge: float = 1.0, confluence_score: str = "2/4", htf_alignment: str = "TREND YÖNÜNDE", custom_margin: float = None, rs_vs_btc: float = 0.0, decoupling_status: str = "⚪ NÖTR_TAKİPÇİ", cvd_pct: float = 50.0, candle_velocity: float = 1.0, custom_leverage: int = None, **kwargs):
+    def open_position(self, *args, **kwargs):
+        with self._open_lock:
+            return self._open_position_unlocked(*args, **kwargs)
+
+    def _open_position_unlocked(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None, atr_pct: float = 1.0, trend_regime: str = "YATAY", session: str = "LONDRA", volume_surge: float = 1.0, confluence_score: str = "2/4", htf_alignment: str = "TREND YÖNÜNDE", custom_margin: float = None, rs_vs_btc: float = 0.0, decoupling_status: str = "⚪ NÖTR_TAKİPÇİ", cvd_pct: float = 50.0, candle_velocity: float = 1.0, custom_leverage: int = None, **kwargs):
         if symbol in self.open_positions:
             return None
 
@@ -745,6 +751,9 @@ class PaperTrader:
 
             self.balance += net_pnl
             if self.balance > 150000.0 or self.balance < 1000.0:
+                clean_alert = f"[KRİTİK KASA ALARMI] Bakiye sınırı aşıldı! (${self.balance:,.2f}) -> Başlangıç kasasına (${self.initial_balance:,.2f}) emniyet sıfırlaması yapıldı."
+                print(f">> {clean_alert}")
+                self.emergency_alert = f"🚨 {clean_alert}"
                 self.balance = float(self.initial_balance)
             exit_time_str = datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S")
 
