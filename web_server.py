@@ -4273,7 +4273,7 @@ HTML_PAGE = """
                     <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Paritelerin canlı test sonuçları, fitil esneklikleri ve botun otonom parametre iyileştirme tavsiyeleri</div>
                 </div>
                 <div style="display:flex; gap:8px; align-items:center;">
-                    <input type="text" id="shadow-coin-search" placeholder="Coin ara (ENA, DOGE, MOVR...)" oninput="filterShadowCoinsTable()" style="background:#090d16; border:1px solid var(--border); color:#fff; padding:6px 12px; border-radius:6px; font-size:12px; width:180px; font-family:'JetBrains Mono', monospace;">
+                    <input type="text" id="shadow-coin-search" placeholder="Coin ara (ENA, DOGE, MOVR...)" oninput="filterShadowCoinsTable()" style="background:#090d16; border:1px solid var(--border); color:#fff; padding:6px 12px; border-radius:6px; font-size:12px; width:235px; min-width:200px; font-family:'JetBrains Mono', monospace;">
                     <button class="nav-tab-btn active" id="btn-shadow-filter-all" onclick="setShadowCoinFilter('ALL')" style="padding:6px 12px; font-size:11px;">Tümü</button>
                     <button class="nav-tab-btn" id="btn-shadow-filter-relax" onclick="setShadowCoinFilter('RELAX')" style="padding:6px 12px; font-size:11px; border-color:rgba(244,63,94,0.4); color:#f43f5e;">⚠️ Gevşet</button>
                     <button class="nav-tab-btn" id="btn-shadow-filter-keep" onclick="setShadowCoinFilter('KEEP')" style="padding:6px 12px; font-size:11px; border-color:rgba(16,185,129,0.4); color:#10b981;">👑 Koru</button>
@@ -4283,18 +4283,18 @@ HTML_PAGE = """
                 <table class="data-table" style="width:100%; border-collapse:collapse;">
                     <thead>
                         <tr>
-                            <th style="text-align:left;">Parite</th>
-                            <th>Toplam Gölge</th>
-                            <th>Hero (Kurtarılan)</th>
-                            <th>Spoiler (Kaçan)</th>
-                            <th>Kurtarılan ($)</th>
-                            <th>Kaçan Kâr ($)</th>
-                            <th>SEI (%)</th>
-                            <th style="text-align:left;">En Çok Engelleyen Kalkan</th>
-                            <th>Fitil Esnekliği</th>
-                            <th>Durum</th>
-                            <th style="text-align:left;">Otonom Kalibrasyon Teşhisi</th>
-                            <th style="text-align:center;">Adli Otopsi</th>
+                            <th style="text-align:left; width:75px;">Parite</th>
+                            <th style="text-align:center; width:60px;">Toplam</th>
+                            <th style="text-align:center; width:65px;" title="Hero Kalkan (Zarardan Kurtarılan İşlem)">🛡️ Hero</th>
+                            <th style="text-align:center; width:65px;" title="Spoiler Kalkan (Kaçan Kârlı İşlem)">⚠️ Spoiler</th>
+                            <th style="text-align:center; width:85px;">Kurtarılan</th>
+                            <th style="text-align:center; width:85px;">Kaçan Kâr</th>
+                            <th style="text-align:center; width:65px;" title="Shield Efficiency Index">SEI (%)</th>
+                            <th style="text-align:left; width:190px; min-width:170px;">En Çok Engelleyen Kalkan</th>
+                            <th style="text-align:center; width:65px;" title="Fitil Esnekliği">Fitil %</th>
+                            <th style="text-align:center; width:95px;">Durum</th>
+                            <th style="text-align:left; min-width:320px;">Otonom Kalibrasyon Teşhisi</th>
+                            <th style="text-align:center; width:75px;">Detay</th>
                         </tr>
                     </thead>
                     <tbody id="shadow-coin-matrix-tbody">
@@ -6071,30 +6071,29 @@ async function loadAdminMetrics() {
 
                             return `
                                 <tr style="border-bottom:1px solid rgba(255,255,255,0.04); font-family:'JetBrains Mono', monospace; font-size:12px;">
-                                    <td style="font-weight:700; color:#fff; padding:10px 12px;">${c.symbol}</td>
+                                    <td style="font-weight:700; color:#fff; padding:10px 12px; text-align:left;">${c.symbol}</td>
                                     <td style="text-align:center;">${c.total_shadows}</td>
                                     <td style="text-align:center; color:#10b981; font-weight:700;">${c.hero_count}</td>
                                     <td style="text-align:center; color:#f43f5e; font-weight:700;">${c.spoiler_count}</td>
-                                    <td style="text-align:center; color:#10b981;">+$${(c.saved_loss_usd || 0).toFixed(2)}</td>
-                                    <td style="text-align:center; color:#f43f5e;">-$${(c.missed_profit_usd || 0).toFixed(2)}</td>
+                                    <td style="text-align:center; color:#10b981; font-weight:600;">+$${(c.saved_loss_usd || 0).toFixed(2)}</td>
+                                    <td style="text-align:center; color:#f43f5e; font-weight:600;">-$${(c.missed_profit_usd || 0).toFixed(2)}</td>
                                     <td style="text-align:center; font-weight:700; color:${c.sei >= 70 ? '#10b981' : (c.sei <= 35 ? '#f43f5e' : '#f59e0b')};">%${(c.sei || 100).toFixed(1)}</td>
-                                    <td style="text-align:left; color:#94a3b8;">${c.top_shield || '-'}</td>
+                                    <td style="text-align:left; color:#94a3b8; font-size:11.5px; white-space:normal; line-height:1.3;">${c.top_shield || '-'}</td>
                                     <td style="text-align:center; color:#38bdf8;">%${(c.wick_elasticity || 12).toFixed(1)}</td>
                                     <td style="text-align:center;">
-                                        <span style="background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeColor}40; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">
+                                        <span style="background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeColor}40; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700; white-space:nowrap;">
                                             ${c.recommendation_badge}
                                         </span>
                                     </td>
-                                    <td style="text-align:left; color:#cbd5e1; font-size:11.5px; max-width:340px;">
-                                        <div style="font-weight:700; color:#38bdf8; font-size:11px; margin-bottom:2px; display:flex; align-items:center; gap:4px;">
-                                            <span>${c.scenario_title ? c.scenario_title.split(' ')[0] : '🎯'}</span>
-                                            <span>${c.scenario_title || 'Canlı Piyasa Gözlemi'}</span>
+                                    <td style="text-align:left; color:#cbd5e1; font-size:11.5px;">
+                                        <div style="font-weight:700; color:#38bdf8; font-size:11.5px; margin-bottom:3px; display:flex; align-items:center; gap:6px;">
+                                            <span>${c.scenario_title || '🎯 Canlı Piyasa Gözlemi'}</span>
                                         </div>
-                                        <div style="color:#cbd5e1; margin-bottom:4px; line-height:1.35;">${c.recommendation}</div>
-                                        ${c.modifications_summary ? `<div style="display:inline-block; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); border-radius:4px; padding:1px 6px; font-size:10px; color:#38bdf8; font-weight:600;">🛠️ ${c.modifications_summary}</div>` : ''}
+                                        <div style="color:#cbd5e1; margin-bottom:4px; line-height:1.4;">${c.recommendation}</div>
+                                        ${(c.modifications_count > 0 && c.modifications_summary) ? `<div style="display:inline-block; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); border-radius:4px; padding:1px 6px; font-size:10px; color:#38bdf8; font-weight:600;">🛠️ ${c.modifications_summary}</div>` : ''}
                                     </td>
                                     <td style="text-align:center;">
-                                        <button onclick="openShadowCoinDetail('${c.symbol}')" style="background:linear-gradient(135deg, rgba(56,189,248,0.2), rgba(168,85,247,0.2)); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:700; font-size:11px; font-family:'JetBrains Mono', monospace; transition:all 0.15s ease;">
+                                        <button onclick="openShadowCoinDetail('${c.symbol}')" style="background:linear-gradient(135deg, rgba(56,189,248,0.2), rgba(168,85,247,0.2)); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:700; font-size:11px; font-family:'JetBrains Mono', monospace; transition:all 0.15s ease; white-space:nowrap;">
                                             🔍 Detay
                                         </button>
                                     </td>
@@ -13263,7 +13262,7 @@ function downloadExcelReport() {
                                 <td style="color:#cbd5e1; text-align:left;">${t.setup}</td>
                                 <td style="color:#94a3b8; text-align:left;">${t.shield}</td>
                                 <td style="text-align:center;">$${(t.entry_price || 0) < 1 ? (t.entry_price || 0).toFixed(4) : (t.entry_price || 0).toFixed(2)} / $${isAct ? ((t.current_price || 0) < 1 ? (t.current_price || 0).toFixed(4) : (t.current_price || 0).toFixed(2)) : ((t.exit_price || 0) < 1 ? (t.exit_price || 0).toFixed(4) : (t.exit_price || 0).toFixed(2))}</td>
-                                <td style="text-align:center;"><span style="color:#10b981;">+%{${(t.max_mfe_pct || 0).toFixed(1)}}</span> / <span style="color:#f43f5e;">-%{${(t.max_mae_pct || 0).toFixed(1)}}</span></td>
+                                <td style="text-align:center;"><span style="color:#10b981;">+%${(t.max_mfe_pct || 0).toFixed(1)}</span> / <span style="color:#f43f5e;">-%${(t.max_mae_pct || 0).toFixed(1)}</span></td>
                                 <td style="text-align:center; font-weight:700; color:${pnlCol};">${pnl >= 0 ? '+$' : '-$'}${Math.abs(pnl).toFixed(2)}</td>
                                 <td style="text-align:center;">${verd}</td>
                                 <td style="text-align:left; color:#94a3b8; max-width:220px; white-space:normal;">${t.narrative || t.reason || '-'}</td>

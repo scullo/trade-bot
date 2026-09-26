@@ -9,10 +9,18 @@ from excel_exporter import create_shadow_dna_excel_report
 
 class TestShadowDeepAudit(unittest.TestCase):
     def setUp(self):
-        self.engine = ShadowExecutionEngine()
+        self.test_file = "test_shadow_audit_history.json"
+        self.engine = ShadowExecutionEngine(history_file=self.test_file)
         # Reset internal state for test
         self.engine.active_positions.clear()
         self.engine.completed_trades.clear()
+
+    def tearDown(self):
+        if os.path.exists(self.test_file):
+            try:
+                os.remove(self.test_file)
+            except Exception:
+                pass
 
     def test_01_mathematical_harmony_and_notional(self):
         """

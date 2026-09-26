@@ -228,6 +228,7 @@ class ShadowExecutionEngine:
         self.active_positions[shadow_id] = shadow_pos
         self.symbol_active_map[clean_sym] = shadow_id
         self.last_rejection_ts[throttle_key] = now_ts
+        self.save_history()
         return shadow_pos
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -1051,11 +1052,12 @@ class ShadowExecutionEngine:
     # GITHUB & DİSK KALICILIĞI (PERSISTENCE)
     # ──────────────────────────────────────────────────────────────────────────
     def save_history(self):
-        """Hafızadaki son 500 gölge işlemi JSON dosyasına yazar."""
+        """Hafızadaki son 500 gölge işlemi ve aktif pozisyonları JSON dosyasına yazar."""
         try:
             data = {
                 "updated_at": datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S"),
-                "completed": list(self.completed_trades)[-500:]
+                "completed": list(self.completed_trades)[-500:],
+                "actives": list(self.active_positions.values())
             }
             with open(self.history_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
@@ -1063,7 +1065,7 @@ class ShadowExecutionEngine:
             pass
 
     def load_history(self):
-        """Başlangıçta geçmiş gölge işlemleri hafızaya yükler."""
+        """Başlangıçta geçmiş gölge işlemleri ve aktif pozisyonları hafızaya yükler."""
         if not os.path.exists(self.history_file):
             return
         try:
@@ -1072,6 +1074,16 @@ class ShadowExecutionEngine:
                 completed = data.get("completed", [])
                 for t in completed:
                     self.completed_trades.append(t)
-            print(f">> [GÖLGE MOTORU] {len(self.completed_trades)} adet geçmiş gölge işlem hafızaya yüklendi.")
+                actives = data.get("actives", [])
+                for a in actives:
+                    s_id = a.get("id") or a.get("shadow_id")
+                    if s_id:
+                        if "id" not in a:
+                            a["id"] = s_id
+                        self.active_positions[s_id] = a
+                        sym = a.get("symbol")
+                        if sym:
+                            self.symbol_active_map[sym] = s_id
+            print(f">> [GÖLGE MOTORU] {len(self.completed_trades)} adet geçmiş, {len(self.active_positions)} adet aktif gölge işlem hafızaya yüklendi.")
         except Exception as e:
             print(f">> [GÖLGE MOTORU UYARI] Geçmiş yüklenemedi: {e}")
