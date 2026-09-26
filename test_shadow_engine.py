@@ -81,7 +81,7 @@ class TestShadowExecutionEngine(unittest.TestCase):
         self.assertGreater(summary["total_missed_profit_usd"], 0)
 
         dna = self.engine.get_coin_dna_matrix()
-        self.assertEqual(len(dna), 2)
+        self.assertEqual(len(dna), 100)
         symbols = [d["symbol"] for d in dna]
         self.assertIn("DOGE", symbols)
         self.assertIn("ENA", symbols)

@@ -1231,14 +1231,19 @@ def create_shadow_dna_excel_report(
     ws2.set_column('J:J', 28)
     ws2.set_column('K:K', 16)
     ws2.set_column('L:L', 18)
-    ws2.set_column('M:M', 45)
+    ws2.set_column('M:M', 36)
+    ws2.set_column('N:N', 55)
 
-    ws2.merge_range('B2:M2', '100 PARİTE CANLI PİYASA DNA\'SI VE OTONOM KALİBRASYON MASASI', title_fmt)
-    ws2.merge_range('B3:M3', 'Parite Bazında Toplanan Gölge Veriler, Fitil Esnekliği ve Otonom Kuant Parametre Önerileri', subtitle_fmt)
+    ws2.merge_range('B2:N2', '100 PARİTE CANLI PİYASA DNA\'SI VE OTONOM KALİBRASYON MASASI', title_fmt)
+    ws2.merge_range('B3:N3', 'Parite Bazında Toplanan Gölge Veriler, Fitil Esnekliği, Kuant Teşhis ve Otonom Parametre Önerileri', subtitle_fmt)
     ws2.set_row(1, 28)
     ws2.set_row(2, 18)
 
-    headers_s2 = ['Parite', 'Toplam Gölge', 'Kahraman (Hero)', 'Frenleyici (Spoiler)', 'Kurtarılan Zarar ($)', 'Kaçan Kâr ($)', 'Net Alfa ($)', 'SEI (%)', 'En Çok Engelleyen Kalkan', 'Fitil Esnekliği (%)', 'Kalibrasyon Durumu', 'Otonom Kalibrasyon Önerisi']
+    headers_s2 = [
+        'Parite', 'Toplam Gölge', 'Aktif', 'Tamamlanan', 'Kahraman (Hero)', 'Frenleyici (Spoiler)',
+        'Kurtarılan Zarar ($)', 'Kaçan Kâr ($)', 'Net Alfa ($)', 'SEI (%)', 'En Çok Engelleyen Kalkan',
+        'Fitil Esnekliği (%)', 'Kalibrasyon Durumu', 'Otonom Kalibrasyon Önerisi', 'Adli Kalibrasyon Özeti'
+    ]
     ws2.set_row(4, 24)
     for c_i, h_txt in enumerate(headers_s2, start=1):
         ws2.write(4, c_i, h_txt, th_navy)
@@ -1248,6 +1253,8 @@ def create_shadow_dna_excel_report(
         ws2.set_row(r2_idx, 20)
         sym = c_item.get('symbol', '-')
         tot_s = c_item.get('total_shadows', 0)
+        act_s = c_item.get('active_shadows', 0)
+        cmp_s = c_item.get('completed_shadows', 0)
         h_cnt = c_item.get('hero_count', 0)
         sp_cnt = c_item.get('spoiler_count', 0)
         saved = c_item.get('saved_loss_usd', 0.0)
@@ -1258,21 +1265,25 @@ def create_shadow_dna_excel_report(
         wick = c_item.get('wick_elasticity', 12.0)
         rec_b = c_item.get('recommendation_badge', 'DENGELİ')
         rec_txt = c_item.get('recommendation', '-')
+        narr_txt = c_item.get('forensic_narrative', '-')
 
         ws2.write(r2_idx, 1, sym, cell_c)
         ws2.write(r2_idx, 2, tot_s, cell_c)
-        ws2.write(r2_idx, 3, h_cnt, cell_c)
-        ws2.write(r2_idx, 4, sp_cnt, cell_c)
-        ws2.write(r2_idx, 5, saved, cell_curr)
-        ws2.write(r2_idx, 6, missed, cell_curr)
-        ws2.write(r2_idx, 7, net_a, cell_pnl_green if net_a >= 0 else cell_pnl_red)
-        ws2.write(r2_idx, 8, f"%{sei:.1f}", cell_c)
-        ws2.write(r2_idx, 9, top_s, cell_l)
-        ws2.write(r2_idx, 10, f"%{wick:.1f}", cell_c)
+        ws2.write(r2_idx, 3, act_s, cell_c)
+        ws2.write(r2_idx, 4, cmp_s, cell_c)
+        ws2.write(r2_idx, 5, h_cnt, cell_c)
+        ws2.write(r2_idx, 6, sp_cnt, cell_c)
+        ws2.write(r2_idx, 7, saved, cell_curr)
+        ws2.write(r2_idx, 8, missed, cell_curr)
+        ws2.write(r2_idx, 9, net_a, cell_pnl_green if net_a >= 0 else cell_pnl_red)
+        ws2.write(r2_idx, 10, f"%{sei:.1f}", cell_c)
+        ws2.write(r2_idx, 11, top_s, cell_l)
+        ws2.write(r2_idx, 12, f"%{wick:.1f}", cell_c)
 
         badge_fmt = cell_badge_spoiler if 'GEVŞET' in rec_b else (cell_badge_hero if 'KORU' in rec_b else cell_badge_neutral)
-        ws2.write(r2_idx, 11, rec_b, badge_fmt)
-        ws2.write(r2_idx, 12, rec_txt, cell_l)
+        ws2.write(r2_idx, 13, rec_b, badge_fmt)
+        ws2.write(r2_idx, 14, rec_txt, cell_l)
+        ws2.write(r2_idx, 15, narr_txt, cell_l)
         r2_idx += 1
 
     # ══════════════════════════════════════════════════════════════════════
@@ -1281,35 +1292,42 @@ def create_shadow_dna_excel_report(
     ws3 = workbook.add_worksheet('👻 DETAYLI GÖLGE DEFTERİ')
     ws3.set_tab_color('#8B5CF6')
     ws3.set_column('A:A', 3)
-    ws3.set_column('B:B', 20)  # ID
+    ws3.set_column('B:B', 18)  # ID
     ws3.set_column('C:C', 12)  # Parite
     ws3.set_column('D:D', 10)  # Yön
     ws3.set_column('E:E', 24)  # Setup
     ws3.set_column('F:F', 28)  # Kalkan
-    ws3.set_column('G:G', 40)  # Ret Gerekçesi
-    ws3.set_column('H:H', 14)  # Giriş Fiyatı
-    ws3.set_column('I:I', 14)  # Çıkış Fiyatı
-    ws3.set_column('J:J', 14)  # Stop
-    ws3.set_column('K:K', 14)  # TP1
-    ws3.set_column('L:L', 14)  # TP2
-    ws3.set_column('M:M', 13)  # MFE %
-    ws3.set_column('N:N', 13)  # MAE %
-    ws3.set_column('O:O', 13)  # ROE %
-    ws3.set_column('P:P', 14)  # PnL $
-    ws3.set_column('Q:Q', 22)  # Verdict Teşhis
-    ws3.set_column('R:R', 12)  # Süre dk
-    ws3.set_column('S:S', 18)  # Giriş Zamanı
-    ws3.set_column('T:T', 18)  # Çıkış Zamanı
+    ws3.set_column('G:G', 32)  # Ret Gerekçesi
+    ws3.set_column('H:H', 48)  # Adli Teşhis & Neden-Sonuç Hikayesi
+    ws3.set_column('I:I', 13)  # Giriş Fiyatı
+    ws3.set_column('J:J', 13)  # Çıkış Fiyatı
+    ws3.set_column('K:K', 13)  # Stop
+    ws3.set_column('L:L', 13)  # TP1
+    ws3.set_column('M:M', 13)  # TP2
+    ws3.set_column('N:N', 12)  # MFE %
+    ws3.set_column('O:O', 12)  # MAE %
+    ws3.set_column('P:P', 12)  # ROE %
+    ws3.set_column('Q:Q', 14)  # PnL $
+    ws3.set_column('R:R', 22)  # Verdict Teşhis
+    ws3.set_column('S:S', 14)  # ATR %
+    ws3.set_column('T:T', 14)  # Hacim Çarpanı
+    ws3.set_column('U:U', 14)  # CVD Alıcı %
+    ws3.set_column('V:V', 14)  # RS Skoru
+    ws3.set_column('W:W', 12)  # Süre dk
+    ws3.set_column('X:X', 18)  # Giriş Zamanı
+    ws3.set_column('Y:Y', 18)  # Çıkış Zamanı
 
-    ws3.merge_range('B2:T2', 'MİKROSKOBİK GÖLGE İŞLEM DEFTERİ (CANLI PİYASA SİMÜLASYONU)', title_fmt)
-    ws3.merge_range('B3:T3', 'Canlı Mumlarla Takip Edilerek TP1, TP2 veya Stop Akıbeti Belirlenmiş Tüm Sanal Pozisyonlar', subtitle_fmt)
+    ws3.merge_range('B2:Y2', 'MİKROSKOBİK GÖLGE İŞLEM DEFTERİ (CANLI PİYASA SİMÜLASYONU)', title_fmt)
+    ws3.merge_range('B3:Y3', 'Canlı Mumlarla Takip Edilerek TP1, TP2 veya Stop Akıbeti Belirlenmiş Tüm Sanal Pozisyonlar ve Adli Otopsi Raporu', subtitle_fmt)
     ws3.set_row(1, 28)
     ws3.set_row(2, 18)
 
     headers_s3 = [
         'Gölge ID', 'Parite', 'Yön', 'Giriş Stratejisi', 'Engelleyen Kalkan', 'Ret Gerekçesi',
+        'Adli Teşhis & Neden-Sonuç Hikayesi',
         'Giriş ($)', 'Çıkış ($)', 'Stop ($)', 'Planlanan TP1 ($)', 'Planlanan TP2 ($)',
         'Zirve MFE (%)', 'Maks MAE (%)', 'ROE (%)', 'Sanal Net PnL ($)', 'Kalkan Teşhisi',
+        'Volatilite ATR (%)', 'Hacim Çarpanı', 'CVD Alıcı (%)', 'RS Skoru',
         'Süre (Dk)', 'Giriş Zamanı', 'Çıkış Zamanı'
     ]
     ws3.set_row(4, 24)
@@ -1325,6 +1343,7 @@ def create_shadow_dna_excel_report(
         setup = t_item.get('setup', '-')
         shield = t_item.get('shield', '-')
         reason = t_item.get('reason', '-')
+        narr = t_item.get('narrative', reason)
         entry_p = t_item.get('entry_price', 0.0)
         exit_p = t_item.get('exit_price', 0.0)
         sl_p = t_item.get('sl_price', 0.0)
@@ -1335,6 +1354,11 @@ def create_shadow_dna_excel_report(
         roe = t_item.get('virtual_pnl_pct', 0.0)
         pnl = t_item.get('virtual_pnl_usd', 0.0)
         verd = t_item.get('verdict_badge', t_item.get('verdict', '-'))
+        telem = t_item.get('telemetry', {}) or {}
+        atr_str = f"%{telem.get('atr_pct', 0.0):.2f}" if 'atr_pct' in telem else '-'
+        vol_str = f"{telem.get('vol_mult', 1.0):.2f}x" if 'vol_mult' in telem else '-'
+        cvd_str = f"%{telem.get('cvd_taker_pct', 50.0):.1f}" if 'cvd_taker_pct' in telem else '-'
+        rs_str = f"{telem.get('rs_score', 0.0):+.2f}" if 'rs_score' in telem else '-'
         dur = t_item.get('duration_mins', 0.0)
         in_t = t_item.get('entry_time', '-')
         out_t = t_item.get('exit_time', '-')
@@ -1345,21 +1369,26 @@ def create_shadow_dna_excel_report(
         ws3.write(r3_idx, 4, setup, cell_l)
         ws3.write(r3_idx, 5, shield, cell_l)
         ws3.write(r3_idx, 6, reason, cell_l)
-        ws3.write(r3_idx, 7, entry_p, cell_curr4 if entry_p < 1.0 else cell_curr)
-        ws3.write(r3_idx, 8, exit_p, cell_curr4 if exit_p < 1.0 else cell_curr)
-        ws3.write(r3_idx, 9, sl_p, cell_curr4 if sl_p < 1.0 else cell_curr)
-        ws3.write(r3_idx, 10, tp1_p, cell_curr4 if tp1_p < 1.0 else cell_curr)
-        ws3.write(r3_idx, 11, tp2_p, cell_curr4 if tp2_p < 1.0 else cell_curr)
-        ws3.write(r3_idx, 12, f"+%{mfe:.2f}", cell_c)
-        ws3.write(r3_idx, 13, f"-%{mae:.2f}", cell_c)
-        ws3.write(r3_idx, 14, f"%{roe:+.2f}", cell_pnl_green if roe >= 0 else cell_pnl_red)
-        ws3.write(r3_idx, 15, pnl, cell_pnl_green if pnl >= 0 else cell_pnl_red)
+        ws3.write(r3_idx, 7, narr, cell_l)
+        ws3.write(r3_idx, 8, entry_p, cell_curr4 if entry_p < 1.0 else cell_curr)
+        ws3.write(r3_idx, 9, exit_p, cell_curr4 if exit_p < 1.0 else cell_curr)
+        ws3.write(r3_idx, 10, sl_p, cell_curr4 if sl_p < 1.0 else cell_curr)
+        ws3.write(r3_idx, 11, tp1_p, cell_curr4 if tp1_p < 1.0 else cell_curr)
+        ws3.write(r3_idx, 12, tp2_p, cell_curr4 if tp2_p < 1.0 else cell_curr)
+        ws3.write(r3_idx, 13, f"+%{mfe:.2f}", cell_c)
+        ws3.write(r3_idx, 14, f"-%{mae:.2f}", cell_c)
+        ws3.write(r3_idx, 15, f"%{roe:+.2f}", cell_pnl_green if roe >= 0 else cell_pnl_red)
+        ws3.write(r3_idx, 16, pnl, cell_pnl_green if pnl >= 0 else cell_pnl_red)
 
         badge_fmt = cell_badge_hero if 'KAHRAMAN' in verd else (cell_badge_spoiler if 'FRENLEYİCİ' in verd else cell_badge_neutral)
-        ws3.write(r3_idx, 16, verd, badge_fmt)
-        ws3.write(r3_idx, 17, dur, cell_c)
-        ws3.write(r3_idx, 18, in_t, cell_c)
-        ws3.write(r3_idx, 19, out_t, cell_c)
+        ws3.write(r3_idx, 17, verd, badge_fmt)
+        ws3.write(r3_idx, 18, atr_str, cell_c)
+        ws3.write(r3_idx, 19, vol_str, cell_c)
+        ws3.write(r3_idx, 20, cvd_str, cell_c)
+        ws3.write(r3_idx, 21, rs_str, cell_c)
+        ws3.write(r3_idx, 22, dur, cell_c)
+        ws3.write(r3_idx, 23, in_t, cell_c)
+        ws3.write(r3_idx, 24, out_t, cell_c)
         r3_idx += 1
 
     # ══════════════════════════════════════════════════════════════════════

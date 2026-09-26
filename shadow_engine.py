@@ -10,13 +10,14 @@ Arka Planda Gölge İşlem Takip Motoru ve Otonom Kuant Kalibrasyon Masası
    - Kalkan Teşhisi (Verdict):
      * STOP OLDU -> HERO SHIELD (🛡️ Kahraman Kalkan: Botu zarardan korudu, kurtarılan para $)
      * TP1/TP2 OLDU -> SPOILER SHIELD (⚠️ Frenleyici Kalkan: Kârlı işlemi engelledi, kaçan kâr $)
-2. Coin DNA Kalibratörü:
+2. Coin DNA Kalibratörü & Adli Otopsi Masası:
    - Her parite (ENA, DOGE, MOVR, vb.) için engellenen sinyalleri analiz eder.
    - Fitil esnekliği (Wick Elasticity), Taker CVD hassasiyeti, Tahta OBI tutunması.
    - Kalkan Verimlilik Endeksi (Shield Efficiency Index - SEI).
    - Otonom Parametre Öneri Motoru (Örn: "ENA S3 fitil eşiği %15'ten %10'a esnetilmeli").
+   - Ayrıntılı Neden-Sonuç Adli Hikayeleştirme (Narrative Forensics).
 3. Bellek İçi O(1) ve Sıfır Gecikme:
-   - Dairesel collections.deque(maxlen=1000), maksimum 100 aktif gölge pozisyon.
+   - Dairesel collections.deque(maxlen=1000), maksimum 300 aktif gölge pozisyon.
    - Render 512MB RAM sınırına kesinlikle uyumlu (<2MB bellek ayak izi).
 """
 
@@ -33,7 +34,7 @@ class ShadowExecutionEngine:
     Sıfır Gecikmeli Bellek İçi Gölge İşlem Motoru ve Otonom Kuant Kalibratörü.
     """
 
-    def __init__(self, history_file: str = "shadow_trades_history.json", max_active: int = 100, max_history: int = 1000):
+    def __init__(self, history_file: str = "shadow_trades_history.json", max_active: int = 300, max_history: int = 1000):
         self.history_file = os.path.join(os.path.dirname(__file__), history_file)
         self.max_active = max_active
         self.max_history = max_history
@@ -52,6 +53,16 @@ class ShadowExecutionEngine:
         self.virtual_margin = 250.0
         self.virtual_leverage = 5
         self.virtual_notional = self.virtual_margin * self.virtual_leverage  # $1,250.0
+
+        # Baz DNA veritabanını yükle (100 Parite Bütünlüğü)
+        self.dna_baseline = {}
+        try:
+            b_path = os.path.join(os.path.dirname(__file__), 'coin_dna_baseline.json')
+            if os.path.exists(b_path):
+                with open(b_path, 'r', encoding='utf-8') as f_b:
+                    self.dna_baseline = json.load(f_b)
+        except Exception:
+            pass
 
         # Hafızadaki geçmişi yükle
         self.load_history()
@@ -101,7 +112,6 @@ class ShadowExecutionEngine:
         elif "Yapısal" in r:
             return "Dinamik Yapısal Seviye Doğrulama (PA Invalidation)"
         else:
-            # İlk iki kelimeyi temizle
             parts = r.split(":")
             if len(parts) > 1 and len(parts[0]) < 40:
                 return parts[0].replace("🛡️", "").replace("🚨", "").strip()
@@ -129,10 +139,10 @@ class ShadowExecutionEngine:
         clean_sym = symbol.replace("/USDT", "").replace(":USDT", "").replace("USDT", "").upper() + "/USDT"
         now_ts = time.time()
 
-        # 1. Throttling Kontrolü (15 dakika içinde aynı coin için çifte kayıt engelle)
+        # 1. Throttling Kontrolü (15 dakika içinde aynı coin ve setup için çifte kayıt engelle)
         throttle_key = f"{clean_sym}_{setup_name}"
         last_ts = self.last_rejection_ts.get(throttle_key, 0.0)
-        if now_ts - last_ts < 900.0:  # 15 dakika (3 mum)
+        if now_ts - last_ts < 900.0:
             return None
 
         # 2. Aktif pozisyon kontrolü (Eğer bu coin'de açık bir sanal pozisyon varsa bekle)
@@ -143,7 +153,7 @@ class ShadowExecutionEngine:
 
         # 3. Yönü (Side) tespit et
         if not side:
-            s_name = setup_name.upper()
+            s_name = (setup_name + " " + reason).upper()
             if any(w in s_name for w in ["SHORT", "AYI", "BREAKDOWN", "DİRENÇ", "REDDİ", "S4", "R3"]):
                 side = "SHORT"
             else:
@@ -152,7 +162,7 @@ class ShadowExecutionEngine:
         # 4. Giriş Fiyatı ve Seviyeleri Doğrula / Hesapla
         entry_p = float(entry_price or 0.0)
         if entry_p <= 0.0:
-            return None  # Geçerli fiyat yoksa sanal işlem açılamaz
+            return None
 
         # Stop ve TP Seviyeleri (Eğer verilmediyse standart dinamik %1.20 stop, %1.65 TP1, %3.0 TP2)
         atr_pct = float((telemetry or {}).get("atr_pct", 1.2))
@@ -202,12 +212,16 @@ class ShadowExecutionEngine:
             "virtual_pnl_usd": 0.0,
             "virtual_pnl_pct": 0.0,
             "verdict": None,  # "HERO_SHIELD", "SPOILER_SHIELD", "NEUTRAL"
+            "verdict_badge": "⏳ TAKİPTE (Açık Pozisyon)",
+            "narrative": "Pozisyon canlı fiyat ve mum teyidiyle takip ediliyor.",
+            "margin_usd": 250.0,
+            "leverage": 5.0,
+            "notional_usd": 1250.0,
             "telemetry": telemetry or {}
         }
 
-        # Aktif kapasiteyi kontrol et (Azami 100 aktif gölge pozisyon)
+        # Aktif kapasiteyi kontrol et (Azami 300 aktif gölge pozisyon)
         if len(self.active_positions) >= self.max_active:
-            # En eski pozisyonu zaman aşımıyla kapat
             oldest_id = next(iter(self.active_positions))
             self._close_shadow_position(oldest_id, self.active_positions[oldest_id]["current_price"], "ZAMAN_AŞIMI (Rotasyon)", "TIMEOUT")
 
@@ -227,7 +241,6 @@ class ShadowExecutionEngine:
         if cur_p <= 0.0:
             return closed_records
 
-        # Bu sembole ait aktif gölge pozisyonları bul
         for s_id in list(self.active_positions.keys()):
             pos = self.active_positions.get(s_id)
             if not pos or pos["symbol"] != clean_sym:
@@ -237,13 +250,11 @@ class ShadowExecutionEngine:
             entry_p = pos["entry_price"]
             pos["current_price"] = cur_p
 
-            # Peak / Valley güncelle
             if cur_p > pos["peak_high"]:
                 pos["peak_high"] = cur_p
             if cur_p < pos["valley_low"]:
                 pos["valley_low"] = cur_p
 
-            # MFE (Maksimum Favorable Excursion) ve MAE hesapla
             if side == "LONG":
                 mfe_pct = max(0.0, ((pos["peak_high"] - entry_p) / entry_p) * 100.0)
                 mae_pct = max(0.0, ((entry_p - pos["valley_low"]) / entry_p) * 100.0)
@@ -316,13 +327,11 @@ class ShadowExecutionEngine:
             tp1_p = pos["tp1_price"]
             tp2_p = pos["tp2_price"]
 
-            # Mum içi peak/valley güncelle
             if c_high > pos["peak_high"]:
                 pos["peak_high"] = c_high
             if c_low < pos["valley_low"] and c_low > 0:
                 pos["valley_low"] = c_low
 
-            # MFE / MAE tazele
             if side == "LONG":
                 pos["max_mfe_pct"] = round(max(pos["max_mfe_pct"], ((pos["peak_high"] - entry_p) / entry_p) * 100.0), 2)
                 pos["max_mae_pct"] = round(max(pos["max_mae_pct"], ((entry_p - pos["valley_low"]) / entry_p) * 100.0), 2)
@@ -330,20 +339,30 @@ class ShadowExecutionEngine:
                 pos["max_mfe_pct"] = round(max(pos["max_mfe_pct"], ((entry_p - pos["valley_low"]) / entry_p) * 100.0), 2)
                 pos["max_mae_pct"] = round(max(pos["max_mae_pct"], ((pos["peak_high"] - entry_p) / entry_p) * 100.0), 2)
 
-            # 1. Stop Loss Kontrolü (Mum kapanışı veya fitil testi)
-            is_stopped = False
-            if side == "LONG" and (c_low <= sl_p or c_close <= sl_p):
-                is_stopped = True
-            elif side == "SHORT" and (c_high >= sl_p or c_close >= sl_p):
-                is_stopped = True
+            # 1. ÖNCELİK: Başa-baş Stop Kontrolü (TP1 veya Chandelier Kilidi Sonrası)
+            if (pos["early_be_locked"] or pos["tp1_hit"]) and pos.get("be_price"):
+                be_p = pos["be_price"]
+                if (side == "LONG" and (c_low <= be_p or c_close <= be_p)) or (side == "SHORT" and (c_high >= be_p or c_close >= be_p)):
+                    rec = self._close_shadow_position(s_id, be_p, "🛡️ Sanal Başa-Baş Koruması (BE)", "BE_CLOSED")
+                    if rec:
+                        closed_records.append(rec)
+                    continue
 
-            if is_stopped:
-                rec = self._close_shadow_position(s_id, sl_p, f"🛑 Sanal Stop Loss (${sl_p:.4f})", "STOPPED")
-                if rec:
-                    closed_records.append(rec)
-                continue
+            # 2. ÖNCELİK: Orijinal Stop Loss Kontrolü (Yalnızca TP1 öncesi)
+            else:
+                is_stopped = False
+                if side == "LONG" and (c_low <= sl_p or c_close <= sl_p):
+                    is_stopped = True
+                elif side == "SHORT" and (c_high >= sl_p or c_close >= sl_p):
+                    is_stopped = True
 
-            # 2. TP1 ve TP2 Kontrolü
+                if is_stopped:
+                    rec = self._close_shadow_position(s_id, sl_p, f"🛑 Sanal Stop Loss (${sl_p:.4f})", "STOPPED")
+                    if rec:
+                        closed_records.append(rec)
+                    continue
+
+            # 3. ÖNCELİK: TP1 ve TP2 Hedef Kontrolleri
             if not pos["tp1_hit"]:
                 if (side == "LONG" and c_high >= tp1_p) or (side == "SHORT" and c_low <= tp1_p):
                     pos["tp1_hit"] = True
@@ -356,16 +375,7 @@ class ShadowExecutionEngine:
                         closed_records.append(rec)
                     continue
 
-            # 3. Başa-baş Stop Kontrolü
-            if (pos["early_be_locked"] or pos["tp1_hit"]) and pos.get("be_price"):
-                be_p = pos["be_price"]
-                if (side == "LONG" and c_low <= be_p) or (side == "SHORT" and c_high >= be_p):
-                    rec = self._close_shadow_position(s_id, be_p, "🛡️ Sanal Başa-Baş Koruması (BE)", "BE_CLOSED")
-                    if rec:
-                        closed_records.append(rec)
-                    continue
-
-            # 4. Zaman Aşımı (36 mum = 3 saat boyunca ne TP ne Stop olmadıysa kapat)
+            # 4. ÖNCELİK: Zaman Aşımı (36 mum = 3 saat boyunca ne TP ne Stop olmadıysa kapat)
             if pos["candles_elapsed"] >= 36:
                 rec = self._close_shadow_position(s_id, c_close, "⏳ Zaman Aşımı (3 Saat / 36 Mum)", "TIMEOUT")
                 if rec:
@@ -383,7 +393,6 @@ class ShadowExecutionEngine:
         if not pos:
             return None
 
-        # Sembol eşlemesini temizle
         if self.symbol_active_map.get(pos["symbol"]) == shadow_id:
             del self.symbol_active_map[pos["symbol"]]
 
@@ -408,27 +417,43 @@ class ShadowExecutionEngine:
         pos["virtual_pnl_usd"] = round(self.virtual_notional * net_pct, 2)
 
         # 🎯 ADLİ TEŞHİS (HERO vs SPOILER)
-        # Eğer işlem zararla kapandıysa -> Kalkan bizi korudu! (HERO SHIELD)
-        # Eğer işlem kârla kapandıysa -> Kalkan kârı kaçırdı! (SPOILER SHIELD)
+        symbol_clean = pos["symbol"].replace("/USDT", "")
+        shield_txt = pos.get("shield", "Kuant Kalkan")
+        pnl_val = pos["virtual_pnl_usd"]
+
         if pos["virtual_pnl_usd"] < -2.0:
             pos["verdict"] = "HERO_SHIELD"
             pos["verdict_badge"] = "🛡️ KAHRAMAN KALKAN (Zarar Kurtarıldı)"
             pos["impact_usd"] = abs(pos["virtual_pnl_usd"])
+            narrative = (
+                f"🛡️ KAHRAMAN SAVUNMA: {symbol_clean} {side} sinyali '{shield_txt}' tarafından engellendi. "
+                f"Piyasa ters yöne kırıldı ve sanal stop seviyesini ({pos['sl_price']}) deldi. "
+                f"Kalkan tetiklenmeseydi kasadan -${abs(pnl_val):.2f} (%{abs(pos['virtual_pnl_pct']):.1f} ROE) eksilecekti. "
+                f"Kalkan sermayeyi kusursuz korudu!"
+            )
         elif pos["virtual_pnl_usd"] > 2.0:
             pos["verdict"] = "SPOILER_SHIELD"
             pos["verdict_badge"] = "⚠️ FRENLEYİCİ KALKAN (Kaçan Kâr)"
             pos["impact_usd"] = pos["virtual_pnl_usd"]
+            narrative = (
+                f"⚠️ FRENLEYİCİ ENGEL: {symbol_clean} {side} sinyali '{shield_txt}' tarafından engellendi. "
+                f"Ancak fiyat hedefe doğru +%{pos['max_mfe_pct']:.2f} zirve yaptı ve sanal hedefe (${exit_p}) ulaştı. "
+                f"Bu filtre engellemeseydi kasaya +${abs(pnl_val):.2f} (+%{pos['virtual_pnl_pct']:.1f} ROE) kâr girecekti. "
+                f"Tavsiye: {symbol_clean} paritesinde bu kalkan eşiği esnetilebilir."
+            )
         else:
             pos["verdict"] = "NEUTRAL"
             pos["verdict_badge"] = "⚪ NÖTR (Başa-Baş)"
             pos["impact_usd"] = 0.0
+            narrative = (
+                f"⚪ NÖTR / DENGELİ: {symbol_clean} {side} işlemi başa-baş veya yatay bölgede kapandı (${pnl_val:+.2f}). "
+                f"Kalkanın kasaya belirgin bir zararı veya fırsat maliyeti oluşmadı."
+            )
 
+        pos["narrative"] = narrative
         pos["status"] = exit_status
 
-        # Dairesel kuyruğa ekle
         self.completed_trades.append(pos)
-
-        # Diske asenkron kaydet (hata fırlatmaz)
         self.save_history()
         return pos
 
@@ -449,12 +474,9 @@ class ShadowExecutionEngine:
         total_missed_profit = sum(t.get("virtual_pnl_usd", 0.0) for t in spoiler_trades)
         net_shield_alpha = total_saved_loss - total_missed_profit
 
-        # Kalkan Verimlilik Endeksi (Shield Efficiency Index - SEI %)
-        # SEI = Kurtarılan Zarar / (Kurtarılan Zarar + Kaçan Kâr) * 100
         total_impact = total_saved_loss + total_missed_profit
         sei_score = round((total_saved_loss / total_impact) * 100.0, 1) if total_impact > 0 else 100.0
 
-        # En çok koruma sağlayan ilk 3 kalkan
         shield_savings: Dict[str, float] = {}
         for t in hero_trades:
             s_name = t.get("shield", "Bilinmeyen")
@@ -482,6 +504,7 @@ class ShadowExecutionEngine:
     def get_coin_dna_matrix(self) -> List[dict]:
         """
         100 coin için tek tek toplanan gölge verileri ve otonom kalibrasyon önerilerini üretir.
+        Aktif pozisyonları ve geçmiş verileri birleştirerek tam kapsama sağlar.
         """
         completed = list(self.completed_trades)
         symbols_map: Dict[str, List[dict]] = {}
@@ -492,10 +515,29 @@ class ShadowExecutionEngine:
                 symbols_map[sym] = []
             symbols_map[sym].append(t)
 
+        # Aktif pozisyonları da sembol haritasına dahil et
+        for s_id, pos in self.active_positions.items():
+            sym = pos.get("symbol", "")
+            if sym not in symbols_map:
+                symbols_map[sym] = []
+
+        # Tüm pariteleri topla
+        all_syms = set(symbols_map.keys())
+        if self.dna_baseline:
+            for b_k, b_v in self.dna_baseline.items():
+                s_fmt = b_v.get("symbol") or (b_k.replace("USDT", "") + "/USDT")
+                all_syms.add(s_fmt)
+
         coin_dna_list = []
-        for sym, t_list in symbols_map.items():
-            clean = sym.replace("/USDT", "")
+        for sym in all_syms:
+            clean = sym.replace("/USDT", "").replace(":USDT", "").replace("USDT", "")
+            t_list = symbols_map.get(sym, [])
             tot = len(t_list)
+
+            # Bu sembole ait aktif işlem var mı?
+            active_for_coin = [p for p in self.active_positions.values() if p.get("symbol") == sym]
+            active_cnt = len(active_for_coin)
+
             heroes = [t for t in t_list if t.get("verdict") == "HERO_SHIELD"]
             spoilers = [t for t in t_list if t.get("verdict") == "SPOILER_SHIELD"]
 
@@ -504,38 +546,55 @@ class ShadowExecutionEngine:
             impact = saved + missed
             sei = round((saved / impact) * 100.0, 1) if impact > 0 else 100.0
 
-            # En sık engelleyen kalkanı bul
+            # En sık engelleyen kalkan
             shield_counts: Dict[str, int] = {}
-            for t in t_list:
-                s_name = t.get("shield", "Genel")
+            for t in t_list + active_for_coin:
+                s_name = t.get("shield", "Genel Kalkan")
                 shield_counts[s_name] = shield_counts.get(s_name, 0) + 1
-            top_shield = max(shield_counts.items(), key=lambda x: x[1])[0] if shield_counts else "Yok"
+            top_shield = max(shield_counts.items(), key=lambda x: x[1])[0] if shield_counts else "Henüz Yok"
 
             # Ortalama fitil oranı (Wick Elasticity)
             wicks = [float(t.get("telemetry", {}).get("lower_wick_ratio", 0.0)) for t in t_list if "lower_wick_ratio" in t.get("telemetry", {})]
-            avg_wick = round((sum(wicks) / len(wicks)) * 100.0, 1) if wicks else 12.0
+            avg_wick = round((sum(wicks) / len(wicks)) * 100.0, 1) if wicks else 13.5
 
-            # Otonom Kuant Kalibrasyon Teşhisi
+            # Otonom Kuant Kalibrasyon Teşhisi ve Yorumlama
             calibrated = False
             rec_badge = "DENGELİ"
-            if len(spoilers) >= 3 and sei < 35.0:
+            if len(spoilers) >= 2 and sei < 40.0:
                 calibrated = True
                 rec_badge = "⚠️ GEVŞET"
                 recommendation = f"Frenleyici kalkan bu paritede ${missed:.1f} kâr kaçırdı ({len(spoilers)} işlem). '{top_shield}' eşiği bu pariteye özel %20 esnetilmeli."
-            elif len(heroes) >= 2 and sei >= 80.0:
+                forensic_narrative = (
+                    f"{clean} paritesinde kalkanlar aşırı katı davranarak toplam ${missed:.2f} potansiyel kârı engelledi. "
+                    f"Kurtarılan zarar ${saved:.2f} seviyesinde kaldığı için kalkan verimliliği (%{sei:.1f}) düşük. "
+                    f"Öneri: {top_shield} filtresi {clean} için %20 esnetilirse kasa kârlılığı belirgin artacaktır."
+                )
+            elif len(heroes) >= 2 and sei >= 75.0:
                 rec_badge = "👑 KORU"
                 recommendation = f"Kalkan kusursuz çalışıyor. Toplam ${saved:.1f} sermaye korundu. Mevcut sıkı filtreler korunmalı."
-            elif tot >= 5:
+                forensic_narrative = (
+                    f"{clean} paritesinde savunma zırhı kusursuz çalışıyor. Kalkanlar stop olacak {len(heroes)} işlemi engelleyerek "
+                    f"kasayı -${saved:.2f} zarardan kurtardı. Kalkan verimlilik skoru %{sei:.1f}. Mevcut sıkı koruma aynen sürdürülmeli."
+                )
+            elif active_cnt > 0 and tot == 0:
+                rec_badge = "⏳ TAKİPTE"
+                recommendation = f"Şu anda {active_cnt} adet gölge işlem canlı fiyat ve mumlarla izleniyor."
+                forensic_narrative = f"{clean} paritesinde canlı piyasa sinyali alındı ve kalkan tarafından engellenen işlem anlık olarak simüle ediliyor."
+            elif tot >= 3:
                 rec_badge = "⚖️ DENGELİ"
-                recommendation = f"Koruma ve fırsat dengesi stabil (SEI: %{sei:.1f}). Standart persona parametreleri optimum."
+                recommendation = f"Koruma ve fırsat dengesi stabil (SEI: %{sei:.1f}). Standart parametreler optimum."
+                forensic_narrative = f"{clean} paritesinde hem korunan zarar (${saved:.2f}) hem de kaçan kâr (${missed:.2f}) makul dengede."
             else:
                 rec_badge = "⏳ VERİ TOPLANIYOR"
-                recommendation = f"Henüz {tot} gölge işlem toplandı. Sağlıklı kalibrasyon için en az 5 işlem bekleniyor."
+                recommendation = f"Henüz {tot} gölge işlem tamamlandı ({active_cnt} aktif). Sağlıklı kalibrasyon için takip sürüyor."
+                forensic_narrative = f"{clean} için veri toplama aşamasında. Yeterli örneklem oluştukça kalibrasyon otomatik devreye girecek."
 
             coin_dna_list.append({
                 "symbol": clean,
                 "full_symbol": sym,
-                "total_shadows": tot,
+                "total_shadows": tot + active_cnt,
+                "active_shadows": active_cnt,
+                "completed_shadows": tot,
                 "hero_count": len(heroes),
                 "spoiler_count": len(spoilers),
                 "saved_loss_usd": round(saved, 2),
@@ -546,12 +605,79 @@ class ShadowExecutionEngine:
                 "wick_elasticity": avg_wick,
                 "recommendation": recommendation,
                 "recommendation_badge": rec_badge,
+                "forensic_narrative": forensic_narrative,
                 "is_calibrated_needed": calibrated
             })
 
-        # Toplam işlem ve etkiye göre sırala
         coin_dna_list.sort(key=lambda x: (x["total_shadows"], abs(x["net_alpha_usd"])), reverse=True)
         return coin_dna_list
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # PARİTE DETAYLI ADLİ OTOPSİ PAKETİ (COIN FORENSIC DEEP-DIVE MODAL DATA)
+    # ──────────────────────────────────────────────────────────────────────────
+    def get_coin_forensic_detail(self, symbol: str) -> dict:
+        """
+        Kullanıcı dashboard'da bir coinin [Detay] butonuna bastığında açılacak
+        en ince ayrıntılı adli inceleme ve parametre optimizasyon paketi.
+        """
+        clean = symbol.replace("/USDT", "").replace(":USDT", "").replace("USDT", "").upper()
+        sym = f"{clean}/USDT"
+
+        # Bu coine ait aktif ve tamamlanmış işlemleri topla
+        coin_actives = [p for p in self.active_positions.values() if clean in p.get("symbol", "").upper()]
+        coin_completed = [t for t in self.completed_trades if clean in t.get("symbol", "").upper()]
+
+        heroes = [t for t in coin_completed if t.get("verdict") == "HERO_SHIELD"]
+        spoilers = [t for t in coin_completed if t.get("verdict") == "SPOILER_SHIELD"]
+        saved = sum(abs(t.get("virtual_pnl_usd", 0.0)) for t in heroes)
+        missed = sum(t.get("virtual_pnl_usd", 0.0) for t in spoilers)
+        impact = saved + missed
+        sei = round((saved / impact) * 100.0, 1) if impact > 0 else 100.0
+
+        # Kalkan kırılımı
+        shields_breakdown = {}
+        for t in coin_completed:
+            s_name = t.get("shield", "Bilinmeyen Kalkan")
+            if s_name not in shields_breakdown:
+                shields_breakdown[s_name] = {"hero": 0, "spoiler": 0, "saved": 0.0, "missed": 0.0}
+            if t.get("verdict") == "HERO_SHIELD":
+                shields_breakdown[s_name]["hero"] += 1
+                shields_breakdown[s_name]["saved"] += abs(t.get("virtual_pnl_usd", 0.0))
+            elif t.get("verdict") == "SPOILER_SHIELD":
+                shields_breakdown[s_name]["spoiler"] += 1
+                shields_breakdown[s_name]["missed"] += t.get("virtual_pnl_usd", 0.0)
+
+        # Persona ve baz parametreler
+        base_p = self.dna_baseline.get(clean + "USDT", {})
+        current_persona = base_p.get("persona_name", "Standart / Dengeli")
+
+        # Önerilen parametre farkı (Diff)
+        suggested_diff = {
+            "current_wick_threshold": "%15.0",
+            "proposed_wick_threshold": "%10.0" if sei < 40 and len(spoilers) >= 2 else "%15.0",
+            "current_min_confluence": 4 if "WHIPSAW" in current_persona else 3,
+            "proposed_min_confluence": 3 if sei < 40 and len(spoilers) >= 2 else (4 if "WHIPSAW" in current_persona else 3),
+            "expected_alpha_boost": f"+${missed:.2f}" if missed > 0 else "$0.00"
+        }
+
+        return {
+            "symbol": clean,
+            "full_symbol": sym,
+            "persona_name": current_persona,
+            "total_trades": len(coin_completed) + len(coin_actives),
+            "active_count": len(coin_actives),
+            "completed_count": len(coin_completed),
+            "hero_count": len(heroes),
+            "spoiler_count": len(spoilers),
+            "saved_loss_usd": round(saved, 2),
+            "missed_profit_usd": round(missed, 2),
+            "net_alpha_usd": round(saved - missed, 2),
+            "sei": sei,
+            "shields_breakdown": shields_breakdown,
+            "suggested_diff": suggested_diff,
+            "active_positions": coin_actives,
+            "completed_trades": coin_completed[-25:]  # son 25 işlem
+        }
 
     # ──────────────────────────────────────────────────────────────────────────
     # KALKAN LİDERLİK TABLOSU (SHIELD AUDIT)
@@ -622,7 +748,7 @@ class ShadowExecutionEngine:
             }
             with open(self.history_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
-        except Exception as e:
+        except Exception:
             pass
 
     def load_history(self):
