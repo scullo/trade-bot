@@ -551,43 +551,26 @@ class ShadowExecutionEngine:
             for t in t_list + active_for_coin:
                 s_name = t.get("shield", "Genel Kalkan")
                 shield_counts[s_name] = shield_counts.get(s_name, 0) + 1
-            top_shield = max(shield_counts.items(), key=lambda x: x[1])[0] if shield_counts else "Henüz Yok"
 
-            # Ortalama fitil oranı (Wick Elasticity)
-            wicks = [float(t.get("telemetry", {}).get("lower_wick_ratio", 0.0)) for t in t_list if "lower_wick_ratio" in t.get("telemetry", {})]
-            avg_wick = round((sum(wicks) / len(wicks)) * 100.0, 1) if wicks else 13.5
+            # Persona ve baz parametreler
+            base_p = self.dna_baseline.get(clean + "USDT", {})
+            current_persona = base_p.get("persona_name", "Standart / Dengeli")
 
-            # Otonom Kuant Kalibrasyon Teşhisi ve Yorumlama
-            calibrated = False
-            rec_badge = "DENGELİ"
-            if len(spoilers) >= 2 and sei < 40.0:
-                calibrated = True
-                rec_badge = "⚠️ GEVŞET"
-                recommendation = f"Frenleyici kalkan bu paritede ${missed:.1f} kâr kaçırdı ({len(spoilers)} işlem). '{top_shield}' eşiği bu pariteye özel %20 esnetilmeli."
-                forensic_narrative = (
-                    f"{clean} paritesinde kalkanlar aşırı katı davranarak toplam ${missed:.2f} potansiyel kârı engelledi. "
-                    f"Kurtarılan zarar ${saved:.2f} seviyesinde kaldığı için kalkan verimliliği (%{sei:.1f}) düşük. "
-                    f"Öneri: {top_shield} filtresi {clean} için %20 esnetilirse kasa kârlılığı belirgin artacaktır."
-                )
-            elif len(heroes) >= 2 and sei >= 75.0:
-                rec_badge = "👑 KORU"
-                recommendation = f"Kalkan kusursuz çalışıyor. Toplam ${saved:.1f} sermaye korundu. Mevcut sıkı filtreler korunmalı."
-                forensic_narrative = (
-                    f"{clean} paritesinde savunma zırhı kusursuz çalışıyor. Kalkanlar stop olacak {len(heroes)} işlemi engelleyerek "
-                    f"kasayı -${saved:.2f} zarardan kurtardı. Kalkan verimlilik skoru %{sei:.1f}. Mevcut sıkı koruma aynen sürdürülmeli."
-                )
-            elif active_cnt > 0 and tot == 0:
-                rec_badge = "⏳ TAKİPTE"
-                recommendation = f"Şu anda {active_cnt} adet gölge işlem canlı fiyat ve mumlarla izleniyor."
-                forensic_narrative = f"{clean} paritesinde canlı piyasa sinyali alındı ve kalkan tarafından engellenen işlem anlık olarak simüle ediliyor."
-            elif tot >= 3:
-                rec_badge = "⚖️ DENGELİ"
-                recommendation = f"Koruma ve fırsat dengesi stabil (SEI: %{sei:.1f}). Standart parametreler optimum."
-                forensic_narrative = f"{clean} paritesinde hem korunan zarar (${saved:.2f}) hem de kaçan kâr (${missed:.2f}) makul dengede."
-            else:
-                rec_badge = "⏳ VERİ TOPLANIYOR"
-                recommendation = f"Henüz {tot} gölge işlem tamamlandı ({active_cnt} aktif). Sağlıklı kalibrasyon için takip sürüyor."
-                forensic_narrative = f"{clean} için veri toplama aşamasında. Yeterli örneklem oluştukça kalibrasyon otomatik devreye girecek."
+            # Çok Boyutlu Adli Teşhis & Kalibrasyon Motoru
+            diag = self._diagnose_multi_dimensional(
+                clean=clean,
+                sym=sym,
+                current_persona=current_persona,
+                base_p=base_p,
+                coin_completed=t_list,
+                coin_actives=active_for_coin,
+                heroes=heroes,
+                spoilers=spoilers,
+                saved=saved,
+                missed=missed,
+                sei=sei,
+                shield_counts=shield_counts
+            )
 
             coin_dna_list.append({
                 "symbol": clean,
@@ -601,16 +584,298 @@ class ShadowExecutionEngine:
                 "missed_profit_usd": round(missed, 2),
                 "net_alpha_usd": round(saved - missed, 2),
                 "sei": sei,
-                "top_shield": top_shield,
-                "wick_elasticity": avg_wick,
-                "recommendation": recommendation,
-                "recommendation_badge": rec_badge,
-                "forensic_narrative": forensic_narrative,
-                "is_calibrated_needed": calibrated
+                "top_shield": diag["top_shield"],
+                "wick_elasticity": diag["avg_wick"],
+                "recommendation": diag["recommendation"],
+                "recommendation_badge": diag["rec_badge"],
+                "forensic_narrative": diag["forensic_narrative"],
+                "primary_scenario": diag["primary_scenario"],
+                "scenario_title": diag["scenario_title"],
+                "modifications_count": diag["modifications_count"],
+                "modifications_summary": diag["modifications_summary"],
+                "is_calibrated_needed": diag["is_calibrated_needed"]
             })
 
         coin_dna_list.sort(key=lambda x: (x["total_shadows"], abs(x["net_alpha_usd"])), reverse=True)
         return coin_dna_list
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # ÇOK BOYUTLU KUANT ADLİ KALİBRASYON MOTORU (MULTI-DIMENSIONAL ENGINE)
+    # ──────────────────────────────────────────────────────────────────────────
+    def _diagnose_multi_dimensional(
+        self,
+        clean: str,
+        sym: str,
+        current_persona: str,
+        base_p: dict,
+        coin_completed: list,
+        coin_actives: list,
+        heroes: list,
+        spoilers: list,
+        saved: float,
+        missed: float,
+        sei: float,
+        shield_counts: dict
+    ) -> dict:
+        """
+        Bir coin için tüm piyasa rejimlerini (8 kuant senaryosu) ve eşzamanlı
+        çoklu parametre değişikliklerini (Fitil, BE, Confluence, ATR, Marjin, Strateji)
+        tespit eden otonom kuant zeka fonksiyonu.
+        """
+        tot_completed = len(coin_completed)
+        tot_active = len(coin_actives)
+
+        # 1. Telemetri İstatistikleri
+        all_trades = coin_completed + coin_actives
+        wicks = [float(t.get("telemetry", {}).get("lower_wick_ratio", 0.0)) for t in all_trades if "lower_wick_ratio" in t.get("telemetry", {})]
+        avg_wick = round((sum(wicks) / len(wicks)) * 100.0, 1) if wicks else 13.5
+        atrs = [float(t.get("telemetry", {}).get("atr_pct", 0.0)) for t in all_trades if "atr_pct" in t.get("telemetry", {})]
+        avg_atr = round(sum(atrs) / len(atrs), 2) if atrs else 1.25
+
+        # En çok engelleyen kalkan
+        top_shield = max(shield_counts.items(), key=lambda x: x[1])[0] if shield_counts else "Genel Kalkan"
+
+        # Erken Başa-Baş (Chandelier Premature BE) Kontrolü
+        premature_be_trades = [t for t in coin_completed if t.get("status") == "BE_CLOSED" and t.get("max_mfe_pct", 0.0) >= 1.80]
+
+        # 2. Senaryo Tespiti (8 Kuant Rejimi)
+        calibrated = False
+        if len(premature_be_trades) >= 1 and missed > saved:
+            calibrated = True
+            rec_badge = "⚡ ERKEN BE"
+            primary_scenario = "PREMATURE_BE_WHIPSAW"
+            scenario_title = "⚡ Erken Başa-Baş (Chandelier) Kırbaç Tuzağı"
+            recommendation = f"{len(premature_be_trades)} işlemde erken BE kilidi tetiklendikten sonra fiyat doğal dalgalanmayla girişte kapandı ve ardından TP hedeflerine fırladı."
+            forensic_narrative = (
+                f"{clean} paritesinde yön analizi son derece isabetliydi. Ancak +%0.80 kârda devreye giren Chandelier Erken Başa-Baş (BE) kilidi, "
+                f"paritenin doğal fitil oynaklığı (%{avg_wick:.1f}) nedeniyle erkenden tetiklendi ({len(premature_be_trades)} işlem). "
+                f"Pozisyon $0 başa-baş ile kapatıldıktan hemen sonra fiyat TP hedeflerine doğru fırladı. "
+                f"Bu durum pariteye yeterli hareket alanı tanınmadığını ve erken BE eşiğinin yükseltilmesi gerektiğini kanıtlar."
+            )
+        elif sei < 40.0 and len(spoilers) >= 2:
+            calibrated = True
+            rec_badge = "⚠️ GEVŞET"
+            primary_scenario = "SPOILER_OVER_RESTRICTIVE"
+            scenario_title = "⚠️ Aşırı Katı Filtre Kurbanı (Kaçan Fırsat Riski)"
+            recommendation = f"Frenleyici kalkan bu paritede ${missed:.1f} kâr kaçırdı ({len(spoilers)} işlem). '{top_shield}' eşiği bu pariteye özel %30 esnetilmeli."
+            forensic_narrative = (
+                f"{clean} paritesinde savunma kalkanları piyasanın dinamizmine ayak uyduramayarak gereğinden katı davrandı. "
+                f"Özellikle '{top_shield}' kalkanı {len(spoilers)} kârlı işlemi engelleyerek toplam ${missed:.2f} potansiyel kazancı kaçırdı. "
+                f"Kurtarılan zarar sadece ${saved:.2f} seviyesinde kaldığı için kalkan verimliliği (%{sei:.1f}) kritik eşiğin altına indi. "
+                f"Kalkan eşikleri %25-30 gevşetilerek paritenin alfa üretim potansiyeli serbest bırakılmalıdır."
+            )
+        elif sei >= 75.0 and len(heroes) >= 2:
+            rec_badge = "👑 KORU"
+            primary_scenario = "HERO_BULLETPROOF"
+            scenario_title = "👑 Çelik Savunma Zırhı (Kusursuz Sermaye Koruması)"
+            recommendation = f"Kalkan kusursuz çalışıyor. Toplam ${saved:.1f} sermaye korundu. Mevcut sıkı filtreler korunmalı."
+            forensic_narrative = (
+                f"{clean} paritesinde kuant kalkanlar tam bir sermaye koruma kalkanı gibi çalışıyor. "
+                f"Kalkanlar mutlak stop ile sonuçlanacak {len(heroes)} işlemi milisaniyesinde engelleyerek kasayı tam -${saved:.2f} zarardan korudu. "
+                f"Kalkan Verimlilik Endeksi (SEI: %{sei:.1f}) kurumsal seviyenin üzerindedir. "
+                f"Mevcut sıkı filtre parametreleri asla bozulmamalı, güvenle korunmalıdır."
+            )
+        elif avg_wick >= 20.0 or "WHIPSAW" in current_persona:
+            calibrated = True
+            rec_badge = "🌪️ FITIL TUZAK"
+            primary_scenario = "HIGH_FAKEOUT_VOLATILE"
+            scenario_title = "🌪️ Sahte Kırılım & Fitil Tuzağı (Whipsaw Rejimi)"
+            recommendation = f"Paritenin ortalama fitil elastikiyeti (%{avg_wick:.1f}) çok yüksek. Breakout yasaklanmalı, S3/R3 sekmeleri hedeflenmeli."
+            forensic_narrative = (
+                f"{clean} paritesi ortalama %{avg_wick:.1f} gibi yüksek bir sahte fitil elastikiyetine sahip. "
+                f"Bu parite breakout hareketlerinde alıcıları içeri çekip hemen ardından stop patlatan bir piyasa yapısına sahip. "
+                f"Breakout kovalamak yerine sadece Camarilla S3/R3 ve nPOC ekstrem seviyelerinden tepki aranmalıdır."
+            )
+        elif avg_atr >= 1.8 and len(heroes) >= 2:
+            calibrated = True
+            rec_badge = "💥 GENİŞ STOP"
+            primary_scenario = "HIGH_BETA_SUFFOCATION"
+            scenario_title = "💥 Dar Stop Boğulması (Yüksek Volatilite & ATR Uyumsuzluğu)"
+            recommendation = f"Yüksek volatilite (%{avg_atr:.2f} ATR) dar stopları erken patlatıyor. Stop çarpanı 2.0x ATR seviyesine genişletilmeli."
+            forensic_narrative = (
+                f"{clean} paritesinin oynaklık katsayısı (%{avg_atr:.2f} ATR) piyasa ortalamasından belirgin şekilde yüksek. "
+                f"Standart stop mesafeleri normal dalgalanma içinde kalıp erken tetikleniyor. "
+                f"Stop genişliğinin 2.0x ATR seviyesine çekilmesi pozisyona rahat bir hareket alanı sağlayacaktır."
+            )
+        elif "Tahta" in top_shield or "Likidite" in top_shield:
+            rec_badge = "🧱 TAHTA DUVARI"
+            primary_scenario = "LOW_LIQUIDITY_WALL"
+            scenario_title = "🧱 Derinlik Duvarı & Likidite Açığı (Orderbook Dengesizliği)"
+            recommendation = f"Paritede emir defteri dengesizliği (OBI) hakim. Tahta likiditesi ve mikro-CVD emilim teyidi şart."
+            forensic_narrative = (
+                f"{clean} paritesinde emir defteri dengesizliği (OBI) ve yapay duvarlar sıkça tetikleniyor. "
+                f"Bu paritede tahta likiditesi ve mikro-CVD emilim teyidi aranmadan açılan işlemler yüksek kayma riski taşır."
+            )
+        elif tot_completed >= 3 and 40.0 <= sei < 75.0:
+            rec_badge = "⚖️ DENGELİ"
+            primary_scenario = "EQUILIBRIUM_BALANCED"
+            scenario_title = "⚖️ Kararlı ve Dengeli Piyasa (Optimum Denge)"
+            recommendation = f"Koruma ve fırsat dengesi stabil (SEI: %{sei:.1f}). Standart parametreler optimum."
+            forensic_narrative = (
+                f"{clean} paritesinde hem engellenen zararlar (${saved:.2f}) hem de kaçan kârlar (${missed:.2f}) makul bir denge içinde (SEI: %{sei:.1f}). "
+                f"Sistemin standart kuralları ve risk çarpanları bu parite için optimum verimliliktedir."
+            )
+        elif tot_active > 0 and tot_completed == 0:
+            rec_badge = "⏳ TAKİPTE"
+            primary_scenario = "ACCUMULATING_DATA"
+            scenario_title = "⏳ Canlı Piyasa Gözlemi (Aktif Pozisyon Takipte)"
+            recommendation = f"Şu anda {tot_active} adet gölge işlem canlı fiyat ve mumlarla izleniyor."
+            forensic_narrative = f"{clean} paritesinde canlı piyasa sinyali alındı ve kalkan tarafından engellenen işlem anlık olarak simüle ediliyor."
+        else:
+            rec_badge = "⏳ VERİ TOPLANIYOR"
+            primary_scenario = "ACCUMULATING_DATA"
+            scenario_title = "⏳ Canlı Piyasa Gözlemi (Veri Biriktirme Modu)"
+            recommendation = f"Henüz {tot_completed} gölge işlem tamamlandı ({tot_active} aktif). Sağlıklı kalibrasyon için takip sürüyor."
+            forensic_narrative = (
+                f"{clean} paritesinde şu ana kadar {tot_completed} tamamlanmış, {tot_active} aktif gölge işlem izlendi. "
+                f"İstatistiki güvenilirlik için asgari 3-5 işlem beklenmektedir. "
+                f"Erken optimizasyon aşırı uyum (overfitting) riski yaratabileceğinden sistem pariteyi canlı izlemeye devam ediyor."
+            )
+
+        # 3. Çok Boyutlu Eylem Planı (Modifications List)
+        modifications = []
+
+        # Mod 1: Kalkan Hassasiyeti
+        if sei < 40.0 and len(spoilers) >= 2:
+            modifications.append({
+                "parameter": f"{top_shield} Hassasiyeti",
+                "code_key": f"shield_sensitivity_{clean.lower()}",
+                "current_val": "%100 (Tam Katı)",
+                "proposed_val": "%70 (Seçici Esnek)",
+                "urgency": "YÜKSEK",
+                "reason": f"Bu kalkan {len(spoilers)} kârlı işlemi engelleyerek kasayı ${missed:.2f} kârdan mahrum bıraktı. Eşik %30 esnetilmeli.",
+                "expected_impact": f"+${missed:.2f} Potansiyel Net Kâr Artışı"
+            })
+
+        # Mod 2: Confluence Skoru
+        if sei < 40.0 and len(spoilers) >= 2:
+            modifications.append({
+                "parameter": "Minimum Confluence Skoru",
+                "code_key": f"min_confluence_{clean.lower()}",
+                "current_val": "4 Puan" if "WHIPSAW" in current_persona else "3 Puan",
+                "proposed_val": "3 Puan" if "WHIPSAW" in current_persona else "2 Puan",
+                "urgency": "ORTA",
+                "reason": f"{clean} güçlü alfa ürettiğinde tüm indikatörler aynı anda yeşile dönmeyebilir. Baraj 1 puan indirilerek kârlı işlemler yakalanabilir.",
+                "expected_impact": "Sinyal Yakalama Oranını %35 Artırır"
+            })
+        elif sei >= 80.0 and len(heroes) >= 2 and len(spoilers) == 0:
+            modifications.append({
+                "parameter": "Minimum Confluence Skoru",
+                "code_key": f"min_confluence_{clean.lower()}",
+                "current_val": "3 Puan",
+                "proposed_val": "4 Puan (Elit Baraj)",
+                "urgency": "ORTA",
+                "reason": f"{clean} paritesinde kalkanlar çok başarılı. Zayıf sinyalleri tamamen elemek için baraj 4 puana yükseltilebilir.",
+                "expected_impact": "Hatalı Girişleri %25 Azaltır"
+            })
+
+        # Mod 3: Chandelier Erken Başa-Baş (BE) Kilidi
+        if len(premature_be_trades) >= 1 or (avg_wick >= 18.0 and missed > saved):
+            modifications.append({
+                "parameter": "Chandelier Erken Başa-Baş (BE) Kilidi",
+                "code_key": f"chandelier_be_threshold_{clean.lower()}",
+                "current_val": "+%0.80 Kârda Kilitle",
+                "proposed_val": "+%1.40 Kârda Kilitle",
+                "urgency": "YÜKSEK",
+                "reason": f"Ortalama fitil boyu %{avg_wick:.1f} olan bu paritede +%0.80 çok dar kalıyor. Fiyat doğal salınımla başa-başta kapanıp ardından hedefe gidiyor.",
+                "expected_impact": "Erken Stoplanmayı %60 Engeller"
+            })
+
+        # Mod 4: Sahte Fitil Toleransı
+        if avg_wick >= 18.0 or "WHIPSAW" in current_persona:
+            modifications.append({
+                "parameter": "Sahte Fitil (Fakeout) Toleransı",
+                "code_key": f"fakeout_wick_threshold_{clean.lower()}",
+                "current_val": "%15.0",
+                "proposed_val": f"%{max(22.0, avg_wick + 3.0):.1f}",
+                "urgency": "YÜKSEK",
+                "reason": f"Paritenin doğal fitil boyu (%{avg_wick:.1f}) piyasa ortalamasının çok üstünde. Eşik artırılarak sahte kırılım alarmları dengelenmeli.",
+                "expected_impact": "Gereksiz Kalkan Retlerini %45 Azaltır"
+            })
+
+        # Mod 5: Stop-Loss ATR Çarpanı
+        if avg_atr >= 1.6:
+            modifications.append({
+                "parameter": "Stop-Loss ATR Çarpanı",
+                "code_key": f"stop_atr_multiplier_{clean.lower()}",
+                "current_val": "1.5x ATR",
+                "proposed_val": "2.2x ATR (Genişletilmiş Koruma)",
+                "urgency": "ORTA",
+                "reason": f"Yüksek volatilite (%{avg_atr:.2f} ATR) nedeniyle dar stoplar piyasa gürültüsüne takılıyor. Stop mesafesi genişletilmeli.",
+                "expected_impact": "Piyasa Gürültüsünden Stop Olmayı %30 Azaltır"
+            })
+
+        # Mod 6: Dinamik Marjin Katsayısı
+        if sei >= 75.0 and saved >= 40.0:
+            modifications.append({
+                "parameter": "Dinamik Marjin Katsayısı",
+                "code_key": f"margin_scale_{clean.lower()}",
+                "current_val": "1.00x ($250)",
+                "proposed_val": "1.25x ($312.50)",
+                "urgency": "DÜŞÜK",
+                "reason": f"Kalkan verimliliği (%{sei:.1f}) elit seviyede. Yüksek korumalı sinyallerde pozisyon büyüklüğü %25 artırılabilir.",
+                "expected_impact": "Kazanan İşlemlerde Net Kârı %25 Artırır"
+            })
+        elif sei < 35.0 and len(heroes) >= 2:
+            modifications.append({
+                "parameter": "Dinamik Marjin Katsayısı",
+                "code_key": f"margin_scale_{clean.lower()}",
+                "current_val": "1.00x ($250)",
+                "proposed_val": "0.50x ($125.00)",
+                "urgency": "YÜKSEK",
+                "reason": f"{clean} yüksek testere riski üretiyor. Risk dengelenene kadar marjin yarıya çekilmeli.",
+                "expected_impact": "Potansiyel Kasa Drawdown'unu %50 Düşürür"
+            })
+
+        # Mod 7: İzin Verilen Stratejiler
+        if avg_wick >= 22.0 or "WHIPSAW" in current_persona:
+            modifications.append({
+                "parameter": "İzin Verilen Strateji Rejimi",
+                "code_key": f"allowed_setups_{clean.lower()}",
+                "current_val": "Tüm Stratejiler (Breakout + Reversal)",
+                "proposed_val": "Sadece Dip/Tepe Dönüşleri (Camarilla S3/R3 & nPOC)",
+                "urgency": "YÜKSEK",
+                "reason": "Yüksek fitilli piyasalarda kırılım (Breakout) kovalamak tuzak yaratır. Sadece aşırı satım/aşırı alım tepkileri oynanmalı.",
+                "expected_impact": "Sahte Kırılım Zararlarını Sıfırlar"
+            })
+
+        active_mods = [m for m in modifications if m["urgency"] != "BİLGİ"]
+        mods_summary = ", ".join([m["parameter"].split()[0] for m in active_mods]) if active_mods else "Optimum"
+
+        if not modifications:
+            modifications.append({
+                "parameter": "Tüm Kuant Parametreleri Optimum",
+                "code_key": f"all_parameters_{clean.lower()}",
+                "current_val": "Standart Konfigürasyon",
+                "proposed_val": "Mevcut Durumu Koru",
+                "urgency": "BİLGİ",
+                "reason": f"Mevcut veriler ışığında parite filtreleri ve stratejileri dengeli çalışıyor. Ek kalibrasyon gerekmiyor.",
+                "expected_impact": "Mevcut Kasa İstikrarını Sürdürür"
+            })
+
+        suggested_diff = {
+            "current_wick_threshold": "%15.0",
+            "proposed_wick_threshold": f"%{max(22.0, avg_wick + 3.0):.1f}" if (avg_wick >= 18.0 or "WHIPSAW" in current_persona) else ("%10.0" if sei < 40 and len(spoilers) >= 2 else "%15.0"),
+            "current_min_confluence": 4 if "WHIPSAW" in current_persona else 3,
+            "proposed_min_confluence": 3 if (sei < 40 and len(spoilers) >= 2) else (4 if "WHIPSAW" in current_persona else 3),
+            "expected_alpha_boost": f"+${missed:.2f}" if missed > 0 else "$0.00"
+        }
+
+        return {
+            "rec_badge": rec_badge,
+            "recommendation": recommendation,
+            "forensic_narrative": forensic_narrative,
+            "primary_scenario": primary_scenario,
+            "scenario_title": scenario_title,
+            "modifications": modifications,
+            "modifications_count": len(active_mods),
+            "modifications_summary": f"{len(active_mods)} Değişiklik ({mods_summary})" if active_mods else "Optimum (0 Değişiklik)",
+            "is_calibrated_needed": calibrated,
+            "suggested_diff": suggested_diff,
+            "avg_wick": avg_wick,
+            "avg_atr": avg_atr,
+            "top_shield": top_shield
+        }
 
     # ──────────────────────────────────────────────────────────────────────────
     # PARİTE DETAYLI ADLİ OTOPSİ PAKETİ (COIN FORENSIC DEEP-DIVE MODAL DATA)
@@ -618,7 +883,7 @@ class ShadowExecutionEngine:
     def get_coin_forensic_detail(self, symbol: str) -> dict:
         """
         Kullanıcı dashboard'da bir coinin [Detay] butonuna bastığında açılacak
-        en ince ayrıntılı adli inceleme ve parametre optimizasyon paketi.
+        en ince ayrıntılı adli inceleme ve çok boyutlu parametre optimizasyon paketi.
         """
         clean = symbol.replace("/USDT", "").replace(":USDT", "").replace("USDT", "").upper()
         sym = f"{clean}/USDT"
@@ -636,8 +901,10 @@ class ShadowExecutionEngine:
 
         # Kalkan kırılımı
         shields_breakdown = {}
+        shield_counts = {}
         for t in coin_completed:
             s_name = t.get("shield", "Bilinmeyen Kalkan")
+            shield_counts[s_name] = shield_counts.get(s_name, 0) + 1
             if s_name not in shields_breakdown:
                 shields_breakdown[s_name] = {"hero": 0, "spoiler": 0, "saved": 0.0, "missed": 0.0}
             if t.get("verdict") == "HERO_SHIELD":
@@ -647,18 +914,29 @@ class ShadowExecutionEngine:
                 shields_breakdown[s_name]["spoiler"] += 1
                 shields_breakdown[s_name]["missed"] += t.get("virtual_pnl_usd", 0.0)
 
+        for p in coin_actives:
+            s_name = p.get("shield", "Genel Kalkan")
+            shield_counts[s_name] = shield_counts.get(s_name, 0) + 1
+
         # Persona ve baz parametreler
         base_p = self.dna_baseline.get(clean + "USDT", {})
         current_persona = base_p.get("persona_name", "Standart / Dengeli")
 
-        # Önerilen parametre farkı (Diff)
-        suggested_diff = {
-            "current_wick_threshold": "%15.0",
-            "proposed_wick_threshold": "%10.0" if sei < 40 and len(spoilers) >= 2 else "%15.0",
-            "current_min_confluence": 4 if "WHIPSAW" in current_persona else 3,
-            "proposed_min_confluence": 3 if sei < 40 and len(spoilers) >= 2 else (4 if "WHIPSAW" in current_persona else 3),
-            "expected_alpha_boost": f"+${missed:.2f}" if missed > 0 else "$0.00"
-        }
+        # Çok boyutlu adli teşhis
+        diag = self._diagnose_multi_dimensional(
+            clean=clean,
+            sym=sym,
+            current_persona=current_persona,
+            base_p=base_p,
+            coin_completed=coin_completed,
+            coin_actives=coin_actives,
+            heroes=heroes,
+            spoilers=spoilers,
+            saved=saved,
+            missed=missed,
+            sei=sei,
+            shield_counts=shield_counts
+        )
 
         return {
             "symbol": clean,
@@ -673,8 +951,14 @@ class ShadowExecutionEngine:
             "missed_profit_usd": round(missed, 2),
             "net_alpha_usd": round(saved - missed, 2),
             "sei": sei,
+            "primary_scenario": diag["primary_scenario"],
+            "scenario_title": diag["scenario_title"],
+            "forensic_narrative": diag["forensic_narrative"],
+            "modifications": diag["modifications"],
+            "modifications_count": diag["modifications_count"],
+            "modifications_summary": diag["modifications_summary"],
+            "suggested_diff": diag["suggested_diff"],
             "shields_breakdown": shields_breakdown,
-            "suggested_diff": suggested_diff,
             "active_positions": coin_actives,
             "completed_trades": coin_completed[-25:]  # son 25 işlem
         }

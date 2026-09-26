@@ -2937,9 +2937,9 @@ HTML_PAGE = """
                 <!-- 3. PARAMETER CALIBRATION DIFF -->
                 <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px;">
                     <div style="font-size:13px; font-weight:800; color:#38bdf8; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
-                        <span>⚙️</span> Otonom Kalibrasyon Önerisi & Parametre Kıyaslaması (Diff)
+                        <span>⚙️</span> Otonom Kuant Kalibrasyon Eylem Planı (Çok Boyutlu Parametre Matrisi)
                     </div>
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px;" id="shadow-modal-diff-grid">
+                    <div style="display:flex; flex-direction:column; gap:10px;" id="shadow-modal-diff-grid">
                         <!-- Populated by JS -->
                     </div>
                 </div>
@@ -6064,7 +6064,14 @@ async function loadAdminMetrics() {
                                             ${c.recommendation_badge}
                                         </span>
                                     </td>
-                                    <td style="text-align:left; color:#cbd5e1; font-size:11.5px; max-width:320px;">${c.recommendation}</td>
+                                    <td style="text-align:left; color:#cbd5e1; font-size:11.5px; max-width:340px;">
+                                        <div style="font-weight:700; color:#38bdf8; font-size:11px; margin-bottom:2px; display:flex; align-items:center; gap:4px;">
+                                            <span>${c.scenario_title ? c.scenario_title.split(' ')[0] : '🎯'}</span>
+                                            <span>${c.scenario_title || 'Canlı Piyasa Gözlemi'}</span>
+                                        </div>
+                                        <div style="color:#cbd5e1; margin-bottom:4px; line-height:1.35;">${c.recommendation}</div>
+                                        ${c.modifications_summary ? `<div style="display:inline-block; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); border-radius:4px; padding:1px 6px; font-size:10px; color:#38bdf8; font-weight:600;">🛠️ ${c.modifications_summary}</div>` : ''}
+                                    </td>
                                     <td style="text-align:center;">
                                         <button onclick="openShadowCoinDetail('${c.symbol}')" style="background:linear-gradient(135deg, rgba(56,189,248,0.2), rgba(168,85,247,0.2)); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:700; font-size:11px; font-family:'JetBrains Mono', monospace; transition:all 0.15s ease;">
                                             🔍 Detay
@@ -13073,9 +13080,9 @@ function downloadExcelReport() {
 
                 const isHeroDom = d.sei >= 70;
                 const isSpoilerDom = d.sei <= 35 && d.spoiler_count >= 2;
-                const badgeText = isSpoilerDom ? '⚠️ GEVŞET' : (isHeroDom ? '👑 KORU' : '⚖️ DENGELİ');
-                const badgeColor = isSpoilerDom ? '#f43f5e' : (isHeroDom ? '#10b981' : '#f59e0b');
-                const badgeBg = isSpoilerDom ? 'rgba(244,63,94,0.15)' : (isHeroDom ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)');
+                const badgeText = d.recommendation_badge || (isSpoilerDom ? '⚠️ GEVŞET' : (isHeroDom ? '👑 KORU' : (d.recommendation_badge || '⚖️ DENGELİ')));
+                const badgeColor = badgeText.includes('GEVŞET') ? '#f43f5e' : (badgeText.includes('KORU') ? '#10b981' : (badgeText.includes('ERKEN') ? '#38bdf8' : '#f59e0b'));
+                const badgeBg = badgeText.includes('GEVŞET') ? 'rgba(244,63,94,0.15)' : (badgeText.includes('KORU') ? 'rgba(16,185,129,0.15)' : (badgeText.includes('ERKEN') ? 'rgba(56,189,248,0.15)' : 'rgba(245,158,11,0.15)'));
                 
                 const badgeEl = document.getElementById('shadow-modal-badge');
                 badgeEl.innerText = badgeText;
@@ -13083,7 +13090,7 @@ function downloadExcelReport() {
                 badgeEl.style.borderColor = `${badgeColor}40`;
                 badgeEl.style.background = badgeBg;
 
-                document.getElementById('shadow-modal-persona').innerText = `Persona: ${d.persona_name || 'Standart Kripto'} • Toplam ${d.total_trades || 0} Sinyal (${d.active_count || 0} Aktif, ${d.completed_count || 0} Tamamlandı)`;
+                document.getElementById('shadow-modal-persona').innerHTML = `Persona: <strong style="color:#fff;">${d.persona_name || 'Standart Kripto'}</strong> • Teşhis: <span style="color:#38bdf8; font-weight:700;">${d.scenario_title || 'Canlı Piyasa Gözlemi'}</span> • Toplam ${d.total_trades || 0} Sinyal (${d.active_count || 0} Aktif, ${d.completed_count || 0} Tamamlandı)`;
 
                 document.getElementById('shadow-modal-kpi-saved').innerText = `+$${(d.saved_loss_usd || 0).toFixed(2)}`;
                 document.getElementById('shadow-modal-kpi-hero').innerText = `${d.hero_count || 0} Stop Engellendi`;
@@ -13101,35 +13108,82 @@ function downloadExcelReport() {
                 alphaEl.style.color = alpha >= 0 ? '#10b981' : '#f43f5e';
 
                 const coinMatrixItem = (appState.coin_dna_matrix || []).find(c => c.symbol.toUpperCase() === cleanSym);
-                const narrativeText = (coinMatrixItem && coinMatrixItem.forensic_narrative) ? coinMatrixItem.forensic_narrative : (
+                const narrativeText = d.forensic_narrative || (coinMatrixItem && coinMatrixItem.forensic_narrative) || (
                     d.sei >= 75 ? `${cleanSym} paritesinde güvenlik zırhı kusursuz çalışıyor. Kalkanlar stop olacak ${d.hero_count} işlemi başarıyla engelleyerek kasayı -$${d.saved_loss_usd.toFixed(2)} zarardan kurtardı. Mevcut sıkı filtreler korunmalı.` :
-                    (d.sei < 40 && d.spoiler_count >= 2 ? `${cleanSym} paritesinde kalkanlar aşırı katı davranarak toplam $${d.missed_profit_usd.toFixed(2)} potansiyel TP kârını engelledi. Kalkan eşikleri %20 esnetilirse kasa kârlılığı artacaktır.` :
+                    (d.sei < 40 && d.spoiler_count >= 2 ? `${cleanSym} paritesinde kalkanlar aşırı katı davranarak toplam $${d.missed_profit_usd.toFixed(2)} potansiyel TP kârını engelledi. Kalkan eşikleri esnetilirse kasa kârlılığı artacaktır.` :
                     `${cleanSym} paritesinde canlı piyasa sinyalleri ve mumlar yakından takip ediliyor. Yeterli gölge işlem biriktikçe kalibrasyon tavsiyesi sunulacak.`)
                 );
-                document.getElementById('shadow-modal-narrative').innerHTML = `<p style="margin:0; font-size:12.5px; line-height:1.6; color:#e2e8f0;">${narrativeText}</p>`;
-
-                const diff = d.suggested_diff || {};
-                const diffGrid = document.getElementById('shadow-modal-diff-grid');
-                diffGrid.innerHTML = `
-                    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); padding:10px 14px; border-radius:8px;">
-                        <div style="font-size:10.5px; color:#94a3b8; margin-bottom:4px;">Sahte Fitil Eşiği (Fakeout %)</div>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="color:#94a3b8; text-decoration:line-through; font-family:'JetBrains Mono';">${diff.current_wick_threshold || '%15.0'}</span>
-                            <span style="color:#00f2fe; font-weight:800; font-family:'JetBrains Mono';">➔ ${diff.proposed_wick_threshold || '%15.0'}</span>
+                
+                document.getElementById('shadow-modal-narrative').innerHTML = `
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(168,85,247,0.2); flex-wrap:wrap; gap:6px;">
+                        <div style="font-size:12px; font-weight:800; color:#c084fc; font-family:'JetBrains Mono';">
+                            🚨 TEŞHİS EDİLEN PİYASA REJİMİ: <span style="color:#fff;">${d.scenario_title || 'Canlı Piyasa Gözlemi'}</span>
+                        </div>
+                        <div style="font-size:11px; color:#38bdf8; font-family:'JetBrains Mono'; font-weight:700;">
+                            ⚡ ${d.modifications_count || (d.modifications ? d.modifications.length : 0)} Eşzamanlı Parametre Aksiyonu
                         </div>
                     </div>
-                    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); padding:10px 14px; border-radius:8px;">
-                        <div style="font-size:10.5px; color:#94a3b8; margin-bottom:4px;">Min Confluence Filtresi</div>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="color:#94a3b8; text-decoration:line-through; font-family:'JetBrains Mono';">${diff.current_min_confluence || 3} Puan</span>
-                            <span style="color:#10b981; font-weight:800; font-family:'JetBrains Mono';">➔ ${diff.proposed_min_confluence || 3} Puan</span>
-                        </div>
-                    </div>
-                    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); padding:10px 14px; border-radius:8px;">
-                        <div style="font-size:10.5px; color:#94a3b8; margin-bottom:4px;">Beklenen Net Kâr Artışı (Alpha)</div>
-                        <div style="color:#38bdf8; font-weight:800; font-family:'JetBrains Mono'; font-size:14px;">${diff.expected_alpha_boost || '$0.00'}</div>
-                    </div>
+                    <p style="margin:0; font-size:12.5px; line-height:1.6; color:#e2e8f0;">${narrativeText}</p>
                 `;
+
+                const diffGrid = document.getElementById('shadow-modal-diff-grid');
+                const mods = (d.modifications && d.modifications.length > 0) ? d.modifications : [
+                    {
+                        parameter: "Sahte Fitil Toleransı",
+                        code_key: `fakeout_threshold_${cleanSym.toLowerCase()}`,
+                        current_val: (d.suggested_diff?.current_wick_threshold || '%15.0'),
+                        proposed_val: (d.suggested_diff?.proposed_wick_threshold || '%15.0'),
+                        urgency: "ORTA",
+                        reason: "Fitil sapmalarına karşı dinamik tolerans.",
+                        expected_impact: d.suggested_diff?.expected_alpha_boost || "$0.00"
+                    }
+                ];
+
+                diffGrid.innerHTML = mods.map((m, idx) => {
+                    const urg = m.urgency || 'BİLGİ';
+                    let urgCol = '#10b981';
+                    let urgBg = 'rgba(16,185,129,0.12)';
+                    if (urg === 'KRİTİK') { urgCol = '#ef4444'; urgBg = 'rgba(239,68,68,0.15)'; }
+                    else if (urg === 'YÜKSEK') { urgCol = '#f97316'; urgBg = 'rgba(249,115,22,0.15)'; }
+                    else if (urg === 'ORTA') { urgCol = '#f59e0b'; urgBg = 'rgba(245,158,11,0.15)'; }
+                    else if (urg === 'DÜŞÜK') { urgCol = '#38bdf8'; urgBg = 'rgba(56,189,248,0.15)'; }
+
+                    return `
+                        <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:12px 16px; display:flex; flex-direction:column; gap:8px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="background:rgba(56,189,248,0.15); color:#38bdf8; font-weight:800; font-size:10.5px; border-radius:4px; padding:1px 6px; font-family:'JetBrains Mono';">#${idx + 1}</span>
+                                    <span style="font-weight:700; color:#f8fafc; font-size:13px;">${m.parameter}</span>
+                                    <span style="color:#64748b; font-size:11px; font-family:'JetBrains Mono'; font-weight:500;">[<code style="color:#94a3b8;">${m.code_key}</code>]</span>
+                                </div>
+                                <span style="background:${urgBg}; color:${urgCol}; border:1px solid ${urgCol}50; font-size:10px; font-weight:800; padding:2px 8px; border-radius:6px; letter-spacing:0.5px;">
+                                    ÖNCELİK: ${urg}
+                                </span>
+                            </div>
+                            
+                            <div style="display:grid; grid-template-columns: 1fr auto 1fr; align-items:center; background:rgba(0,0,0,0.25); border-radius:8px; padding:8px 12px; gap:10px;">
+                                <div>
+                                    <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; margin-bottom:2px;">Mevcut Değer</div>
+                                    <div style="color:#cbd5e1; font-family:'JetBrains Mono'; font-size:12px; font-weight:600; text-decoration:line-through; text-decoration-color:#94a3b8;">${m.current_val}</div>
+                                </div>
+                                <div style="color:#38bdf8; font-weight:900; font-size:16px;">➔</div>
+                                <div>
+                                    <div style="font-size:10px; color:#38bdf8; text-transform:uppercase; margin-bottom:2px; font-weight:700;">Önerilen Değer</div>
+                                    <div style="color:#00f2fe; font-family:'JetBrains Mono'; font-size:12.5px; font-weight:800;">${m.proposed_val}</div>
+                                </div>
+                            </div>
+
+                            <div style="display:flex; align-items:baseline; justify-content:space-between; font-size:11.5px; line-height:1.5; color:#94a3b8; gap:10px; flex-wrap:wrap; border-top:1px dashed rgba(255,255,255,0.06); padding-top:6px;">
+                                <div style="flex:1; min-width:240px;">
+                                    <span style="color:#e2e8f0; font-weight:600;">Gerekçe:</span> ${m.reason}
+                                </div>
+                                <div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.2); padding:3px 8px; border-radius:6px; font-family:'JetBrains Mono'; font-size:11px; color:#38bdf8; white-space:nowrap;">
+                                    📈 <span style="font-weight:700;">Kâr/Risk Etkisi:</span> ${m.expected_impact}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
 
                 const shieldsTbody = document.getElementById('shadow-modal-shields-tbody');
                 const shBreak = d.shields_breakdown || {};

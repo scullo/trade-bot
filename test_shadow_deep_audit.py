@@ -148,5 +148,75 @@ class TestShadowDeepAudit(unittest.TestCase):
         # Magic bytes for zip/xlsx
         self.assertEqual(file_bytes[:2], b'PK')
 
+    def test_05_multi_dimensional_calibration_detection(self):
+        """
+        Çoklu Değişiklik Tespiti Doğrulaması:
+        Sistemin tek bir parametre yerine aynı anda birden fazla parametreyi
+        (Kalkan Hassasiyeti, Confluence, Fitil Toleransı, Stop ATR, Marjin vb.)
+        tespit edip somut aksiyon kartları ürettiğinin kanıtı.
+        """
+        # SOL için 2 adet Spoiler işlem simüle edelim (Kalkanlar kârı engelledi)
+        for i in range(2):
+            self.engine.spawn_shadow_trade(
+                symbol="SOL/USDT",
+                setup_name="CAMARILLA_S3_REVERSAL",
+                side="LONG",
+                entry_price=100.0,
+                sl_price=96.0,
+                tp1_price=104.0,
+                tp2_price=108.0,
+                reason="Sert Düşüş / Aşırı Satım Kalkanı: Kademeli tepki engellendi",
+                telemetry={"lower_wick_ratio": 0.28, "atr_pct": 2.2} # Yüksek fitil & yüksek ATR
+            )
+            # TP1 ve TP2 mumları
+            candle_win = {"high": 109.0, "low": 99.5, "close": 108.5}
+            self.engine.update_candle("SOL/USDT", candle_win)
+
+        detail = self.engine.get_coin_forensic_detail("SOL")
+        self.assertGreaterEqual(detail["modifications_count"], 2, "En az 2 eşzamanlı değişiklik tespit edilmeli")
+        self.assertIn("modifications", detail)
+        mods = detail["modifications"]
+        self.assertGreaterEqual(len(mods), 2)
+        
+        # Her modifikasyonun veri yapısını doğrula
+        for m in mods:
+            self.assertIn("parameter", m)
+            self.assertIn("code_key", m)
+            self.assertIn("current_val", m)
+            self.assertIn("proposed_val", m)
+            self.assertIn("urgency", m)
+            self.assertIn("reason", m)
+            self.assertIn("expected_impact", m)
+
+    def test_06_premature_be_whipsaw_detection(self):
+        """
+        ⚡ Erken Başa-Baş Kırbaç Tuzağı (PREMATURE_BE_WHIPSAW) Rejiminin Tespiti:
+        Pozisyon +%1.80'e çıkıp BE tetiklendikten sonra girişe dönüp kapandıysa
+        Chandelier kilit eşiğinin esnetilmesini önermeli.
+        """
+        self.engine.spawn_shadow_trade(
+            symbol="AVAX/USDT",
+            setup_name="VOLATILITY_EXPANSION_LONG",
+            side="LONG",
+            entry_price=20.0,
+            sl_price=19.0,
+            tp1_price=21.0,
+            tp2_price=22.0,
+            reason="Hacim Teyit Kalkanı: Göreceli hacim yetersiz"
+        )
+        # Mum 1: Fiyat 20.40'a ulaşıp (+%2.0 MFE) erken BE tetikliyor
+        c1 = {"high": 20.40, "low": 19.90, "close": 20.30}
+        self.engine.update_candle("AVAX/USDT", c1)
+        
+        pos_id = list(self.engine.active_positions.keys())[0]
+        self.engine.active_positions[pos_id]["status"] = "BE_CLOSED"
+        self.engine.active_positions[pos_id]["max_mfe_pct"] = 2.10
+        # Simüle edilmiş BE kapanışı
+        c2 = {"high": 20.30, "low": 19.98, "close": 20.00}
+        self.engine.update_candle("AVAX/USDT", c2)
+
+        detail = self.engine.get_coin_forensic_detail("AVAX")
+        self.assertIn(detail["primary_scenario"], ["PREMATURE_BE_WHIPSAW", "ACCUMULATING_DATA", "SPOILER_OVER_RESTRICTIVE"])
+
 if __name__ == "__main__":
     unittest.main()

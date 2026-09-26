@@ -1220,29 +1220,34 @@ def create_shadow_dna_excel_report(
     ws2 = workbook.add_worksheet('🧬 COIN DNA & KALİBRASYON')
     ws2.set_tab_color('#10B981')
     ws2.set_column('A:A', 3)
-    ws2.set_column('B:B', 12)
-    ws2.set_column('C:C', 14)
-    ws2.set_column('D:D', 14)
-    ws2.set_column('E:E', 14)
-    ws2.set_column('F:F', 16)
-    ws2.set_column('G:G', 16)
-    ws2.set_column('H:H', 16)
-    ws2.set_column('I:I', 14)
-    ws2.set_column('J:J', 28)
-    ws2.set_column('K:K', 16)
-    ws2.set_column('L:L', 18)
-    ws2.set_column('M:M', 36)
-    ws2.set_column('N:N', 55)
+    ws2.set_column('B:B', 12)  # Parite
+    ws2.set_column('C:C', 14)  # Toplam Gölge
+    ws2.set_column('D:D', 10)  # Aktif
+    ws2.set_column('E:E', 12)  # Tamamlanan
+    ws2.set_column('F:F', 14)  # Hero
+    ws2.set_column('G:G', 14)  # Spoiler
+    ws2.set_column('H:H', 16)  # Kurtarılan Zarar
+    ws2.set_column('I:I', 16)  # Kaçan Kâr
+    ws2.set_column('J:J', 16)  # Net Alfa
+    ws2.set_column('K:K', 12)  # SEI
+    ws2.set_column('L:L', 26)  # En Çok Engelleyen Kalkan
+    ws2.set_column('M:M', 16)  # Fitil Esnekliği
+    ws2.set_column('N:N', 18)  # Kalibrasyon Durumu
+    ws2.set_column('O:O', 32)  # Teşhis Edilen Piyasa Rejimi
+    ws2.set_column('P:P', 32)  # Çoklu Parametre Eylem Paketi
+    ws2.set_column('Q:Q', 45)  # Otonom Kalibrasyon Önerisi
+    ws2.set_column('R:R', 65)  # Adli Kuant Otopsisi
 
-    ws2.merge_range('B2:N2', '100 PARİTE CANLI PİYASA DNA\'SI VE OTONOM KALİBRASYON MASASI', title_fmt)
-    ws2.merge_range('B3:N3', 'Parite Bazında Toplanan Gölge Veriler, Fitil Esnekliği, Kuant Teşhis ve Otonom Parametre Önerileri', subtitle_fmt)
+    ws2.merge_range('B2:R2', '100 PARİTE CANLI PİYASA DNA\'SI VE OTONOM KALİBRASYON MASASI', title_fmt)
+    ws2.merge_range('B3:R3', 'Parite Bazında Toplanan Gölge Veriler, Fitil Esnekliği, Kuant Teşhis ve Çok Boyutlu Parametre Eylemleri', subtitle_fmt)
     ws2.set_row(1, 28)
     ws2.set_row(2, 18)
 
     headers_s2 = [
         'Parite', 'Toplam Gölge', 'Aktif', 'Tamamlanan', 'Kahraman (Hero)', 'Frenleyici (Spoiler)',
         'Kurtarılan Zarar ($)', 'Kaçan Kâr ($)', 'Net Alfa ($)', 'SEI (%)', 'En Çok Engelleyen Kalkan',
-        'Fitil Esnekliği (%)', 'Kalibrasyon Durumu', 'Otonom Kalibrasyon Önerisi', 'Adli Kalibrasyon Özeti'
+        'Fitil Esnekliği (%)', 'Kalibrasyon Durumu', 'Teşhis Edilen Piyasa Rejimi', 'Çoklu Parametre Eylem Paketi',
+        'Otonom Kalibrasyon Önerisi', 'Adli Kuant Otopsisi & Neden-Sonuç Hikayesi'
     ]
     ws2.set_row(4, 24)
     for c_i, h_txt in enumerate(headers_s2, start=1):
@@ -1264,6 +1269,8 @@ def create_shadow_dna_excel_report(
         top_s = c_item.get('top_shield', '-')
         wick = c_item.get('wick_elasticity', 12.0)
         rec_b = c_item.get('recommendation_badge', 'DENGELİ')
+        scen_txt = c_item.get('scenario_title', 'Canlı Piyasa Gözlemi')
+        mods_txt = c_item.get('modifications_summary', 'Optimum')
         rec_txt = c_item.get('recommendation', '-')
         narr_txt = c_item.get('forensic_narrative', '-')
 
@@ -1282,8 +1289,10 @@ def create_shadow_dna_excel_report(
 
         badge_fmt = cell_badge_spoiler if 'GEVŞET' in rec_b else (cell_badge_hero if 'KORU' in rec_b else cell_badge_neutral)
         ws2.write(r2_idx, 13, rec_b, badge_fmt)
-        ws2.write(r2_idx, 14, rec_txt, cell_l)
-        ws2.write(r2_idx, 15, narr_txt, cell_l)
+        ws2.write(r2_idx, 14, scen_txt, cell_l)
+        ws2.write(r2_idx, 15, mods_txt, cell_l)
+        ws2.write(r2_idx, 16, rec_txt, cell_l)
+        ws2.write(r2_idx, 17, narr_txt, cell_l)
         r2_idx += 1
 
     # ══════════════════════════════════════════════════════════════════════
@@ -1397,17 +1406,17 @@ def create_shadow_dna_excel_report(
     ws4 = workbook.add_worksheet('⚙️ KOD KALİBRASYON MASASI')
     ws4.set_tab_color('#F59E0B')
     ws4.set_column('A:A', 3)
-    ws4.set_column('B:B', 90)
+    ws4.set_column('B:B', 115)
 
-    ws4.write('B2', 'OTONOM KOD KALİBRASYON VE PARAMETRE LİSTESİ', title_fmt)
-    ws4.write('B3', 'Canlı Verilerle Tespit Edilen Optimum Eşik Değerleri (Doğrudan Koda Entegre Edilebilir Format)', subtitle_fmt)
+    ws4.write('B2', 'OTONOM KOD KALİBRASYON VE ÇOK BOYUTLU PARAMETRE SÖZLÜĞÜ', title_fmt)
+    ws4.write('B3', 'Canlı Mum Verileriyle Teşhis Edilen 8 Piyasa Rejimi ve Parite Bazlı Çoklu Kuant Parametreleri (Koda Entegre Edilebilir)', subtitle_fmt)
     ws4.set_row(1, 28)
     ws4.set_row(2, 18)
 
-    ws4.write('B5', '# 🧬 VALKYRIE OTONOM KALİBRE EDİLMİŞ COIN PARAMETRELERİ (CANLI PİYASA DNA)', th_gold)
+    ws4.write('B5', '# 🧬 VALKYRIE OTONOM KALİBRE EDİLMİŞ ÇOK BOYUTLU COIN PARAMETRELERİ (CANLI PİYASA DNA)', th_gold)
     
     code_lines = [
-        "# Aşağıdaki sözlük, gölge takip motorunun canlı piyasa analizlerine göre otomatik üretilmiştir.",
+        "# Aşağıdaki sözlük, gölge takip motorunun canlı piyasa analizlerine ve 8 kuant rejimine göre otomatik üretilmiştir.",
         "# Bu parametreler kopyalanıp strategy.py veya config.py içerisine doğrudan eklenebilir:",
         "",
         "CALIBRATED_COIN_DNA = {"
@@ -1418,11 +1427,26 @@ def create_shadow_dna_excel_report(
         wick = c.get('wick_elasticity', 12.0)
         sei = c.get('sei', 100.0)
         rec_b = c.get('recommendation_badge', 'DENGELİ')
+        scenario = c.get('scenario_title', 'Canlı Piyasa Gözlemi')
+        mods_sum = c.get('modifications_summary', 'Optimum')
+        p_scen = c.get('primary_scenario', 'ACCUMULATING_DATA')
+        
+        min_conf = 4 if ('WHIPSAW' in p_scen or 'SUFFOCATION' in p_scen) else (2 if ('OVER_RESTRICTIVE' in p_scen) else 3)
+        be_thresh = 1.40 if 'PREMATURE_BE' in p_scen else 0.80
+        stop_mult = 2.0 if ('SUFFOCATION' in p_scen or 'VOLATILE' in p_scen) else 1.5
+        margin_scale = 1.25 if ('BULLETPROOF' in p_scen and sei >= 75) else (0.50 if sei < 35 else 1.0)
+        allowed_regime = "REVERSAL_ONLY" if ('FAKEOUT' in p_scen or wick >= 22) else "ALL"
+
         code_lines.append(f'    "{sym}": {{')
-        code_lines.append(f'        "wick_threshold_pct": {wick:.1f},  # Canlı ortalama fitil esnekliği')
-        code_lines.append(f'        "sei_efficiency_score": {sei:.1f},')
-        code_lines.append(f'        "status": "{rec_b}",')
-        code_lines.append(f'        "top_shield": "{c.get("top_shield", "")}",')
+        code_lines.append(f'        "scenario": "{scenario}",')
+        code_lines.append(f'        "action_package": "{mods_sum}",')
+        code_lines.append(f'        "fakeout_wick_threshold": {wick:.1f},  # Dinamik fitil toleransı (%)')
+        code_lines.append(f'        "min_confluence": {min_conf},  # Minimum sinyal puanı')
+        code_lines.append(f'        "chandelier_be_threshold_pct": {be_thresh},  # Erken BE kilit eşiği (%)')
+        code_lines.append(f'        "stop_atr_multiplier": {stop_mult},  # Dinamik Stop ATR mesafesi')
+        code_lines.append(f'        "dynamic_margin_scale": {margin_scale},  # Risk ağırlıklı sermaye çarpanı')
+        code_lines.append(f'        "allowed_strategy_regime": "{allowed_regime}",  # İzin verilen işlem türü')
+        code_lines.append(f'        "sei_score": {sei:.1f},  # Kalkan verimlilik skoru (%)')
         code_lines.append(f'    }},')
 
     code_lines.append("}")
