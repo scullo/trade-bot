@@ -1,4 +1,5 @@
 from security_vault import SecurityVault
+from shadow_engine import ShadowExecutionEngine
 import os
 import json
 import time
@@ -53,6 +54,7 @@ class StrategyEngine:
         self.recent_rejections = []  # 🧠 Son elenen / girilmeyen sinyaller ve nedenleri (Canlı Dashboard Zekası)
         self.setup_attempts = {}     # Seviye temas takibi (Madde 5)
         self.recently_stopped_levels = {}  # 🪤 Fakeout Reclaim (Tuzak İntikamı) Seviye Takipçisi
+        self.shadow_engine = ShadowExecutionEngine()  # 👻 Gölge İşlem Motoru & Coin DNA Kalibratörü
         self.dna_baseline = {}       # 🧬 3,615 Gerçek İşlem Analizinden Türetilen Parite DNA Hafızası
         try:
             baseline_path = os.path.join(os.path.dirname(__file__), 'coin_dna_baseline.json')
@@ -94,6 +96,48 @@ class StrategyEngine:
         self.recent_rejections.append(entry)
         if len(self.recent_rejections) > 25:
             self.recent_rejections.pop(0)
+
+        # 👻 Gölge İşlem Motoru (Counterfactual Shadow Execution):
+        if hasattr(self, "shadow_engine") and self.shadow_engine:
+            try:
+                clean_s = symbol if '/' in symbol else (symbol + '/USDT')
+                entry_p = float(kwargs.get("entry_price") or 0.0)
+                if entry_p <= 0.0 and self.market_data:
+                    entry_p = float(self.market_data.current_prices.get(clean_s, 0.0))
+                    if entry_p <= 0.0 and clean_s in self.market_data.candles_5m:
+                        df_c = self.market_data.candles_5m[clean_s]
+                        if not df_c.empty:
+                            entry_p = float(df_c['close'].iloc[-1])
+
+                if entry_p > 0.0:
+                    side = kwargs.get("side")
+                    if not side:
+                        s_upper = (setup_name + " " + reason).upper()
+                        if any(w in s_upper for w in ["SHORT", "AYI", "BREAKDOWN", "DİRENÇ", "REDDİ", "S4", "R3"]):
+                            side = "SHORT"
+                        else:
+                            side = "LONG"
+
+                    telemetry = kwargs.get("telemetry") or {}
+                    if self.market_data and hasattr(self.market_data, 'get_symbol_metrics'):
+                        met = self.market_data.get_symbol_metrics(clean_s) or {}
+                        telemetry.setdefault("atr_pct", met.get("atr_pct", 1.2))
+                        telemetry.setdefault("vol_surge", met.get("vol_surge", 1.0))
+                        telemetry.setdefault("rs_score", met.get("dynamic_rs_score", 0.0))
+
+                    self.shadow_engine.spawn_shadow_trade(
+                        symbol=clean_s,
+                        setup_name=setup_name,
+                        reason=reason,
+                        side=side,
+                        entry_price=entry_p,
+                        sl_price=kwargs.get("sl_price") or kwargs.get("hard_stop"),
+                        tp1_price=kwargs.get("tp1"),
+                        tp2_price=kwargs.get("tp2"),
+                        telemetry=telemetry
+                    )
+            except Exception:
+                pass
 
     def _record_structural_stop(self, record: dict):
         """Stop olan veya zararla kapanan işlemin seviyesini kaydeder."""
@@ -614,6 +658,13 @@ class StrategyEngine:
 
     async def evaluate_tick(self, symbol: str, current_price: float, levels: dict):
         """Milisaniyelik anlik sert stop, TP ve trailing stop kontrolleri."""
+        # 👻 Gölge İşlem Motoru Milisaniyelik Tick Takibi (Açılmayan sanal pozisyonları takip eder)
+        if hasattr(self, "shadow_engine") and self.shadow_engine:
+            try:
+                self.shadow_engine.update_tick(symbol, current_price)
+            except Exception:
+                pass
+
         if symbol not in self.paper_trader.open_positions:
             return
 
@@ -2780,6 +2831,13 @@ class StrategyEngine:
         """5 Dakikalik mum kapandiginda tum kontroller."""
         close_price = current_candle['close']
         prev_close = prev_candle['close'] if prev_candle else close_price
+
+        # 👻 Gölge İşlem Motoru 5M Mum Kapanış Takibi
+        if hasattr(self, "shadow_engine") and self.shadow_engine:
+            try:
+                self.shadow_engine.update_candle(symbol, current_candle)
+            except Exception:
+                pass
 
         # 🪤 Fakeout Reclaim mum ömrü takibi
         if hasattr(self, 'recently_stopped_levels') and symbol in self.recently_stopped_levels:

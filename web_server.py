@@ -3284,6 +3284,12 @@ HTML_PAGE = """
                     <span class="tab-badge-sub" id="nav-persona-badge" style="background:rgba(0,242,254,0.12); color:var(--cyan); border:1px solid rgba(0,242,254,0.3);">100 Parite</span>
                 </button>
 
+                <button class="nav-tab-btn" id="tab-btn-shadow" onclick="switchMainTab('shadow')" title="5b. Gölge İşlem & Coin DNA Kalibrasyon Masası">
+                    <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"></path><circle cx="9" cy="10" r="1"></circle><circle cx="15" cy="10" r="1"></circle></svg></span>
+                    <span class="tab-btn-text">5b. Gölge & DNA</span>
+                    <span class="tab-badge-sub" id="nav-shadow-badge" style="background:rgba(168,85,247,0.15); color:#a855f7; border:1px solid rgba(168,85,247,0.3);">SEI %100</span>
+                </button>
+
                 <button class="nav-tab-btn" id="tab-btn-funding" onclick="switchMainTab('funding')" title="6. Fonlama & Squeeze Radarı">
                     <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></span>
                     <span class="tab-btn-text">6. Fonlama</span>
@@ -4033,6 +4039,229 @@ HTML_PAGE = """
             <div id="persona-table-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding:12px 18px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; font-family:'JetBrains Mono'; font-size:12px; color:#94a3b8;">
                 <div>Toplam <b id="persona-footer-count" style="color:#fff;">0</b> parite analiz edildi.</div>
                 <div style="color:var(--cyan);">🛡️ Kalkan Kuralı: %45+ Sahte Fitil üreten paritelerde Breakout otomatik engellenir, dip-tepe sekmeleri yarım marjinle korunur.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================================
+         5b. SEKME: 👻 GÖLGE İŞLEM TAKİP MOTORU & OTONOM COIN DNA KALİBRASYON MASASI
+         ========================================================================= -->
+    <div id="main-tab-content-shadow" class="main-tab-content" style="display:none;">
+        <!-- BAŞLIK VE 1-TIK EXCEL İNDİR AKSİYON ÇUBUĞU -->
+        <div style="display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg, rgba(17,23,38,0.95), rgba(14,19,31,0.98)); border:1px solid var(--border-light); border-radius:12px; padding:18px 24px; margin-bottom:20px; box-shadow:0 8px 32px rgba(0,0,0,0.36); flex-wrap:wrap; gap:16px;">
+            <div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:24px;">👻</span>
+                    <h2 style="font-size:18px; font-weight:800; color:#fff; margin:0; letter-spacing:0.5px;">GÖLGE İŞLEM TAKİP MOTORU & OTONOM COIN DNA MASASI</h2>
+                    <span style="background:rgba(168,85,247,0.18); color:#c084fc; border:1px solid rgba(168,85,247,0.4); font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px;">COUNTERFACTUAL SHADOW ENGINE</span>
+                </div>
+                <div style="font-size:12px; color:#94a3b8; margin-top:5px; font-family:'JetBrains Mono', monospace;">
+                    Reddedilen tüm sinyaller arka planda canlı fiyatla izlenir • Hero (Kurtarılan) vs Spoiler (Kaçan) kalkan analizi • Otonom parametre kalibrasyonu
+                </div>
+            </div>
+            <div style="display:flex; gap:12px; align-items:center;">
+                <button onclick="window.location.href='/api/export_shadow_excel'" class="action-btn" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; font-weight:700; padding:10px 18px; border-radius:8px; display:flex; align-items:center; gap:8px; border:none; cursor:pointer; box-shadow:0 4px 14px rgba(16,185,129,0.35); transition:all 0.2s ease;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    <span>📥 Gölge & Coin DNA Excel İndir (.xlsx)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 5 KPI ÖZET KARTI -->
+        <div class="cockpit-kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-bottom:20px;">
+            <div class="cockpit-kpi-card" style="border-top:3px solid #10b981;">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">🛡️ Kurtarılan Net Zarar (Hero)</span>
+                    <span class="kpi-card-icon">🛡️</span>
+                </div>
+                <div class="kpi-card-val" id="shadow-kpi-saved" style="color:#10b981;">$0.00</div>
+                <div class="kpi-card-sub"><span id="shadow-kpi-hero-count">0</span> Stop İşlemi Engellendi</div>
+                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">Kalkanların koruduğu gerçek sermaye</div>
+            </div>
+
+            <div class="cockpit-kpi-card" style="border-top:3px solid #f43f5e;">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">⚠️ Kaçan Fırsat Kârı (Spoiler)</span>
+                    <span class="kpi-card-icon">⚠️</span>
+                </div>
+                <div class="kpi-card-val" id="shadow-kpi-missed" style="color:#f43f5e;">$0.00</div>
+                <div class="kpi-card-sub"><span id="shadow-kpi-spoiler-count">0</span> Kazanan İşlem Engellendi</div>
+                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">Filtrelerin kaçırdığı potansiyel TP kazancı</div>
+            </div>
+
+            <div class="cockpit-kpi-card" style="border-top:3px solid #f59e0b;">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">🎯 Kalkan Verimliliği (SEI)</span>
+                    <span class="kpi-card-icon">🎯</span>
+                </div>
+                <div class="kpi-card-val" id="shadow-kpi-sei" style="color:#f59e0b;">%100.0</div>
+                <div class="kpi-card-sub">Kurtarılan / Toplam Etki Oranı</div>
+                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">&ge; %70 Elit Kurumsal Koruma Seviyesi</div>
+            </div>
+
+            <div class="cockpit-kpi-card" style="border-top:3px solid #06b6d4;">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">💎 Net Kalkan Alfası</span>
+                    <span class="kpi-card-icon">💎</span>
+                </div>
+                <div class="kpi-card-val" id="shadow-kpi-alpha" style="color:#06b6d4;">$0.00</div>
+                <div class="kpi-card-sub">Kurtarılan Zarar - Kaçan Kâr</div>
+                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">Sistem filtrelerinin net kâr katkısı</div>
+            </div>
+
+            <div class="cockpit-kpi-card" style="border-top:3px solid #a855f7;">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">👻 Canlı Gölge Pozisyonlar</span>
+                    <span class="kpi-card-icon">⏳</span>
+                </div>
+                <div class="kpi-card-val" id="shadow-kpi-active" style="color:#a855f7;">0 Aktif</div>
+                <div class="kpi-card-sub"><span id="shadow-kpi-total-tracked">0</span> Toplam Sinyal Taraması</div>
+                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">Anlık tick ve 5M mum teyidiyle takipte</div>
+            </div>
+        </div>
+
+        <!-- 1. BÖLÜM: 🧬 COIN BAZLI CANLI DNA VE KALİBRASYON MASASI -->
+        <div class="table-container" style="margin-bottom:24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:12px;">
+                <div>
+                    <h3 style="font-size:15px; font-weight:700; color:#fff; margin:0; display:flex; align-items:center; gap:8px;">
+                        <span>🧬</span> 100 Parite Canlı Piyasa DNA'sı ve Otonom Kalibrasyon Masası
+                    </h3>
+                    <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Paritelerin canlı test sonuçları, fitil esneklikleri ve botun otonom parametre iyileştirme tavsiyeleri</div>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input type="text" id="shadow-coin-search" placeholder="Coin ara (ENA, DOGE, MOVR...)" oninput="filterShadowCoinsTable()" style="background:#090d16; border:1px solid var(--border); color:#fff; padding:6px 12px; border-radius:6px; font-size:12px; width:180px; font-family:'JetBrains Mono', monospace;">
+                    <button class="nav-tab-btn active" id="btn-shadow-filter-all" onclick="setShadowCoinFilter('ALL')" style="padding:6px 12px; font-size:11px;">Tümü</button>
+                    <button class="nav-tab-btn" id="btn-shadow-filter-relax" onclick="setShadowCoinFilter('RELAX')" style="padding:6px 12px; font-size:11px; border-color:rgba(244,63,94,0.4); color:#f43f5e;">⚠️ Gevşet</button>
+                    <button class="nav-tab-btn" id="btn-shadow-filter-keep" onclick="setShadowCoinFilter('KEEP')" style="padding:6px 12px; font-size:11px; border-color:rgba(16,185,129,0.4); color:#10b981;">👑 Koru</button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="data-table" style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr>
+                            <th style="text-align:left;">Parite</th>
+                            <th>Toplam Gölge</th>
+                            <th>Hero (Kurtarılan)</th>
+                            <th>Spoiler (Kaçan)</th>
+                            <th>Kurtarılan ($)</th>
+                            <th>Kaçan Kâr ($)</th>
+                            <th>SEI (%)</th>
+                            <th style="text-align:left;">En Çok Engelleyen Kalkan</th>
+                            <th>Fitil Esnekliği</th>
+                            <th>Durum</th>
+                            <th style="text-align:left;">Otonom Kalibrasyon Teşhisi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shadow-coin-matrix-tbody">
+                        <tr><td colspan="11" style="text-align:center; padding:24px; color:#64748b;">Henüz gölge işlem verisi toplanıyor...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 2. BÖLÜM: 🛡️ KALKAN LİDERLİK VE VERİMLİLİK KARNESİ (SHIELD AUDIT) -->
+        <div class="table-container" style="margin-bottom:24px;">
+            <div style="margin-bottom:14px;">
+                <h3 style="font-size:15px; font-weight:700; color:#fff; margin:0; display:flex; align-items:center; gap:8px;">
+                    <span>🛡️</span> Güvenlik Kalkanları ve Filtre Verimlilik Karnesi (Shield Leaderboard)
+                </h3>
+                <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Hangi kalkan botu kaç dolarlık zarardan kurtardı? Hangisi kaç dolarlık kârı engelledi?</div>
+            </div>
+            <div class="table-responsive">
+                <table class="data-table" style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr>
+                            <th style="text-align:left;">Kalkan / Filtre Adı</th>
+                            <th>Toplam Bloklama</th>
+                            <th>Kahraman (Hero)</th>
+                            <th>Frenleyici (Spoiler)</th>
+                            <th>Kurtarılan Zarar ($)</th>
+                            <th>Kaçan Kâr ($)</th>
+                            <th>Net Katkı ($)</th>
+                            <th>SEI (%)</th>
+                            <th>Kalkan Rolü</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shadow-shield-leaderboard-tbody">
+                        <tr><td colspan="9" style="text-align:center; padding:24px; color:#64748b;">Kalkan verileri hesaplanıyor...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 3. BÖLÜM: 👻 AKTİF GÖLGE POZİSYONLAR & SON TAMAMLANAN GÖLGE DEFTERİ -->
+        <div style="display:grid; grid-template-columns:1fr; gap:20px;">
+            <!-- AKTİF SANAL İŞLEMLER -->
+            <div class="table-container">
+                <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h3 style="font-size:15px; font-weight:700; color:#fff; margin:0; display:flex; align-items:center; gap:8px;">
+                            <span>⏳</span> Canlı İzlenen Aktif Gölge Pozisyonlar (Live Shadow Tracking)
+                        </h3>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Açılması engellenen fakat anlık fiyat ve 5M mum teyidiyle canlı takip edilen pozisyonlar</div>
+                    </div>
+                    <span id="shadow-active-count-badge" style="background:rgba(168,85,247,0.15); color:#a855f7; border:1px solid rgba(168,85,247,0.3); font-size:11px; font-weight:700; padding:2px 8px; border-radius:12px;">0 Pozisyon</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" style="width:100%; border-collapse:collapse;">
+                        <thead>
+                            <tr>
+                                <th style="text-align:left;">Parite</th>
+                                <th>Yön</th>
+                                <th style="text-align:left;">Giriş Stratejisi</th>
+                                <th style="text-align:left;">Engelleyen Kalkan</th>
+                                <th>Giriş Fiyatı</th>
+                                <th>Güncel Fiyat</th>
+                                <th>Stop Fiyatı</th>
+                                <th>Planlanan TP1</th>
+                                <th>Planlanan TP2</th>
+                                <th>Zirve MFE</th>
+                                <th>Maks MAE</th>
+                                <th>Canlı ROE</th>
+                                <th>Canlı Sanal PnL</th>
+                                <th>Süre (Dk)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="shadow-active-tbody">
+                            <tr><td colspan="14" style="text-align:center; padding:20px; color:#64748b;">Şu an canlı izlenen açık gölge pozisyon yok.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SON TAMAMLANAN GÖLGE DEFTERİ -->
+            <div class="table-container">
+                <div style="margin-bottom:14px;">
+                    <h3 style="font-size:15px; font-weight:700; color:#fff; margin:0; display:flex; align-items:center; gap:8px;">
+                        <span>📜</span> Son Tamamlanan Gölge İşlem Defteri (Son 50 Sonuç)
+                    </h3>
+                    <div style="font-size:11px; color:#94a3b8; margin-top:4px;">TP1, TP2, Stop veya Zaman Aşımıyla sonuçlanan sanal işlemler ve adli teşhis</div>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" style="width:100%; border-collapse:collapse;">
+                        <thead>
+                            <tr>
+                                <th>Gölge ID</th>
+                                <th style="text-align:left;">Parite</th>
+                                <th>Yön</th>
+                                <th style="text-align:left;">Setup</th>
+                                <th style="text-align:left;">Engelleyen Kalkan</th>
+                                <th>Giriş ($)</th>
+                                <th>Çıkış ($)</th>
+                                <th>MFE</th>
+                                <th>MAE</th>
+                                <th>Sanal PnL ($)</th>
+                                <th>Kalkan Teşhisi (Verdict)</th>
+                                <th>Sonuç Durumu</th>
+                                <th>Giriş Zamanı</th>
+                            </tr>
+                        </thead>
+                        <tbody id="shadow-history-tbody">
+                            <tr><td colspan="13" style="text-align:center; padding:20px; color:#64748b;">Henüz tamamlanan gölge işlem yok.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -5605,6 +5834,229 @@ async function loadAdminMetrics() {
             badge.innerText = `${w} ⚠️ | ${g} 👑`;
         }
 
+        let shadowCoinFilterState = 'ALL';
+
+        function updateShadowBadge() {
+            const badge = document.getElementById('nav-shadow-badge');
+            if (!badge || !appState || !appState.shadow_summary) return;
+            const summ = appState.shadow_summary || {};
+            const sei = summ.shield_efficiency_index != null ? summ.shield_efficiency_index : 100;
+            const heroes = summ.hero_count || 0;
+            const spoilers = summ.spoiler_count || 0;
+            badge.innerText = `SEI %${sei.toFixed(0)} (${heroes}🛡️/${spoilers}⚠️)`;
+        }
+
+        function setShadowCoinFilter(filter) {
+            shadowCoinFilterState = filter;
+            ['all', 'relax', 'keep'].forEach(k => {
+                const btn = document.getElementById(`btn-shadow-filter-${k}`);
+                if (btn) btn.classList.remove('active');
+            });
+            const actBtn = document.getElementById(`btn-shadow-filter-${filter.toLowerCase()}`);
+            if (actBtn) actBtn.classList.add('active');
+            renderShadowView();
+        }
+
+        function filterShadowCoinsTable() {
+            renderShadowView();
+        }
+
+        function renderShadowView() {
+            try {
+                if (!appState) return;
+                const summ = appState.shadow_summary || {};
+                const coinMatrix = appState.coin_dna_matrix || [];
+                const shieldBoards = appState.shield_leaderboard || [];
+                const activePos = appState.shadow_positions || [];
+                const hist = appState.shadow_history || [];
+
+                // 1. KPI Kartlarını Güncelle
+                const savedEl = document.getElementById('shadow-kpi-saved');
+                if (savedEl) savedEl.innerText = `+$${(summ.total_saved_loss_usd || 0).toFixed(2)}`;
+
+                const heroEl = document.getElementById('shadow-kpi-hero-count');
+                if (heroEl) heroEl.innerText = summ.hero_count || 0;
+
+                const missedEl = document.getElementById('shadow-kpi-missed');
+                if (missedEl) missedEl.innerText = `-$${(summ.total_missed_profit_usd || 0).toFixed(2)}`;
+
+                const spoilerEl = document.getElementById('shadow-kpi-spoiler-count');
+                if (spoilerEl) spoilerEl.innerText = summ.spoiler_count || 0;
+
+                const seiEl = document.getElementById('shadow-kpi-sei');
+                if (seiEl) {
+                    const sei = summ.shield_efficiency_index != null ? summ.shield_efficiency_index : 100;
+                    seiEl.innerText = `%${sei.toFixed(1)}`;
+                    seiEl.style.color = sei >= 70 ? '#10b981' : (sei <= 35 ? '#f43f5e' : '#f59e0b');
+                }
+
+                const alphaEl = document.getElementById('shadow-kpi-alpha');
+                if (alphaEl) {
+                    const alpha = summ.net_shield_alpha_usd || 0;
+                    alphaEl.innerText = `${alpha >= 0 ? '+$' : '-$'}${Math.abs(alpha).toFixed(2)}`;
+                    alphaEl.style.color = alpha >= 0 ? '#06b6d4' : '#f43f5e';
+                }
+
+                const activeEl = document.getElementById('shadow-kpi-active');
+                if (activeEl) activeEl.innerText = `${summ.active_shadow_trades || activePos.length} Aktif`;
+
+                const totalEl = document.getElementById('shadow-kpi-total-tracked');
+                if (totalEl) totalEl.innerText = summ.total_shadow_trades || (activePos.length + hist.length);
+
+                updateShadowBadge();
+
+                // 2. 100 Coin Canlı DNA & Kalibrasyon Tablosu
+                const coinTbody = document.getElementById('shadow-coin-matrix-tbody');
+                if (coinTbody) {
+                    const searchInput = (document.getElementById('shadow-coin-search')?.value || '').trim().toUpperCase();
+                    
+                    let filteredCoins = coinMatrix.filter(c => {
+                        if (searchInput && !c.symbol.toUpperCase().includes(searchInput)) return false;
+                        if (shadowCoinFilterState === 'RELAX' && !c.recommendation_badge.includes('GEVŞET')) return false;
+                        if (shadowCoinFilterState === 'KEEP' && !c.recommendation_badge.includes('KORU')) return false;
+                        return true;
+                    });
+
+                    if (filteredCoins.length === 0) {
+                        coinTbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:24px; color:#64748b;">${coinMatrix.length === 0 ? 'Canlı mumlarla gölge pozisyonlar toplanıyor... Bot her 5M mumda verileri işler.' : 'Arama kriterine uygun coin bulunamadı.'}</td></tr>`;
+                    } else {
+                        coinTbody.innerHTML = filteredCoins.map(c => {
+                            const badgeColor = c.recommendation_badge.includes('GEVŞET') ? '#f43f5e' : (c.recommendation_badge.includes('KORU') ? '#10b981' : '#f59e0b');
+                            const badgeBg = c.recommendation_badge.includes('GEVŞET') ? 'rgba(244,63,94,0.12)' : (c.recommendation_badge.includes('KORU') ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)');
+
+                            return `
+                                <tr style="border-bottom:1px solid rgba(255,255,255,0.04); font-family:'JetBrains Mono', monospace; font-size:12px;">
+                                    <td style="font-weight:700; color:#fff; padding:10px 12px;">${c.symbol}</td>
+                                    <td style="text-align:center;">${c.total_shadows}</td>
+                                    <td style="text-align:center; color:#10b981; font-weight:700;">${c.hero_count}</td>
+                                    <td style="text-align:center; color:#f43f5e; font-weight:700;">${c.spoiler_count}</td>
+                                    <td style="text-align:center; color:#10b981;">+$${(c.saved_loss_usd || 0).toFixed(2)}</td>
+                                    <td style="text-align:center; color:#f43f5e;">-$${(c.missed_profit_usd || 0).toFixed(2)}</td>
+                                    <td style="text-align:center; font-weight:700; color:${c.sei >= 70 ? '#10b981' : (c.sei <= 35 ? '#f43f5e' : '#f59e0b')};">%${(c.sei || 100).toFixed(1)}</td>
+                                    <td style="text-align:left; color:#94a3b8;">${c.top_shield || '-'}</td>
+                                    <td style="text-align:center; color:#38bdf8;">%${(c.wick_elasticity || 12).toFixed(1)}</td>
+                                    <td style="text-align:center;">
+                                        <span style="background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeColor}40; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">
+                                            ${c.recommendation_badge}
+                                        </span>
+                                    </td>
+                                    <td style="text-align:left; color:#cbd5e1; font-size:11.5px; max-width:320px;">${c.recommendation}</td>
+                                </tr>
+                            `;
+                        }).join('');
+                    }
+                }
+
+                // 3. Kalkan Liderlik Tablosu
+                const shieldTbody = document.getElementById('shadow-shield-leaderboard-tbody');
+                if (shieldTbody) {
+                    if (shieldBoards.length === 0) {
+                        shieldTbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px; color:#64748b;">Kalkan verileri hesaplanıyor...</td></tr>`;
+                    } else {
+                        shieldTbody.innerHTML = shieldBoards.map(s => {
+                            const roleColor = s.role.includes('KAHRAMAN') ? '#10b981' : (s.role.includes('FRENLEYİCİ') ? '#f43f5e' : '#f59e0b');
+                            const roleBg = s.role.includes('KAHRAMAN') ? 'rgba(16,185,129,0.12)' : (s.role.includes('FRENLEYİCİ') ? 'rgba(244,63,94,0.12)' : 'rgba(245,158,11,0.12)');
+                            return `
+                                <tr style="border-bottom:1px solid rgba(255,255,255,0.04); font-family:'JetBrains Mono', monospace; font-size:12px;">
+                                    <td style="font-weight:700; color:#fff; text-align:left; padding:10px 12px;">${s.shield_name}</td>
+                                    <td style="text-align:center;">${s.total_blocks}</td>
+                                    <td style="text-align:center; color:#10b981; font-weight:700;">${s.hero_count}</td>
+                                    <td style="text-align:center; color:#f43f5e; font-weight:700;">${s.spoiler_count}</td>
+                                    <td style="text-align:center; color:#10b981;">+$${(s.saved_loss_usd || 0).toFixed(2)}</td>
+                                    <td style="text-align:center; color:#f43f5e;">-$${(s.missed_profit_usd || 0).toFixed(2)}</td>
+                                    <td style="text-align:center; font-weight:700; color:${s.net_saved_usd >= 0 ? '#10b981' : '#f43f5e'};">${s.net_saved_usd >= 0 ? '+$' : '-$'}${Math.abs(s.net_saved_usd || 0).toFixed(2)}</td>
+                                    <td style="text-align:center; font-weight:700;">%${(s.sei || 100).toFixed(1)}</td>
+                                    <td style="text-align:center;">
+                                        <span style="background:${roleBg}; color:${roleColor}; border:1px solid ${roleColor}40; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">
+                                            ${s.role}
+                                        </span>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('');
+                    }
+                }
+
+                // 4. Aktif Gölge Pozisyonlar Tablosu
+                const activeTbody = document.getElementById('shadow-active-tbody');
+                const activeBadge = document.getElementById('shadow-active-count-badge');
+                if (activeBadge) activeBadge.innerText = `${activePos.length} Pozisyon`;
+
+                if (activeTbody) {
+                    if (activePos.length === 0) {
+                        activeTbody.innerHTML = `<tr><td colspan="14" style="text-align:center; padding:20px; color:#64748b;">Şu an canlı izlenen açık gölge pozisyon yok. Reddedilen yeni sinyaller anında burada takip edilir.</td></tr>`;
+                    } else {
+                        activeTbody.innerHTML = activePos.map(p => {
+                            const sideColor = p.side === 'LONG' ? '#10b981' : '#f43f5e';
+                            const sideBg = p.side === 'LONG' ? 'rgba(16,185,129,0.12)' : 'rgba(244,63,94,0.12)';
+                            const pnlPct = p.side === 'LONG' ? ((p.current_price - p.entry_price) / p.entry_price * 5 * 100) : ((p.entry_price - p.current_price) / p.entry_price * 5 * 100);
+                            const pnlUsd = (1250 * (pnlPct / 100)).toFixed(2);
+                            const pnlColor = pnlPct >= 0 ? '#10b981' : '#f43f5e';
+
+                            return `
+                                <tr style="border-bottom:1px solid rgba(255,255,255,0.04); font-family:'JetBrains Mono', monospace; font-size:12px;">
+                                    <td style="font-weight:700; color:#fff; text-align:left; padding:10px 12px;">${p.symbol.replace('/USDT','')}</td>
+                                    <td style="text-align:center;"><span style="background:${sideBg}; color:${sideColor}; padding:2px 6px; border-radius:6px; font-weight:700; font-size:11px;">${p.side}</span></td>
+                                    <td style="text-align:left; color:#94a3b8;">${p.setup}</td>
+                                    <td style="text-align:left; color:#cbd5e1;">${p.shield}</td>
+                                    <td style="text-align:center;">$${p.entry_price < 1 ? p.entry_price.toFixed(4) : p.entry_price.toFixed(2)}</td>
+                                    <td style="text-align:center; font-weight:700; color:#fff;">$${p.current_price < 1 ? p.current_price.toFixed(4) : p.current_price.toFixed(2)}</td>
+                                    <td style="text-align:center; color:#f43f5e;">$${p.sl_price < 1 ? p.sl_price.toFixed(4) : p.sl_price.toFixed(2)}</td>
+                                    <td style="text-align:center; color:#10b981;">$${p.tp1_price < 1 ? p.tp1_price.toFixed(4) : p.tp1_price.toFixed(2)}</td>
+                                    <td style="text-align:center; color:#10b981;">$${p.tp2_price < 1 ? p.tp2_price.toFixed(4) : p.tp2_price.toFixed(2)}</td>
+                                    <td style="text-align:center; color:#10b981;">+%{p.max_mfe_pct.toFixed(2)}</td>
+                                    <td style="text-align:center; color:#f43f5e;">-%{p.max_mae_pct.toFixed(2)}</td>
+                                    <td style="text-align:center; font-weight:700; color:${pnlColor};">${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%</td>
+                                    <td style="text-align:center; font-weight:700; color:${pnlColor};">${pnlPct >= 0 ? '+$' : '-$'}${Math.abs(pnlUsd)}</td>
+                                    <td style="text-align:center; color:#64748b;">${((Date.now() / 1000 - p.entry_ts) / 60).toFixed(0)} dk</td>
+                                </tr>
+                            `;
+                        }).join('');
+                    }
+                }
+
+                // 5. Tamamlanan Gölge Defteri Tablosu
+                const histTbody = document.getElementById('shadow-history-tbody');
+                if (histTbody) {
+                    if (hist.length === 0) {
+                        histTbody.innerHTML = `<tr><td colspan="13" style="text-align:center; padding:20px; color:#64748b;">Henüz tamamlanan gölge işlem yok. Pozisyonlar kapandıkça buraya dökülür.</td></tr>`;
+                    } else {
+                        histTbody.innerHTML = [...hist].reverse().slice(0, 50).map(t => {
+                            const isHero = t.verdict === 'HERO_SHIELD';
+                            const isSpoiler = t.verdict === 'SPOILER_SHIELD';
+                            const badgeColor = isHero ? '#10b981' : (isSpoiler ? '#f43f5e' : '#94a3b8');
+                            const badgeBg = isHero ? 'rgba(16,185,129,0.12)' : (isSpoiler ? 'rgba(244,63,94,0.12)' : 'rgba(255,255,255,0.05)');
+                            const pnlColor = t.virtual_pnl_usd >= 0 ? '#10b981' : '#f43f5e';
+
+                            return `
+                                <tr style="border-bottom:1px solid rgba(255,255,255,0.04); font-family:'JetBrains Mono', monospace; font-size:12px;">
+                                    <td style="color:#64748b; font-size:11px;">${t.id.replace('SHD_','')}</td>
+                                    <td style="font-weight:700; color:#fff; text-align:left;">${t.symbol.replace('/USDT','')}</td>
+                                    <td style="text-align:center; color:${t.side === 'LONG' ? '#10b981' : '#f43f5e'}; font-weight:700;">${t.side}</td>
+                                    <td style="text-align:left; color:#94a3b8;">${t.setup}</td>
+                                    <td style="text-align:left; color:#cbd5e1;">${t.shield}</td>
+                                    <td style="text-align:center;">$${t.entry_price < 1 ? t.entry_price.toFixed(4) : t.entry_price.toFixed(2)}</td>
+                                    <td style="text-align:center;">$${t.exit_price ? (t.exit_price < 1 ? t.exit_price.toFixed(4) : t.exit_price.toFixed(2)) : '-'}</td>
+                                    <td style="text-align:center; color:#10b981;">+%{t.max_mfe_pct ? t.max_mfe_pct.toFixed(2) : '0.00'}</td>
+                                    <td style="text-align:center; color:#f43f5e;">-%{t.max_mae_pct ? t.max_mae_pct.toFixed(2) : '0.00'}</td>
+                                    <td style="text-align:center; font-weight:700; color:${pnlColor};">${t.virtual_pnl_usd >= 0 ? '+$' : '-$'}${Math.abs(t.virtual_pnl_usd || 0).toFixed(2)}</td>
+                                    <td style="text-align:center;">
+                                        <span style="background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeColor}40; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">
+                                            ${t.verdict_badge || t.verdict}
+                                        </span>
+                                    </td>
+                                    <td style="text-align:center; color:#64748b;">${t.status}</td>
+                                    <td style="text-align:center; color:#64748b; font-size:11px;">${t.entry_time ? t.entry_time.split(' ')[1] : '-'}</td>
+                                </tr>
+                            `;
+                        }).join('');
+                    }
+                }
+            } catch (err) {
+                console.error("renderShadowView error:", err);
+            }
+        }
+
         function renderPersonaMatrixView() {
             try {
                 const matrix = appState.coin_personas || {};
@@ -6269,6 +6721,7 @@ async function loadAdminMetrics() {
                 'radar': document.getElementById('tab-btn-radar'),
                 'ledger': document.getElementById('tab-btn-ledger'),
                 'persona': document.getElementById('tab-btn-persona'),
+                'shadow': document.getElementById('tab-btn-shadow'),
                 'funding': document.getElementById('tab-btn-funding'),
                 'cvd': document.getElementById('tab-btn-cvd'),
                 'health': document.getElementById('tab-btn-health'),
@@ -6280,6 +6733,7 @@ async function loadAdminMetrics() {
                 'radar': document.getElementById('main-tab-content-radar'),
                 'ledger': document.getElementById('main-tab-content-ledger'),
                 'persona': document.getElementById('main-tab-content-persona'),
+                'shadow': document.getElementById('main-tab-content-shadow'),
                 'funding': document.getElementById('main-tab-content-funding'),
                 'cvd': document.getElementById('main-tab-content-cvd'),
                 'health': document.getElementById('main-tab-content-health'),
@@ -6343,6 +6797,8 @@ async function loadAdminMetrics() {
                     renderHistoryTable();
                 } else if (tabName === 'persona') {
                     renderPersonaMatrixView();
+                } else if (tabName === 'shadow') {
+                    renderShadowView();
                 } else if (tabName === 'funding') {
                     renderFundingMatrixView();
                     renderLiquidationView();
@@ -12055,6 +12511,13 @@ function downloadExcelReport() {
                     renderHealthTabView();
                 }
 
+                // 5c4. Update Shadow & Calibration View if active tab, otherwise update badge
+                if (currentActiveMainTab === 'shadow') {
+                    renderShadowView();
+                } else {
+                    updateShadowBadge();
+                }
+
                 // 5d. Update Cockpit Funding, Liquidation & Micro-CVD Commentary
                 const cFundingEl = document.getElementById('cockpit-funding-commentary');
                 if (cFundingEl && appState.funding_summary) {
@@ -12721,6 +13184,11 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "server_start_ts": SERVER_START_TS,
                 "server_uptime_sec": int(time.time() - SERVER_START_TS),
                 "macro_climate": strategy.get_macro_climate() if strategy and hasattr(strategy, 'get_macro_climate') else {},
+                "shadow_summary": strategy.shadow_engine.get_summary() if (strategy and hasattr(strategy, 'shadow_engine')) else {},
+                "shadow_positions": strategy.shadow_engine.get_active_positions() if (strategy and hasattr(strategy, 'shadow_engine')) else [],
+                "shadow_history": strategy.shadow_engine.get_recent_history(50) if (strategy and hasattr(strategy, 'shadow_engine')) else [],
+                "coin_dna_matrix": strategy.shadow_engine.get_coin_dna_matrix() if (strategy and hasattr(strategy, 'shadow_engine')) else [],
+                "shield_leaderboard": strategy.shadow_engine.get_shield_leaderboard() if (strategy and hasattr(strategy, 'shadow_engine')) else [],
                 "reforms": {
                     "dynamic_coin_audit": True,
                     "chandelier_early_be_lock": True,
@@ -12741,6 +13209,11 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "history_summary": {"total_realized_pnl": 0, "total_fees": 0, "total_trades": len(hist_full), "wins": 0, "losses": 0, "win_pnl_sum": 0, "loss_pnl_sum": 0},
                 "symbols": {},
                 "all_coins": [],
+                "shadow_summary": {},
+                "shadow_positions": [],
+                "shadow_history": [],
+                "coin_dna_matrix": [],
+                "shield_leaderboard": [],
                 "reforms": {
                     "dynamic_coin_audit": True,
                     "chandelier_early_be_lock": True,
@@ -12884,6 +13357,50 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                     'Content-Disposition': f'attachment; filename="{filename}"'
                 }
             )
+        except Exception as e:
+            return web.json_response({"status": "error", "message": str(e)}, status=500)
+
+    async def api_export_shadow_excel(request):
+        try:
+            from excel_exporter import create_shadow_dna_excel_report
+            summary = strategy.shadow_engine.get_summary() if (strategy and hasattr(strategy, 'shadow_engine')) else {}
+            coin_dna = strategy.shadow_engine.get_coin_dna_matrix() if (strategy and hasattr(strategy, 'shadow_engine')) else []
+            shadow_history = strategy.shadow_engine.get_recent_history(500) if (strategy and hasattr(strategy, 'shadow_engine')) else []
+            shield_leaderboard = strategy.shadow_engine.get_shield_leaderboard() if (strategy and hasattr(strategy, 'shadow_engine')) else []
+
+            buf = create_shadow_dna_excel_report(
+                shadow_summary=summary,
+                coin_dna=coin_dna,
+                shadow_history=shadow_history,
+                shield_leaderboard=shield_leaderboard
+            )
+            filename = f"Valkyrie_Golge_Islem_ve_Coin_DNA_Raporu_{datetime.now(timezone(timedelta(hours=3))).strftime('%Y%m%d_%H%M')}.xlsx"
+            import gc
+            file_bytes = buf.read()
+            del buf
+            gc.collect()
+            return web.Response(
+                body=file_bytes,
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                headers={
+                    'Content-Disposition': f'attachment; filename="{filename}"'
+                }
+            )
+        except Exception as e:
+            return web.json_response({"status": "error", "message": str(e)}, status=500)
+
+    async def api_shadow_data(request):
+        try:
+            if not strategy or not hasattr(strategy, 'shadow_engine'):
+                return web.json_response({"status": "error", "message": "Shadow engine not initialized"}, status=500)
+            return web.json_response({
+                "status": "ok",
+                "summary": strategy.shadow_engine.get_summary(),
+                "active_positions": strategy.shadow_engine.get_active_positions(),
+                "recent_history": strategy.shadow_engine.get_recent_history(50),
+                "coin_dna": strategy.shadow_engine.get_coin_dna_matrix(),
+                "shield_leaderboard": strategy.shadow_engine.get_shield_leaderboard()
+            })
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
@@ -13093,6 +13610,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
     app.router.add_get('/api/data', api_data)
     app.router.add_get('/api/candles', api_candles)
     app.router.add_get('/api/export_excel', api_export_excel)
+    app.router.add_get('/api/export_shadow_excel', api_export_shadow_excel)
+    app.router.add_get('/api/shadow_data', api_shadow_data)
     app.router.add_post('/api/toggle_symbol', api_toggle_symbol)
     app.router.add_post('/api/set_active_symbols', api_set_active_symbols)
     app.router.add_post('/api/close_position_manual', api_close_position_manual)

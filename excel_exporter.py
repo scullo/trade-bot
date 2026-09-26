@@ -1054,3 +1054,365 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
 
     return io.BytesIO(file_bytes)
 
+
+def create_shadow_dna_excel_report(
+    shadow_summary: dict,
+    coin_dna: list,
+    shadow_history: list,
+    shield_leaderboard: list
+) -> io.BytesIO:
+    """
+    Valkyrie Gölge İşlem & Coin DNA Otonom Kalibrasyon Masası için 4 Sayfalı Profesyonel Excel Raporu:
+    1. 📊 GÖLGE KARNESİ & SEI (Kalkan Verimlilik Endeksi, Hero vs Spoiler Karnesi)
+    2. 🧬 COIN DNA & KALİBRASYON (100 Parite Canlı Fitil Esnekliği ve Parametre Önerileri)
+    3. 👻 DETAYLI GÖLGE DEFTERİ (Her sanal işlemin mikroskobik tick/mum takibi)
+    4. ⚙️ KOD KALİBRASYON MASASI (Kopyalanabilir Python parametre sözlüğü)
+    """
+    with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp:
+        tmp_path = tmp.name
+        
+    workbook = xlsxwriter.Workbook(tmp_path)
+
+    # ==================== ORTAK FORMATLAR ====================
+    title_fmt = workbook.add_format({
+        'bold': True, 'font_size': 14, 'font_name': 'Segoe UI',
+        'font_color': '#FFFFFF', 'bg_color': '#0F172A',
+        'align': 'center', 'valign': 'vcenter', 'border': 1, 'border_color': '#334155'
+    })
+    subtitle_fmt = workbook.add_format({
+        'italic': True, 'font_size': 9, 'font_name': 'Segoe UI',
+        'font_color': '#94A3B8', 'bg_color': '#0F172A',
+        'align': 'center', 'valign': 'vcenter'
+    })
+
+    kpi_lbl = workbook.add_format({
+        'bold': True, 'font_size': 8.5, 'font_name': 'Segoe UI',
+        'font_color': '#475569', 'bg_color': '#F8FAFC',
+        'align': 'center', 'valign': 'vcenter', 'border': 1, 'border_color': '#CBD5E1'
+    })
+    kpi_val_green = workbook.add_format({
+        'bold': True, 'font_size': 13, 'font_name': 'Segoe UI',
+        'font_color': '#059669', 'bg_color': '#ECFDF5',
+        'align': 'center', 'valign': 'vcenter', 'border': 1, 'border_color': '#A7F3D0',
+        'num_format': '$#,##0.00'
+    })
+    kpi_val_red = workbook.add_format({
+        'bold': True, 'font_size': 13, 'font_name': 'Segoe UI',
+        'font_color': '#DC2626', 'bg_color': '#FEF2F2',
+        'align': 'center', 'valign': 'vcenter', 'border': 1, 'border_color': '#FECACA',
+        'num_format': '$#,##0.00'
+    })
+    kpi_val_blue = workbook.add_format({
+        'bold': True, 'font_size': 13, 'font_name': 'Segoe UI',
+        'font_color': '#2563EB', 'bg_color': '#EFF6FF',
+        'align': 'center', 'valign': 'vcenter', 'border': 1, 'border_color': '#BFDBFE'
+    })
+    kpi_val_gold = workbook.add_format({
+        'bold': True, 'font_size': 13, 'font_name': 'Segoe UI',
+        'font_color': '#D97706', 'bg_color': '#FFFBEB',
+        'align': 'center', 'valign': 'vcenter', 'border': 1, 'border_color': '#FDE68A'
+    })
+
+    th_navy = workbook.add_format({
+        'bold': True, 'font_size': 9, 'font_name': 'Segoe UI',
+        'font_color': '#FFFFFF', 'bg_color': '#1E293B',
+        'align': 'center', 'valign': 'vcenter', 'border': 1, 'border_color': '#475569',
+        'text_wrap': True
+    })
+    th_gold = workbook.add_format({
+        'bold': True, 'font_size': 9, 'font_name': 'Segoe UI',
+        'font_color': '#FFFFFF', 'bg_color': '#854D0E',
+        'align': 'center', 'valign': 'vcenter', 'border': 1, 'border_color': '#CA8A04',
+        'text_wrap': True
+    })
+
+    cell_c = workbook.add_format({'font_size': 9, 'font_name': 'Segoe UI', 'align': 'center', 'valign': 'vcenter', 'border': 1, 'border_color': '#E2E8F0'})
+    cell_l = workbook.add_format({'font_size': 9, 'font_name': 'Segoe UI', 'align': 'left', 'valign': 'vcenter', 'border': 1, 'border_color': '#E2E8F0'})
+    cell_r = workbook.add_format({'font_size': 9, 'font_name': 'Segoe UI', 'align': 'right', 'valign': 'vcenter', 'border': 1, 'border_color': '#E2E8F0'})
+    cell_curr = workbook.add_format({'font_size': 9, 'font_name': 'Segoe UI', 'align': 'right', 'valign': 'vcenter', 'border': 1, 'border_color': '#E2E8F0', 'num_format': '$#,##0.00'})
+    cell_curr4 = workbook.add_format({'font_size': 9, 'font_name': 'Segoe UI', 'align': 'right', 'valign': 'vcenter', 'border': 1, 'border_color': '#E2E8F0', 'num_format': '$#,##0.0000'})
+    cell_pnl_green = workbook.add_format({'bold': True, 'font_size': 9, 'font_name': 'Segoe UI', 'align': 'right', 'valign': 'vcenter', 'border': 1, 'border_color': '#E2E8F0', 'font_color': '#059669', 'bg_color': '#F0FDF4', 'num_format': '+$#,##0.00'})
+    cell_pnl_red = workbook.add_format({'bold': True, 'font_size': 9, 'font_name': 'Segoe UI', 'align': 'right', 'valign': 'vcenter', 'border': 1, 'border_color': '#E2E8F0', 'font_color': '#DC2626', 'bg_color': '#FEF2F2', 'num_format': '-$#,##0.00'})
+    cell_badge_hero = workbook.add_format({'bold': True, 'font_size': 8.5, 'font_name': 'Segoe UI', 'align': 'center', 'valign': 'vcenter', 'border': 1, 'border_color': '#86EFAC', 'font_color': '#166534', 'bg_color': '#DCFCE7'})
+    cell_badge_spoiler = workbook.add_format({'bold': True, 'font_size': 8.5, 'font_name': 'Segoe UI', 'align': 'center', 'valign': 'vcenter', 'border': 1, 'border_color': '#FCA5A5', 'font_color': '#991B1B', 'bg_color': '#FEE2E2'})
+    cell_badge_neutral = workbook.add_format({'font_size': 8.5, 'font_name': 'Segoe UI', 'align': 'center', 'valign': 'vcenter', 'border': 1, 'border_color': '#CBD5E1', 'font_color': '#475569', 'bg_color': '#F1F5F9'})
+    cell_badge_gold = workbook.add_format({'bold': True, 'font_size': 8.5, 'font_name': 'Segoe UI', 'align': 'center', 'valign': 'vcenter', 'border': 1, 'border_color': '#FDE68A', 'font_color': '#92400E', 'bg_color': '#FEF3C7'})
+    cell_code = workbook.add_format({'font_size': 9, 'font_name': 'Consolas', 'align': 'left', 'valign': 'vcenter', 'border': 1, 'border_color': '#CBD5E1', 'bg_color': '#F8FAFC'})
+
+    # ══════════════════════════════════════════════════════════════════════
+    # SAYFA 1: 📊 GÖLGE KARNESİ & SEI
+    # ══════════════════════════════════════════════════════════════════════
+    ws1 = workbook.add_worksheet('📊 GÖLGE KARNESİ & SEI')
+    ws1.set_tab_color('#38BDF8')
+    ws1.set_column('A:A', 3)
+    ws1.set_column('B:B', 32)
+    ws1.set_column('C:C', 14)
+    ws1.set_column('D:D', 14)
+    ws1.set_column('E:E', 14)
+    ws1.set_column('F:F', 16)
+    ws1.set_column('G:G', 16)
+    ws1.set_column('H:H', 16)
+    ws1.set_column('I:I', 14)
+    ws1.set_column('J:J', 24)
+
+    ws1.merge_range('B2:J2', 'VALKYRIE OTONOM GÖLGE İŞLEM & KALKAN VERİMLİLİK RAPORU (SEI AUDIT)', title_fmt)
+    ws1.merge_range('B3:J3', 'Canlı Piyasa Reddedilen Sinyallerin Karşı-Olgusal (Counterfactual) Adli Analizi ve Kalkan Verimlilik Endeksi', subtitle_fmt)
+    ws1.set_row(1, 28)
+    ws1.set_row(2, 18)
+
+    # KPI Kartları
+    ws1.set_row(4, 18)
+    ws1.set_row(5, 26)
+    ws1.write('B5', 'TOPLAM GÖLGE İŞLEM', kpi_lbl)
+    ws1.write('B6', f"{shadow_summary.get('total_shadow_trades', 0)} ({shadow_summary.get('active_shadow_trades', 0)} Aktif)", kpi_val_blue)
+
+    ws1.merge_range('C5:D5', '🛡️ KURTARILAN ZARAR (HERO)', kpi_lbl)
+    ws1.merge_range('C6:D6', shadow_summary.get('total_saved_loss_usd', 0.0), kpi_val_green)
+
+    ws1.merge_range('E5:F5', '⚠️ KAÇAN FIRSAT KÂRI (SPOILER)', kpi_lbl)
+    ws1.merge_range('E6:F6', shadow_summary.get('total_missed_profit_usd', 0.0), kpi_val_red)
+
+    ws1.merge_range('G5:H5', '🎯 KALKAN VERİMLİLİĞİ (SEI)', kpi_lbl)
+    ws1.merge_range('G6:H6', f"%{shadow_summary.get('shield_efficiency_index', 100.0):.1f}", kpi_val_gold)
+
+    ws1.merge_range('I5:J5', '💎 NET KALKAN ALFASI ($)', kpi_lbl)
+    net_a = shadow_summary.get('net_shield_alpha_usd', 0.0)
+    ws1.merge_range('I6:J6', net_a, kpi_val_green if net_a >= 0 else kpi_val_red)
+
+    # Kalkan Liderlik Tablosu
+    ws1.set_row(7, 24)
+    ws1.merge_range('B8:J8', '🛡️ GÜVENLİK KALKANLARI VE FRENLEYİCİ ENGEL KARNESİ (SHIELD AUDIT)', th_gold)
+    
+    headers_s1 = ['Kalkan / Filtre Adı', 'Toplam Engel', 'Kahraman (Hero)', 'Frenleyici (Spoiler)', 'Kurtarılan Zarar ($)', 'Kaçan Kâr ($)', 'Net Fayda ($)', 'SEI (%)', 'Kalkan Rolü']
+    ws1.set_row(8, 22)
+    for c_i, h_txt in enumerate(headers_s1, start=1):
+        ws1.write(8, c_i, h_txt, th_navy)
+
+    r_idx = 9
+    for s_item in shield_leaderboard:
+        ws1.set_row(r_idx, 20)
+        s_name = s_item.get('shield_name', '-')
+        tot_b = s_item.get('total_blocks', 0)
+        h_cnt = s_item.get('hero_count', 0)
+        sp_cnt = s_item.get('spoiler_count', 0)
+        saved = s_item.get('saved_loss_usd', 0.0)
+        missed = s_item.get('missed_profit_usd', 0.0)
+        net_s = s_item.get('net_saved_usd', 0.0)
+        sei = s_item.get('sei', 100.0)
+        role = s_item.get('role', 'DENGELİ')
+
+        ws1.write(r_idx, 1, s_name, cell_l)
+        ws1.write(r_idx, 2, tot_b, cell_c)
+        ws1.write(r_idx, 3, h_cnt, cell_c)
+        ws1.write(r_idx, 4, sp_cnt, cell_c)
+        ws1.write(r_idx, 5, saved, cell_curr)
+        ws1.write(r_idx, 6, missed, cell_curr)
+        ws1.write(r_idx, 7, net_s, cell_pnl_green if net_s >= 0 else cell_pnl_red)
+        ws1.write(r_idx, 8, f"%{sei:.1f}", cell_c)
+        
+        badge_fmt = cell_badge_hero if 'KAHRAMAN' in role else (cell_badge_spoiler if 'FRENLEYİCİ' in role else cell_badge_neutral)
+        ws1.write(r_idx, 9, role, badge_fmt)
+        r_idx += 1
+
+    # ══════════════════════════════════════════════════════════════════════
+    # SAYFA 2: 🧬 COIN DNA & KALİBRASYON
+    # ══════════════════════════════════════════════════════════════════════
+    ws2 = workbook.add_worksheet('🧬 COIN DNA & KALİBRASYON')
+    ws2.set_tab_color('#10B981')
+    ws2.set_column('A:A', 3)
+    ws2.set_column('B:B', 12)
+    ws2.set_column('C:C', 14)
+    ws2.set_column('D:D', 14)
+    ws2.set_column('E:E', 14)
+    ws2.set_column('F:F', 16)
+    ws2.set_column('G:G', 16)
+    ws2.set_column('H:H', 16)
+    ws2.set_column('I:I', 14)
+    ws2.set_column('J:J', 28)
+    ws2.set_column('K:K', 16)
+    ws2.set_column('L:L', 18)
+    ws2.set_column('M:M', 45)
+
+    ws2.merge_range('B2:M2', '100 PARİTE CANLI PİYASA DNA\'SI VE OTONOM KALİBRASYON MASASI', title_fmt)
+    ws2.merge_range('B3:M3', 'Parite Bazında Toplanan Gölge Veriler, Fitil Esnekliği ve Otonom Kuant Parametre Önerileri', subtitle_fmt)
+    ws2.set_row(1, 28)
+    ws2.set_row(2, 18)
+
+    headers_s2 = ['Parite', 'Toplam Gölge', 'Kahraman (Hero)', 'Frenleyici (Spoiler)', 'Kurtarılan Zarar ($)', 'Kaçan Kâr ($)', 'Net Alfa ($)', 'SEI (%)', 'En Çok Engelleyen Kalkan', 'Fitil Esnekliği (%)', 'Kalibrasyon Durumu', 'Otonom Kalibrasyon Önerisi']
+    ws2.set_row(4, 24)
+    for c_i, h_txt in enumerate(headers_s2, start=1):
+        ws2.write(4, c_i, h_txt, th_navy)
+
+    r2_idx = 5
+    for c_item in coin_dna:
+        ws2.set_row(r2_idx, 20)
+        sym = c_item.get('symbol', '-')
+        tot_s = c_item.get('total_shadows', 0)
+        h_cnt = c_item.get('hero_count', 0)
+        sp_cnt = c_item.get('spoiler_count', 0)
+        saved = c_item.get('saved_loss_usd', 0.0)
+        missed = c_item.get('missed_profit_usd', 0.0)
+        net_a = c_item.get('net_alpha_usd', 0.0)
+        sei = c_item.get('sei', 100.0)
+        top_s = c_item.get('top_shield', '-')
+        wick = c_item.get('wick_elasticity', 12.0)
+        rec_b = c_item.get('recommendation_badge', 'DENGELİ')
+        rec_txt = c_item.get('recommendation', '-')
+
+        ws2.write(r2_idx, 1, sym, cell_c)
+        ws2.write(r2_idx, 2, tot_s, cell_c)
+        ws2.write(r2_idx, 3, h_cnt, cell_c)
+        ws2.write(r2_idx, 4, sp_cnt, cell_c)
+        ws2.write(r2_idx, 5, saved, cell_curr)
+        ws2.write(r2_idx, 6, missed, cell_curr)
+        ws2.write(r2_idx, 7, net_a, cell_pnl_green if net_a >= 0 else cell_pnl_red)
+        ws2.write(r2_idx, 8, f"%{sei:.1f}", cell_c)
+        ws2.write(r2_idx, 9, top_s, cell_l)
+        ws2.write(r2_idx, 10, f"%{wick:.1f}", cell_c)
+
+        badge_fmt = cell_badge_spoiler if 'GEVŞET' in rec_b else (cell_badge_hero if 'KORU' in rec_b else cell_badge_neutral)
+        ws2.write(r2_idx, 11, rec_b, badge_fmt)
+        ws2.write(r2_idx, 12, rec_txt, cell_l)
+        r2_idx += 1
+
+    # ══════════════════════════════════════════════════════════════════════
+    # SAYFA 3: 👻 DETAYLI GÖLGE DEFTERİ
+    # ══════════════════════════════════════════════════════════════════════
+    ws3 = workbook.add_worksheet('👻 DETAYLI GÖLGE DEFTERİ')
+    ws3.set_tab_color('#8B5CF6')
+    ws3.set_column('A:A', 3)
+    ws3.set_column('B:B', 20)  # ID
+    ws3.set_column('C:C', 12)  # Parite
+    ws3.set_column('D:D', 10)  # Yön
+    ws3.set_column('E:E', 24)  # Setup
+    ws3.set_column('F:F', 28)  # Kalkan
+    ws3.set_column('G:G', 40)  # Ret Gerekçesi
+    ws3.set_column('H:H', 14)  # Giriş Fiyatı
+    ws3.set_column('I:I', 14)  # Çıkış Fiyatı
+    ws3.set_column('J:J', 14)  # Stop
+    ws3.set_column('K:K', 14)  # TP1
+    ws3.set_column('L:L', 14)  # TP2
+    ws3.set_column('M:M', 13)  # MFE %
+    ws3.set_column('N:N', 13)  # MAE %
+    ws3.set_column('O:O', 13)  # ROE %
+    ws3.set_column('P:P', 14)  # PnL $
+    ws3.set_column('Q:Q', 22)  # Verdict Teşhis
+    ws3.set_column('R:R', 12)  # Süre dk
+    ws3.set_column('S:S', 18)  # Giriş Zamanı
+    ws3.set_column('T:T', 18)  # Çıkış Zamanı
+
+    ws3.merge_range('B2:T2', 'MİKROSKOBİK GÖLGE İŞLEM DEFTERİ (CANLI PİYASA SİMÜLASYONU)', title_fmt)
+    ws3.merge_range('B3:T3', 'Canlı Mumlarla Takip Edilerek TP1, TP2 veya Stop Akıbeti Belirlenmiş Tüm Sanal Pozisyonlar', subtitle_fmt)
+    ws3.set_row(1, 28)
+    ws3.set_row(2, 18)
+
+    headers_s3 = [
+        'Gölge ID', 'Parite', 'Yön', 'Giriş Stratejisi', 'Engelleyen Kalkan', 'Ret Gerekçesi',
+        'Giriş ($)', 'Çıkış ($)', 'Stop ($)', 'Planlanan TP1 ($)', 'Planlanan TP2 ($)',
+        'Zirve MFE (%)', 'Maks MAE (%)', 'ROE (%)', 'Sanal Net PnL ($)', 'Kalkan Teşhisi',
+        'Süre (Dk)', 'Giriş Zamanı', 'Çıkış Zamanı'
+    ]
+    ws3.set_row(4, 24)
+    for c_i, h_txt in enumerate(headers_s3, start=1):
+        ws3.write(4, c_i, h_txt, th_navy)
+
+    r3_idx = 5
+    for t_item in shadow_history:
+        ws3.set_row(r3_idx, 20)
+        s_id = t_item.get('id', '-')
+        sym = t_item.get('symbol', '-')
+        side = t_item.get('side', '-')
+        setup = t_item.get('setup', '-')
+        shield = t_item.get('shield', '-')
+        reason = t_item.get('reason', '-')
+        entry_p = t_item.get('entry_price', 0.0)
+        exit_p = t_item.get('exit_price', 0.0)
+        sl_p = t_item.get('sl_price', 0.0)
+        tp1_p = t_item.get('tp1_price', 0.0)
+        tp2_p = t_item.get('tp2_price', 0.0)
+        mfe = t_item.get('max_mfe_pct', 0.0)
+        mae = t_item.get('max_mae_pct', 0.0)
+        roe = t_item.get('virtual_pnl_pct', 0.0)
+        pnl = t_item.get('virtual_pnl_usd', 0.0)
+        verd = t_item.get('verdict_badge', t_item.get('verdict', '-'))
+        dur = t_item.get('duration_mins', 0.0)
+        in_t = t_item.get('entry_time', '-')
+        out_t = t_item.get('exit_time', '-')
+
+        ws3.write(r3_idx, 1, s_id, cell_c)
+        ws3.write(r3_idx, 2, sym, cell_c)
+        ws3.write(r3_idx, 3, side, cell_badge_hero if side == 'LONG' else cell_badge_spoiler)
+        ws3.write(r3_idx, 4, setup, cell_l)
+        ws3.write(r3_idx, 5, shield, cell_l)
+        ws3.write(r3_idx, 6, reason, cell_l)
+        ws3.write(r3_idx, 7, entry_p, cell_curr4 if entry_p < 1.0 else cell_curr)
+        ws3.write(r3_idx, 8, exit_p, cell_curr4 if exit_p < 1.0 else cell_curr)
+        ws3.write(r3_idx, 9, sl_p, cell_curr4 if sl_p < 1.0 else cell_curr)
+        ws3.write(r3_idx, 10, tp1_p, cell_curr4 if tp1_p < 1.0 else cell_curr)
+        ws3.write(r3_idx, 11, tp2_p, cell_curr4 if tp2_p < 1.0 else cell_curr)
+        ws3.write(r3_idx, 12, f"+%{mfe:.2f}", cell_c)
+        ws3.write(r3_idx, 13, f"-%{mae:.2f}", cell_c)
+        ws3.write(r3_idx, 14, f"%{roe:+.2f}", cell_pnl_green if roe >= 0 else cell_pnl_red)
+        ws3.write(r3_idx, 15, pnl, cell_pnl_green if pnl >= 0 else cell_pnl_red)
+
+        badge_fmt = cell_badge_hero if 'KAHRAMAN' in verd else (cell_badge_spoiler if 'FRENLEYİCİ' in verd else cell_badge_neutral)
+        ws3.write(r3_idx, 16, verd, badge_fmt)
+        ws3.write(r3_idx, 17, dur, cell_c)
+        ws3.write(r3_idx, 18, in_t, cell_c)
+        ws3.write(r3_idx, 19, out_t, cell_c)
+        r3_idx += 1
+
+    # ══════════════════════════════════════════════════════════════════════
+    # SAYFA 4: ⚙️ KOD KALİBRASYON MASASI
+    # ══════════════════════════════════════════════════════════════════════
+    ws4 = workbook.add_worksheet('⚙️ KOD KALİBRASYON MASASI')
+    ws4.set_tab_color('#F59E0B')
+    ws4.set_column('A:A', 3)
+    ws4.set_column('B:B', 90)
+
+    ws4.write('B2', 'OTONOM KOD KALİBRASYON VE PARAMETRE LİSTESİ', title_fmt)
+    ws4.write('B3', 'Canlı Verilerle Tespit Edilen Optimum Eşik Değerleri (Doğrudan Koda Entegre Edilebilir Format)', subtitle_fmt)
+    ws4.set_row(1, 28)
+    ws4.set_row(2, 18)
+
+    ws4.write('B5', '# 🧬 VALKYRIE OTONOM KALİBRE EDİLMİŞ COIN PARAMETRELERİ (CANLI PİYASA DNA)', th_gold)
+    
+    code_lines = [
+        "# Aşağıdaki sözlük, gölge takip motorunun canlı piyasa analizlerine göre otomatik üretilmiştir.",
+        "# Bu parametreler kopyalanıp strategy.py veya config.py içerisine doğrudan eklenebilir:",
+        "",
+        "CALIBRATED_COIN_DNA = {"
+    ]
+
+    for c in coin_dna:
+        sym = c.get('symbol')
+        wick = c.get('wick_elasticity', 12.0)
+        sei = c.get('sei', 100.0)
+        rec_b = c.get('recommendation_badge', 'DENGELİ')
+        code_lines.append(f'    "{sym}": {{')
+        code_lines.append(f'        "wick_threshold_pct": {wick:.1f},  # Canlı ortalama fitil esnekliği')
+        code_lines.append(f'        "sei_efficiency_score": {sei:.1f},')
+        code_lines.append(f'        "status": "{rec_b}",')
+        code_lines.append(f'        "top_shield": "{c.get("top_shield", "")}",')
+        code_lines.append(f'    }},')
+
+    code_lines.append("}")
+    code_lines.append("")
+    code_lines.append(f"# Rapor Oluşturulma Zamanı: {datetime.now(timezone(timedelta(hours=3))).strftime('%Y-%m-%d %H:%M:%S')} (TSİ)")
+
+    for line_i, c_line in enumerate(code_lines, start=6):
+        ws4.set_row(line_i, 18)
+        ws4.write(line_i, 1, c_line, cell_code)
+
+    workbook.close()
+    
+    with open(tmp_path, 'rb') as f:
+        file_bytes = f.read()
+    try:
+        os.remove(tmp_path)
+    except Exception:
+        pass
+
+    return io.BytesIO(file_bytes)
+
+
