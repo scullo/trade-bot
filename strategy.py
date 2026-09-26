@@ -1453,14 +1453,33 @@ class StrategyEngine:
         # Taker akışına karşı asla pozisyon açılamaz!
         # İSTİSNA: Kurumsal Buzdağı veya Pasif Limit Emiliminde (Iceberg / Bookmap) taker akışı kurumsal duvar tarafından absorbe edilir.
         is_passive_institutional = is_ice_sniper_order or any(k in str(confluence_list or []) for k in ["Iceberg", "Buzdağı", "Emilim", "Absorption", "Wall", "Duvar"])
-        if side == "SHORT" and cvd_ratio_60s > 52.0 and not is_passive_institutional:
-            rej_msg = f"🛡️ Harmonik Akış Kalkanı: Taker piyasa alıcıların kontrolünde (Alıcı CVD: %{cvd_ratio_60s:.1f} > %52.0). Yükselen taker akışına karşı SHORT engellendi."
+        
+        # 🧬 GÖLGE MOTORU ADLİ ENTEGRASYONU:
+        # Reversal, nPOC veya Direnç/Destek dönüşlerinde perakende alıcı/satıcı akışı doğaldır (tuzak öncesi tükeniş).
+        # Gölge takip verilerimizde 39 kazanan işlemin %52-%56 arası perakende CVD gürültüsü yüzünden engellendiği kanıtlanmıştır.
+        is_reversal_setup = any(k in str(setup_name or '').upper() for k in ["NPOC", "S3", "R3", "REDDİ", "SEKMESİ", "REVERSAL", "TEPE AVWAP", "DİP AVWAP"])
+        
+        # Gölge Motoru Parite Teşhisi (Aşırı katı kalkan kurbanı paritelerde otonom esnetme)
+        is_spoiler_coin = False
+        if hasattr(self, 'shadow_engine') and self.shadow_engine:
+            try:
+                coin_detail = self.shadow_engine.get_coin_forensic_detail(symbol)
+                if coin_detail.get('primary_scenario') == 'SPOILER_OVER_RESTRICTIVE':
+                    is_spoiler_coin = True
+            except Exception:
+                pass
+
+        cvd_short_limit = 57.0 if is_spoiler_coin else (55.0 if is_reversal_setup else 52.0)
+        cvd_long_limit = 43.0 if is_spoiler_coin else (45.0 if is_reversal_setup else 48.0)
+
+        if side == "SHORT" and cvd_ratio_60s > cvd_short_limit and not is_passive_institutional:
+            rej_msg = f"🛡️ Harmonik Akış Kalkanı: Taker piyasa alıcıların kontrolünde (Alıcı CVD: %{cvd_ratio_60s:.1f} > %{cvd_short_limit:.1f}). Yükselen taker akışına karşı SHORT engellendi."
             print(f">> [RED - HARMONİK AKIŞ KALKANI] {symbol}: {rej_msg}")
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "HARMONIC_FLOW_CVD_BUYER_DOMINANT"}
 
-        if side == "LONG" and cvd_ratio_60s < 48.0 and not is_passive_institutional:
-            rej_msg = f"🛡️ Harmonik Akış Kalkanı: Taker piyasa satıcıların kontrolünde (Alıcı CVD: %{cvd_ratio_60s:.1f} < %48.0). Düşen taker akışına karşı LONG engellendi."
+        if side == "LONG" and cvd_ratio_60s < cvd_long_limit and not is_passive_institutional:
+            rej_msg = f"🛡️ Harmonik Akış Kalkanı: Taker piyasa satıcıların kontrolünde (Alıcı CVD: %{cvd_ratio_60s:.1f} < %{cvd_long_limit:.1f}). Düşen taker akışına karşı LONG engellendi."
             print(f">> [RED - HARMONİK AKIŞ KALKANI] {symbol}: {rej_msg}")
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "HARMONIC_FLOW_CVD_SELLER_DOMINANT"}
@@ -1494,11 +1513,18 @@ class StrategyEngine:
         if obi_wall_side == "BALANCED":
             has_vol_surge = (vol_surge >= 1.35)
             has_cvd_flow = (side == "LONG" and cvd_ratio_60s >= 58.0) or (side == "SHORT" and cvd_ratio_60s <= 42.0)
+            c_cnt = len(confluence_list) if isinstance(confluence_list, list) else 0
+            is_dz = getattr(self, 'get_macro_climate', lambda: {})().get("is_dead_zone", False)
+
             if not has_vol_surge and not has_cvd_flow:
-                rej_msg = f"⚖️ Dengeli Tahta Kalite Çıtası: Tahtada koruyucu duvar yok (BALANCED, Bid/Ask: {obi_ratio:.2f}x) ve ek hacim/CVD teyidi yetersiz (Hacim: {vol_surge:.2f}x < 1.35x, CVD: %{cvd_ratio_60s:.0f}). Düşük kaliteli işlem elendi."
-                print(f">> [RED - DENGELİ TAHTA KALKANI] {symbol}: {rej_msg}")
-                self.log_rejection(symbol, reason, rej_msg)
-                return {"error": "BALANCED_OBI_CONFIRMATION_MISSING"}
+                # Gölge motoru tespiti: Ölü bölgede ve reversal dönüşlerinde kaliteli sinyallere marjin kırparak izin ver
+                if (is_dz or is_spoiler_coin) and is_reversal_setup and c_cnt >= 2:
+                    obi_margin_mult = 0.85
+                else:
+                    rej_msg = f"⚖️ Dengeli Tahta Kalite Çıtası: Tahtada koruyucu duvar yok (BALANCED, Bid/Ask: {obi_ratio:.2f}x) ve ek hacim/CVD teyidi yetersiz (Hacim: {vol_surge:.2f}x < 1.35x, CVD: %{cvd_ratio_60s:.0f}). Düşük kaliteli işlem elendi."
+                    print(f">> [RED - DENGELİ TAHTA KALKANI] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg)
+                    return {"error": "BALANCED_OBI_CONFIRMATION_MISSING"}
 
         obi_confirmed = False
         obi_tag = ""
