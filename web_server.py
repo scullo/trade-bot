@@ -4263,6 +4263,22 @@ HTML_PAGE = """
             </div>
         </div>
 
+        <!-- GÖLGE SEKME KONTROL VE HIZLI GİZLE/GÖSTER BARI -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; padding:10px 16px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:10px; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:13px; font-weight:700; color:#fff;">📑 Görünüm & Tablo Denetimi:</span>
+                <span style="font-size:11px; color:#94a3b8;">Aşağı doğru uzayan tabloları tek tıkla gizleyebilir veya açabilirsiniz.</span>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button class="nav-tab-btn" onclick="toggleAllShadowSections(false)" style="padding:6px 12px; font-size:11px; display:flex; align-items:center; gap:5px; border-color:rgba(244,63,94,0.3); color:#f43f5e;" title="Tüm tabloları gizleyerek kompakt başlık moduna geçer">
+                    <span>📁</span> <span>Tüm Tabloları Gizle (Kompakt Mod)</span>
+                </button>
+                <button class="nav-tab-btn" onclick="toggleAllShadowSections(true)" style="padding:6px 12px; font-size:11px; display:flex; align-items:center; gap:5px; border-color:rgba(16,185,129,0.3); color:#10b981;" title="Tüm tabloları görünür yapar">
+                    <span>📂</span> <span>Tüm Tabloları Aç</span>
+                </button>
+            </div>
+        </div>
+
         <!-- 1. BÖLÜM: 🧬 COIN BAZLI CANLI DNA VE KALİBRASYON MASASI -->
         <div class="table-container" style="margin-bottom:24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:12px;">
@@ -4277,11 +4293,14 @@ HTML_PAGE = """
                     <button class="nav-tab-btn active" id="btn-shadow-filter-all" onclick="setShadowCoinFilter('ALL')" style="padding:6px 12px; font-size:11px;">Tümü</button>
                     <button class="nav-tab-btn" id="btn-shadow-filter-relax" onclick="setShadowCoinFilter('RELAX')" style="padding:6px 12px; font-size:11px; border-color:rgba(244,63,94,0.4); color:#f43f5e;">⚠️ Gevşet</button>
                     <button class="nav-tab-btn" id="btn-shadow-filter-keep" onclick="setShadowCoinFilter('KEEP')" style="padding:6px 12px; font-size:11px; border-color:rgba(16,185,129,0.4); color:#10b981;">👑 Koru</button>
+                    <button class="nav-tab-btn" id="btn-toggle-shadow-dna" onclick="toggleShadowSection('shadow-dna')" style="padding:6px 12px; font-size:11px; border-color:rgba(56,189,248,0.4); color:#38bdf8; display:flex; align-items:center; gap:5px;" title="Bu tabloyu gizle veya aç">
+                        <span id="icon-toggle-shadow-dna">👁️</span> <span id="text-toggle-shadow-dna">Gizle</span>
+                    </button>
                 </div>
             </div>
-            <div class="table-responsive">
+            <div class="table-responsive" id="container-shadow-dna" style="max-height:520px; overflow-y:auto;">
                 <table class="data-table" style="width:100%; border-collapse:collapse;">
-                    <thead>
+                    <thead style="position:sticky; top:0; z-index:10; background:#0b101b;">
                         <tr>
                             <th style="text-align:left; width:75px;">Parite</th>
                             <th style="text-align:center; width:60px;">Toplam</th>
@@ -4306,15 +4325,22 @@ HTML_PAGE = """
 
         <!-- 2. BÖLÜM: 🛡️ KALKAN LİDERLİK VE VERİMLİLİK KARNESİ (SHIELD AUDIT) -->
         <div class="table-container" style="margin-bottom:24px;">
-            <div style="margin-bottom:14px;">
-                <h3 style="font-size:15px; font-weight:700; color:#fff; margin:0; display:flex; align-items:center; gap:8px;">
-                    <span>🛡️</span> Güvenlik Kalkanları ve Filtre Verimlilik Karnesi (Shield Leaderboard)
-                </h3>
-                <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Hangi kalkan botu kaç dolarlık zarardan kurtardı? Hangisi kaç dolarlık kârı engelledi?</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:12px;">
+                <div>
+                    <h3 style="font-size:15px; font-weight:700; color:#fff; margin:0; display:flex; align-items:center; gap:8px;">
+                        <span>🛡️</span> Güvenlik Kalkanları ve Filtre Verimlilik Karnesi (Shield Leaderboard)
+                    </h3>
+                    <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Hangi kalkan botu kaç dolarlık zarardan kurtardı? Hangisi kaç dolarlık kârı engelledi?</div>
+                </div>
+                <div>
+                    <button class="nav-tab-btn" id="btn-toggle-shadow-shields" onclick="toggleShadowSection('shadow-shields')" style="padding:6px 12px; font-size:11px; border-color:rgba(56,189,248,0.4); color:#38bdf8; display:flex; align-items:center; gap:5px;" title="Bu tabloyu gizle veya aç">
+                        <span id="icon-toggle-shadow-shields">👁️</span> <span id="text-toggle-shadow-shields">Gizle</span>
+                    </button>
+                </div>
             </div>
-            <div class="table-responsive">
+            <div class="table-responsive" id="container-shadow-shields" style="max-height:480px; overflow-y:auto;">
                 <table class="data-table" style="width:100%; border-collapse:collapse;">
-                    <thead>
+                    <thead style="position:sticky; top:0; z-index:10; background:#0b101b;">
                         <tr>
                             <th style="text-align:left;">Kalkan / Filtre Adı</th>
                             <th>Toplam Bloklama</th>
@@ -4338,18 +4364,23 @@ HTML_PAGE = """
         <div style="display:grid; grid-template-columns:1fr; gap:20px;">
             <!-- AKTİF SANAL İŞLEMLER -->
             <div class="table-container">
-                <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                     <div>
                         <h3 style="font-size:15px; font-weight:700; color:#fff; margin:0; display:flex; align-items:center; gap:8px;">
                             <span>⏳</span> Canlı İzlenen Aktif Gölge Pozisyonlar (Live Shadow Tracking)
                         </h3>
                         <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Açılması engellenen fakat anlık fiyat ve 5M mum teyidiyle canlı takip edilen pozisyonlar</div>
                     </div>
-                    <span id="shadow-active-count-badge" style="background:rgba(168,85,247,0.15); color:#a855f7; border:1px solid rgba(168,85,247,0.3); font-size:11px; font-weight:700; padding:2px 8px; border-radius:12px;">0 Pozisyon</span>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <span id="shadow-active-count-badge" style="background:rgba(168,85,247,0.15); color:#a855f7; border:1px solid rgba(168,85,247,0.3); font-size:11px; font-weight:700; padding:2px 8px; border-radius:12px;">0 Pozisyon</span>
+                        <button class="nav-tab-btn" id="btn-toggle-shadow-active" onclick="toggleShadowSection('shadow-active')" style="padding:6px 12px; font-size:11px; border-color:rgba(168,85,247,0.4); color:#a855f7; display:flex; align-items:center; gap:5px;" title="Bu tabloyu gizle veya aç">
+                            <span id="icon-toggle-shadow-active">👁️</span> <span id="text-toggle-shadow-active">Gizle</span>
+                        </button>
+                    </div>
                 </div>
-                <div class="table-responsive">
+                <div class="table-responsive" id="container-shadow-active" style="max-height:480px; overflow-y:auto;">
                     <table class="data-table" style="width:100%; border-collapse:collapse;">
-                        <thead>
+                        <thead style="position:sticky; top:0; z-index:10; background:#0b101b;">
                             <tr>
                                 <th style="text-align:left;">Parite</th>
                                 <th>Yön</th>
@@ -4376,15 +4407,22 @@ HTML_PAGE = """
 
             <!-- SON TAMAMLANAN GÖLGE DEFTERİ -->
             <div class="table-container">
-                <div style="margin-bottom:14px;">
-                    <h3 style="font-size:15px; font-weight:700; color:#fff; margin:0; display:flex; align-items:center; gap:8px;">
-                        <span>📜</span> Son Tamamlanan Gölge İşlem Defteri (Son 50 Sonuç)
-                    </h3>
-                    <div style="font-size:11px; color:#94a3b8; margin-top:4px;">TP1, TP2, Stop veya Zaman Aşımıyla sonuçlanan sanal işlemler ve adli teşhis</div>
+                <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                    <div>
+                        <h3 style="font-size:15px; font-weight:700; color:#fff; margin:0; display:flex; align-items:center; gap:8px;">
+                            <span>📜</span> Son Tamamlanan Gölge İşlem Defteri (Son 50 Sonuç)
+                        </h3>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:4px;">TP1, TP2, Stop veya Zaman Aşımıyla sonuçlanan sanal işlemler ve adli teşhis</div>
+                    </div>
+                    <div>
+                        <button class="nav-tab-btn" id="btn-toggle-shadow-history" onclick="toggleShadowSection('shadow-history')" style="padding:6px 12px; font-size:11px; border-color:rgba(56,189,248,0.4); color:#38bdf8; display:flex; align-items:center; gap:5px;" title="Bu tabloyu gizle veya aç">
+                            <span id="icon-toggle-shadow-history">👁️</span> <span id="text-toggle-shadow-history">Gizle</span>
+                        </button>
+                    </div>
                 </div>
-                <div class="table-responsive">
+                <div class="table-responsive" id="container-shadow-history" style="max-height:480px; overflow-y:auto;">
                     <table class="data-table" style="width:100%; border-collapse:collapse;">
-                        <thead>
+                        <thead style="position:sticky; top:0; z-index:10; background:#0b101b;">
                             <tr>
                                 <th>Gölge ID</th>
                                 <th style="text-align:left;">Parite</th>
@@ -5981,6 +6019,72 @@ async function loadAdminMetrics() {
 
         let shadowCoinFilterState = 'ALL';
 
+        const shadowSections = {
+            'shadow-dna': { isHidden: false, name: '100 Coin DNA Masası' },
+            'shadow-shields': { isHidden: false, name: 'Kalkan Karnesi' },
+            'shadow-active': { isHidden: false, name: 'Aktif Gölge Pozisyonlar' },
+            'shadow-history': { isHidden: false, name: 'Tamamlanan Gölge Defteri' }
+        };
+
+        try {
+            const savedShadowState = localStorage.getItem('valkyrie_shadow_sections');
+            if (savedShadowState) {
+                const parsed = JSON.parse(savedShadowState);
+                Object.keys(parsed).forEach(k => {
+                    if (shadowSections[k]) shadowSections[k].isHidden = parsed[k];
+                });
+            }
+        } catch(e) {}
+
+        function applyShadowSectionVisibility() {
+            Object.keys(shadowSections).forEach(k => {
+                const isHidden = shadowSections[k].isHidden;
+                const container = document.getElementById(`container-${k}`);
+                const btnText = document.getElementById(`text-toggle-${k}`);
+                const btnIcon = document.getElementById(`icon-toggle-${k}`);
+                const btn = document.getElementById(`btn-toggle-${k}`);
+                if (container) {
+                    container.style.display = isHidden ? 'none' : 'block';
+                }
+                if (btnText) {
+                    btnText.innerText = isHidden ? 'Göster' : 'Gizle';
+                }
+                if (btnIcon) {
+                    btnIcon.innerText = isHidden ? '👁️‍🗨️' : '👁️';
+                }
+                if (btn) {
+                    if (isHidden) {
+                        btn.style.opacity = '0.6';
+                        btn.style.borderColor = 'rgba(255,255,255,0.15)';
+                        btn.style.color = '#94a3b8';
+                    } else {
+                        btn.style.opacity = '1';
+                        btn.style.borderColor = k === 'shadow-active' ? 'rgba(168,85,247,0.4)' : 'rgba(56,189,248,0.4)';
+                        btn.style.color = k === 'shadow-active' ? '#a855f7' : '#38bdf8';
+                    }
+                }
+            });
+            try {
+                const toSave = {};
+                Object.keys(shadowSections).forEach(k => toSave[k] = shadowSections[k].isHidden);
+                localStorage.setItem('valkyrie_shadow_sections', JSON.stringify(toSave));
+            } catch(e) {}
+        }
+
+        function toggleShadowSection(secKey) {
+            if (shadowSections[secKey]) {
+                shadowSections[secKey].isHidden = !shadowSections[secKey].isHidden;
+                applyShadowSectionVisibility();
+            }
+        }
+
+        function toggleAllShadowSections(show) {
+            Object.keys(shadowSections).forEach(k => {
+                shadowSections[k].isHidden = !show;
+            });
+            applyShadowSectionVisibility();
+        }
+
         function updateShadowBadge() {
             const badge = document.getElementById('nav-shadow-badge');
             if (!badge || !appState || !appState.shadow_summary) return;
@@ -6209,6 +6313,9 @@ async function loadAdminMetrics() {
                         }).join('');
                     }
                 }
+
+                // Apply user collapse/expand visibility states
+                applyShadowSectionVisibility();
             } catch (err) {
                 console.error("renderShadowView error:", err);
             }
