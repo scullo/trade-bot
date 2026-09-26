@@ -591,6 +591,9 @@ class ShadowExecutionEngine:
                 "forensic_narrative": diag["forensic_narrative"],
                 "primary_scenario": diag["primary_scenario"],
                 "scenario_title": diag["scenario_title"],
+                "optimality_score": diag["optimality_score"],
+                "optimality_status": diag["optimality_status"],
+                "optimality_desc": diag["optimality_desc"],
                 "modifications_count": diag["modifications_count"],
                 "modifications_summary": diag["modifications_summary"],
                 "is_calibrated_needed": diag["is_calibrated_needed"]
@@ -861,12 +864,33 @@ class ShadowExecutionEngine:
             "expected_alpha_boost": f"+${missed:.2f}" if missed > 0 else "$0.00"
         }
 
+        # 4. Optimum Durum & Kuant Kararlılık Endeksi (Optimality Index)
+        if primary_scenario == "HERO_BULLETPROOF":
+            optimality_score = 98.0
+            optimality_status = "🔒 KUSURSUZ OPTİMUM (DOKUNMA)"
+            optimality_desc = "Parametreler altın oranda. Kalkanlar kusursuz sermaye koruması sağlıyor, parametre değiştirmek riski artırır."
+        elif primary_scenario == "EQUILIBRIUM_BALANCED":
+            optimality_score = 88.0
+            optimality_status = "⚖️ STABİL VE OPTİMUM"
+            optimality_desc = "Fırsat ve koruma dengesi kararlı seviyede. Mevcut konfigürasyon sürdürülmeli."
+        elif primary_scenario == "ACCUMULATING_DATA":
+            optimality_score = 50.0
+            optimality_status = "⏳ VERİ BİRİKİYOR (GÖZLEM MODU)"
+            optimality_desc = f"İstatistiki kesinlik için {tot_completed}/5 işlem tamamlandı. Erken müdahale aşırı uyum (overfitting) tuzağı yaratır."
+        else:
+            optimality_score = max(15.0, round(sei * 0.4, 1))
+            optimality_status = "🛠️ KALİBRASYON GEREKLİ (OPTİMUM DIŞI)"
+            optimality_desc = f"Parite {scenario_title} rejiminde. Sermaye verimliliği için paket uygulanmalı."
+
         return {
             "rec_badge": rec_badge,
             "recommendation": recommendation,
             "forensic_narrative": forensic_narrative,
             "primary_scenario": primary_scenario,
             "scenario_title": scenario_title,
+            "optimality_score": optimality_score,
+            "optimality_status": optimality_status,
+            "optimality_desc": optimality_desc,
             "modifications": modifications,
             "modifications_count": len(active_mods),
             "modifications_summary": f"{len(active_mods)} Değişiklik ({mods_summary})" if active_mods else "Optimum (0 Değişiklik)",
@@ -953,6 +977,9 @@ class ShadowExecutionEngine:
             "sei": sei,
             "primary_scenario": diag["primary_scenario"],
             "scenario_title": diag["scenario_title"],
+            "optimality_score": diag["optimality_score"],
+            "optimality_status": diag["optimality_status"],
+            "optimality_desc": diag["optimality_desc"],
             "forensic_narrative": diag["forensic_narrative"],
             "modifications": diag["modifications"],
             "modifications_count": diag["modifications_count"],

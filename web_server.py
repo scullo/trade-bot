@@ -2924,6 +2924,27 @@ HTML_PAGE = """
                     </div>
                 </div>
 
+                <!-- 1.5 OPTIMALITY & STABILITY GAUGE (EN İYİ PARAMETRE & KORUMA GÜVENİ) -->
+                <div id="shadow-modal-optimality-box" style="background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+                    <div style="flex:1; min-width:260px;">
+                        <div style="font-size:10.5px; color:#94a3b8; text-transform:uppercase; font-weight:700; letter-spacing:0.5px; margin-bottom:2px;">
+                            🎯 Kuant Optimum Parametre Durumu & Kararlılık Kilidi
+                        </div>
+                        <div id="shadow-modal-optimality-status" style="font-size:14px; font-weight:800; color:#38bdf8;">
+                            Analiz Ediliyor...
+                        </div>
+                        <div id="shadow-modal-optimality-desc" style="font-size:11.5px; color:#cbd5e1; margin-top:3px; line-height:1.4;">
+                            Mevcut parametrelerin altın oran uyumu ve istatistiki yeterlilik ölçülüyor.
+                        </div>
+                    </div>
+                    <div style="text-align:right; background:rgba(0,0,0,0.35); padding:8px 16px; border-radius:8px; border:1px solid rgba(255,255,255,0.06);">
+                        <div id="shadow-modal-optimality-score" style="font-size:22px; font-weight:900; font-family:'JetBrains Mono'; color:#10b981;">
+                            %100
+                        </div>
+                        <div style="font-size:10px; color:#64748b; font-weight:600;">Optimum Güven Endeksi</div>
+                    </div>
+                </div>
+
                 <!-- 2. FORENSIC NARRATIVE (ADLİ TEŞHİS & NEDEN-SONUÇ HİKAYESİ) -->
                 <div style="background:linear-gradient(135deg, rgba(168,85,247,0.08), rgba(15,23,42,0.95)); border:1px solid rgba(168,85,247,0.3); border-radius:12px; padding:16px;">
                     <div style="font-size:13px; font-weight:800; color:#c084fc; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
@@ -13106,6 +13127,19 @@ function downloadExcelReport() {
                 const alpha = d.net_alpha_usd || 0;
                 alphaEl.innerText = `${alpha >= 0 ? '+$' : '-$'}${Math.abs(alpha).toFixed(2)}`;
                 alphaEl.style.color = alpha >= 0 ? '#10b981' : '#f43f5e';
+
+                // Optimum Durum & Güven Endeksi
+                const optScore = d.optimality_score != null ? d.optimality_score : 50;
+                const optStatusEl = document.getElementById('shadow-modal-optimality-status');
+                const optDescEl = document.getElementById('shadow-modal-optimality-desc');
+                const optScoreEl = document.getElementById('shadow-modal-optimality-score');
+
+                if (optStatusEl) optStatusEl.innerText = d.optimality_status || '⚖️ Analiz Ediliyor';
+                if (optDescEl) optDescEl.innerText = d.optimality_desc || '';
+                if (optScoreEl) {
+                    optScoreEl.innerText = `%${optScore.toFixed(0)}`;
+                    optScoreEl.style.color = (optScore >= 80) ? '#10b981' : ((optScore <= 40) ? '#f43f5e' : '#f59e0b');
+                }
 
                 const coinMatrixItem = (appState.coin_dna_matrix || []).find(c => c.symbol.toUpperCase() === cleanSym);
                 const narrativeText = d.forensic_narrative || (coinMatrixItem && coinMatrixItem.forensic_narrative) || (
