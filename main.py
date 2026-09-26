@@ -1,6 +1,10 @@
 import asyncio
 import os
+import sys
 import time
+
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
 from config import ALL_AVAILABLE_SYMBOLS, DEFAULT_ACTIVE_SYMBOLS, TIMEFRAME, INITIAL_BALANCE, LEVERAGE, POSITION_SIZE_USDT
 from market_data import MarketDataManager
 from paper_trader import PaperTrader

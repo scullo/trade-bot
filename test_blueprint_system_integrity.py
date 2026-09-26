@@ -6,6 +6,10 @@ Aegis Sentinel oto-onarım (auto-healing) mekanizmalarını, Excel dışa aktar�
 asla kilitlenmeyeceğini (non-blocking zero-freeze) kanıtlar.
 """
 
+import sys
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
 import unittest
 import asyncio
 import time
@@ -302,6 +306,48 @@ class TestBlueprintSystemIntegrity(unittest.TestCase):
                 self.assertEqual(regime, "NEUTRAL", "Harici API yokken sistem güvenli NÖTR rejimde kalmalı")
             finally:
                 loop.close()
+
+
+    def test_07_candle_close_and_open_eval_integrity(self):
+        """7. 5M Mum Kapanışı ve Pozisyon Açma Motorunun Değişken ve Kapsam Bütünlüğü Testi."""
+        from strategy import StrategyEngine, SecurityVault
+        from unittest.mock import MagicMock
+
+        strat = StrategyEngine.__new__(StrategyEngine)
+        strat.paper_trader = self.trader
+        strat.market_data = self.market_data
+        strat.vault = SecurityVault()
+        strat.notifier = MagicMock()
+        strat.failed_levels = {}
+        strat.recent_rejections = []
+        strat.setup_attempts = {}
+        strat.setup_attempt_history = {}
+        strat.symbol_stop_cooldown = {}
+        strat.symbol_trade_cooldown = {}
+        strat.symbol_daily_loss_count = {}
+        strat.recently_stopped_levels = {}
+        strat.get_effective_slot_count = lambda pos: len(pos)
+        strat.get_macro_climate = lambda: {'regime': 'NEUTRAL', 'is_dead_zone': False, 'eth_leading': False}
+        strat.get_coin_dynamic_persona = lambda s: {'allow_breakout': True, 'persona_class': 'STANDARD'}
+
+        # A. _record_structural_stop testi (Zararla kapanışta close_reason NameError olmamalı)
+        strat._record_structural_stop({'symbol': 'BTC/USDT', 'net_pnl': -10.0, 'close_reason': 'Stop Oldu'})
+        self.assertIn('BTC/USDT', strat.failed_levels)
+        self.assertEqual(strat.failed_levels['BTC/USDT']['reason'], 'Stop Oldu')
+
+        # B. evaluate_candle_close testi (coin_decoupling UnboundLocalError olmamalı)
+        cur_candle = {'timestamp': 1000, 'open': 65000, 'high': 65500, 'low': 64800, 'close': 65200, 'volume': 1000, 'quote_volume': 65200000}
+        prev_candle = {'timestamp': 900, 'open': 64500, 'high': 65100, 'low': 64400, 'close': 65000, 'volume': 900, 'quote_volume': 58500000}
+        levels = {'camarilla': {'P': 65000, 'R3': 65300, 'R4': 65600, 'R5': 66000, 'S3': 64700, 'S4': 64400, 'S5': 64000}}
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(strat.evaluate_candle_close('BTC/USDT', cur_candle, prev_candle, levels))
+        except Exception as e:
+            self.fail(f"evaluate_candle_close çalışma zamanı hatası verdi: {e}")
+        finally:
+            loop.close()
 
 
 if __name__ == '__main__':

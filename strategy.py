@@ -103,6 +103,7 @@ class StrategyEngine:
         if not symbol:
             return
         net_pnl = float(record.get("net_pnl", 0.0))
+        close_reason = str(record.get("close_reason", "") or "")
         is_breakeven = "Breakeven" in close_reason or "Başa Baş" in close_reason or "Başa-Baş" in close_reason
         if net_pnl < 0 and not is_breakeven:
             self.failed_levels[symbol] = {
@@ -938,20 +939,6 @@ class StrategyEngine:
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "MAX_SLOTS_REACHED"}
 
-        # Kural 3: Beta Sektör & Ekosistem Korelasyon Kalkanı (Cluster Exposure Shield)
-        # Fırsat kaçırmamak için her sektörde standart en az 2 pozisyona izin verilir (Güçlü trendde 3)
-        CLUSTERS = SECTOR_CLUSTERS
-        max_cluster_allowed = 3 if "GÜÇLÜ" in trend_regime else 2
-
-        for c_name, c_symbols in CLUSTERS.items():
-            if symbol in c_symbols:
-                c_open = sum(1 for s in open_positions if s in c_symbols)
-                if c_open >= max_cluster_allowed:
-                    rej_msg = f"🛡️ Sektör Korelasyon Kalkanı ({c_name}): Bu kümede zaten {c_open} açık pozisyon var (İzin Verilen: {max_cluster_allowed}). Beta aşırı riskini önlemek için işlem engellendi."
-                    print(f">> [RED - SEKTÖR KÜMELENMESİ] {symbol}: {rej_msg}")
-                    self.log_rejection(symbol, reason, rej_msg)
-                    return {"error": f"CLUSTER_LIMIT_{c_name}"}
-
         # ── 0b. TREND REJİMİ ERKEN TESPİTİ (BTC + PİVOT P + AVWAP) ──
         snaps = snapshot_levels or {}
         tepe_av = snaps.get('tepe_avwap', 0.0)
@@ -979,7 +966,22 @@ class StrategyEngine:
         else:
             trend_regime = "⚪ YATAY / SIKIŞMA (Ranging)"
 
+        # Kural 3: Beta Sektör & Ekosistem Korelasyon Kalkanı (Cluster Exposure Shield)
+        # Fırsat kaçırmamak için her sektörde standart en az 2 pozisyona izin verilir (Güçlü trendde 3)
+        CLUSTERS = SECTOR_CLUSTERS
+        max_cluster_allowed = 3 if "GÜÇLÜ" in trend_regime else 2
+
+        for c_name, c_symbols in CLUSTERS.items():
+            if symbol in c_symbols:
+                c_open = sum(1 for s in open_positions if s in c_symbols)
+                if c_open >= max_cluster_allowed:
+                    rej_msg = f"🛡️ Sektör Korelasyon Kalkanı ({c_name}): Bu kümede zaten {c_open} açık pozisyon var (İzin Verilen: {max_cluster_allowed}). Beta aşırı riskini önlemek için işlem engellendi."
+                    print(f">> [RED - SEKTÖR KÜMELENMESİ] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg)
+                    return {"error": f"CLUSTER_LIMIT_{c_name}"}
+
         sym_met = self.market_data.get_symbol_metrics(symbol) if (self.market_data and hasattr(self.market_data, 'get_symbol_metrics')) else {}
+        coin_rs_score = float(sym_met.get("dynamic_rs_score", 0.0))
 
         # ── 1. ATR / VOLATILITE HESABI & KATMANLI LİKİDİTE EŞİĞİ ──
         atr_pct = 1.2
@@ -1052,9 +1054,11 @@ class StrategyEngine:
                 self.log_rejection(symbol, reason, rej_msg)
                 return {"error": "WHIPSAW_BREAKOUT_AUDIT_BLOCKED"}
             
-            # b. Sıkı Confluence Eşiği Denetimi: Çalkantılı coinlerde rastgele 2-3 teyitle işlem açılamaz; asgari 4 teyit veya net balina akışı aranır
-            if c_cnt < 4 and not has_whale:
-                rej_msg = f"🛡️ Kuant Confluence Denetimi: {symbol} yüksek gürültülü piyasa yapısında. En doğru zamanlama için asgari 4 teyit şarttır (Mevcut: {c_cnt}/4). Zayıf sinyal elendi."
+            # b. Sıkı Confluence Eşiği Denetimi: Çalkantılı coinlerde rastgele 2 teyitle işlem açılamaz; kırılımda 4, dönüşlerde 3 teyit (veya kurumsal akış) aranır
+            min_required_confluence = 4 if is_breakout else 3
+            has_qualifying_flow = has_whale or has_wall or (vol_surge >= 1.5) or (coin_rs_score >= 0.40)
+            if c_cnt < min_required_confluence and not has_qualifying_flow:
+                rej_msg = f"🛡️ Kuant Confluence Denetimi: {symbol} yüksek gürültülü piyasa yapısında. En doğru zamanlama için asgari {min_required_confluence} teyit veya akış şarttır (Mevcut: {c_cnt}/{min_required_confluence}). Zayıf sinyal elendi."
                 print(f">> [RED - SIKI CONFLUENCE DENETİMİ] {symbol}: {rej_msg}")
                 self.log_rejection(symbol, reason, rej_msg)
                 return {"error": "WHIPSAW_LOW_CONFLUENCE_BLOCKED"}
@@ -3192,9 +3196,9 @@ class StrategyEngine:
         # Bağımsız Alfa Ayrışan Parite & Coin DNA Kırılım İzni
         persona_obj = self.get_coin_dynamic_persona(symbol)
         is_breakout_permitted_by_dna = persona_obj.get("allow_breakout", True)
+        coin_decoupling = sym_met.get("decoupling_status", "")
         is_decoupled_bull = (coin_rs_score >= 0.5 or "ALFA" in coin_decoupling or "DİRENÇLİ" in coin_decoupling or coin_vol_surge >= 1.25) and is_breakout_permitted_by_dna
         is_decoupled_bear = (coin_rs_score <= -0.5 or "AŞIRI_ZAYIF" in coin_decoupling) and is_breakout_permitted_by_dna
-        coin_decoupling = sym_met.get("decoupling_status", "")
         is_severely_weak = ("AŞIRI_ZAYIF" in coin_decoupling) or (coin_rs_score <= -1.0)
 
         # ── 3 BOYUTLU TRİ-MODAL REJİM HAKEMİ (BOĞA TRENDİ, AYI TRENDİ, YATAY PİNG-PONG) ──
@@ -3412,7 +3416,7 @@ class StrategyEngine:
         # SETUP 3: S3 DESTEK TEPKISI LONG (Scalp — Kademeli Kilit Hedef)
         # Mum S3'e dokunur ama ustunde kapatir (Pivot P kısıtlaması kaldırıldı, boğada da çalışır)
         # ─────────────────────────────────────────────────────────────────
-        if current_candle['low'] <= s3 and close_price > s3:
+        if current_candle['low'] <= s3 * 1.0008 and close_price > s3:
             struct_ok, struct_reason = self.check_structural_invalidation(symbol, "LONG", close_price, levels)
             if not struct_ok:
                 self.log_rejection(symbol, "SETUP 3 S3 Destek", struct_reason)
@@ -3539,7 +3543,7 @@ class StrategyEngine:
         # SETUP 4: R3 DIRENC TEPKISI SHORT (Scalp — Kademeli Kilit Hedef)
         # Mum R3'e dokunur ama altinda kapatir, Pivot P ustunde
         # ─────────────────────────────────────────────────────────────────
-        if current_candle['high'] >= r3 and close_price < r3 and close_price > p:
+        if current_candle['high'] >= r3 * 0.9992 and close_price < r3 and close_price > p:
             struct_ok, struct_reason = self.check_structural_invalidation(symbol, "SHORT", close_price, levels)
             if not struct_ok:
                 self.log_rejection(symbol, "SETUP 4 R3 Direnç", struct_reason)
@@ -3827,7 +3831,7 @@ class StrategyEngine:
         # Fiyat önceki günlerin dokunulmamış POC/VAL seviyesine inip fitil bırakır ve üstünde kapatır
         # ─────────────────────────────────────────────────────────────────
         support_npoc = below_npoc if (below_npoc and below_npoc > 0) else below_nval
-        if support_npoc and support_npoc > 0 and current_candle['low'] <= support_npoc and close_price > support_npoc:
+        if support_npoc and support_npoc > 0 and current_candle['low'] <= support_npoc * 1.0008 and close_price > support_npoc:
             struct_ok, struct_reason = self.check_structural_invalidation(symbol, "LONG", close_price, levels)
             if not struct_ok:
                 self.log_rejection(symbol, "SETUP 9 nPOC Sekmesi", struct_reason)
@@ -3957,7 +3961,7 @@ class StrategyEngine:
         # Fiyat önceki günlerin dokunulmamış POC/VAH seviyesine iğne atıp altında kapatır
         # ─────────────────────────────────────────────────────────────────
         resist_npoc = above_npoc if (above_npoc and above_npoc > 0) else above_nvah
-        if resist_npoc and resist_npoc > 0 and current_candle['high'] >= resist_npoc and close_price < resist_npoc and close_price > p:
+        if resist_npoc and resist_npoc > 0 and current_candle['high'] >= resist_npoc * 0.9992 and close_price < resist_npoc and close_price > p:
             struct_ok, struct_reason = self.check_structural_invalidation(symbol, "SHORT", close_price, levels)
             if not struct_ok:
                 self.log_rejection(symbol, "SETUP 10 nPOC Reddi", struct_reason)
@@ -4082,12 +4086,12 @@ class StrategyEngine:
                     c_range = c_high - c_low
                     upper_wick = (c_high - max(c_open, close_price)) if c_range > 0 else 0
                     upper_wick_ratio = (upper_wick / c_range) if c_range > 0 else 0
-                    is_seller_rejection = (upper_wick_ratio >= 0.22) or (upper_wick_ratio >= 0.15 and close_price < c_open)
+                    is_seller_rejection = (upper_wick_ratio >= 0.15) or (close_price < c_open)
 
                     obi_data = self.market_data.get_orderbook_depth(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_orderbook_depth')) else {}
                     obi_imbalance = float(obi_data.get('imbalance', 0.0))
                     obi_ratio = float(obi_data.get('ratio', 1.0))
-                    has_seller_flow = (cvd_ratio <= 50.0) and ((obi_imbalance <= -0.10) or (obi_ratio <= 0.85))
+                    has_seller_flow = (cvd_ratio <= 48.0) or ((cvd_ratio <= 52.0) and (obi_imbalance <= -0.05 or obi_ratio <= 0.90)) or (obi_imbalance <= -0.10)
 
                     if not is_seller_rejection:
                         self.log_rejection(symbol, f"SETUP 11 {resist_tag} Retest Reddi", f"Direnç retestinde satıcı reddi (üst fitil) yetersiz (Fitil: %{upper_wick_ratio*100:.1f})")
@@ -4242,7 +4246,7 @@ class StrategyEngine:
                     c_range = c_high - c_low
                     lower_wick = (min(c_open, close_price) - c_low) if c_range > 0 else 0
                     lower_wick_ratio = (lower_wick / c_range) if c_range > 0 else 0
-                    is_buyer_rejection = (lower_wick_ratio >= 0.20) or (close_price > c_open)
+                    is_buyer_rejection = (lower_wick_ratio >= 0.15) or (close_price > c_open)
 
                     cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
                     cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
@@ -4340,7 +4344,7 @@ class StrategyEngine:
                 c_range = c_high - c_low
                 lower_wick = (min(c_open, close_price) - c_low) if c_range > 0 else 0
                 lower_wick_ratio = (lower_wick / c_range) if c_range > 0 else 0
-                is_buyer_rej = (lower_wick_ratio >= 0.18) or (close_price > c_open)
+                is_buyer_rej = (lower_wick_ratio >= 0.15) or (close_price > c_open)
 
                 if not is_buyer_rej:
                     self.log_rejection(symbol, "SETUP 16 R3 Retest Reddi", f"R3 retestinde alıcı tepkisi yetersiz (Fitil: %{lower_wick_ratio*100:.1f})")
