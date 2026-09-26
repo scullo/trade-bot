@@ -2881,13 +2881,13 @@ HTML_PAGE = """
         <div class="live-settings-card" style="max-width:960px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden;">
             <div class="tv-modal-header" style="border-bottom:1px solid var(--border); flex-shrink:0;">
                 <div style="display:flex; align-items:center; gap:12px;">
-                    <div class="brand-logo-gem" style="width:38px; height:38px; background:rgba(168,85,247,0.18); border-color:#a855f7; display:flex; align-items:center; justify-content:center; border-radius:10px; font-size:18px;">
-                        🧬
+                    <div class="brand-logo-gem" style="width:38px; height:38px; background:rgba(168,85,247,0.18); border:1px solid #a855f7; display:flex; align-items:center; justify-content:center; border-radius:10px; font-size:13px; font-weight:800; color:#c084fc; font-family:'JetBrains Mono';">
+                        DNA
                     </div>
                     <div>
                         <div style="display:flex; align-items:center; gap:8px;">
                             <span style="font-size:17px; font-weight:800; color:#fff;" id="shadow-modal-symbol">PARİTE / USDT</span>
-                            <span id="shadow-modal-badge" style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px;">👑 KORU</span>
+                            <span id="shadow-modal-badge" style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px;">KORU</span>
                         </div>
                         <div style="font-size:11.5px; color:var(--text-muted); font-family:'JetBrains Mono', monospace;" id="shadow-modal-persona">
                             Coin DNA & Canlı Piyasa Adli Kalibrasyon Masası
@@ -2903,22 +2903,22 @@ HTML_PAGE = """
                 <!-- 1. KPI STRIP -->
                 <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px;">
                     <div style="background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.2); border-radius:8px; padding:10px 14px;">
-                        <div style="font-size:10.5px; color:#94a3b8; margin-bottom:2px;">🛡️ Kurtarılan Zarar (Hero)</div>
+                        <div style="font-size:10.5px; color:#94a3b8; margin-bottom:2px;">Kurtarılan Zarar (Hero)</div>
                         <div id="shadow-modal-kpi-saved" style="font-size:16px; font-weight:800; color:#10b981; font-family:'JetBrains Mono';">$0.00</div>
                         <div id="shadow-modal-kpi-hero" style="font-size:10px; color:#64748b;">0 Stop Engellendi</div>
                     </div>
                     <div style="background:rgba(244,63,94,0.06); border:1px solid rgba(244,63,94,0.2); border-radius:8px; padding:10px 14px;">
-                        <div style="font-size:10.5px; color:#94a3b8; margin-bottom:2px;">⚠️ Kaçan Kâr (Spoiler)</div>
+                        <div style="font-size:10.5px; color:#94a3b8; margin-bottom:2px;">Kaçan Kâr (Spoiler)</div>
                         <div id="shadow-modal-kpi-missed" style="font-size:16px; font-weight:800; color:#f43f5e; font-family:'JetBrains Mono';">$0.00</div>
                         <div id="shadow-modal-kpi-spoiler" style="font-size:10px; color:#64748b;">0 Kâr Kaçırıldı</div>
                     </div>
                     <div style="background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.2); border-radius:8px; padding:10px 14px;">
-                        <div style="font-size:10.5px; color:#94a3b8; margin-bottom:2px;">🎯 Kalkan Verimliliği (SEI)</div>
+                        <div style="font-size:10.5px; color:#94a3b8; margin-bottom:2px;">Kalkan Verimliliği (SEI)</div>
                         <div id="shadow-modal-kpi-sei" style="font-size:16px; font-weight:800; color:#f59e0b; font-family:'JetBrains Mono';">%100.0</div>
                         <div style="font-size:10px; color:#64748b;">Kurtarılan / Etki Oranı</div>
                     </div>
                     <div style="background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.2); border-radius:8px; padding:10px 14px;">
-                        <div style="font-size:10.5px; color:#94a3b8; margin-bottom:2px;">💎 Net Kalkan Alfası</div>
+                        <div style="font-size:10.5px; color:#94a3b8; margin-bottom:2px;">Net Kalkan Alfası</div>
                         <div id="shadow-modal-kpi-alpha" style="font-size:16px; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono';">$0.00</div>
                         <div style="font-size:10px; color:#64748b;">Kurtarılan - Kaçan Kâr</div>
                     </div>
@@ -2928,7 +2928,7 @@ HTML_PAGE = """
                 <div id="shadow-modal-optimality-box" style="background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
                     <div style="flex:1; min-width:260px;">
                         <div style="font-size:10.5px; color:#94a3b8; text-transform:uppercase; font-weight:700; letter-spacing:0.5px; margin-bottom:2px;">
-                            🎯 Kuant Optimum Parametre Durumu & Kararlılık Kilidi
+                            Kuant Optimum Parametre Durumu & Kararlılık Kilidi
                         </div>
                         <div id="shadow-modal-optimality-status" style="font-size:14px; font-weight:800; color:#38bdf8;">
                             Analiz Ediliyor...
@@ -2948,7 +2948,7 @@ HTML_PAGE = """
                 <!-- 2. FORENSIC NARRATIVE (ADLİ TEŞHİS & NEDEN-SONUÇ HİKAYESİ) -->
                 <div style="background:linear-gradient(135deg, rgba(168,85,247,0.08), rgba(15,23,42,0.95)); border:1px solid rgba(168,85,247,0.3); border-radius:12px; padding:16px;">
                     <div style="font-size:13px; font-weight:800; color:#c084fc; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
-                        <span>🧠</span> Kuant Adli Otopsi & Neden-Sonuç Teşhisi
+                        Kuant Adli Otopsi & Neden-Sonuç Teşhisi
                     </div>
                     <div id="shadow-modal-narrative" style="font-size:12.5px; line-height:1.6; color:#e2e8f0; font-family:'Segoe UI', sans-serif;">
                         Yükleniyor...
@@ -2958,7 +2958,7 @@ HTML_PAGE = """
                 <!-- 3. PARAMETER CALIBRATION DIFF -->
                 <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px;">
                     <div style="font-size:13px; font-weight:800; color:#38bdf8; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
-                        <span>⚙️</span> Otonom Kuant Kalibrasyon Eylem Planı (Çok Boyutlu Parametre Matrisi)
+                        Otonom Kuant Kalibrasyon Eylem Planı (Çok Boyutlu Parametre Matrisi)
                     </div>
                     <div style="display:flex; flex-direction:column; gap:10px;" id="shadow-modal-diff-grid">
                         <!-- Populated by JS -->
@@ -2968,7 +2968,7 @@ HTML_PAGE = """
                 <!-- 4. SHIELDS BREAKDOWN -->
                 <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px;">
                     <div style="font-size:13px; font-weight:800; color:#f59e0b; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
-                        <span>🛡️</span> Bu Paritede Tetiklenen Kalkanlar ve Skorları
+                        Bu Paritede Tetiklenen Kalkanlar ve Skorları
                     </div>
                     <div class="table-responsive">
                         <table class="data-table" style="width:100%; font-size:12px;">
@@ -2991,7 +2991,7 @@ HTML_PAGE = """
                 <!-- 5. RECENT SHADOW TRADES -->
                 <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px;">
                     <div style="font-size:13px; font-weight:800; color:#fff; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
-                        <span>📜</span> Paritenin Gölge Pozisyon Geçmişi & Canlı Sonuçları
+                        Paritenin Gölge Pozisyon Geçmişi & Canlı Sonuçları
                     </div>
                     <div class="table-responsive">
                         <table class="data-table" style="width:100%; font-size:11.5px;">
@@ -4187,14 +4187,14 @@ HTML_PAGE = """
     </div>
 
     <!-- =========================================================================
-         5b. SEKME: 👻 GÖLGE İŞLEM TAKİP MOTORU & OTONOM COIN DNA KALİBRASYON MASASI
-         ========================================================================= -->
+          5b. SEKME: GÖLGE İŞLEM TAKİP MOTORU & OTONOM COIN DNA KALİBRASYON MASASI
+          ========================================================================= -->
     <div id="main-tab-content-shadow" class="main-tab-content" style="display:none;">
         <!-- BAŞLIK VE 1-TIK EXCEL İNDİR AKSİYON ÇUBUĞU -->
         <div style="display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg, rgba(17,23,38,0.95), rgba(14,19,31,0.98)); border:1px solid var(--border-light); border-radius:12px; padding:18px 24px; margin-bottom:20px; box-shadow:0 8px 32px rgba(0,0,0,0.36); flex-wrap:wrap; gap:16px;">
             <div>
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <span style="font-size:24px;">👻</span>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:36px; height:36px; border-radius:8px; background:linear-gradient(135deg, rgba(168,85,247,0.25), rgba(56,189,248,0.25)); border:1px solid rgba(168,85,247,0.4); display:flex; align-items:center; justify-content:center; color:#c084fc; font-weight:900; font-size:13px; font-family:'JetBrains Mono', monospace; letter-spacing:1px;">SHD</div>
                     <h2 style="font-size:18px; font-weight:800; color:#fff; margin:0; letter-spacing:0.5px;">GÖLGE İŞLEM TAKİP MOTORU & OTONOM COIN DNA MASASI</h2>
                     <span style="background:rgba(168,85,247,0.18); color:#c084fc; border:1px solid rgba(168,85,247,0.4); font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px;">COUNTERFACTUAL SHADOW ENGINE</span>
                 </div>
@@ -4205,7 +4205,7 @@ HTML_PAGE = """
             <div style="display:flex; gap:12px; align-items:center;">
                 <button onclick="window.location.href='/api/export_shadow_excel'" class="action-btn" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; font-weight:700; padding:10px 18px; border-radius:8px; display:flex; align-items:center; gap:8px; border:none; cursor:pointer; box-shadow:0 4px 14px rgba(16,185,129,0.35); transition:all 0.2s ease;">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                    <span>📥 Gölge & Coin DNA Excel İndir (.xlsx)</span>
+                    <span>Gölge & Coin DNA Excel İndir (.xlsx)</span>
                 </button>
             </div>
         </div>
@@ -4214,8 +4214,8 @@ HTML_PAGE = """
         <div class="cockpit-kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-bottom:20px;">
             <div class="cockpit-kpi-card" style="border-top:3px solid #10b981;">
                 <div class="kpi-card-head">
-                    <span class="kpi-card-title">🛡️ Kurtarılan Net Zarar (Hero)</span>
-                    <span class="kpi-card-icon">🛡️</span>
+                    <span class="kpi-card-title">Kurtarılan Net Zarar (Hero)</span>
+                    <span class="kpi-card-icon" style="font-size:10px; font-weight:800; color:#10b981; font-family:'JetBrains Mono'; background:rgba(16,185,129,0.12); padding:2px 6px; border-radius:4px; border:1px solid rgba(16,185,129,0.3);">HERO</span>
                 </div>
                 <div class="kpi-card-val" id="shadow-kpi-saved" style="color:#10b981;">$0.00</div>
                 <div class="kpi-card-sub"><span id="shadow-kpi-hero-count">0</span> Stop İşlemi Engellendi</div>
@@ -4224,8 +4224,8 @@ HTML_PAGE = """
 
             <div class="cockpit-kpi-card" style="border-top:3px solid #f43f5e;">
                 <div class="kpi-card-head">
-                    <span class="kpi-card-title">⚠️ Kaçan Fırsat Kârı (Spoiler)</span>
-                    <span class="kpi-card-icon">⚠️</span>
+                    <span class="kpi-card-title">Kaçan Fırsat Kârı (Spoiler)</span>
+                    <span class="kpi-card-icon" style="font-size:10px; font-weight:800; color:#f43f5e; font-family:'JetBrains Mono'; background:rgba(244,63,94,0.12); padding:2px 6px; border-radius:4px; border:1px solid rgba(244,63,94,0.3);">SPOIL</span>
                 </div>
                 <div class="kpi-card-val" id="shadow-kpi-missed" style="color:#f43f5e;">$0.00</div>
                 <div class="kpi-card-sub"><span id="shadow-kpi-spoiler-count">0</span> Kazanan İşlem Engellendi</div>
@@ -4234,8 +4234,8 @@ HTML_PAGE = """
 
             <div class="cockpit-kpi-card" style="border-top:3px solid #f59e0b;">
                 <div class="kpi-card-head">
-                    <span class="kpi-card-title">🎯 Kalkan Verimliliği (SEI)</span>
-                    <span class="kpi-card-icon">🎯</span>
+                    <span class="kpi-card-title">Kalkan Verimliliği (SEI)</span>
+                    <span class="kpi-card-icon" style="font-size:10px; font-weight:800; color:#f59e0b; font-family:'JetBrains Mono'; background:rgba(245,158,11,0.12); padding:2px 6px; border-radius:4px; border:1px solid rgba(245,158,11,0.3);">INDEX</span>
                 </div>
                 <div class="kpi-card-val" id="shadow-kpi-sei" style="color:#f59e0b;">%100.0</div>
                 <div class="kpi-card-sub">Kurtarılan / Toplam Etki Oranı</div>
@@ -4244,8 +4244,8 @@ HTML_PAGE = """
 
             <div class="cockpit-kpi-card" style="border-top:3px solid #06b6d4;">
                 <div class="kpi-card-head">
-                    <span class="kpi-card-title">💎 Net Kalkan Alfası</span>
-                    <span class="kpi-card-icon">💎</span>
+                    <span class="kpi-card-title">Net Kalkan Alfası</span>
+                    <span class="kpi-card-icon" style="font-size:10px; font-weight:800; color:#06b6d4; font-family:'JetBrains Mono'; background:rgba(6,182,212,0.12); padding:2px 6px; border-radius:4px; border:1px solid rgba(6,182,212,0.3);">ALPHA</span>
                 </div>
                 <div class="kpi-card-val" id="shadow-kpi-alpha" style="color:#06b6d4;">$0.00</div>
                 <div class="kpi-card-sub">Kurtarılan Zarar - Kaçan Kâr</div>
@@ -4254,8 +4254,8 @@ HTML_PAGE = """
 
             <div class="cockpit-kpi-card" style="border-top:3px solid #a855f7;">
                 <div class="kpi-card-head">
-                    <span class="kpi-card-title">👻 Canlı Gölge Pozisyonlar</span>
-                    <span class="kpi-card-icon">⏳</span>
+                    <span class="kpi-card-title">Canlı Gölge Pozisyonlar</span>
+                    <span class="kpi-card-icon" style="font-size:10px; font-weight:800; color:#a855f7; font-family:'JetBrains Mono'; background:rgba(168,85,247,0.12); padding:2px 6px; border-radius:4px; border:1px solid rgba(168,85,247,0.3);">LIVE</span>
                 </div>
                 <div class="kpi-card-val" id="shadow-kpi-active" style="color:#a855f7;">0 Aktif</div>
                 <div class="kpi-card-sub"><span id="shadow-kpi-total-tracked">0</span> Toplam Sinyal Taraması</div>
@@ -4266,35 +4266,35 @@ HTML_PAGE = """
         <!-- GÖLGE SEKME KONTROL VE HIZLI GİZLE/GÖSTER BARI -->
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; padding:10px 16px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:10px; flex-wrap:wrap; gap:10px;">
             <div style="display:flex; align-items:center; gap:8px;">
-                <span style="font-size:13px; font-weight:700; color:#fff;">📑 Görünüm & Tablo Denetimi:</span>
+                <span style="font-size:13px; font-weight:700; color:#fff;">Görünüm & Tablo Denetimi:</span>
                 <span style="font-size:11px; color:#94a3b8;">Aşağı doğru uzayan tabloları tek tıkla gizleyebilir veya açabilirsiniz.</span>
             </div>
             <div style="display:flex; gap:8px;">
-                <button class="nav-tab-btn" onclick="toggleAllShadowSections(false)" style="padding:6px 12px; font-size:11px; display:flex; align-items:center; gap:5px; border-color:rgba(244,63,94,0.3); color:#f43f5e;" title="Tüm tabloları gizleyerek kompakt başlık moduna geçer">
-                    <span>📁</span> <span>Tüm Tabloları Gizle (Kompakt Mod)</span>
+                <button class="nav-tab-btn" onclick="toggleAllShadowSections(false)" style="padding:6px 12px; font-size:11px; border-color:rgba(244,63,94,0.3); color:#f43f5e;" title="Tüm tabloları gizleyerek kompakt başlık moduna geçer">
+                    <span>Tüm Tabloları Gizle (Kompakt Mod)</span>
                 </button>
-                <button class="nav-tab-btn" onclick="toggleAllShadowSections(true)" style="padding:6px 12px; font-size:11px; display:flex; align-items:center; gap:5px; border-color:rgba(16,185,129,0.3); color:#10b981;" title="Tüm tabloları görünür yapar">
-                    <span>📂</span> <span>Tüm Tabloları Aç</span>
+                <button class="nav-tab-btn" onclick="toggleAllShadowSections(true)" style="padding:6px 12px; font-size:11px; border-color:rgba(16,185,129,0.3); color:#10b981;" title="Tüm tabloları görünür yapar">
+                    <span>Tüm Tabloları Aç</span>
                 </button>
             </div>
         </div>
 
-        <!-- 1. BÖLÜM: 🧬 COIN BAZLI CANLI DNA VE KALİBRASYON MASASI -->
+        <!-- 1. BÖLÜM: COIN BAZLI CANLI DNA VE KALİBRASYON MASASI -->
         <div class="table-container" style="margin-bottom:24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:12px;">
                 <div>
                     <h3 style="font-size:15px; font-weight:700; color:#fff; margin:0; display:flex; align-items:center; gap:8px;">
-                        <span>🧬</span> 100 Parite Canlı Piyasa DNA'sı ve Otonom Kalibrasyon Masası
+                        100 Parite Canlı Piyasa DNA'sı ve Otonom Kalibrasyon Masası
                     </h3>
                     <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Paritelerin canlı test sonuçları, fitil esneklikleri ve botun otonom parametre iyileştirme tavsiyeleri</div>
                 </div>
                 <div style="display:flex; gap:8px; align-items:center;">
                     <input type="text" id="shadow-coin-search" placeholder="Coin ara (ENA, DOGE, MOVR...)" oninput="filterShadowCoinsTable()" style="background:#090d16; border:1px solid var(--border); color:#fff; padding:6px 12px; border-radius:6px; font-size:12px; width:235px; min-width:200px; font-family:'JetBrains Mono', monospace;">
                     <button class="nav-tab-btn active" id="btn-shadow-filter-all" onclick="setShadowCoinFilter('ALL')" style="padding:6px 12px; font-size:11px;">Tümü</button>
-                    <button class="nav-tab-btn" id="btn-shadow-filter-relax" onclick="setShadowCoinFilter('RELAX')" style="padding:6px 12px; font-size:11px; border-color:rgba(244,63,94,0.4); color:#f43f5e;">⚠️ Gevşet</button>
-                    <button class="nav-tab-btn" id="btn-shadow-filter-keep" onclick="setShadowCoinFilter('KEEP')" style="padding:6px 12px; font-size:11px; border-color:rgba(16,185,129,0.4); color:#10b981;">👑 Koru</button>
-                    <button class="nav-tab-btn" id="btn-toggle-shadow-dna" onclick="toggleShadowSection('shadow-dna')" style="padding:6px 12px; font-size:11px; border-color:rgba(56,189,248,0.4); color:#38bdf8; display:flex; align-items:center; gap:5px;" title="Bu tabloyu gizle veya aç">
-                        <span id="icon-toggle-shadow-dna">👁️</span> <span id="text-toggle-shadow-dna">Gizle</span>
+                    <button class="nav-tab-btn" id="btn-shadow-filter-relax" onclick="setShadowCoinFilter('RELAX')" style="padding:6px 12px; font-size:11px; border-color:rgba(244,63,94,0.4); color:#f43f5e;">Gevşet</button>
+                    <button class="nav-tab-btn" id="btn-shadow-filter-keep" onclick="setShadowCoinFilter('KEEP')" style="padding:6px 12px; font-size:11px; border-color:rgba(16,185,129,0.4); color:#10b981;">Koru</button>
+                    <button class="nav-tab-btn" id="btn-toggle-shadow-dna" onclick="toggleShadowSection('shadow-dna')" style="padding:6px 12px; font-size:11px; border-color:rgba(56,189,248,0.4); color:#38bdf8;" title="Bu tabloyu gizle veya aç">
+                        <span id="text-toggle-shadow-dna">Gizle</span>
                     </button>
                 </div>
             </div>
@@ -4304,8 +4304,8 @@ HTML_PAGE = """
                         <tr>
                             <th style="text-align:left; width:75px;">Parite</th>
                             <th style="text-align:center; width:60px;">Toplam</th>
-                            <th style="text-align:center; width:65px;" title="Hero Kalkan (Zarardan Kurtarılan İşlem)">🛡️ Hero</th>
-                            <th style="text-align:center; width:65px;" title="Spoiler Kalkan (Kaçan Kârlı İşlem)">⚠️ Spoiler</th>
+                            <th style="text-align:center; width:65px;" title="Hero Kalkan (Zarardan Kurtarılan İşlem)">Hero</th>
+                            <th style="text-align:center; width:65px;" title="Spoiler Kalkan (Kaçan Kârlı İşlem)">Spoiler</th>
                             <th style="text-align:center; width:85px;">Kurtarılan</th>
                             <th style="text-align:center; width:85px;">Kaçan Kâr</th>
                             <th style="text-align:center; width:65px;" title="Shield Efficiency Index">SEI (%)</th>
@@ -4323,18 +4323,18 @@ HTML_PAGE = """
             </div>
         </div>
 
-        <!-- 2. BÖLÜM: 🛡️ KALKAN LİDERLİK VE VERİMLİLİK KARNESİ (SHIELD AUDIT) -->
+        <!-- 2. BÖLÜM: KALKAN LİDERLİK VE VERİMLİLİK KARNESİ (SHIELD AUDIT) -->
         <div class="table-container" style="margin-bottom:24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:12px;">
                 <div>
                     <h3 style="font-size:15px; font-weight:700; color:#fff; margin:0; display:flex; align-items:center; gap:8px;">
-                        <span>🛡️</span> Güvenlik Kalkanları ve Filtre Verimlilik Karnesi (Shield Leaderboard)
+                        Güvenlik Kalkanları ve Filtre Verimlilik Karnesi (Shield Leaderboard)
                     </h3>
                     <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Hangi kalkan botu kaç dolarlık zarardan kurtardı? Hangisi kaç dolarlık kârı engelledi?</div>
                 </div>
                 <div>
-                    <button class="nav-tab-btn" id="btn-toggle-shadow-shields" onclick="toggleShadowSection('shadow-shields')" style="padding:6px 12px; font-size:11px; border-color:rgba(56,189,248,0.4); color:#38bdf8; display:flex; align-items:center; gap:5px;" title="Bu tabloyu gizle veya aç">
-                        <span id="icon-toggle-shadow-shields">👁️</span> <span id="text-toggle-shadow-shields">Gizle</span>
+                    <button class="nav-tab-btn" id="btn-toggle-shadow-shields" onclick="toggleShadowSection('shadow-shields')" style="padding:6px 12px; font-size:11px; border-color:rgba(56,189,248,0.4); color:#38bdf8;" title="Bu tabloyu gizle veya aç">
+                        <span id="text-toggle-shadow-shields">Gizle</span>
                     </button>
                 </div>
             </div>
@@ -4360,21 +4360,21 @@ HTML_PAGE = """
             </div>
         </div>
 
-        <!-- 3. BÖLÜM: 👻 AKTİF GÖLGE POZİSYONLAR & SON TAMAMLANAN GÖLGE DEFTERİ -->
+        <!-- 3. BÖLÜM: AKTİF GÖLGE POZİSYONLAR & SON TAMAMLANAN GÖLGE DEFTERİ -->
         <div style="display:grid; grid-template-columns:1fr; gap:20px;">
             <!-- AKTİF SANAL İŞLEMLER -->
             <div class="table-container">
                 <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                     <div>
                         <h3 style="font-size:15px; font-weight:700; color:#fff; margin:0; display:flex; align-items:center; gap:8px;">
-                            <span>⏳</span> Canlı İzlenen Aktif Gölge Pozisyonlar (Live Shadow Tracking)
+                            Canlı İzlenen Aktif Gölge Pozisyonlar (Live Shadow Tracking)
                         </h3>
                         <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Açılması engellenen fakat anlık fiyat ve 5M mum teyidiyle canlı takip edilen pozisyonlar</div>
                     </div>
                     <div style="display:flex; gap:8px; align-items:center;">
                         <span id="shadow-active-count-badge" style="background:rgba(168,85,247,0.15); color:#a855f7; border:1px solid rgba(168,85,247,0.3); font-size:11px; font-weight:700; padding:2px 8px; border-radius:12px;">0 Pozisyon</span>
-                        <button class="nav-tab-btn" id="btn-toggle-shadow-active" onclick="toggleShadowSection('shadow-active')" style="padding:6px 12px; font-size:11px; border-color:rgba(168,85,247,0.4); color:#a855f7; display:flex; align-items:center; gap:5px;" title="Bu tabloyu gizle veya aç">
-                            <span id="icon-toggle-shadow-active">👁️</span> <span id="text-toggle-shadow-active">Gizle</span>
+                        <button class="nav-tab-btn" id="btn-toggle-shadow-active" onclick="toggleShadowSection('shadow-active')" style="padding:6px 12px; font-size:11px; border-color:rgba(168,85,247,0.4); color:#a855f7;" title="Bu tabloyu gizle veya aç">
+                            <span id="text-toggle-shadow-active">Gizle</span>
                         </button>
                     </div>
                 </div>
@@ -4410,13 +4410,13 @@ HTML_PAGE = """
                 <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                     <div>
                         <h3 style="font-size:15px; font-weight:700; color:#fff; margin:0; display:flex; align-items:center; gap:8px;">
-                            <span>📜</span> Son Tamamlanan Gölge İşlem Defteri (Son 50 Sonuç)
+                            Son Tamamlanan Gölge İşlem Defteri (Son 50 Sonuç)
                         </h3>
                         <div style="font-size:11px; color:#94a3b8; margin-top:4px;">TP1, TP2, Stop veya Zaman Aşımıyla sonuçlanan sanal işlemler ve adli teşhis</div>
                     </div>
                     <div>
-                        <button class="nav-tab-btn" id="btn-toggle-shadow-history" onclick="toggleShadowSection('shadow-history')" style="padding:6px 12px; font-size:11px; border-color:rgba(56,189,248,0.4); color:#38bdf8; display:flex; align-items:center; gap:5px;" title="Bu tabloyu gizle veya aç">
-                            <span id="icon-toggle-shadow-history">👁️</span> <span id="text-toggle-shadow-history">Gizle</span>
+                        <button class="nav-tab-btn" id="btn-toggle-shadow-history" onclick="toggleShadowSection('shadow-history')" style="padding:6px 12px; font-size:11px; border-color:rgba(56,189,248,0.4); color:#38bdf8;" title="Bu tabloyu gizle veya aç">
+                            <span id="text-toggle-shadow-history">Gizle</span>
                         </button>
                     </div>
                 </div>
@@ -6014,7 +6014,7 @@ async function loadAdminMetrics() {
                 if (p === 'WHIPSAW') w++;
                 else if (p === 'GOLD') g++;
             }
-            badge.innerText = `${w} ⚠️ | ${g} 👑`;
+            badge.innerText = `${w} W | ${g} G`;
         }
 
         let shadowCoinFilterState = 'ALL';
@@ -6041,16 +6041,12 @@ async function loadAdminMetrics() {
                 const isHidden = shadowSections[k].isHidden;
                 const container = document.getElementById(`container-${k}`);
                 const btnText = document.getElementById(`text-toggle-${k}`);
-                const btnIcon = document.getElementById(`icon-toggle-${k}`);
                 const btn = document.getElementById(`btn-toggle-${k}`);
                 if (container) {
                     container.style.display = isHidden ? 'none' : 'block';
                 }
                 if (btnText) {
                     btnText.innerText = isHidden ? 'Göster' : 'Gizle';
-                }
-                if (btnIcon) {
-                    btnIcon.innerText = isHidden ? '👁️‍🗨️' : '👁️';
                 }
                 if (btn) {
                     if (isHidden) {
@@ -6092,7 +6088,7 @@ async function loadAdminMetrics() {
             const sei = summ.shield_efficiency_index != null ? summ.shield_efficiency_index : 100;
             const heroes = summ.hero_count || 0;
             const spoilers = summ.spoiler_count || 0;
-            badge.innerText = `SEI %${sei.toFixed(0)} (${heroes}🛡️/${spoilers}⚠️)`;
+            badge.innerText = `SEI %${sei.toFixed(0)} (${heroes}H / ${spoilers}S)`;
         }
 
         function setShadowCoinFilter(filter) {
@@ -6191,14 +6187,14 @@ async function loadAdminMetrics() {
                                     </td>
                                     <td style="text-align:left; color:#cbd5e1; font-size:11.5px;">
                                         <div style="font-weight:700; color:#38bdf8; font-size:11.5px; margin-bottom:3px; display:flex; align-items:center; gap:6px;">
-                                            <span>${c.scenario_title || '🎯 Canlı Piyasa Gözlemi'}</span>
+                                            <span>${c.scenario_title || 'Canlı Piyasa Gözlemi'}</span>
                                         </div>
                                         <div style="color:#cbd5e1; margin-bottom:4px; line-height:1.4;">${c.recommendation}</div>
-                                        ${(c.modifications_count > 0 && c.modifications_summary) ? `<div style="display:inline-block; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); border-radius:4px; padding:1px 6px; font-size:10px; color:#38bdf8; font-weight:600;">🛠️ ${c.modifications_summary}</div>` : ''}
+                                        ${(c.modifications_count > 0 && c.modifications_summary) ? `<div style="display:inline-block; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); border-radius:4px; padding:1px 6px; font-size:10px; color:#38bdf8; font-weight:600;">${c.modifications_summary}</div>` : ''}
                                     </td>
                                     <td style="text-align:center;">
                                         <button onclick="openShadowCoinDetail('${c.symbol}')" style="background:linear-gradient(135deg, rgba(56,189,248,0.2), rgba(168,85,247,0.2)); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:700; font-size:11px; font-family:'JetBrains Mono', monospace; transition:all 0.15s ease; white-space:nowrap;">
-                                            🔍 Detay
+                                            Detay
                                         </button>
                                     </td>
                                 </tr>
@@ -13207,7 +13203,7 @@ function downloadExcelReport() {
 
                 const isHeroDom = d.sei >= 70;
                 const isSpoilerDom = d.sei <= 35 && d.spoiler_count >= 2;
-                const badgeText = d.recommendation_badge || (isSpoilerDom ? '⚠️ GEVŞET' : (isHeroDom ? '👑 KORU' : (d.recommendation_badge || '⚖️ DENGELİ')));
+                const badgeText = d.recommendation_badge || (isSpoilerDom ? 'GEVŞET' : (isHeroDom ? 'KORU' : (d.recommendation_badge || 'DENGELİ')));
                 const badgeColor = badgeText.includes('GEVŞET') ? '#f43f5e' : (badgeText.includes('KORU') ? '#10b981' : (badgeText.includes('ERKEN') ? '#38bdf8' : '#f59e0b'));
                 const badgeBg = badgeText.includes('GEVŞET') ? 'rgba(244,63,94,0.15)' : (badgeText.includes('KORU') ? 'rgba(16,185,129,0.15)' : (badgeText.includes('ERKEN') ? 'rgba(56,189,248,0.15)' : 'rgba(245,158,11,0.15)'));
                 
@@ -13240,7 +13236,7 @@ function downloadExcelReport() {
                 const optDescEl = document.getElementById('shadow-modal-optimality-desc');
                 const optScoreEl = document.getElementById('shadow-modal-optimality-score');
 
-                if (optStatusEl) optStatusEl.innerText = d.optimality_status || '⚖️ Analiz Ediliyor';
+                if (optStatusEl) optStatusEl.innerText = d.optimality_status || 'Analiz Ediliyor';
                 if (optDescEl) optDescEl.innerText = d.optimality_desc || '';
                 if (optScoreEl) {
                     optScoreEl.innerText = `%${optScore.toFixed(0)}`;
@@ -13257,10 +13253,10 @@ function downloadExcelReport() {
                 document.getElementById('shadow-modal-narrative').innerHTML = `
                     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(168,85,247,0.2); flex-wrap:wrap; gap:6px;">
                         <div style="font-size:12px; font-weight:800; color:#c084fc; font-family:'JetBrains Mono';">
-                            🚨 TEŞHİS EDİLEN PİYASA REJİMİ: <span style="color:#fff;">${d.scenario_title || 'Canlı Piyasa Gözlemi'}</span>
+                            TEŞHİS EDİLEN PİYASA REJİMİ: <span style="color:#fff;">${d.scenario_title || 'Canlı Piyasa Gözlemi'}</span>
                         </div>
                         <div style="font-size:11px; color:#38bdf8; font-family:'JetBrains Mono'; font-weight:700;">
-                            ⚡ ${d.modifications_count || (d.modifications ? d.modifications.length : 0)} Eşzamanlı Parametre Aksiyonu
+                            ${d.modifications_count || (d.modifications ? d.modifications.length : 0)} Eşzamanlı Parametre Aksiyonu
                         </div>
                     </div>
                     <p style="margin:0; font-size:12.5px; line-height:1.6; color:#e2e8f0;">${narrativeText}</p>
@@ -13318,7 +13314,7 @@ function downloadExcelReport() {
                                     <span style="color:#e2e8f0; font-weight:600;">Gerekçe:</span> ${m.reason}
                                 </div>
                                 <div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.2); padding:3px 8px; border-radius:6px; font-family:'JetBrains Mono'; font-size:11px; color:#38bdf8; white-space:nowrap;">
-                                    📈 <span style="font-weight:700;">Kâr/Risk Etkisi:</span> ${m.expected_impact}
+                                    <span style="font-weight:700;">Kâr/Risk Etkisi:</span> ${m.expected_impact}
                                 </div>
                             </div>
                         </div>
@@ -13361,7 +13357,7 @@ function downloadExcelReport() {
                         const sideCol = t.side === 'LONG' ? '#10b981' : '#f43f5e';
                         const pnl = isAct ? 0.0 : (t.virtual_pnl_usd || 0);
                         const pnlCol = pnl >= 0 ? '#10b981' : '#f43f5e';
-                        const verd = isAct ? '⏳ CANLI TAKİP' : (t.verdict_badge || t.verdict || '-');
+                        const verd = isAct ? 'CANLI TAKİP' : (t.verdict_badge || t.verdict || '-');
                         return `
                             <tr style="border-bottom:1px solid rgba(255,255,255,0.04); font-family:'JetBrains Mono'; font-size:11px;">
                                 <td style="color:#94a3b8;">${(t.id || '').replace('SHD_','')}</td>

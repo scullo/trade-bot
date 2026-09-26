@@ -8,8 +8,8 @@ Arka Planda Gölge İşlem Takip Motoru ve Otonom Kuant Kalibrasyon Masası
    - Reddedilen / Veto edilen tüm setup'ları sanal pozisyon olarak açar.
    - Anlık fiyat (tick) ve 5M mum teyitleriyle pozisyonu TP1, TP2, Stop Loss ve Chandelier BE açısından canlı takip eder.
    - Kalkan Teşhisi (Verdict):
-     * STOP OLDU -> HERO SHIELD (🛡️ Kahraman Kalkan: Botu zarardan korudu, kurtarılan para $)
-     * TP1/TP2 OLDU -> SPOILER SHIELD (⚠️ Frenleyici Kalkan: Kârlı işlemi engelledi, kaçan kâr $)
+     * STOP OLDU -> HERO SHIELD (Kahraman Kalkan: Botu zarardan korudu, kurtarılan para $)
+     * TP1/TP2 OLDU -> SPOILER SHIELD (Frenleyici Kalkan: Kârlı işlemi engelledi, kaçan kâr $)
 2. Coin DNA Kalibratörü & Adli Otopsi Masası:
    - Her parite (ENA, DOGE, MOVR, vb.) için engellenen sinyalleri analiz eder.
    - Fitil esnekliği (Wick Elasticity), Taker CVD hassasiyeti, Tahta OBI tutunması.
@@ -212,7 +212,7 @@ class ShadowExecutionEngine:
             "virtual_pnl_usd": 0.0,
             "virtual_pnl_pct": 0.0,
             "verdict": None,  # "HERO_SHIELD", "SPOILER_SHIELD", "NEUTRAL"
-            "verdict_badge": "⏳ TAKİPTE (Açık Pozisyon)",
+            "verdict_badge": "TAKİPTE (Açık Pozisyon)",
             "narrative": "Pozisyon canlı fiyat ve mum teyidiyle takip ediliyor.",
             "margin_usd": 250.0,
             "leverage": 5.0,
@@ -277,7 +277,7 @@ class ShadowExecutionEngine:
             if (pos["early_be_locked"] or pos["tp1_hit"]) and pos.get("be_price"):
                 be_p = pos["be_price"]
                 if (side == "LONG" and cur_p <= be_p) or (side == "SHORT" and cur_p >= be_p):
-                    rec = self._close_shadow_position(s_id, be_p, "🛡️ Sanal Başa-Baş Koruması (BE)", "BE_CLOSED")
+                    rec = self._close_shadow_position(s_id, be_p, "Sanal Başa-Baş Koruması (BE)", "BE_CLOSED")
                     if rec:
                         closed_records.append(rec)
                     continue
@@ -290,7 +290,7 @@ class ShadowExecutionEngine:
 
             if pos["tp1_hit"]:
                 if (side == "LONG" and cur_p >= pos["tp2_price"]) or (side == "SHORT" and cur_p <= pos["tp2_price"]):
-                    rec = self._close_shadow_position(s_id, pos["tp2_price"], "🎯 Sanal TP2 Hedefi Gerçekleşti", "TP2_HIT")
+                    rec = self._close_shadow_position(s_id, pos["tp2_price"], "Sanal TP2 Hedefi Gerçekleşti", "TP2_HIT")
                     if rec:
                         closed_records.append(rec)
                     continue
@@ -298,7 +298,7 @@ class ShadowExecutionEngine:
             # 4. Mutlak Acil Tavan Stopu (%1.60 felaket tavanı)
             disaster_pct = 0.0160
             if (side == "LONG" and cur_p <= entry_p * (1.0 - disaster_pct)) or (side == "SHORT" and cur_p >= entry_p * (1.0 + disaster_pct)):
-                rec = self._close_shadow_position(s_id, cur_p, "🚨 Sanal Mutlak Stop Delindi (%1.60)", "STOPPED")
+                rec = self._close_shadow_position(s_id, cur_p, "Sanal Mutlak Stop Delindi (%1.60)", "STOPPED")
                 if rec:
                     closed_records.append(rec)
                 continue
@@ -344,7 +344,7 @@ class ShadowExecutionEngine:
             if (pos["early_be_locked"] or pos["tp1_hit"]) and pos.get("be_price"):
                 be_p = pos["be_price"]
                 if (side == "LONG" and (c_low <= be_p or c_close <= be_p)) or (side == "SHORT" and (c_high >= be_p or c_close >= be_p)):
-                    rec = self._close_shadow_position(s_id, be_p, "🛡️ Sanal Başa-Baş Koruması (BE)", "BE_CLOSED")
+                    rec = self._close_shadow_position(s_id, be_p, "Sanal Başa-Baş Koruması (BE)", "BE_CLOSED")
                     if rec:
                         closed_records.append(rec)
                     continue
@@ -358,7 +358,7 @@ class ShadowExecutionEngine:
                     is_stopped = True
 
                 if is_stopped:
-                    rec = self._close_shadow_position(s_id, sl_p, f"🛑 Sanal Stop Loss (${sl_p:.4f})", "STOPPED")
+                    rec = self._close_shadow_position(s_id, sl_p, f"Sanal Stop Loss (${sl_p:.4f})", "STOPPED")
                     if rec:
                         closed_records.append(rec)
                     continue
@@ -371,14 +371,14 @@ class ShadowExecutionEngine:
 
             if pos["tp1_hit"]:
                 if (side == "LONG" and c_high >= tp2_p) or (side == "SHORT" and c_low <= tp2_p):
-                    rec = self._close_shadow_position(s_id, tp2_p, f"🎯 Sanal TP2 Gerçekleşti (${tp2_p:.4f})", "TP2_HIT")
+                    rec = self._close_shadow_position(s_id, tp2_p, f"Sanal TP2 Gerçekleşti (${tp2_p:.4f})", "TP2_HIT")
                     if rec:
                         closed_records.append(rec)
                     continue
 
             # 4. ÖNCELİK: Zaman Aşımı (36 mum = 3 saat boyunca ne TP ne Stop olmadıysa kapat)
             if pos["candles_elapsed"] >= 36:
-                rec = self._close_shadow_position(s_id, c_close, "⏳ Zaman Aşımı (3 Saat / 36 Mum)", "TIMEOUT")
+                rec = self._close_shadow_position(s_id, c_close, "Zaman Aşımı (3 Saat / 36 Mum)", "TIMEOUT")
                 if rec:
                     closed_records.append(rec)
                 continue
@@ -417,37 +417,37 @@ class ShadowExecutionEngine:
         pos["virtual_pnl_pct"] = round(net_pct * self.virtual_leverage * 100.0, 2)
         pos["virtual_pnl_usd"] = round(self.virtual_notional * net_pct, 2)
 
-        # 🎯 ADLİ TEŞHİS (HERO vs SPOILER)
+        # ADLİ TEŞHİS (HERO vs SPOILER)
         symbol_clean = pos["symbol"].replace("/USDT", "")
         shield_txt = pos.get("shield", "Kuant Kalkan")
         pnl_val = pos["virtual_pnl_usd"]
 
         if pos["virtual_pnl_usd"] < -2.0:
             pos["verdict"] = "HERO_SHIELD"
-            pos["verdict_badge"] = "🛡️ KAHRAMAN KALKAN (Zarar Kurtarıldı)"
+            pos["verdict_badge"] = "KAHRAMAN KALKAN (Zarar Kurtarıldı)"
             pos["impact_usd"] = abs(pos["virtual_pnl_usd"])
             narrative = (
-                f"🛡️ KAHRAMAN SAVUNMA: {symbol_clean} {side} sinyali '{shield_txt}' tarafından engellendi. "
+                f"KAHRAMAN SAVUNMA: {symbol_clean} {side} sinyali '{shield_txt}' tarafından engellendi. "
                 f"Piyasa ters yöne kırıldı ve sanal stop seviyesini ({pos['sl_price']}) deldi. "
                 f"Kalkan tetiklenmeseydi kasadan -${abs(pnl_val):.2f} (%{abs(pos['virtual_pnl_pct']):.1f} ROE) eksilecekti. "
                 f"Kalkan sermayeyi kusursuz korudu!"
             )
         elif pos["virtual_pnl_usd"] > 2.0:
             pos["verdict"] = "SPOILER_SHIELD"
-            pos["verdict_badge"] = "⚠️ FRENLEYİCİ KALKAN (Kaçan Kâr)"
+            pos["verdict_badge"] = "FRENLEYİCİ KALKAN (Kaçan Kâr)"
             pos["impact_usd"] = pos["virtual_pnl_usd"]
             narrative = (
-                f"⚠️ FRENLEYİCİ ENGEL: {symbol_clean} {side} sinyali '{shield_txt}' tarafından engellendi. "
+                f"FRENLEYİCİ ENGEL: {symbol_clean} {side} sinyali '{shield_txt}' tarafından engellendi. "
                 f"Ancak fiyat hedefe doğru +%{pos['max_mfe_pct']:.2f} zirve yaptı ve sanal hedefe (${exit_p}) ulaştı. "
                 f"Bu filtre engellemeseydi kasaya +${abs(pnl_val):.2f} (+%{pos['virtual_pnl_pct']:.1f} ROE) kâr girecekti. "
                 f"Tavsiye: {symbol_clean} paritesinde bu kalkan eşiği esnetilebilir."
             )
         else:
             pos["verdict"] = "NEUTRAL"
-            pos["verdict_badge"] = "⚪ NÖTR (Başa-Baş)"
+            pos["verdict_badge"] = "NÖTR (Başa-Baş)"
             pos["impact_usd"] = 0.0
             narrative = (
-                f"⚪ NÖTR / DENGELİ: {symbol_clean} {side} işlemi başa-baş veya yatay bölgede kapandı (${pnl_val:+.2f}). "
+                f"NÖTR / DENGELİ: {symbol_clean} {side} işlemi başa-baş veya yatay bölgede kapandı (${pnl_val:+.2f}). "
                 f"Kalkanın kasaya belirgin bir zararı veya fırsat maliyeti oluşmadı."
             )
 
@@ -646,9 +646,9 @@ class ShadowExecutionEngine:
         calibrated = False
         if len(premature_be_trades) >= 1 and missed > saved:
             calibrated = True
-            rec_badge = "⚡ ERKEN BE"
+            rec_badge = "ERKEN BE"
             primary_scenario = "PREMATURE_BE_WHIPSAW"
-            scenario_title = "⚡ Erken Başa-Baş (Chandelier) Kırbaç Tuzağı"
+            scenario_title = "Erken Başa-Baş (Chandelier) Kırbaç Tuzağı"
             recommendation = f"{len(premature_be_trades)} işlemde erken BE kilidi tetiklendikten sonra fiyat doğal dalgalanmayla girişte kapandı ve ardından TP hedeflerine fırladı."
             forensic_narrative = (
                 f"{clean} paritesinde yön analizi son derece isabetliydi. Ancak +%0.80 kârda devreye giren Chandelier Erken Başa-Baş (BE) kilidi, "
@@ -658,9 +658,9 @@ class ShadowExecutionEngine:
             )
         elif sei < 40.0 and len(spoilers) >= 2:
             calibrated = True
-            rec_badge = "⚠️ GEVŞET"
+            rec_badge = "GEVŞET"
             primary_scenario = "SPOILER_OVER_RESTRICTIVE"
-            scenario_title = "⚠️ Aşırı Katı Filtre Kurbanı (Kaçan Fırsat Riski)"
+            scenario_title = "Aşırı Katı Filtre Kurbanı (Kaçan Fırsat Riski)"
             recommendation = f"Frenleyici kalkan bu paritede ${missed:.1f} kâr kaçırdı ({len(spoilers)} işlem). '{top_shield}' eşiği bu pariteye özel %30 esnetilmeli."
             forensic_narrative = (
                 f"{clean} paritesinde savunma kalkanları piyasanın dinamizmine ayak uyduramayarak gereğinden katı davrandı. "
@@ -669,9 +669,9 @@ class ShadowExecutionEngine:
                 f"Kalkan eşikleri %25-30 gevşetilerek paritenin alfa üretim potansiyeli serbest bırakılmalıdır."
             )
         elif sei >= 75.0 and len(heroes) >= 2:
-            rec_badge = "👑 KORU"
+            rec_badge = "KORU"
             primary_scenario = "HERO_BULLETPROOF"
-            scenario_title = "👑 Çelik Savunma Zırhı (Kusursuz Sermaye Koruması)"
+            scenario_title = "Çelik Savunma Zırhı (Kusursuz Sermaye Koruması)"
             recommendation = f"Kalkan kusursuz çalışıyor. Toplam ${saved:.1f} sermaye korundu. Mevcut sıkı filtreler korunmalı."
             forensic_narrative = (
                 f"{clean} paritesinde kuant kalkanlar tam bir sermaye koruma kalkanı gibi çalışıyor. "
@@ -681,9 +681,9 @@ class ShadowExecutionEngine:
             )
         elif avg_wick >= 20.0 or "WHIPSAW" in current_persona:
             calibrated = True
-            rec_badge = "🌪️ FITIL TUZAK"
+            rec_badge = "FITIL TUZAK"
             primary_scenario = "HIGH_FAKEOUT_VOLATILE"
-            scenario_title = "🌪️ Sahte Kırılım & Fitil Tuzağı (Whipsaw Rejimi)"
+            scenario_title = "Sahte Kırılım & Fitil Tuzağı (Whipsaw Rejimi)"
             recommendation = f"Paritenin ortalama fitil elastikiyeti (%{avg_wick:.1f}) çok yüksek. Breakout yasaklanmalı, S3/R3 sekmeleri hedeflenmeli."
             forensic_narrative = (
                 f"{clean} paritesi ortalama %{avg_wick:.1f} gibi yüksek bir sahte fitil elastikiyetine sahip. "
@@ -692,9 +692,9 @@ class ShadowExecutionEngine:
             )
         elif avg_atr >= 1.8 and len(heroes) >= 2:
             calibrated = True
-            rec_badge = "💥 GENİŞ STOP"
+            rec_badge = "GENİŞ STOP"
             primary_scenario = "HIGH_BETA_SUFFOCATION"
-            scenario_title = "💥 Dar Stop Boğulması (Yüksek Volatilite & ATR Uyumsuzluğu)"
+            scenario_title = "Dar Stop Boğulması (Yüksek Volatilite & ATR Uyumsuzluğu)"
             recommendation = f"Yüksek volatilite (%{avg_atr:.2f} ATR) dar stopları erken patlatıyor. Stop çarpanı 2.0x ATR seviyesine genişletilmeli."
             forensic_narrative = (
                 f"{clean} paritesinin oynaklık katsayısı (%{avg_atr:.2f} ATR) piyasa ortalamasından belirgin şekilde yüksek. "
@@ -702,33 +702,33 @@ class ShadowExecutionEngine:
                 f"Stop genişliğinin 2.0x ATR seviyesine çekilmesi pozisyona rahat bir hareket alanı sağlayacaktır."
             )
         elif "Tahta" in top_shield or "Likidite" in top_shield:
-            rec_badge = "🧱 TAHTA DUVARI"
+            rec_badge = "TAHTA DUVARI"
             primary_scenario = "LOW_LIQUIDITY_WALL"
-            scenario_title = "🧱 Derinlik Duvarı & Likidite Açığı (Orderbook Dengesizliği)"
+            scenario_title = "Derinlik Duvarı & Likidite Açığı (Orderbook Dengesizliği)"
             recommendation = f"Paritede emir defteri dengesizliği (OBI) hakim. Tahta likiditesi ve mikro-CVD emilim teyidi şart."
             forensic_narrative = (
                 f"{clean} paritesinde emir defteri dengesizliği (OBI) ve yapay duvarlar sıkça tetikleniyor. "
                 f"Bu paritede tahta likiditesi ve mikro-CVD emilim teyidi aranmadan açılan işlemler yüksek kayma riski taşır."
             )
         elif tot_completed >= 3 and 40.0 <= sei < 75.0:
-            rec_badge = "⚖️ DENGELİ"
+            rec_badge = "DENGELİ"
             primary_scenario = "EQUILIBRIUM_BALANCED"
-            scenario_title = "⚖️ Kararlı ve Dengeli Piyasa (Optimum Denge)"
+            scenario_title = "Kararlı ve Dengeli Piyasa (Optimum Denge)"
             recommendation = f"Koruma ve fırsat dengesi stabil (SEI: %{sei:.1f}). Standart parametreler optimum."
             forensic_narrative = (
                 f"{clean} paritesinde hem engellenen zararlar (${saved:.2f}) hem de kaçan kârlar (${missed:.2f}) makul bir denge içinde (SEI: %{sei:.1f}). "
                 f"Sistemin standart kuralları ve risk çarpanları bu parite için optimum verimliliktedir."
             )
         elif tot_active > 0 and tot_completed == 0:
-            rec_badge = "⏳ TAKİPTE"
+            rec_badge = "TAKİPTE"
             primary_scenario = "ACCUMULATING_DATA"
-            scenario_title = "⏳ Canlı Piyasa Gözlemi (Aktif Pozisyon Takipte)"
+            scenario_title = "Canlı Piyasa Gözlemi (Aktif Pozisyon Takipte)"
             recommendation = f"Şu anda {tot_active} adet gölge işlem canlı fiyat ve mumlarla izleniyor."
             forensic_narrative = f"{clean} paritesinde canlı piyasa sinyali alındı ve kalkan tarafından engellenen işlem anlık olarak simüle ediliyor."
         else:
-            rec_badge = "⏳ VERİ TOPLANIYOR"
+            rec_badge = "VERİ TOPLANIYOR"
             primary_scenario = "ACCUMULATING_DATA"
-            scenario_title = "⏳ Canlı Piyasa Gözlemi (Veri Biriktirme Modu)"
+            scenario_title = "Canlı Piyasa Gözlemi (Veri Biriktirme Modu)"
             recommendation = f"Henüz {tot_completed} gölge işlem tamamlandı ({tot_active} aktif). Sağlıklı kalibrasyon için takip sürüyor."
             forensic_narrative = (
                 f"{clean} paritesinde şu ana kadar {tot_completed} tamamlanmış, {tot_active} aktif gölge işlem izlendi. "
@@ -868,19 +868,19 @@ class ShadowExecutionEngine:
         # 4. Optimum Durum & Kuant Kararlılık Endeksi (Optimality Index)
         if primary_scenario == "HERO_BULLETPROOF":
             optimality_score = 98.0
-            optimality_status = "🔒 KUSURSUZ OPTİMUM (DOKUNMA)"
+            optimality_status = "KUSURSUZ OPTİMUM (DOKUNMA)"
             optimality_desc = "Parametreler altın oranda. Kalkanlar kusursuz sermaye koruması sağlıyor, parametre değiştirmek riski artırır."
         elif primary_scenario == "EQUILIBRIUM_BALANCED":
             optimality_score = 88.0
-            optimality_status = "⚖️ STABİL VE OPTİMUM"
+            optimality_status = "STABİL VE OPTİMUM"
             optimality_desc = "Fırsat ve koruma dengesi kararlı seviyede. Mevcut konfigürasyon sürdürülmeli."
         elif primary_scenario == "ACCUMULATING_DATA":
             optimality_score = 50.0
-            optimality_status = "⏳ VERİ BİRİKİYOR (GÖZLEM MODU)"
+            optimality_status = "VERİ BİRİKİYOR (GÖZLEM MODU)"
             optimality_desc = f"İstatistiki kesinlik için {tot_completed}/5 işlem tamamlandı. Erken müdahale aşırı uyum (overfitting) tuzağı yaratır."
         else:
             optimality_score = max(15.0, round(sei * 0.4, 1))
-            optimality_status = "🛠️ KALİBRASYON GEREKLİ (OPTİMUM DIŞI)"
+            optimality_status = "KALİBRASYON GEREKLİ (OPTİMUM DIŞI)"
             optimality_desc = f"Parite {scenario_title} rejiminde. Sermaye verimliliği için paket uygulanmalı."
 
         return {
@@ -1015,11 +1015,11 @@ class ShadowExecutionEngine:
             sei = round((saved / impact) * 100.0, 1) if impact > 0 else 100.0
 
             if sei >= 70.0:
-                role = "👑 KAHRAMAN (Hero)"
+                role = "KAHRAMAN (Hero)"
             elif sei <= 35.0 and len(spoilers) >= 2:
-                role = "⚠️ FRENLEYİCİ (Spoiler)"
+                role = "FRENLEYİCİ (Spoiler)"
             else:
-                role = "⚖️ DENGELİ (Balanced)"
+                role = "DENGELİ (Balanced)"
 
             leaderboard.append({
                 "shield_name": s_name,
