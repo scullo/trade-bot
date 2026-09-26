@@ -24,9 +24,23 @@ Arka Planda Gölge İşlem Takip Motoru ve Otonom Kuant Kalibrasyon Masası
 import os
 import json
 import time
+import base64
+import threading
+import urllib.request
 from collections import deque
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Any
+
+try:
+    from paper_trader import _get_gh_token, GITHUB_REPO, GITHUB_BRANCH
+    GITHUB_TOKEN = _get_gh_token()
+except Exception:
+    GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+    GITHUB_REPO = os.environ.get("GITHUB_REPO", "scullo/trade-bot")
+    GITHUB_BRANCH = os.environ.get("GITHUB_STATE_BRANCH", "state")
+
+SHADOW_GITHUB_FILE_PATH = "shadow_trades_history.json"
+SHADOW_GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{SHADOW_GITHUB_FILE_PATH}"
 
 
 class ShadowExecutionEngine:
@@ -38,6 +52,15 @@ class ShadowExecutionEngine:
         self.history_file = os.path.join(os.path.dirname(__file__), history_file)
         self.max_active = max_active
         self.max_history = max_history
+        self.is_test = "test" in os.path.basename(self.history_file).lower()
+
+        # Bulut Kalıcılık (GitHub State Dalı) ve Sağlık Koruması
+        self._github_sha: Optional[str] = None
+        self._push_lock = threading.Lock()
+        self._last_push_ts: float = 0.0
+        self.last_sync_status: str = "BEKLEMEDE"
+        self.last_tick_ts: float = time.time()
+        self.last_candle_ts: float = time.time()
 
         # Aktif Sanal Pozisyonlar: {shadow_id: ShadowPositionDict}
         self.active_positions: Dict[str, dict] = {}
@@ -236,6 +259,7 @@ class ShadowExecutionEngine:
     # ──────────────────────────────────────────────────────────────────────────
     def update_tick(self, symbol: str, current_price: float) -> List[dict]:
         """Anlık milisaniyelik fiyat güncellemesi (MFE, MAE, Acil Stop, Chandelier BE)."""
+        self.last_tick_ts = time.time()
         clean_sym = symbol.replace("/USDT", "").replace(":USDT", "").replace("USDT", "").upper() + "/USDT"
         closed_records = []
         cur_p = float(current_price)
@@ -307,6 +331,7 @@ class ShadowExecutionEngine:
 
     def update_candle(self, symbol: str, current_candle: dict) -> List[dict]:
         """5 Dakikalık mum kapanışı ile fitil ve kapanış kontrolleri."""
+        self.last_candle_ts = time.time()
         clean_sym = symbol.replace("/USDT", "").replace(":USDT", "").replace("USDT", "").upper() + "/USDT"
         closed_records = []
         c_high = float(current_candle.get("high", 0.0))
@@ -455,7 +480,7 @@ class ShadowExecutionEngine:
         pos["status"] = exit_status
 
         self.completed_trades.append(pos)
-        self.save_history()
+        self.save_history(critical=True)
         return pos
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -1049,41 +1074,182 @@ class ShadowExecutionEngine:
         return trades[-limit:] if len(trades) > limit else trades
 
     # ──────────────────────────────────────────────────────────────────────────
-    # GITHUB & DİSK KALICILIĞI (PERSISTENCE)
+    # GITHUB UZAK BULUT KALICILIĞI (REMOTE PERSISTENCE) & SİSTEM SAĞLIĞI
     # ──────────────────────────────────────────────────────────────────────────
-    def save_history(self):
-        """Hafızadaki son 500 gölge işlemi ve aktif pozisyonları JSON dosyasına yazar."""
+    def save_history(self, critical: bool = False):
+        """Hafızadaki gölge işlemleri hem lokal dosyaya atomik hem de GitHub state dalına kaydeder."""
+        data = {
+            "updated_at": datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S"),
+            "completed": list(self.completed_trades)[-500:],
+            "actives": list(self.active_positions.values())
+        }
+
+        # 1. Lokal Dosyaya Atomik Yazma
         try:
-            data = {
-                "updated_at": datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S"),
-                "completed": list(self.completed_trades)[-500:],
-                "actives": list(self.active_positions.values())
-            }
-            with open(self.history_file, "w", encoding="utf-8") as f:
+            tmp_file = self.history_file + ".tmp"
+            with open(tmp_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp_file, self.history_file)
         except Exception:
             pass
 
-    def load_history(self):
-        """Başlangıçta geçmiş gölge işlemleri ve aktif pozisyonları hafızaya yükler."""
-        if not os.path.exists(self.history_file):
+        # 2. GitHub Uzak Kalıcılık (İzole state dalı - Render restart döngüsünü tetiklemez)
+        if GITHUB_TOKEN and not self.is_test:
+            now_ts = time.time()
+            if critical:
+                self._last_push_ts = now_ts
+                threading.Thread(target=self._push_to_github, args=(data,), daemon=True).start()
+            else:
+                if now_ts - self._last_push_ts >= 25.0:
+                    self._last_push_ts = now_ts
+                    threading.Thread(target=self._push_to_github, args=(data,), daemon=True).start()
+
+    def _push_to_github(self, data: dict):
+        """shadow_trades_history.json dosyasını GitHub state dalına güvenle yazar."""
+        if self.is_test or not GITHUB_TOKEN or not self._push_lock.acquire(blocking=False):
             return
         try:
-            with open(self.history_file, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                completed = data.get("completed", [])
-                for t in completed:
-                    self.completed_trades.append(t)
-                actives = data.get("actives", [])
-                for a in actives:
-                    s_id = a.get("id") or a.get("shadow_id")
-                    if s_id:
-                        if "id" not in a:
-                            a["id"] = s_id
-                        self.active_positions[s_id] = a
-                        sym = a.get("symbol")
-                        if sym:
-                            self.symbol_active_map[sym] = s_id
-            print(f">> [GÖLGE MOTORU] {len(self.completed_trades)} adet geçmiş, {len(self.active_positions)} adet aktif gölge işlem hafızaya yüklendi.")
-        except Exception as e:
-            print(f">> [GÖLGE MOTORU UYARI] Geçmiş yüklenemedi: {e}")
+            for attempt in range(1, 4):
+                try:
+                    content_str = json.dumps(data, ensure_ascii=False, indent=2)
+                    content_b64 = base64.b64encode(content_str.encode("utf-8")).decode("utf-8")
+
+                    # Güncel SHA'yı al
+                    try:
+                        req = urllib.request.Request(f"{SHADOW_GITHUB_API_URL}?ref={GITHUB_BRANCH}", headers={
+                            "Authorization": f"token {GITHUB_TOKEN}",
+                            "Accept": "application/vnd.github.v3+json",
+                            "User-Agent": "Valkyrie-Shadow-Engine"
+                        })
+                        with urllib.request.urlopen(req, timeout=10) as res:
+                            gh = json.loads(res.read().decode("utf-8"))
+                            self._github_sha = gh.get("sha")
+                    except Exception:
+                        pass
+
+                    payload = {
+                        "message": f"[SHADOW] State auto-sync ({len(data.get('completed', []))} completed, {len(data.get('actives', []))} active)",
+                        "content": content_b64,
+                        "branch": GITHUB_BRANCH
+                    }
+                    if self._github_sha:
+                        payload["sha"] = self._github_sha
+
+                    payload_bytes = json.dumps(payload).encode("utf-8")
+                    req = urllib.request.Request(SHADOW_GITHUB_API_URL, data=payload_bytes, method="PUT", headers={
+                        "Authorization": f"token {GITHUB_TOKEN}",
+                        "Accept": "application/vnd.github.v3+json",
+                        "Content-Type": "application/json",
+                        "User-Agent": "Valkyrie-Shadow-Engine"
+                    })
+                    with urllib.request.urlopen(req, timeout=20) as resp:
+                        res_data = json.loads(resp.read().decode("utf-8"))
+                        self._github_sha = res_data.get("content", {}).get("sha", self._github_sha)
+                        self.last_sync_status = "SENKRONİZE"
+                        return
+                except Exception as e:
+                    self.last_sync_status = f"HATA ({e})"
+                    time.sleep(2 * attempt)
+        finally:
+            self._push_lock.release()
+
+    def load_history(self):
+        """
+        Başlangıçta GitHub state dalından ve yerel diskten verileri çekip akıllıca birleştirir (Merge & Deduplicate).
+        Render yeniden başlatmalarında veya dağıtımlarda tek bir gölge işlem dahi kaybolmaz.
+        """
+        remote_completed = []
+        remote_actives = []
+
+        # 1. GitHub state dalından yükle
+        if GITHUB_TOKEN and not self.is_test:
+            try:
+                req = urllib.request.Request(f"{SHADOW_GITHUB_API_URL}?ref={GITHUB_BRANCH}", headers={
+                    "Authorization": f"token {GITHUB_TOKEN}",
+                    "Accept": "application/vnd.github.v3+json",
+                    "User-Agent": "Valkyrie-Shadow-Engine"
+                })
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    gh_data = json.loads(resp.read().decode("utf-8"))
+                    self._github_sha = gh_data.get("sha")
+                    content_b64 = gh_data.get("content", "")
+                    content_str = base64.b64decode(content_b64).decode("utf-8")
+                    data = json.loads(content_str)
+                    remote_completed = data.get("completed", [])
+                    remote_actives = data.get("actives", [])
+                    print(f">> [GÖLGE BULUT KALICILIĞI] GitHub state dalından {len(remote_completed)} tamamlanan, {len(remote_actives)} aktif işlem çekildi. (SHA: {self._github_sha[:8] if self._github_sha else 'OK'})")
+            except Exception as e:
+                print(f">> [GÖLGE BULUT BİLGİ] GitHub'dan çekilemedi: {e}")
+
+        # 2. Lokal diskten oku
+        local_completed = []
+        local_actives = []
+        if os.path.exists(self.history_file):
+            try:
+                with open(self.history_file, "r", encoding="utf-8") as f:
+                    l_data = json.load(f)
+                    local_completed = l_data.get("completed", [])
+                    local_actives = l_data.get("actives", [])
+            except Exception as e:
+                print(f">> [GÖLGE YEREL HATA] Yerel dosya okunamadı: {e}")
+
+        # 3. Akıllı Birleştirme ve Mükerrer Kayıt Önleme (Deduplication Guard)
+        completed_map = {}
+        for t in remote_completed + local_completed:
+            t_id = t.get("id") or t.get("shadow_id")
+            if t_id:
+                completed_map[t_id] = t
+
+        active_map = {}
+        for a in remote_actives + local_actives:
+            a_id = a.get("id") or a.get("shadow_id")
+            # Eğer bir işlem tamamlananlar arasındaysa artık aktif kalamaz!
+            if a_id and a_id not in completed_map:
+                active_map[a_id] = a
+
+        # Hafızaya doldur
+        self.completed_trades.clear()
+        sorted_completed = sorted(completed_map.values(), key=lambda x: str(x.get("entry_time", "")))
+        for t in sorted_completed:
+            self.completed_trades.append(t)
+
+        self.active_positions.clear()
+        self.symbol_active_map.clear()
+        for a_id, a in active_map.items():
+            if "id" not in a:
+                a["id"] = a_id
+            self.active_positions[a_id] = a
+            sym = a.get("symbol")
+            if sym:
+                self.symbol_active_map[sym] = a_id
+
+        self.last_sync_status = "SENKRONİZE"
+        print(f">> [GÖLGE KALICILIK ZIRHI] {len(self.completed_trades)} tamamlanan, {len(self.active_positions)} aktif gölge işlem hafızaya yüklendi ve korundu.")
+
+        # Eğer lokalde GitHub'dan daha fazla kayıt varsa GitHub'ı da senkronize et
+        if len(completed_map) > len(remote_completed):
+            self.save_history(critical=True)
+
+    def get_health_status(self) -> dict:
+        """Sistem Sağlığı ve Aegis Sentinel için gölge motoru teşhis metrikleri."""
+        now = time.time()
+        tick_gap = round(now - getattr(self, "last_tick_ts", now), 1)
+        candle_gap = round(now - getattr(self, "last_candle_ts", now), 1)
+        is_alive = tick_gap < 120.0
+        summary = self.get_summary()
+
+        return {
+            "healthy": is_alive,
+            "status_text": "TAM SAĞLIKLI" if is_alive else "GECİKME",
+            "active_count": len(self.active_positions),
+            "completed_count": len(self.completed_trades),
+            "sei": summary.get("shield_efficiency_index", 100.0),
+            "saved_loss_usd": summary.get("total_saved_loss_usd", 0.0),
+            "missed_profit_usd": summary.get("total_missed_profit_usd", 0.0),
+            "net_alpha_usd": summary.get("net_shield_alpha_usd", 0.0),
+            "last_tick_gap_sec": tick_gap,
+            "last_candle_gap_sec": candle_gap,
+            "github_synced": bool(GITHUB_TOKEN and self.last_sync_status == "SENKRONİZE"),
+            "sync_status": self.last_sync_status,
+            "max_active": self.max_active
+        }

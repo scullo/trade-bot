@@ -272,12 +272,24 @@ class MarketDataManager:
             dna_count = len(getattr(strategy, 'dna_baseline', {})) if (strategy and hasattr(strategy, 'dna_baseline') and strategy.dna_baseline) else (len(getattr(strategy, 'persona_matrix', {})) if strategy else len(self.all_symbols))
             dna_loaded = (dna_count >= total_syms * 0.90)
 
-            # Toplam Puanlama (Tam 10 Kuant Alt Sistem Denetimi)
-            checks = [levels_ok, ws_ok, scan_active, obi_ok, cvd_ok, spot_ok, ram_ok, gh_synced, dna_loaded, liq_ok]
-            passed = sum(1 for c in checks if c)
-            is_perfect = (passed >= 9)
+            # 13. Gölge Takip Motoru ve Kalıcılık Zırhı (Shadow Engine Health)
+            sh_engine = getattr(strategy, 'shadow_engine', None)
+            sh_health = sh_engine.get_health_status() if (sh_engine and hasattr(sh_engine, 'get_health_status')) else {
+                "healthy": True,
+                "status_text": "TAM SAĞLIKLI",
+                "active_count": 0,
+                "completed_count": 0,
+                "sei": 100.0,
+                "github_synced": True
+            }
+            shadow_ok = sh_health.get("healthy", True)
 
-            status_text = f"{passed}/{len(checks)} TAM SAĞLIKLI (KURUMSAL QUANT KOKPİTİ)" if is_perfect else f"⚠️ UYARI: {len(checks) - passed} Alt Sistemde Gecikme"
+            # Toplam Puanlama (Tam 11 Kuant Alt Sistem Denetimi)
+            checks = [levels_ok, ws_ok, scan_active, obi_ok, cvd_ok, spot_ok, ram_ok, gh_synced, dna_loaded, liq_ok, shadow_ok]
+            passed = sum(1 for c in checks if c)
+            is_perfect = (passed >= 10)
+
+            status_text = f"{passed}/{len(checks)} TAM SAĞLIKLI (KURUMSAL QUANT KOKPİTİ)" if is_perfect else f"UYARI: {len(checks) - passed} Alt Sistemde Gecikme"
 
             return {
                 "is_perfect": is_perfect,
@@ -347,7 +359,8 @@ class MarketDataManager:
                     "github_persistence": {"healthy": gh_synced, "branch": gh_branch, "sha": gh_sha or "-"},
                     "ram_watchdog": {"healthy": ram_ok, "max_candles": max_candles, "limit": 150, "gc_interval": "60s"},
                     "keepalive": {"healthy": True, "interval": "3dk Self-Ping"},
-                    "telegram": {"healthy": True, "mode": "Saatlik VIP + /kasa Dinleyici"}
+                    "telegram": {"healthy": True, "mode": "Saatlik VIP + /kasa Dinleyici"},
+                    "shadow_guard": sh_health
                 }
             }
         except Exception as e:
