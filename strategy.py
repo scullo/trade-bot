@@ -65,6 +65,28 @@ class StrategyEngine:
         except Exception as e:
             print(f">> [COIN DNA HATA] Baz DNA yüklenemedi: {e}")
 
+        self.calibrated_coin_dna = {}  # 🧬 100 Parite Gölge İşlem Canlı Piyasa Kalibrasyon Sözlüğü
+        try:
+            calib_path = os.path.join(os.path.dirname(__file__), 'coin_dna_calibrated.json')
+            if os.path.exists(calib_path):
+                with open(calib_path, 'r', encoding='utf-8') as f:
+                    self.calibrated_coin_dna = json.load(f)
+                print(f">> [COIN DNA KALİBRASYON] {len(self.calibrated_coin_dna)} parite için canlı kalibre DNA yüklendi.")
+        except Exception as e:
+            print(f">> [COIN DNA KALİBRASYON HATA] {e}")
+
+    def is_gevset_coin(self, symbol: str) -> bool:
+        """Paritenin canlı kalibrasyon sözlüğünde GEVŞET liginde olup olmadığını döndürür."""
+        clean = symbol.replace('/USDT', '').replace(':USDT', '').replace('USDT', '').replace('/', '').upper()
+        cfg = getattr(self, 'calibrated_coin_dna', {}).get(clean) or {}
+        return str(cfg.get('calibration_status', '')).strip() == 'GEVŞET'
+
+    def is_koru_coin(self, symbol: str) -> bool:
+        """Paritenin canlı kalibrasyon sözlüğünde KORU liginde olup olmadığını döndürür."""
+        clean = symbol.replace('/USDT', '').replace(':USDT', '').replace('USDT', '').replace('/', '').upper()
+        cfg = getattr(self, 'calibrated_coin_dna', {}).get(clean) or {}
+        return str(cfg.get('calibration_status', '')).strip() == 'KORU'
+
     def get_effective_slot_count(self, open_positions: dict) -> float:
         """
         Dinamik Slot Geri Kazanımı (Slot Recycling):
@@ -384,6 +406,51 @@ class StrategyEngine:
             "eth_price": float(eth_close)
         }
 
+    def _enrich_persona_with_dna(self, res: dict, symbol: str, clean_sym: str) -> dict:
+        """
+        🧬 CALIBRATED COIN DNA ENJEKSİYONU:
+        100 parite için tek tek hesaplanmış canlı piyasa kalibrasyon sözlüğünü (coin_dna_calibrated.json)
+        parite personasına bağlar. GEVŞET ligindeki paritelerin kilitlerini açar, KORU paritelerini korur.
+        """
+        raw_sym = clean_sym.replace('USDT', '')
+        calib_cfg = (
+            getattr(self, 'calibrated_coin_dna', {}).get(raw_sym) or
+            getattr(self, 'calibrated_coin_dna', {}).get(clean_sym) or
+            getattr(self, 'calibrated_coin_dna', {}).get(symbol) or {}
+        )
+        if calib_cfg:
+            calib_status = str(calib_cfg.get("calibration_status", "DENGELİ")).strip()
+            res["calibration_status"] = calib_status
+            res["min_confluence"] = int(calib_cfg.get("min_confluence", 2 if calib_status == "GEVŞET" else 3))
+            res["dynamic_margin_scale"] = float(calib_cfg.get("dynamic_margin_scale", 0.5 if calib_status == "GEVŞET" else (1.25 if calib_status == "KORU" else 1.0)))
+            res["fakeout_wick_threshold"] = float(calib_cfg.get("fakeout_wick_threshold", 13.5))
+            res["chandelier_be_threshold_pct"] = float(calib_cfg.get("chandelier_be_threshold_pct", 0.8))
+            res["calibrated_scenario"] = str(calib_cfg.get("scenario", ""))
+            res["sei_score"] = float(calib_cfg.get("sei_score", 50.0))
+
+            # 🔓 GEVŞET Ligi: Aşırı katı kalkan kurbanı olan 17 coin için kilit açma
+            if calib_status == "GEVŞET":
+                res["persona_class"] = "GEVSET_OPPORTUNITY"
+                res["persona_name"] = "🔓 Fırsat Kilidi Açık (Gevşet / Marjin 0.5x)"
+                res["allow_breakout"] = True
+                res["allow_bounce"] = True
+                res["is_trading_allowed"] = True
+                res["margin_scale"] = res["dynamic_margin_scale"]
+                res["status_badge"] = "🔓 Fırsat Kilidi (2 Teyit, Marjin %50)"
+                res["strategy_permission"] = "Kâr Fırsatı Açık (2 Teyit, Marjin %50)"
+
+            # 🛡️ KORU Ligi: Sermayeyi stop loss'lardan koruyan 19 coin için çelik zırh
+            elif calib_status == "KORU":
+                res["persona_name"] = "🛡️ Çelik Savunma Zırhı (Koru / Sıkı Filtre)"
+                res["margin_scale"] = res["dynamic_margin_scale"]
+                res["status_badge"] = "🛡️ Çelik Zırh (3 Teyit, Marjin x1.25)"
+                res["strategy_permission"] = "Elit Teyitli Kırılım + Pusu (Marjin x1.25)"
+        else:
+            res["calibration_status"] = "DENGELİ"
+            res["min_confluence"] = 3
+            res["dynamic_margin_scale"] = 1.0
+        return res
+
     def get_coin_dynamic_persona(self, symbol: str) -> dict:
         """
         Otonom Kripto DNA ve Dinamik Persona Motoru (Rolling 15-20 İşlem Penceresi):
@@ -391,6 +458,7 @@ class StrategyEngine:
         - Fakeout (tuzak) fitil oranı, win rate ve net kâr analizine göre pariteyi
           👑 Altın Karakter, ⚪ Standart / Dengeli veya ⚠️ Volatil & Tuzakçı (Whipsaw) ligine atar.
         - İyileşme gösteren pariteleri otomatik terfi ettirir (Self-Healing).
+        - Canlı piyasa gölge kalibrasyon sözlüğü (coin_dna_calibrated.json) ile zenginleştirir.
         """
         clean_sym = symbol.replace('/', '').upper()
         history = getattr(self.paper_trader, 'history', []) if self.paper_trader else []
@@ -421,8 +489,8 @@ class StrategyEngine:
             if hasattr(self, 'dna_baseline') and clean_sym in self.dna_baseline:
                 base_data = dict(self.dna_baseline[clean_sym])
                 base_data["symbol"] = symbol
-                return base_data
-            return {
+                return self._enrich_persona_with_dna(base_data, symbol, clean_sym)
+            return self._enrich_persona_with_dna({
                 "symbol": symbol,
                 "persona_class": "STANDARD",
                 "persona_name": "⚪ Standart / Dengeli",
@@ -437,7 +505,7 @@ class StrategyEngine:
                 "status_badge": "🟢 Kırılım + Sekme Açık",
                 "strategy_permission": "Tüm Stratejiler Açık (Kırılım + Pusu)",
                 "is_baseline": False
-            }
+            }, symbol, clean_sym)
 
         wins = sum(1 for t in recent if t['pnl'] > 0)
         net_pnl = sum(t['pnl'] for t in recent)
@@ -451,7 +519,7 @@ class StrategyEngine:
         recent_5 = coin_trades[-5:]
         recent_stops = sum(1 for t in recent_5 if t['pnl'] < 0 and ('Stop' in t['reason'] or 'stop' in t['reason']))
         if recent_stops >= 2:
-            return {
+            return self._enrich_persona_with_dna({
                 "symbol": symbol,
                 "persona_class": "WHIPSAW",
                 "persona_name": "⚠️ Volatil & Tuzakçı (Whipsaw - 2x Stop Pusu Modu)",
@@ -467,14 +535,14 @@ class StrategyEngine:
                 "status_badge": "🛡️ Whipsaw (Pusu & Elit Teyit Modu, Marjin %60)",
                 "strategy_permission": "Yalnızca S3/R3/nPOC Dip Pusu veya Elit Kırılım (Marjin %60)",
                 "is_baseline": False
-            }
+            }, symbol, clean_sym)
 
         # Sınıflandırma
         base_class = self.dna_baseline.get(clean_sym, {}).get("persona_class", "STANDARD") if hasattr(self, 'dna_baseline') else "STANDARD"
 
         # Eğer parite geçmişte WHIPSAW ise, canlıda en az 5 işlem görmeden erken GOLD terfisi yapılmaz (Yumuşak Geçiş Kalkanı)
         if net_pnl > 3.0 and wr >= 60.0 and fakeout_rate <= 25.0 and (total_t >= 5 or base_class != "WHIPSAW"):
-            return {
+            return self._enrich_persona_with_dna({
                 "symbol": symbol,
                 "persona_class": "GOLD",
                 "persona_name": "👑 Altın Karakter (Pusu Ustası)",
@@ -490,9 +558,9 @@ class StrategyEngine:
                 "status_badge": "👑 Altın Lig (Marjin x1.3)",
                 "strategy_permission": "Öncelikli Kırılım + Pusu (Marjin x1.3)",
                 "is_baseline": False
-            }
+            }, symbol, clean_sym)
         elif fakeout_rate >= 45.0 or (net_pnl < -5.0 and wr < 45.0) or (base_class == "WHIPSAW" and total_t < 5 and wr < 60.0):
-            return {
+            return self._enrich_persona_with_dna({
                 "symbol": symbol,
                 "persona_class": "WHIPSAW",
                 "persona_name": "⚠️ Volatil & Tuzakçı (Whipsaw)",
@@ -508,9 +576,9 @@ class StrategyEngine:
                 "status_badge": "🛡️ Whipsaw (Pusu & Elit Teyit Modu, Marjin %60)",
                 "strategy_permission": "Yalnızca S3/R3/nPOC Dip Pusu veya Elit Kırılım (Marjin %60)",
                 "is_baseline": False
-            }
+            }, symbol, clean_sym)
         else:
-            return {
+            return self._enrich_persona_with_dna({
                 "symbol": symbol,
                 "persona_class": "STANDARD",
                 "persona_name": "⚪ Standart / Dengeli",
@@ -525,7 +593,7 @@ class StrategyEngine:
                 "status_badge": "🟢 Kırılım + Sekme Açık",
                 "strategy_permission": "Dengeli Kırılım + Pusu",
                 "is_baseline": False
-            }
+            }, symbol, clean_sym)
 
     def get_all_coin_personas(self, all_symbols: list = None) -> dict:
         """Tüm pariteler için canlı dinamik persona matrisini döndürür."""
@@ -1090,26 +1158,36 @@ class StrategyEngine:
         # Tuzakçı/çalkantılı hareket eden paritelerde hacimsiz kırılımlar elenir, asgari 4 confluence veya kurumsal balina akışı şartı aranır.
         persona = self.get_coin_dynamic_persona(symbol)
         p_class = persona.get("persona_class", "STANDARD")
+        p_calib_status = str(persona.get("calibration_status", "DENGELİ")).strip()
+        is_gevset = (p_calib_status == "GEVŞET")
+        is_koru = (p_calib_status == "KORU")
         is_breakout = (trade_type == "BREAKOUT" or "BREAKOUT" in str(setup_id) or "BREAKDOWN" in str(setup_id) or "Breakout" in reason or "Breakdown" in reason or "Kırılım" in reason)
         
-        if ENABLE_DYNAMIC_COIN_AUDIT and p_class == "WHIPSAW":
+        if ENABLE_DYNAMIC_COIN_AUDIT:
             c_cnt = len(confluence_list or [])
             has_whale = any("Balina" in str(c) or "Whale" in str(c) or "Iceberg" in str(c) or "Buzdağı" in str(c) for c in (confluence_list or []))
-            has_vol = vol_surge >= 1.8
+            has_vol = vol_surge >= (1.35 if is_gevset else 1.8)
             has_wall = any("DUVARI" in str(c) or "WALL" in str(c) for c in (confluence_list or []))
             
-            # a. Hacimsiz Kırılım Tuzağı Denetimi: Volatil paritede kurumsal hacim patlaması yoksa fakeout kırılımı engelle
-            if is_breakout and not (has_vol and (has_whale or has_wall)):
-                rej_msg = f"🛡️ Kuant Veri Süzgeci Denetimi: {symbol} volatil/çalkantılı rejimde. Hacimsiz kırılım tuzağını önlemek için (Hacim: {vol_surge:.1f}x < 1.8x veya Emir Akışı Yok) kırılım elendi. Yalnızca dip/tepe pusu veya hacimli kurumsal kırılımlara izin verilir."
-                print(f">> [RED - DİNAMİK VERİ SÜZGECİ] {symbol}: {rej_msg}")
-                self.log_rejection(symbol, reason, rej_msg)
-                return {"error": "WHIPSAW_BREAKOUT_AUDIT_BLOCKED"}
+            # a. Hacimsiz Kırılım Tuzağı Denetimi: Yalnızca KORU ve katı WHIPSAW paritelerinde engelle, GEVŞET liginde izin ver
+            if is_breakout and (p_class == "WHIPSAW" or is_koru) and not is_gevset:
+                if not (has_vol and (has_whale or has_wall)):
+                    rej_msg = f"🛡️ Kuant Veri Süzgeci Denetimi: {symbol} volatil/çalkantılı rejimde. Hacimsiz kırılım tuzağını önlemek için (Hacim: {vol_surge:.1f}x < 1.8x veya Emir Akışı Yok) kırılım elendi. Yalnızca dip/tepe pusu veya hacimli kurumsal kırılımlara izin verilir."
+                    print(f">> [RED - DİNAMİK VERİ SÜZGECİ] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg)
+                    return {"error": "WHIPSAW_BREAKOUT_AUDIT_BLOCKED"}
             
-            # b. Sıkı Confluence Eşiği Denetimi: Çalkantılı coinlerde rastgele 2 teyitle işlem açılamaz; kırılımda 4, dönüşlerde 3 teyit (veya kurumsal akış) aranır
-            min_required_confluence = 4 if is_breakout else 3
-            has_qualifying_flow = has_whale or has_wall or (vol_surge >= 1.5) or (coin_rs_score >= 0.40)
+            # b. Sıkı Confluence Eşiği Denetimi: GEVŞET coinlerinde 2 teyitle kilit açılır! KORU coinlerinde 3-4 teyit aranır
+            if is_gevset:
+                min_required_confluence = 2
+            elif p_class == "WHIPSAW" or is_koru:
+                min_required_confluence = 4 if is_breakout else 3
+            else:
+                min_required_confluence = 3 if is_breakout else 2
+
+            has_qualifying_flow = has_whale or has_wall or (vol_surge >= (1.30 if is_gevset else 1.5)) or (coin_rs_score >= 0.30)
             if c_cnt < min_required_confluence and not has_qualifying_flow:
-                rej_msg = f"🛡️ Kuant Confluence Denetimi: {symbol} yüksek gürültülü piyasa yapısında. En doğru zamanlama için asgari {min_required_confluence} teyit veya akış şarttır (Mevcut: {c_cnt}/{min_required_confluence}). Zayıf sinyal elendi."
+                rej_msg = f"🛡️ Kuant Confluence Denetimi: {symbol} yapısında asgari {min_required_confluence} teyit veya akış şarttır (Mevcut: {c_cnt}/{min_required_confluence}). Zayıf sinyal elendi."
                 print(f">> [RED - SIKI CONFLUENCE DENETİMİ] {symbol}: {rej_msg}")
                 self.log_rejection(symbol, reason, rej_msg)
                 return {"error": "WHIPSAW_LOW_CONFLUENCE_BLOCKED"}
@@ -1430,7 +1508,8 @@ class StrategyEngine:
 
         # Perakende agresif alıyor (CVD >= 65%) ama fiyat 5M mum açılışının altında ve düşüyor!
         # Whale pasif limit satışla perakendeyi karşılıyor (Passive Sell Absorption).
-        if side == "LONG" and cvd_ratio_60s >= 65.0 and entry_price < candle_open_price:
+        price_diff_pct = abs(entry_price - candle_open_price) / candle_open_price if candle_open_price > 0 else 0.0
+        if side == "LONG" and cvd_ratio_60s >= (70.0 if is_gevset else 65.0) and entry_price < candle_open_price and price_diff_pct >= 0.0008:
             rej_msg = f"🦊 Pasif Satış Emilim Tuzağı (Passive Absorption Trap): Mikro-CVD alıcı baskın (%{cvd_ratio_60s:.0f}) fakat fiyat 5M açılışının altında (${entry_price:.4f} < ${candle_open_price:.4f}). Balina pasif satışla karşılıyor, LONG engellendi."
             print(f">> [RED - PASİF EMİLİM TUZAĞI] {symbol}: {rej_msg}")
             self.log_rejection(symbol, reason, rej_msg)
@@ -1438,7 +1517,7 @@ class StrategyEngine:
 
         # Perakende agresif satıyor (CVD <= 35%) ama fiyat 5M mum açılışının üstünde ve yükseliyor!
         # Whale pasif limit alışla perakendeyi karşılıyor (Passive Buy Absorption).
-        if side == "SHORT" and cvd_ratio_60s <= 35.0 and entry_price > candle_open_price:
+        if side == "SHORT" and cvd_ratio_60s <= (30.0 if is_gevset else 35.0) and entry_price > candle_open_price and price_diff_pct >= 0.0008:
             rej_msg = f"🦊 Pasif Alış Emilim Tuzağı (Passive Absorption Trap): Mikro-CVD satıcı baskın (%{100-cvd_ratio_60s:.0f}) fakat fiyat 5M açılışının üstünde (${entry_price:.4f} > ${candle_open_price:.4f}). Balina pasif alışla karşılıyor, SHORT engellendi."
             print(f">> [RED - PASİF EMİLİM TUZAĞI] {symbol}: {rej_msg}")
             self.log_rejection(symbol, reason, rej_msg)
@@ -1460,8 +1539,8 @@ class StrategyEngine:
         is_reversal_setup = any(k in str(setup_name or '').upper() for k in ["NPOC", "S3", "R3", "REDDİ", "SEKMESİ", "REVERSAL", "TEPE AVWAP", "DİP AVWAP"])
         
         # Gölge Motoru Parite Teşhisi (Aşırı katı kalkan kurbanı paritelerde otonom esnetme)
-        is_spoiler_coin = False
-        if hasattr(self, 'shadow_engine') and self.shadow_engine:
+        is_spoiler_coin = is_gevset
+        if not is_spoiler_coin and hasattr(self, 'shadow_engine') and self.shadow_engine:
             try:
                 coin_detail = self.shadow_engine.get_coin_forensic_detail(symbol)
                 if coin_detail.get('primary_scenario') == 'SPOILER_OVER_RESTRICTIVE':
@@ -1469,8 +1548,8 @@ class StrategyEngine:
             except Exception:
                 pass
 
-        cvd_short_limit = 57.0 if is_spoiler_coin else (55.0 if is_reversal_setup else 52.0)
-        cvd_long_limit = 43.0 if is_spoiler_coin else (45.0 if is_reversal_setup else 48.0)
+        cvd_short_limit = 58.0 if is_spoiler_coin else (55.0 if is_reversal_setup else 52.0)
+        cvd_long_limit = 42.0 if is_spoiler_coin else (45.0 if is_reversal_setup else 48.0)
 
         if side == "SHORT" and cvd_ratio_60s > cvd_short_limit and not is_passive_institutional:
             rej_msg = f"🛡️ Harmonik Akış Kalkanı: Taker piyasa alıcıların kontrolünde (Alıcı CVD: %{cvd_ratio_60s:.1f} > %{cvd_short_limit:.1f}). Yükselen taker akışına karşı SHORT engellendi."
@@ -2172,7 +2251,11 @@ class StrategyEngine:
             if confluence_list is not None and isinstance(confluence_list, list):
                 confluence_list.append("🛡️_Meme_Sermaye_Zırhı")
 
-        dyn_margin = round(max(dyn_min_margin_bound, min(max_margin_cap, base_calc_margin * kelly_mult * getattr(self, 'margin_multiplier', 1.0))), 2)
+        # 🧬 CALIBRATED MARJİN ÖLÇEKLEME (GEVŞET Paritelerinde 0.5x, KORU Paritelerinde 1.25x)
+        p_margin_scale = float(persona.get("dynamic_margin_scale", persona.get("margin_scale", 1.0)))
+        scaled_min_bound = dyn_min_margin_bound * min(1.0, p_margin_scale)
+        scaled_max_cap = max_margin_cap * p_margin_scale
+        dyn_margin = round(max(scaled_min_bound, min(scaled_max_cap, base_calc_margin * kelly_mult * getattr(self, 'margin_multiplier', 1.0) * p_margin_scale)), 2)
 
         # Katı Dolar Riski Tavanı (Maksimum $25 Dolar Riski Kalkanı - Hiçbir işlem $25'ten fazla riske atamaz)
         calculated_dollar_risk = round(dyn_margin * float(dyn_leverage) * effective_stop_pct, 2)
@@ -3965,7 +4048,8 @@ class StrategyEngine:
                     return
 
             # 🛡️ GÖRECELİ GÜÇ (RS) BARİYERİ: Aşırı negatif çöken toksik coinlerde nPOC desteği tutunamaz
-            if coin_rs_score < -1.0 or is_severely_weak:
+            rs_limit = -1.6 if self.is_gevset_coin(symbol) else -1.0
+            if coin_rs_score < rs_limit or (is_severely_weak and not self.is_gevset_coin(symbol)):
                 self.log_rejection(
                     symbol, "SETUP 9 nPOC Sekmesi",
                     f"Zayıf Parite Kalkanı: Aşırı Negatif Göreceli Güç (RS: {coin_rs_score:+.2f}) olan paritede nPOC sekmesi engellendi."
@@ -3979,9 +4063,10 @@ class StrategyEngine:
             c_range = c_high - c_low
             lower_wick = (min(c_open, close_price) - c_low) if c_range > 0 else 0
             lower_wick_ratio = (lower_wick / c_range) if c_range > 0 else 0
-            is_absorption = (lower_wick_ratio >= 0.15) or (close_price >= c_open)
+            min_wick = 0.08 if self.is_gevset_coin(symbol) else 0.15
+            is_absorption = (lower_wick_ratio >= min_wick) or (close_price >= c_open)
             if not is_absorption:
-                self.log_rejection(symbol, "SETUP 9 nPOC Sekmesi", f"Aşırı Zayıf Parite: Aşağı nPOC desteğinde alıcı emilimi (min %15 alt fitil veya yeşil kapanış) yok (Fitil: %{lower_wick_ratio*100:.1f})")
+                self.log_rejection(symbol, "SETUP 9 nPOC Sekmesi", f"Aşırı Zayıf Parite: Aşağı nPOC desteğinde alıcı emilimi (min %{min_wick*100:.0f} alt fitil veya yeşil kapanış) yok (Fitil: %{lower_wick_ratio*100:.1f})")
                 return
 
             # 🛡️ CVD DELTA EMİLİMİ ŞARTI (Taker Satıcı Tükeniş Teyidi)
@@ -4083,8 +4168,9 @@ class StrategyEngine:
             if c_range > 0:
                 upper_wick = c_high - max(c_open, close_price)
                 upper_wick_ratio = upper_wick / c_range
-                # Kalibrasyon: Üst fitil en az %12 olmalı VEYA mum kırmızı gövdeyle dönmüş olmalı
-                is_seller_rejection = (upper_wick_ratio >= 0.12) or (close_price < c_open and upper_wick_ratio >= 0.05)
+                # Kalibrasyon: GEVŞET coinlerinde üst fitil toleransı %6, diğerlerinde %12
+                min_upper_wick = 0.06 if self.is_gevset_coin(symbol) else 0.12
+                is_seller_rejection = (upper_wick_ratio >= min_upper_wick) or (close_price < c_open and upper_wick_ratio >= 0.03) or (self.is_gevset_coin(symbol) and close_price <= c_open)
                 if not is_seller_rejection:
                     self.log_rejection(symbol, "Yukarı nPOC Reddi", f"Üst fitil veya satıcı dönüşü yetersiz (Fitil: %{upper_wick_ratio*100:.1f}, Kapanış: {close_price:.4f})")
                     return
@@ -4170,12 +4256,14 @@ class StrategyEngine:
                     c_range = c_high - c_low
                     upper_wick = (c_high - max(c_open, close_price)) if c_range > 0 else 0
                     upper_wick_ratio = (upper_wick / c_range) if c_range > 0 else 0
-                    is_seller_rejection = (upper_wick_ratio >= 0.15) or (close_price < c_open)
+                    min_upper_wick = 0.08 if self.is_gevset_coin(symbol) else 0.15
+                    is_seller_rejection = (upper_wick_ratio >= min_upper_wick) or (close_price < c_open)
 
                     obi_data = self.market_data.get_orderbook_depth(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_orderbook_depth')) else {}
                     obi_imbalance = float(obi_data.get('imbalance', 0.0))
                     obi_ratio = float(obi_data.get('ratio', 1.0))
-                    has_seller_flow = (cvd_ratio <= 48.0) or ((cvd_ratio <= 52.0) and (obi_imbalance <= -0.05 or obi_ratio <= 0.90)) or (obi_imbalance <= -0.10)
+                    max_cvd = 53.0 if self.is_gevset_coin(symbol) else 48.0
+                    has_seller_flow = (cvd_ratio <= max_cvd) or ((cvd_ratio <= (max_cvd + 4.0)) and (obi_imbalance <= -0.05 or obi_ratio <= 0.90)) or (obi_imbalance <= -0.10)
 
                     if not is_seller_rejection:
                         self.log_rejection(symbol, f"SETUP 11 {resist_tag} Retest Reddi", f"Direnç retestinde satıcı reddi (üst fitil) yetersiz (Fitil: %{upper_wick_ratio*100:.1f})")
