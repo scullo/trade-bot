@@ -461,11 +461,22 @@ class StrategyEngine:
                 res["margin_scale"] = res["dynamic_margin_scale"]
                 res["status_badge"] = "🛡️ Çelik Zırh (3 Teyit, Marjin x1.25)"
                 res["strategy_permission"] = "Elit Teyitli Kırılım + Pusu (Marjin x1.25)"
+
+            # ⏳ ERKEN BE Ligi: Kırbaç dalgalanmasında erken kapanmayı engelleyen dinamik nefes ligi
+            elif calib_status == "ERKEN BE":
+                res["persona_name"] = f"⏳ Dinamik Başa-Baş (BE %{res['chandelier_be_threshold_pct']})"
+                res["margin_scale"] = res["dynamic_margin_scale"]
+                res["status_badge"] = f"⏳ Dinamik BE (%{res['chandelier_be_threshold_pct']})"
+                res["strategy_permission"] = "Dinamik Nefes Alanı (BE Genişletildi)"
         else:
             res["calibration_status"] = "DENGELİ"
             res["min_confluence"] = 3
             res["dynamic_margin_scale"] = 1.0
         return res
+
+    def get_coin_persona(self, symbol: str) -> dict:
+        """Parite dinamik personasını döndüren geriye dönük uyumlu erişimci."""
+        return self.get_coin_dynamic_persona(symbol)
 
     def get_coin_dynamic_persona(self, symbol: str) -> dict:
         """
@@ -3139,7 +3150,7 @@ class StrategyEngine:
                         fee_buffer = (float(COMMISSION_RATE) * 2.0) + 0.0002  # Dinamik giriş-çıkış komisyon tamponu + slipaj koruması
                         be_price = entry_p * (1.0 + fee_buffer) if side == "LONG" else entry_p * (1.0 - fee_buffer)
                         cur_stop = pos.get("hard_stop") or pos.get("soft_stop", 0.0)
-                        should_lock = (side == "LONG" and cur_stop < be_price) or (side == "SHORT" and cur_stop > be_price)
+                        should_lock = (side == "LONG" and cur_stop < be_price) or (side == "SHORT" and (cur_stop == 0.0 or cur_stop > be_price))
                         if should_lock:
                             pos['hard_stop'] = be_price
                             pos['soft_stop'] = be_price

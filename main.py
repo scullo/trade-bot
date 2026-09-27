@@ -28,6 +28,7 @@ async def main():
     trader_manager = TraderManager(paper_trader, live_trader)
     notifier = TelegramNotifier()
     strategy = StrategyEngine(trader_manager, notifier, market_data=market_data)
+    trader_manager.strategy = strategy
 
     async def on_tick(symbol, price):
         await broadcast_tick(symbol, price)
@@ -107,14 +108,14 @@ async def main():
         await asyncio.sleep(60)  # Başlangıçta 1 dakika ısınma
         while True:
             try:
-                strat = getattr(trader_manager, "strategy", None)
-                calib = getattr(strat, "dna_calibrator", None)
+                calib = getattr(strategy, "dna_calibrator", None)
                 if calib:
                     if not calib.notifier:
                         calib.notifier = notifier
-                    res = calib.run_cycle(force=False)
+                    loop = asyncio.get_event_loop()
+                    res = await loop.run_in_executor(None, lambda: calib.run_cycle(force=False))
                     if res.get("executed") and res.get("changes_applied", 0) > 0:
-                        strat.calibrated_coin_dna = calib._load_current_calibrated_dna()
+                        strategy.calibrated_coin_dna = calib._load_current_calibrated_dna()
                         print(f">> [OTONOM KALİBRASYON BAŞARILI] {res.get('changes_applied')} parite optimize edildi ve doğrulandı.")
             except Exception as e:
                 print(f">> [OTONOM KALİBRASYON DÖNGÜ HATA] {e}")

@@ -13278,6 +13278,11 @@ function downloadExcelReport() {
                     updateShadowBadge();
                 }
 
+                // 5c5. Update Quant Evolution View if active tab
+                if (currentActiveMainTab === 'evolution') {
+                    loadQuantEvolutionData();
+                }
+
                 // 5d. Update Cockpit Funding, Liquidation & Micro-CVD Commentary
                 const cFundingEl = document.getElementById('cockpit-funding-commentary');
                 if (cFundingEl && appState.funding_summary) {
@@ -14405,7 +14410,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             elif not calib.notifier and notifier:
                 calib.notifier = notifier
 
-            res = calib.run_cycle(force=True)
+            loop = asyncio.get_event_loop()
+            res = await loop.run_in_executor(None, lambda: calib.run_cycle(force=True))
             if res.get("executed") and res.get("changes_applied", 0) > 0 and strategy:
                 strategy.calibrated_coin_dna = calib._load_current_calibrated_dna()
             return web.json_response({

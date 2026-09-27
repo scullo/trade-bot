@@ -221,8 +221,11 @@ class AutonomousDNACalibrator:
         changes_applied = len(proposals)
         if changes_applied > 0:
             self._save_calibrated_dna(updated_dna)
-            if self.strategy and hasattr(self.strategy, "_calibrated_dna"):
-                self.strategy._calibrated_dna = updated_dna
+            if self.strategy:
+                if hasattr(self.strategy, "calibrated_coin_dna"):
+                    self.strategy.calibrated_coin_dna = updated_dna
+                if hasattr(self.strategy, "_calibrated_dna"):
+                    self.strategy._calibrated_dna = updated_dna
                 print(f">> [OTONOM KALİBRASYON] Strateji motoruna {changes_applied} yeni DNA kuralı canlı enjekte edildi!")
 
         # 7. Denetim Defterine Kaydet
