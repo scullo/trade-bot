@@ -1193,6 +1193,57 @@ class StrategyEngine:
         is_breakout = (trade_type == "BREAKOUT" or "BREAKOUT" in str(setup_id) or "BREAKDOWN" in str(setup_id) or "Breakout" in reason or "Breakdown" in reason or "Kırılım" in reason)
         
         if ENABLE_DYNAMIC_COIN_AUDIT:
+            # JIT Confluence List Enrichment:
+            if confluence_list is None:
+                confluence_list = []
+            elif not isinstance(confluence_list, list):
+                confluence_list = list(confluence_list)
+
+            # 1. Makro Piyasa Trend Uyumu Teyidi
+            if ("BOĞA" in str(trend_regime) or "Bull" in str(trend_regime)) and side == "LONG":
+                if not any("Boga" in str(c) or "Bull" in str(c) for c in confluence_list):
+                    confluence_list.append("Makro_Boga_Trendi_Uyumu")
+            elif ("AYI" in str(trend_regime) or "Bear" in str(trend_regime)) and side == "SHORT":
+                if not any("Ayi" in str(c) or "Bear" in str(c) for c in confluence_list):
+                    confluence_list.append("Makro_Ayi_Trendi_Uyumu")
+
+            # 2. Günlük Seans AVWAP Teyidi
+            daily_avwap_val = snaps.get('daily_avwap', 0.0) if isinstance(snaps, dict) else 0.0
+            if daily_avwap_val <= 0 and self.market_data and hasattr(self.market_data, 'levels'):
+                daily_avwap_val = float(self.market_data.levels.get(symbol, {}).get('daily_avwap', 0.0))
+            if side == "LONG" and daily_avwap_val > 0 and entry_price > daily_avwap_val:
+                if not any("Daily_AVWAP" in str(c) or "Gunluk_AVWAP" in str(c) for c in confluence_list):
+                    confluence_list.append("Gunluk_AVWAP_Ustu_Boga")
+            elif side == "SHORT" and daily_avwap_val > 0 and entry_price < daily_avwap_val:
+                if not any("Daily_AVWAP" in str(c) or "Gunluk_AVWAP" in str(c) for c in confluence_list):
+                    confluence_list.append("Gunluk_AVWAP_Alti_Ayi")
+
+            # 3. Taker CVD Akış Teyidi
+            cvd_info_jit = self.market_data.get_symbol_cvd(symbol) if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+            cvd_ratio_jit = float(cvd_info_jit.get('ratio_60s', 50.0))
+            if side == "LONG" and cvd_ratio_jit >= 50.0:
+                if not any("CVD" in str(c) for c in confluence_list):
+                    confluence_list.append("Taker_Alici_Baskisi_Teyidi")
+            elif side == "SHORT" and cvd_ratio_jit <= 50.0:
+                if not any("CVD" in str(c) for c in confluence_list):
+                    confluence_list.append("Taker_Satici_Baskisi_Teyidi")
+
+            # 4. Derinlik (OrderBook OBI) Duvar Teyidi
+            obi_info_jit = self.market_data.get_orderbook_depth(symbol) if (self.market_data and hasattr(self.market_data, 'get_orderbook_depth')) else {}
+            obi_imb = float(obi_info_jit.get('imbalance', 0.0))
+            obi_rat = float(obi_info_jit.get('ratio', 1.0))
+            if side == "LONG" and (obi_imb >= 0.04 or obi_rat >= 1.08):
+                if not any("WALL" in str(c) or "DUVARI" in str(c) or "Tahta" in str(c) for c in confluence_list):
+                    confluence_list.append("Tahta_Alis_Duvari_Destegi")
+            elif side == "SHORT" and (obi_imb <= -0.04 or obi_rat <= 0.92):
+                if not any("WALL" in str(c) or "DUVARI" in str(c) or "Tahta" in str(c) for c in confluence_list):
+                    confluence_list.append("Tahta_Satis_Duvari_Baskisi")
+
+            # 5. Hacim Artışı Teyidi
+            if vol_surge >= 1.15:
+                if not any("Vol" in str(c) or "Hacim" in str(c) for c in confluence_list):
+                    confluence_list.append("Hacim_Artisi_Teyidi")
+
             c_cnt = len(confluence_list or [])
             has_whale = any("Balina" in str(c) or "Whale" in str(c) or "Iceberg" in str(c) or "Buzdağı" in str(c) for c in (confluence_list or []))
             has_vol = vol_surge >= (1.35 if is_gevset else 1.8)
@@ -1537,20 +1588,21 @@ class StrategyEngine:
 
         # Perakende agresif alıyor (CVD >= 65%) ama fiyat 5M mum açılışının altında ve düşüyor!
         # Whale pasif limit satışla perakendeyi karşılıyor (Passive Sell Absorption).
+        # Not: Destek/AVWAP sekme (BOUNCE/RETEST) işlemlerinde doğal alt fitil emilimi beklenir, kural yalnızca net kırılımlarda ve belirgin gövdede (>%0.35) çalışır.
         price_diff_pct = abs(entry_price - candle_open_price) / candle_open_price if candle_open_price > 0 else 0.0
-        if side == "LONG" and cvd_ratio_60s >= (70.0 if is_gevset else 65.0) and entry_price < candle_open_price and price_diff_pct >= 0.0008:
-            rej_msg = f"🦊 Pasif Satış Emilim Tuzağı (Passive Absorption Trap): Mikro-CVD alıcı baskın (%{cvd_ratio_60s:.0f}) fakat fiyat 5M açılışının altında (${entry_price:.4f} < ${candle_open_price:.4f}). Balina pasif satışla karşılıyor, LONG engellendi."
-            print(f">> [RED - PASİF EMİLİM TUZAĞI] {symbol}: {rej_msg}")
-            self.log_rejection(symbol, reason, rej_msg)
-            return {"error": "PASSIVE_SELL_ABSORPTION_TRAP"}
+        is_bounce_trade = (trade_type in ["BOUNCE", "RETEST"] or "Sekme" in str(reason) or "Retest" in str(reason) or "Pusu" in str(reason))
+        if not is_bounce_trade:
+            if side == "LONG" and cvd_ratio_60s >= (75.0 if is_gevset else 70.0) and entry_price < candle_open_price and price_diff_pct >= 0.0035:
+                rej_msg = f"🦊 Pasif Satış Emilim Tuzağı (Passive Absorption Trap): Mikro-CVD alıcı baskın (%{cvd_ratio_60s:.0f}) fakat fiyat 5M açılışının altında (${entry_price:.4f} < ${candle_open_price:.4f}, Gövde: %{price_diff_pct*100:.2f}). Balina pasif satışla karşılıyor, LONG engellendi."
+                print(f">> [RED - PASİF EMİLİM TUZAĞI] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, reason, rej_msg)
+                return {"error": "PASSIVE_SELL_ABSORPTION_TRAP"}
 
-        # Perakende agresif satıyor (CVD <= 35%) ama fiyat 5M mum açılışının üstünde ve yükseliyor!
-        # Whale pasif limit alışla perakendeyi karşılıyor (Passive Buy Absorption).
-        if side == "SHORT" and cvd_ratio_60s <= (30.0 if is_gevset else 35.0) and entry_price > candle_open_price and price_diff_pct >= 0.0008:
-            rej_msg = f"🦊 Pasif Alış Emilim Tuzağı (Passive Absorption Trap): Mikro-CVD satıcı baskın (%{100-cvd_ratio_60s:.0f}) fakat fiyat 5M açılışının üstünde (${entry_price:.4f} > ${candle_open_price:.4f}). Balina pasif alışla karşılıyor, SHORT engellendi."
-            print(f">> [RED - PASİF EMİLİM TUZAĞI] {symbol}: {rej_msg}")
-            self.log_rejection(symbol, reason, rej_msg)
-            return {"error": "PASSIVE_BUY_ABSORPTION_TRAP"}
+            if side == "SHORT" and cvd_ratio_60s <= (25.0 if is_gevset else 30.0) and entry_price > candle_open_price and price_diff_pct >= 0.0035:
+                rej_msg = f"🦊 Pasif Alış Emilim Tuzağı (Passive Absorption Trap): Mikro-CVD satıcı baskın (%{100-cvd_ratio_60s:.0f}) fakat fiyat 5M açılışının üstünde (${entry_price:.4f} > ${candle_open_price:.4f}, Gövde: %{price_diff_pct*100:.2f}). Balina pasif alışla karşılıyor, SHORT engellendi."
+                print(f">> [RED - PASİF EMİLİM TUZAĞI] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, reason, rej_msg)
+                return {"error": "PASSIVE_BUY_ABSORPTION_TRAP"}
 
         if cvd_confirmed and cvd_tag:
             reason += cvd_tag
@@ -3459,7 +3511,7 @@ class StrategyEngine:
                 )
                 return
 
-            min_breakout_vol = 1.20 if (eth_leading or is_decoupled_bull) else 1.35
+            min_breakout_vol = 1.15 if (eth_leading or is_decoupled_bull or "BOĞA" in str(trend_regime) or macro_regime in ["BULL_PUMP", "BULL_TREND", "BULLISH"]) else 1.30
             if not is_oi_bull_expansion and vol_surge < min_breakout_vol:
                 self.log_rejection(symbol, "SETUP 1 R4 Breakout", f"Hacim patlaması {vol_surge:.2f}x yetersiz (en az {min_breakout_vol:.2f}x patlama aranıyor)")
                 return
@@ -4525,7 +4577,7 @@ class StrategyEngine:
                             symbol=symbol, side="LONG", entry_price=close_price,
                             reason=f"{reclaim_tag} Reclaim & Retest Sekmesi (Bullish Macro Absorption)",
                             soft_stop=soft_stop, hard_stop=hard_stop,
-                            tp1=tp1_target, tp2=tp2_target, trade_type="BREAKOUT",
+                            tp1=tp1_target, tp2=tp2_target, trade_type="BOUNCE",
                             snapshot_levels=levels, setup_id="SETUP_15_AVWAP_MVAH_RECLAIM",
                             confluence_list=[f"{reclaim_tag}_Reclaim", "Macro_Absorption_Confirmed"]
                         )
