@@ -1250,9 +1250,19 @@ class StrategyEngine:
             has_wall = any("DUVARI" in str(c) or "WALL" in str(c) for c in (confluence_list or []))
             
             # a. Hacimsiz Kırılım Tuzağı Denetimi: Yalnızca KORU ve katı WHIPSAW paritelerinde engelle, GEVŞET liginde izin ver
+            # Kurumsal akış veya patlayıcı hacim teyidi:
+            # - Hacim patlaması (>=1.8x; gevşet için >=1.35x), VEYA
+            # - Tahta likidite duvarı/balina emilimi, VEYA
+            # - Hacim >=1.4x ile beraber Göreceli Güç (RS) teyidi (Long için RS>=0.15, Short için RS<=-0.15)
+            has_strong_breakout_flow = (
+                has_vol or 
+                has_whale or 
+                has_wall or 
+                (vol_surge >= 1.40 and ((side == "LONG" and coin_rs_score >= 0.15) or (side == "SHORT" and coin_rs_score <= -0.15)))
+            )
             if is_breakout and (p_class == "WHIPSAW" or is_koru) and not is_gevset:
-                if not (has_vol and (has_whale or has_wall)):
-                    rej_msg = f"🛡️ Kuant Veri Süzgeci Denetimi: {symbol} volatil/çalkantılı rejimde. Hacimsiz kırılım tuzağını önlemek için (Hacim: {vol_surge:.1f}x < 1.8x veya Emir Akışı Yok) kırılım elendi. Yalnızca dip/tepe pusu veya hacimli kurumsal kırılımlara izin verilir."
+                if not has_strong_breakout_flow:
+                    rej_msg = f"🛡️ Kuant Veri Süzgeci Denetimi: {symbol} volatil/çalkantılı rejimde. Hacimsiz kırılım tuzağını önlemek için (Hacim: {vol_surge:.1f}x < 1.8x ve Kurumsal Akış Yok) kırılım elendi. Yalnızca dip/tepe pusu veya hacimli kurumsal kırılımlara izin verilir."
                     print(f">> [RED - DİNAMİK VERİ SÜZGECİ] {symbol}: {rej_msg}")
                     self.log_rejection(symbol, reason, rej_msg)
                     return {"error": "WHIPSAW_BREAKOUT_AUDIT_BLOCKED"}
@@ -1265,7 +1275,8 @@ class StrategyEngine:
             else:
                 min_required_confluence = 3 if is_breakout else 2
 
-            has_qualifying_flow = has_whale or has_wall or (vol_surge >= (1.30 if is_gevset else 1.5)) or (coin_rs_score >= 0.30)
+            has_rs_flow = (coin_rs_score >= 0.30) if side == "LONG" else (coin_rs_score <= -0.30)
+            has_qualifying_flow = has_whale or has_wall or (vol_surge >= (1.30 if is_gevset else 1.5)) or has_rs_flow
             if c_cnt < min_required_confluence and not has_qualifying_flow:
                 rej_msg = f"🛡️ Kuant Confluence Denetimi: {symbol} yapısında asgari {min_required_confluence} teyit veya akış şarttır (Mevcut: {c_cnt}/{min_required_confluence}). Zayıf sinyal elendi."
                 print(f">> [RED - SIKI CONFLUENCE DENETİMİ] {symbol}: {rej_msg}")
