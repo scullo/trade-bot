@@ -1073,11 +1073,64 @@ class ShadowExecutionEngine:
         trades = list(self.completed_trades)
         return trades[-limit:] if len(trades) > limit else trades
 
+    def archive_old_trades(self, keep_latest: int = 3000):
+        """
+        Aktif hafızadaki işlem sayısı 3000'i aştığında, en eski işlemleri aylık arşiv dosyasına
+        (shadow_archive_YYYYMM.json) aktarır. Böylece RAM ve disk şişmesi önlenir,
+        tarihsel veriler ise aylık bazda sonsuza kadar korunur.
+        """
+        if len(self.completed_trades) <= keep_latest:
+            return
+
+        all_completed = list(self.completed_trades)
+        to_archive = all_completed[:-keep_latest]
+        to_keep = all_completed[-keep_latest:]
+
+        archive_map: Dict[str, list] = {}
+        for t in to_archive:
+            entry_t = t.get("entry_time", "")
+            ym = entry_t[:7].replace("-", "") if len(entry_t) >= 7 else datetime.now().strftime("%Y%m")
+            af_name = f"shadow_archive_{ym}.json"
+            if af_name not in archive_map:
+                archive_map[af_name] = []
+            archive_map[af_name].append(t)
+
+        base_dir = os.path.dirname(self.history_file)
+        for af_name, trades in archive_map.items():
+            af_path = os.path.join(base_dir, af_name)
+            existing = []
+            if os.path.exists(af_path):
+                try:
+                    with open(af_path, "r", encoding="utf-8") as f:
+                        existing = json.load(f).get("completed", [])
+                except Exception:
+                    pass
+
+            merged_map = {x.get("id"): x for x in (existing + trades) if x.get("id")}
+            archive_data = {
+                "updated_at": datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S"),
+                "archive_period": af_name.replace("shadow_archive_", "").replace(".json", ""),
+                "completed": sorted(merged_map.values(), key=lambda x: str(x.get("entry_time", "")))
+            }
+            try:
+                with open(af_path, "w", encoding="utf-8") as f:
+                    json.dump(archive_data, f, ensure_ascii=False, indent=2)
+                print(f">> [GÖLGE ARŞİVLEME] {len(trades)} eski işlem {af_name} dosyasına arşivlendi.")
+            except Exception as e:
+                print(f">> [GÖLGE ARŞİV HATA] {e}")
+
+        self.completed_trades.clear()
+        for t in to_keep:
+            self.completed_trades.append(t)
+
     # ──────────────────────────────────────────────────────────────────────────
     # GITHUB UZAK BULUT KALICILIĞI (REMOTE PERSISTENCE) & SİSTEM SAĞLIĞI
     # ──────────────────────────────────────────────────────────────────────────
     def save_history(self, critical: bool = False):
         """Hafızadaki gölge işlemleri hem lokal dosyaya atomik hem de GitHub state dalına kaydeder."""
+        if len(self.completed_trades) > 3000:
+            self.archive_old_trades(keep_latest=3000)
+
         data = {
             "updated_at": datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S"),
             "completed": list(self.completed_trades),

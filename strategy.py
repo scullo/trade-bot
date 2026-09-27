@@ -1,5 +1,9 @@
 from security_vault import SecurityVault
 from shadow_engine import ShadowExecutionEngine
+try:
+    from autonomous_dna_calibrator import AutonomousDNACalibrator
+except Exception:
+    AutonomousDNACalibrator = None
 import os
 import json
 import time
@@ -74,6 +78,18 @@ class StrategyEngine:
                 print(f">> [COIN DNA KALİBRASYON] {len(self.calibrated_coin_dna)} parite için canlı kalibre DNA yüklendi.")
         except Exception as e:
             print(f">> [COIN DNA KALİBRASYON HATA] {e}")
+
+        # 🧬 48 Saatlik Otonom Kuant Kalibratörü ve Simülasyon Doğrulayıcısı
+        self.dna_calibrator = AutonomousDNACalibrator(shadow_engine=self.shadow_engine, strategy=self) if AutonomousDNACalibrator else None
+
+    def run_autonomous_calibration(self, force: bool = False) -> dict:
+        """48 saatlik otonom kuant evrim döngüsünü tetikler ve kanıtlanan kuralları canlıya alır."""
+        if hasattr(self, 'dna_calibrator') and self.dna_calibrator:
+            res = self.dna_calibrator.run_cycle(force=force)
+            if res.get("executed") and res.get("changes_applied", 0) > 0:
+                self.calibrated_coin_dna = self.dna_calibrator._load_current_calibrated_dna()
+            return res
+        return {"executed": False, "reason": "Kalibratör motoru tanımlı değil."}
 
     def is_gevset_coin(self, symbol: str) -> bool:
         """Paritenin canlı kalibrasyon sözlüğünde GEVŞET liginde olup olmadığını döndürür."""
@@ -758,7 +774,9 @@ class StrategyEngine:
 
         # ── 0b. CHANDELIER ANLIK TICK ERKEN BREAKEVEN KİLİDİ ──
         if ENABLE_CHANDELIER_EARLY_BE_LOCK and not pos.get("is_half_closed", False):
-            be_threshold = float(CHANDELIER_EARLY_BE_THRESHOLD_PCT) / 100.0  # 0.0080
+            coin_p = self.get_coin_persona(symbol)
+            be_threshold_pct = float(coin_p.get("chandelier_be_threshold_pct", CHANDELIER_EARLY_BE_THRESHOLD_PCT))
+            be_threshold = be_threshold_pct / 100.0
             cur_price_pct = (current_price - entry_p) / entry_p if side == "LONG" else (entry_p - current_price) / entry_p
             if cur_price_pct >= be_threshold:
                 fee_buffer = (float(COMMISSION_RATE) * 2.0) + 0.0002  # Dinamik giriş-çıkış komisyon tamponu + slipaj koruması
@@ -3114,7 +3132,9 @@ class StrategyEngine:
                 # Bu işlemler kârı kilitleyen mekanizma olmadığı için geri dönüp stop oluyordu.
                 # Eğer pozisyon lehimize >= +%0.80 (+%4 ROE) kâr görmüşse, stop seviyesi derhal 'Giriş + Komisyon Tamponu'na kilitlenir!
                 if ENABLE_CHANDELIER_EARLY_BE_LOCK and not is_half:
-                    be_threshold = float(CHANDELIER_EARLY_BE_THRESHOLD_PCT) / 100.0  # 0.0080
+                    coin_p = self.get_coin_persona(symbol)
+                    be_threshold_pct = float(coin_p.get("chandelier_be_threshold_pct", CHANDELIER_EARLY_BE_THRESHOLD_PCT))
+                    be_threshold = be_threshold_pct / 100.0
                     if price_pct >= be_threshold:
                         fee_buffer = (float(COMMISSION_RATE) * 2.0) + 0.0002  # Dinamik giriş-çıkış komisyon tamponu + slipaj koruması
                         be_price = entry_p * (1.0 + fee_buffer) if side == "LONG" else entry_p * (1.0 - fee_buffer)

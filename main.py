@@ -102,6 +102,26 @@ async def main():
     # Telegram /kasa ve kasa İnteraktif Komut Dinleyicisini Başlat
     asyncio.create_task(notifier.start_command_listener(trader_manager, market_data=market_data))
 
+    # 🧬 48 Saatlik Otonom Kuant Kalibratörü Watchdog'u (Her 1 saatte bir kontrol eder)
+    async def autonomous_calibration_watchdog():
+        await asyncio.sleep(60)  # Başlangıçta 1 dakika ısınma
+        while True:
+            try:
+                strat = getattr(trader_manager, "strategy", None)
+                calib = getattr(strat, "dna_calibrator", None)
+                if calib:
+                    if not calib.notifier:
+                        calib.notifier = notifier
+                    res = calib.run_cycle(force=False)
+                    if res.get("executed") and res.get("changes_applied", 0) > 0:
+                        strat.calibrated_coin_dna = calib._load_current_calibrated_dna()
+                        print(f">> [OTONOM KALİBRASYON BAŞARILI] {res.get('changes_applied')} parite optimize edildi ve doğrulandı.")
+            except Exception as e:
+                print(f">> [OTONOM KALİBRASYON DÖNGÜ HATA] {e}")
+            await asyncio.sleep(3600)  # 1 saatte bir döngü kontrolü
+
+    asyncio.create_task(autonomous_calibration_watchdog())
+
     # Global Crash Recovery Loop — WebSocket çöktüğünde bot ölmez, otomatik yeniden başlar
     ws_backoff = 5
     while True:
