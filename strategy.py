@@ -3724,16 +3724,32 @@ class StrategyEngine:
                 )
                 return
 
-            # 🛡️ ALICI EMİLİM MUMU ŞARTI
+            # 🛡️ ALICI EMİLİM MUMU ŞARTI (Çift Mum Teyidi & Seviye Tutunması)
             c_open = current_candle.get('open', close_price)
             c_low = current_candle.get('low', close_price)
             c_high = current_candle.get('high', close_price)
             c_range = c_high - c_low
             lower_wick = (min(c_open, close_price) - c_low) if c_range > 0 else 0
             lower_wick_ratio = (lower_wick / c_range) if c_range > 0 else 0
-            is_absorption = (lower_wick_ratio >= 0.15) or (close_price >= c_open)
+
+            p_open = prev_candle.get('open', close_price) if prev_candle else close_price
+            p_close = prev_candle.get('close', close_price) if prev_candle else close_price
+            p_low = prev_candle.get('low', close_price) if prev_candle else close_price
+            p_high = prev_candle.get('high', close_price) if prev_candle else close_price
+            p_range = p_high - p_low
+            p_lower_wick = (min(p_open, p_close) - p_low) if p_range > 0 else 0
+            p_lower_wick_ratio = (p_lower_wick / p_range) if p_range > 0 else 0
+
+            min_wick = 0.06 if self.is_gevset_coin(symbol) else 0.10
+            is_absorption = (
+                (lower_wick_ratio >= min_wick)
+                or (close_price >= c_open)
+                or (p_lower_wick_ratio >= min_wick)
+                or (p_close > p_open and close_price >= s3)
+                or (self.is_gevset_coin(symbol) and close_price >= s3)
+            )
             if not is_absorption:
-                self.log_rejection(symbol, "SETUP 3 S3 Destek", f"S3 desteğinde alıcı emilimi (min %15 alt fitil veya yeşil kapanış) yok (Fitil: %{lower_wick_ratio*100:.1f})")
+                self.log_rejection(symbol, "SETUP 3 S3 Destek", f"S3 desteğinde alıcı emilimi (min %{min_wick*100:.0f} alt fitil veya yeşil kapanış) yok (Fitil: %{lower_wick_ratio*100:.1f})")
                 return
 
             # 🛡️ CVD DELTA EMİLİMİ ŞARTI (Taker Satıcı Tükeniş Teyidi)
@@ -3808,8 +3824,9 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 4 R3 Direnç", f"Piyasa {trend_regime} rejimindeyken R3 direncinden SHORT açılmadı (Short Squeeze Koruması)")
                 return
             elif "BOĞA" in trend_regime:
-                # Ilımlı Boğa'da satıcı teyiti varsa izin ver, yoksa engelle
-                if cvd_ratio_r3 >= 48.0 and coin_rs_score >= 0.3:
+                # Ilımlı Boğa'da aşırı alıcı coşkusu varsa engelle; dengeli veya satıcı baskılı paritelere izin ver
+                max_cvd_r3 = 54.0 if self.is_gevset_coin(symbol) else 50.0
+                if cvd_ratio_r3 >= max_cvd_r3 and coin_rs_score >= 0.50 and not self.is_gevset_coin(symbol):
                     self.log_rejection(symbol, "SETUP 4 R3 Direnç", f"Piyasa {trend_regime} rejimindeyken R3 direncinde satıcı teyidi yetersiz (CVD: %{cvd_ratio_r3:.1f}, RS: {coin_rs_score:+.2f})")
                     return
             elif macro.get("btc_chg_1h", 0.0) > 0.50:
@@ -4139,15 +4156,30 @@ class StrategyEngine:
                 )
                 return
 
-            # 🛡️ ALICI EMİLİM MUMU ŞARTI (Ezilen Parite Koruma Zırhı)
+            # 🛡️ ALICI EMİLİM MUMU ŞARTI (Çift Mum Teyidi & Seviye Tutunması)
             c_open = current_candle.get('open', close_price)
             c_low = current_candle.get('low', close_price)
             c_high = current_candle.get('high', close_price)
             c_range = c_high - c_low
             lower_wick = (min(c_open, close_price) - c_low) if c_range > 0 else 0
             lower_wick_ratio = (lower_wick / c_range) if c_range > 0 else 0
-            min_wick = 0.08 if self.is_gevset_coin(symbol) else 0.15
-            is_absorption = (lower_wick_ratio >= min_wick) or (close_price >= c_open)
+
+            p_open = prev_candle.get('open', close_price) if prev_candle else close_price
+            p_close = prev_candle.get('close', close_price) if prev_candle else close_price
+            p_low = prev_candle.get('low', close_price) if prev_candle else close_price
+            p_high = prev_candle.get('high', close_price) if prev_candle else close_price
+            p_range = p_high - p_low
+            p_lower_wick = (min(p_open, p_close) - p_low) if p_range > 0 else 0
+            p_lower_wick_ratio = (p_lower_wick / p_range) if p_range > 0 else 0
+
+            min_wick = 0.06 if self.is_gevset_coin(symbol) else 0.10
+            is_absorption = (
+                (lower_wick_ratio >= min_wick)
+                or (close_price >= c_open)
+                or (p_lower_wick_ratio >= min_wick)
+                or (p_close > p_open and close_price >= support_npoc)
+                or (self.is_gevset_coin(symbol) and close_price >= support_npoc)
+            )
             if not is_absorption:
                 self.log_rejection(symbol, "SETUP 9 nPOC Sekmesi", f"Aşırı Zayıf Parite: Aşağı nPOC desteğinde alıcı emilimi (min %{min_wick*100:.0f} alt fitil veya yeşil kapanış) yok (Fitil: %{lower_wick_ratio*100:.1f})")
                 return
@@ -4225,13 +4257,20 @@ class StrategyEngine:
             btc_chg_1h = macro.get("btc_chg_1h", 0.0)
             is_ice_sniper_sell = sym_met.get("is_iceberg_sniper_sell", False)
             is_trapped_longs_check = (sym_met.get("trapped_status") == "TRAPPED_LONGS")
-            if "GÜÇLÜ BOĞA" in trend_regime and btc_chg_1h > 0.30:
+            if "GÜÇLÜ BOĞA" in trend_regime and btc_chg_1h > 0.35:
                 self.log_rejection(symbol, "Yukarı nPOC Reddi", f"Piyasa {trend_regime} rejimindeyken Yukarı nPOC'den SHORT açılmadı (Short Squeeze Koruması)")
                 return
             elif "BOĞA" in trend_regime:
                 cvd_data_chk = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
                 cvd_ratio_chk = float(cvd_data_chk.get('ratio_60s', 50.0))
-                has_institutional_short = is_ice_sniper_sell or is_trapped_longs_check or (cvd_ratio_chk < 45.0 and coin_rs_score < 0.0)
+                max_cvd_npoc = 53.0 if self.is_gevset_coin(symbol) else 48.0
+                has_institutional_short = (
+                    is_ice_sniper_sell
+                    or is_trapped_longs_check
+                    or (cvd_ratio_chk <= max_cvd_npoc)
+                    or (cvd_ratio_chk < 55.0 and coin_rs_score < 0.40)
+                    or self.is_gevset_coin(symbol)
+                )
                 if not has_institutional_short:
                     self.log_rejection(symbol, "Yukarı nPOC Reddi", f"Piyasa {trend_regime} rejimindeyken Yukarı nPOC SHORT için satıcı üstünlüğü (Buzdağı/dPOC/CVD) yetersiz.")
                     return
@@ -4243,20 +4282,34 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 10 nPOC Reddi", f"CVD Boğa İtişi Kalkanı: nPOC test ediliyor fakat taker alıcı baskısı (%{cvd_ratio_npoc_r:.1f} alıcı) aşırı agresif. Tepeye kafa atılmadı.")
                 return
 
-            # 🛡️ PİNBAS / ÜST FİTİL / KIRMIZI DÖNÜŞ ŞARTI: Mum tepeden gerçek bir satış baskısıyla reddedilmeli
+            # 🛡️ PİNBAS / ÜST FİTİL / KIRMIZI DÖNÜŞ ŞARTI (Çift Mum Teyidi)
             c_high = current_candle['high']
             c_low = current_candle['low']
             c_open = current_candle['open']
             c_range = c_high - c_low
-            if c_range > 0:
-                upper_wick = c_high - max(c_open, close_price)
-                upper_wick_ratio = upper_wick / c_range
-                # Kalibrasyon: GEVŞET coinlerinde üst fitil toleransı %6, diğerlerinde %12
-                min_upper_wick = 0.06 if self.is_gevset_coin(symbol) else 0.12
-                is_seller_rejection = (upper_wick_ratio >= min_upper_wick) or (close_price < c_open and upper_wick_ratio >= 0.03) or (self.is_gevset_coin(symbol) and close_price <= c_open)
-                if not is_seller_rejection:
-                    self.log_rejection(symbol, "Yukarı nPOC Reddi", f"Üst fitil veya satıcı dönüşü yetersiz (Fitil: %{upper_wick_ratio*100:.1f}, Kapanış: {close_price:.4f})")
-                    return
+            upper_wick = (c_high - max(c_open, close_price)) if c_range > 0 else 0
+            upper_wick_ratio = (upper_wick / c_range) if c_range > 0 else 0
+
+            p_open = prev_candle.get('open', close_price) if prev_candle else close_price
+            p_close = prev_candle.get('close', close_price) if prev_candle else close_price
+            p_high = prev_candle.get('high', close_price) if prev_candle else close_price
+            p_low = prev_candle.get('low', close_price) if prev_candle else close_price
+            p_range = p_high - p_low
+            p_upper_wick = (p_high - max(p_open, p_close)) if p_range > 0 else 0
+            p_upper_wick_ratio = (p_upper_wick / p_range) if p_range > 0 else 0
+
+            min_upper_wick = 0.05 if self.is_gevset_coin(symbol) else 0.10
+            is_seller_rejection = (
+                (upper_wick_ratio >= min_upper_wick)
+                or (close_price < c_open and upper_wick_ratio >= 0.02)
+                or (self.is_gevset_coin(symbol) and close_price <= c_open)
+                or (p_upper_wick_ratio >= min_upper_wick)
+                or (p_close < p_open and close_price <= resist_npoc)
+                or (self.is_gevset_coin(symbol) and close_price <= resist_npoc)
+            )
+            if not is_seller_rejection:
+                self.log_rejection(symbol, "Yukarı nPOC Reddi", f"Üst fitil veya satıcı dönüşü yetersiz (Fitil: %{upper_wick_ratio*100:.1f}, Kapanış: {close_price:.4f})")
+                return
 
             buffer = (resist_npoc - p) * BUFFER_RATIO if (resist_npoc > p) else (resist_npoc * 0.003)
             soft_stop = min(resist_npoc + buffer, close_price * 1.0050)
@@ -4327,10 +4380,10 @@ class StrategyEngine:
                 cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
                 # Kalibrasyon: Yalnızca GÜÇLÜ BOĞA + BTC aktif yükselişte koşulsuz engel
                 # ILIMLI BOĞA'da coin bazlı satıcı akışı teyiti varsa izin ver
-                is_strong_bull_mkt = ("GÜÇLÜ BOĞA" in trend_regime) and (macro.get("btc_chg_1h", 0.0) > 0.30)
+                is_strong_bull_mkt = ("GÜÇLÜ BOĞA" in trend_regime) and (macro.get("btc_chg_1h", 0.0) > 0.40)
                 if is_strong_bull_mkt:
                     self.log_rejection(symbol, f"SETUP 11 {resist_tag} Retest Reddi", f"Piyasa {trend_regime} rejimindeyken (RS: {coin_rs_score:+.2f}) direnç retest shortu açılmadı.")
-                elif "BOĞA" in trend_regime and cvd_ratio >= 52.0 and coin_rs_score >= 0.30:
+                elif "BOĞA" in trend_regime and cvd_ratio >= 55.0 and coin_rs_score >= 0.50 and not self.is_gevset_coin(symbol):
                     self.log_rejection(symbol, f"SETUP 11 {resist_tag} Retest Reddi", f"Piyasa {trend_regime} rejimindeyken satıcı teyidi yetersiz (CVD: %{cvd_ratio:.1f}, RS: {coin_rs_score:+.2f})")
                 else:
                     c_high = current_candle.get('high', close_price)
@@ -4339,14 +4392,29 @@ class StrategyEngine:
                     c_range = c_high - c_low
                     upper_wick = (c_high - max(c_open, close_price)) if c_range > 0 else 0
                     upper_wick_ratio = (upper_wick / c_range) if c_range > 0 else 0
-                    min_upper_wick = 0.08 if self.is_gevset_coin(symbol) else 0.15
-                    is_seller_rejection = (upper_wick_ratio >= min_upper_wick) or (close_price < c_open)
+
+                    p_open = prev_candle.get('open', close_price) if prev_candle else close_price
+                    p_close = prev_candle.get('close', close_price) if prev_candle else close_price
+                    p_high = prev_candle.get('high', close_price) if prev_candle else close_price
+                    p_low = prev_candle.get('low', close_price) if prev_candle else close_price
+                    p_range = p_high - p_low
+                    p_upper_wick = (p_high - max(p_open, p_close)) if p_range > 0 else 0
+                    p_upper_wick_ratio = (p_upper_wick / p_range) if p_range > 0 else 0
+
+                    min_upper_wick = 0.05 if self.is_gevset_coin(symbol) else 0.10
+                    is_seller_rejection = (
+                        (upper_wick_ratio >= min_upper_wick)
+                        or (close_price < c_open)
+                        or (p_upper_wick_ratio >= min_upper_wick)
+                        or (p_close < p_open and close_price <= resist_lvl)
+                        or (self.is_gevset_coin(symbol) and close_price <= resist_lvl)
+                    )
 
                     obi_data = self.market_data.get_orderbook_depth(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_orderbook_depth')) else {}
                     obi_imbalance = float(obi_data.get('imbalance', 0.0))
                     obi_ratio = float(obi_data.get('ratio', 1.0))
-                    max_cvd = 53.0 if self.is_gevset_coin(symbol) else 48.0
-                    has_seller_flow = (cvd_ratio <= max_cvd) or ((cvd_ratio <= (max_cvd + 4.0)) and (obi_imbalance <= -0.05 or obi_ratio <= 0.90)) or (obi_imbalance <= -0.10)
+                    max_cvd = 55.0 if self.is_gevset_coin(symbol) else 50.0
+                    has_seller_flow = (cvd_ratio <= max_cvd) or ((cvd_ratio <= (max_cvd + 4.0)) and (obi_imbalance <= -0.04 or obi_ratio <= 0.92)) or (obi_imbalance <= -0.08)
 
                     if not is_seller_rejection:
                         self.log_rejection(symbol, f"SETUP 11 {resist_tag} Retest Reddi", f"Direnç retestinde satıcı reddi (üst fitil) yetersiz (Fitil: %{upper_wick_ratio*100:.1f})")
@@ -4445,15 +4513,31 @@ class StrategyEngine:
                 c_range = c_high - c_low
                 upper_wick = (c_high - max(c_open, close_price)) if c_range > 0 else 0
                 upper_wick_ratio = (upper_wick / c_range) if c_range > 0 else 0
-                is_seller_rej = (upper_wick_ratio >= 0.18) or (close_price < c_open)
+
+                p_open = prev_candle.get('open', close_price) if prev_candle else close_price
+                p_close = prev_candle.get('close', close_price) if prev_candle else close_price
+                p_high = prev_candle.get('high', close_price) if prev_candle else close_price
+                p_low = prev_candle.get('low', close_price) if prev_candle else close_price
+                p_range = p_high - p_low
+                p_upper_wick = (p_high - max(p_open, p_close)) if p_range > 0 else 0
+                p_upper_wick_ratio = (p_upper_wick / p_range) if p_range > 0 else 0
+
+                min_wick_13 = 0.06 if self.is_gevset_coin(symbol) else 0.12
+                is_seller_rej = (
+                    (upper_wick_ratio >= min_wick_13)
+                    or (close_price < c_open)
+                    or (p_upper_wick_ratio >= min_wick_13)
+                    or (p_close < p_open and close_price <= s3)
+                    or (self.is_gevset_coin(symbol) and close_price <= s3)
+                )
 
                 cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
                 cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
                 is_strong_bull_mkt = ("GÜÇLÜ BOĞA" in trend_regime) or (macro.get("btc_chg_1h", 0.0) > 0.80 and "AYI" not in trend_regime)
-                is_weak_outlier = (coin_rs_score <= -0.60 and cvd_ratio <= 44.0)
+                is_weak_outlier = (coin_rs_score <= -0.40 or cvd_ratio <= 46.0 or self.is_gevset_coin(symbol))
                 if not is_seller_rej:
                     self.log_rejection(symbol, "SETUP 13 S3 Retest Reddi", f"S3 retestinde satıcı tepkisi yok (Fitil: %{upper_wick_ratio*100:.1f})")
-                elif (is_strong_bull_mkt and not is_weak_outlier) or ("BOĞA" in trend_regime and not is_weak_outlier):
+                elif is_strong_bull_mkt and not is_weak_outlier:
                     self.log_rejection(symbol, "SETUP 13 S3 Retest Reddi", f"Piyasa {trend_regime} rejimindeyken S3 retest shortu açılmadı.")
                 else:
                     down_targets = [lvl for lvl in [s4, s5, below_npoc, below_nval] if lvl and lvl <= close_price * 0.992]
@@ -4501,7 +4585,23 @@ class StrategyEngine:
                     c_range = c_high - c_low
                     lower_wick = (min(c_open, close_price) - c_low) if c_range > 0 else 0
                     lower_wick_ratio = (lower_wick / c_range) if c_range > 0 else 0
-                    is_buyer_rejection = (lower_wick_ratio >= 0.15) or (close_price > c_open)
+
+                    p_open = prev_candle.get('open', close_price) if prev_candle else close_price
+                    p_close = prev_candle.get('close', close_price) if prev_candle else close_price
+                    p_low = prev_candle.get('low', close_price) if prev_candle else close_price
+                    p_high = prev_candle.get('high', close_price) if prev_candle else close_price
+                    p_range = p_high - p_low
+                    p_lower_wick = (min(p_open, p_close) - p_low) if p_range > 0 else 0
+                    p_lower_wick_ratio = (p_lower_wick / p_range) if p_range > 0 else 0
+
+                    min_wick_14 = 0.06 if self.is_gevset_coin(symbol) else 0.10
+                    is_buyer_rejection = (
+                        (lower_wick_ratio >= min_wick_14)
+                        or (close_price > c_open)
+                        or (p_lower_wick_ratio >= min_wick_14)
+                        or (p_close > p_open and close_price >= support_lvl)
+                        or (self.is_gevset_coin(symbol) and close_price >= support_lvl)
+                    )
 
                     cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
                     cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
@@ -4509,7 +4609,7 @@ class StrategyEngine:
                     obi_data = self.market_data.get_orderbook_depth(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_orderbook_depth')) else {}
                     obi_imbalance = float(obi_data.get('imbalance', 0.0))
                     obi_ratio = float(obi_data.get('ratio', 1.0))
-                    has_buyer_flow = (cvd_ratio >= 48.0) or (obi_imbalance >= 0.05) or (obi_ratio >= 1.10)
+                    has_buyer_flow = (cvd_ratio >= 46.0) or (obi_imbalance >= 0.04) or (obi_ratio >= 1.08) or self.is_gevset_coin(symbol)
 
                     if not is_buyer_rejection:
                         self.log_rejection(symbol, f"SETUP 14 {support_tag} Retest Reddi", f"Destek retestinde alıcı tepkisi (alt fitil) yetersiz (Fitil: %{lower_wick_ratio*100:.1f})")
@@ -4599,7 +4699,23 @@ class StrategyEngine:
                 c_range = c_high - c_low
                 lower_wick = (min(c_open, close_price) - c_low) if c_range > 0 else 0
                 lower_wick_ratio = (lower_wick / c_range) if c_range > 0 else 0
-                is_buyer_rej = (lower_wick_ratio >= 0.15) or (close_price > c_open)
+
+                p_open = prev_candle.get('open', close_price) if prev_candle else close_price
+                p_close = prev_candle.get('close', close_price) if prev_candle else close_price
+                p_low = prev_candle.get('low', close_price) if prev_candle else close_price
+                p_high = prev_candle.get('high', close_price) if prev_candle else close_price
+                p_range = p_high - p_low
+                p_lower_wick = (min(p_open, p_close) - p_low) if p_range > 0 else 0
+                p_lower_wick_ratio = (p_lower_wick / p_range) if p_range > 0 else 0
+
+                min_wick_16 = 0.06 if self.is_gevset_coin(symbol) else 0.10
+                is_buyer_rej = (
+                    (lower_wick_ratio >= min_wick_16)
+                    or (close_price > c_open)
+                    or (p_lower_wick_ratio >= min_wick_16)
+                    or (p_close > p_open and close_price >= r3)
+                    or (self.is_gevset_coin(symbol) and close_price >= r3)
+                )
 
                 if not is_buyer_rej:
                     self.log_rejection(symbol, "SETUP 16 R3 Retest Reddi", f"R3 retestinde alıcı tepkisi yetersiz (Fitil: %{lower_wick_ratio*100:.1f})")
