@@ -6493,6 +6493,8 @@ async function loadAdminMetrics() {
             } catch (err) {
                 console.error("renderShadowView error:", err);
             }
+        }
+
         // ─────────────────────────────────────────────────────────────────────
         // 🧬 OTONOM KUANT EVRİM MASASI & İÇSEL SİMÜLASYON FRONTEND ENGINE
         // ─────────────────────────────────────────────────────────────────────
@@ -6699,10 +6701,10 @@ async function loadAdminMetrics() {
                         <span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:8px; font-size:11px; font-weight:700;">${status} LİGİ</span>
                     </div>
                     <p style="margin:0; font-size:12px; color:#cbd5e1; line-height:1.5;">
-                        ${status === 'GEVŞET' ? 'Bu paritede kalkanlar fazla katı olduğu için yüksek kâr potansiyeline sahip işlemler engelleniyordu (Spoiler Shield tuzağı). Confluence 4\'ten 2\'ye indirilerek fırsat yakalama kabiliyeti artırıldı; sermaye riskini sınırlamak için marjin büyüklüğü %50\'ye ölçeklendi.' :
-                          status === 'KORU' ? 'Bu paritede piyasa fitil tuzakları ve ani dökülmeler üretiyor. Kalkanlar sermayeyi yüksek başarıyla korudu (Hero Shield). Standart koruma kuralları sıkı tutuldu.' :
-                          status === 'ERKEN BE' ? 'Bu paritede erken başa-baş (Chandelier BE) stopu %0.80 kârda tetiklendiğinde piyasa geri çekilip stopu patlatıyor, ardından fırlayıp TP2\'ye gidiyordu. Stop eşiği %1.40\'a genişletilerek pariteye nefes payı bırakıldı.' :
-                          'Parite dengeli rejimde hareket ediyor; kalkanlar ve tetikleyiciler optimum dengede çalışmaktadır.'}
+                        ${status === "GEVŞET" ? "Bu paritede kalkanlar fazla katı olduğu için yüksek kâr potansiyeline sahip işlemler engelleniyordu (Spoiler Shield tuzağı). Confluence 4 yerine 2 seviyesine indirilerek fırsat yakalama kabiliyeti artırıldı; sermaye riskini sınırlamak için marjin büyüklüğü yarıya indirildi." :
+                          status === "KORU" ? "Bu paritede piyasa fitil tuzakları ve ani dökülmeler üretiyor. Kalkanlar sermayeyi yüksek başarıyla korudu (Hero Shield). Standart koruma kuralları sıkı tutuldu." :
+                          status === "ERKEN BE" ? "Bu paritede erken başa-baş (Chandelier BE) stopu %0.80 kârda tetiklendiğinde piyasa geri çekilip stopu patlatıyor, ardından fırlayıp TP2 seviyesine gidiyordu. Stop eşiği %1.40 seviyesine genişletilerek pariteye nefes payı bırakıldı." :
+                          "Parite dengeli rejimde hareket ediyor; kalkanlar ve tetikleyiciler optimum dengede çalışmaktadır."}
                     </p>
                 </div>
 
