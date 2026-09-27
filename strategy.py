@@ -4,6 +4,7 @@ try:
     from autonomous_dna_calibrator import AutonomousDNACalibrator
 except Exception:
     AutonomousDNACalibrator = None
+import asyncio
 import os
 import json
 import time
@@ -37,6 +38,7 @@ from config import (
     ENABLE_CHANDELIER_EARLY_BE_LOCK, CHANDELIER_EARLY_BE_THRESHOLD_PCT,
     ENABLE_ASIA_SELECTIVE_SHIELD, ENABLE_COOLDOWN_THROTTLE, SYMBOL_MIN_COOLDOWN_MINUTES,
     ENABLE_CHANDELIER_BE_NOTIFY, ENABLE_DAILY_CIRCUIT_BREAKER, MAX_DAILY_LOSS_PCT,
+    LEVERAGE_EXTREME_ATR_THRESHOLD, LEVERAGE_HIGH_ATR_THRESHOLD, LEVERAGE_LOW_ATR_THRESHOLD,
     SECTOR_CLUSTERS, TOP_LIQUIDITY_SYMBOLS
 )
 
@@ -1628,7 +1630,8 @@ class StrategyEngine:
         # 🧬 GÖLGE MOTORU ADLİ ENTEGRASYONU:
         # Reversal, nPOC veya Direnç/Destek dönüşlerinde perakende alıcı/satıcı akışı doğaldır (tuzak öncesi tükeniş).
         # Gölge takip verilerimizde 39 kazanan işlemin %52-%56 arası perakende CVD gürültüsü yüzünden engellendiği kanıtlanmıştır.
-        is_reversal_setup = any(k in str(setup_name or '').upper() for k in ["NPOC", "S3", "R3", "REDDİ", "SEKMESİ", "REVERSAL", "TEPE AVWAP", "DİP AVWAP"])
+        setup_tag = str(setup_id or reason or "").upper()
+        is_reversal_setup = any(k in setup_tag for k in ["NPOC", "S3", "R3", "REDDİ", "SEKMESİ", "REVERSAL", "TEPE AVWAP", "DİP AVWAP"])
         
         # Gölge Motoru Parite Teşhisi (Aşırı katı kalkan kurbanı paritelerde otonom esnetme)
         is_spoiler_coin = is_gevset
@@ -2920,7 +2923,7 @@ class StrategyEngine:
             deribit_net_gex=float(l2_info.get('deribit_net_gex', 0.0)) if 'l2_info' in locals() and l2_info else 0.0,
             hawkes_eta=float(l2_info.get('hawkes_eta', 0.15)) if 'l2_info' in locals() and l2_info else 0.15,
             is_avalanche_active=bool(l2_info.get('is_avalanche_active', False)) if 'l2_info' in locals() and l2_info else False,
-            cvd_accel_60s=float(cvd_info.get('accel_60s', 0.0)) if 'cvd_info' in locals() and cvd_info else 0.0,
+            cvd_accel_60s=float((locals().get('cvd_data') or locals().get('cvd_info') or {}).get('accel_60s', 0.0)),
             tri_modal_regime=str(getattr(self, 'current_market_regime', 'RANGING_PINGPONG')),
             cvd_divergence=cvd_div_tag,
             rvol_ratio=rvol_ratio_v,
