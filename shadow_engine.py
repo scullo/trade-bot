@@ -1111,7 +1111,7 @@ class ShadowExecutionEngine:
         try:
             for attempt in range(1, 4):
                 try:
-                    content_str = json.dumps(data, ensure_ascii=False, indent=2)
+                    content_str = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
                     content_b64 = base64.b64encode(content_str.encode("utf-8")).decode("utf-8")
 
                     # Güncel SHA'yı al
@@ -1173,8 +1173,27 @@ class ShadowExecutionEngine:
                     gh_data = json.loads(resp.read().decode("utf-8"))
                     self._github_sha = gh_data.get("sha")
                     content_b64 = gh_data.get("content", "")
-                    content_str = base64.b64decode(content_b64).decode("utf-8")
-                    data = json.loads(content_str)
+                    if content_b64:
+                        content_str = base64.b64decode(content_b64).decode("utf-8")
+                        data = json.loads(content_str)
+                    elif gh_data.get("download_url"):
+                        raw_req = urllib.request.Request(gh_data["download_url"], headers={
+                            "Authorization": f"token {GITHUB_TOKEN}",
+                            "User-Agent": "Valkyrie-Shadow-Engine"
+                        })
+                        with urllib.request.urlopen(raw_req, timeout=15) as raw_resp:
+                            data = json.loads(raw_resp.read().decode("utf-8"))
+                    elif gh_data.get("git_url"):
+                        blob_req = urllib.request.Request(gh_data["git_url"], headers={
+                            "Authorization": f"token {GITHUB_TOKEN}",
+                            "Accept": "application/vnd.github.v3+json",
+                            "User-Agent": "Valkyrie-Shadow-Engine"
+                        })
+                        with urllib.request.urlopen(blob_req, timeout=15) as blob_resp:
+                            blob_data = json.loads(blob_resp.read().decode("utf-8"))
+                            data = json.loads(base64.b64decode(blob_data.get("content", "")).decode("utf-8"))
+                    else:
+                        data = {}
                     remote_completed = data.get("completed", [])
                     remote_actives = data.get("actives", [])
                     print(f">> [GÖLGE BULUT KALICILIĞI] GitHub state dalından {len(remote_completed)} tamamlanan, {len(remote_actives)} aktif işlem çekildi. (SHA: {self._github_sha[:8] if self._github_sha else 'OK'})")
