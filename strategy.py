@@ -2105,7 +2105,8 @@ class StrategyEngine:
                         cum_vol = vol.sum()
                         btc_vwap = float((hlc3 * vol).sum() / cum_vol) if cum_vol > 0 else float(btc_sub['close'].iloc[-1])
                         btc_cur = float(df_btc['close'].iloc[-1])
-                        if btc_cur < btc_vwap * 0.998 and dynamic_rs_score < 1.0:
+                        has_inst_long_escape = (cvd_ratio_60s >= 52.0) or (dynamic_rs_score >= 0.20) or self.is_gevset_coin(symbol)
+                        if btc_cur < btc_vwap * 0.998 and dynamic_rs_score < 1.0 and not has_inst_long_escape:
                             rej_msg = f"⚓ BTC VWAP Çapası: Bitcoin (${btc_cur:,.1f}) günlük intraday VWAP (${btc_vwap:,.1f}) seviyesinin altında ve bağımsız alfa yok (RS: {dynamic_rs_score:+.2f}). Altcoin sekme LONG'u engellendi."
                             print(f">> [RED - BTC VWAP ÇAPASI] {symbol}: {rej_msg}")
                             self.log_rejection(symbol, reason, rej_msg)
@@ -2203,13 +2204,15 @@ class StrategyEngine:
                 self.log_rejection(symbol, reason, rej_msg)
                 return {"error": "MACRO_BEAR_LONG_BLOCKED"}
 
-        # 2b. Makro Boğa Karşı-Trend Kalkanı: BTC 1S trendi belirgin yükselişteyken (%+0.30 üzeri veya BULL_PUMP)
-        #    altcoin direnç SHORT'ları kesinlikle engellenir!
-        if side == "SHORT" and not is_breakout and (btc_chg_1h >= 0.30 or regime_clim in ["BULL_PUMP", "EXTREME_BULL"]):
-            rej_msg = f"🛡️ Makro Boğa Yön Valisi: BTC 1S (%{btc_chg_1h:+.2f}) boğa yükselişindeyken altcoin direnç SHORT'u engellendi."
-            print(f">> [RED - MAKRO BOĞA YÖN VALİSİ] {symbol}: {rej_msg}")
-            self.log_rejection(symbol, reason, rej_msg)
-            return {"error": "MACRO_BULL_SHORT_BLOCKED"}
+        # 2b. Makro Boğa Karşı-Trend Kalkanı: BTC 1S trendi belirgin yükselişteyken (%+0.40 üzeri veya BULL_PUMP)
+        #    altcoin direnç SHORT'ları kesinlikle engellenir (paritede kurumsal dökülme teyidi olanlar istisna)!
+        if side == "SHORT" and not is_breakout and (btc_chg_1h >= 0.40 or regime_clim in ["BULL_PUMP", "EXTREME_BULL"]):
+            cvd_r = float(cvd_data.get('ratio_60s', 50.0)) if 'cvd_data' in locals() and cvd_data else 50.0
+            if dynamic_rs_score > -0.80 and cvd_r > 35.0 and not self.is_gevset_coin(symbol):
+                rej_msg = f"🛡️ Makro Boğa Yön Valisi: BTC 1S (%{btc_chg_1h:+.2f}) boğa yükselişindeyken ve paritede kurumsal dökülme yokken (RS: {dynamic_rs_score:+.2f}, CVD: %{cvd_r:.0f}) altcoin direnç SHORT'u engellendi."
+                print(f">> [RED - MAKRO BOĞA YÖN VALİSİ] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, reason, rej_msg)
+                return {"error": "MACRO_BULL_SHORT_BLOCKED"}
 
         # ── 6. ÜST ZAMAN DİLİMİ (HTF) MAKRO UYUMU ──
         mpoc_val = snaps.get('mpoc', 0.0)
@@ -2238,7 +2241,7 @@ class StrategyEngine:
                 print(f">> [RED - MADDE 9] {symbol}: Nötr coin, güçlü AYI trendinde LONG kırılımı açamaz.")
                 self.log_rejection(symbol, reason, f"Piyasa {trend_regime} iken ters yöne LONG açılması engellendi (Trend Kalkanı)")
                 return {"error": "MACRO_TREND_VIOLATION"}
-            if side == "SHORT" and ("BOĞA" in trend_regime):
+            if side == "SHORT" and ("GÜÇLÜ BOĞA" in trend_regime):
                 print(f">> [RED - MADDE 9] {symbol}: Nötr coin, {trend_regime} trendinde SHORT kırılımı açamaz.")
                 self.log_rejection(symbol, reason, f"Piyasa {trend_regime} iken ters yöne SHORT açılması engellendi (Trend Kalkanı)")
                 return {"error": "MACRO_TREND_VIOLATION"}
@@ -3431,12 +3434,16 @@ class StrategyEngine:
         eth_leading = macro.get("eth_leading", False)
         macro_regime = macro.get("regime", "NEUTRAL")
         is_bear_dump = (macro_regime == "BEAR_DUMP")
+        is_bull_pump = (macro_regime in ["BULL_PUMP", "EXTREME_BULL"]) or (macro.get("btc_chg_1h", 0.0) >= 0.80)
         is_range_regime = is_dead_zone
 
         if tepe_avwap > 0 and p > 0 and close_price > tepe_avwap and close_price > p:
             regime_desc = "🟢 GÜÇLÜ BOĞA (Bullish)"
         elif dip_avwap > 0 and p > 0 and close_price < dip_avwap and close_price < p:
             regime_desc = "🔴 GÜÇLÜ AYI (Bearish)"
+        elif s3 > 0 and r3 > 0 and s3 <= close_price <= r3:
+            regime_desc = "⚪ YATAY / SIKIŞMA (Ranging)"
+            is_range_regime = True
         elif p > 0 and close_price > p:
             regime_desc = "🟡 ILIMLI BOĞA (Moderate Bull)"
         elif p > 0 and close_price < p:
@@ -3606,6 +3613,14 @@ class StrategyEngine:
             cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
             if cvd_ratio > 58.0:
                 self.log_rejection(symbol, "SETUP 2 S4 Breakdown", f"Ayı Tuzağı Kalkanı: Fiyat S4'ü aşağı kırdı fakat mikro-CVD alıcı ağırlıklı (%{cvd_ratio:.1f} alıcı). Sahte çöküş elendi.")
+                return
+
+            # 🛡️ MAKRO BOĞA TAARRUZU KALKANI: Piyasa roket yükselişindeyken S4 breakdown short açılmaz!
+            if is_bull_pump and not is_decoupled_bear:
+                self.log_rejection(
+                    symbol, "SETUP 2 S4 Breakdown",
+                    f"Makro Boğa Kalkanı ({macro_regime} - BTC 1S: %{macro.get('btc_chg_1h', 0.0):+.2f}); Piyasa boğa taarruzundayken breakdown short elendi."
+                )
                 return
 
             if is_bear_dump or is_oi_bear_expansion:
@@ -3963,7 +3978,10 @@ class StrategyEngine:
                 return
 
             # 🛡️ HACİM TEYİDİ: Aylık mVAH kırılımı kurumsal hacim patlaması gerektirir (Sahte kırılım tuzağını önleme)
-            min_mvah_vol = min_vol_surge if min_vol_surge else 1.5
+            if is_bull_pump:
+                min_mvah_vol = 1.10
+            else:
+                min_mvah_vol = min_vol_surge if min_vol_surge else 1.5
             if vol_surge < min_mvah_vol:
                 self.log_rejection(symbol, "SETUP 6 mVAH Breakout", f"mVAH kırılım hacmi {vol_surge:.2f}x yetersiz (en az {min_mvah_vol:.2f}x aranıyor)")
                 return
@@ -4728,10 +4746,15 @@ class StrategyEngine:
                     or (self.is_gevset_coin(symbol) and close_price >= r3)
                 )
 
+                cvd_data_16 = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+                cvd_ratio_16 = float(cvd_data_16.get('ratio_60s', 50.0))
+                is_strong_bear_mkt = ("GÜÇLÜ AYI" in trend_regime) or (macro.get("btc_chg_1h", 0.0) < -0.80 and "BOĞA" not in trend_regime)
+                is_strong_outlier = (coin_rs_score >= 0.40 or cvd_ratio_16 >= 54.0 or self.is_gevset_coin(symbol))
+
                 if not is_buyer_rej:
                     self.log_rejection(symbol, "SETUP 16 R3 Retest Reddi", f"R3 retestinde alıcı tepkisi yetersiz (Fitil: %{lower_wick_ratio*100:.1f})")
-                elif "AYI" in trend_regime:
-                    self.log_rejection(symbol, "SETUP 16 R3 Retest Reddi", "Piyasa Ayı rejimindeyken R3 retest longu açılmadı.")
+                elif is_strong_bear_mkt and not is_strong_outlier:
+                    self.log_rejection(symbol, "SETUP 16 R3 Retest Reddi", f"Piyasa {trend_regime} rejimindeyken R3 retest longu açılmadı.")
                 else:
                     up_targets = [lvl for lvl in [r4, r5, above_npoc, above_nvah] if lvl and lvl >= close_price * 1.009]
                     up_targets.sort()
