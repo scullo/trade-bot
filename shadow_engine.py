@@ -48,7 +48,7 @@ class ShadowExecutionEngine:
     Sıfır Gecikmeli Bellek İçi Gölge İşlem Motoru ve Otonom Kuant Kalibratörü.
     """
 
-    def __init__(self, history_file: str = "shadow_trades_history.json", max_active: int = 300, max_history: int = 1000):
+    def __init__(self, history_file: str = "shadow_trades_history.json", max_active: int = 300, max_history: int = 5000):
         self.history_file = os.path.join(os.path.dirname(__file__), history_file)
         self.max_active = max_active
         self.max_history = max_history
@@ -1080,7 +1080,7 @@ class ShadowExecutionEngine:
         """Hafızadaki gölge işlemleri hem lokal dosyaya atomik hem de GitHub state dalına kaydeder."""
         data = {
             "updated_at": datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S"),
-            "completed": list(self.completed_trades)[-500:],
+            "completed": list(self.completed_trades),
             "actives": list(self.active_positions.values())
         }
 
