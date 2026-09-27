@@ -3489,34 +3489,7 @@ HTML_PAGE = """
          1. SEKME: KOKPİT (ANA SAYFA)
          ========================================================================= -->
     <div id="main-tab-content-cockpit" class="main-tab-content active-tab">
-        <!-- OTONOM KUANT EVRM & G-LGE MOTORU CANLI KOKPT ERD -->
-        <div class="cockpit-quant-strip" style="background:linear-gradient(90deg, rgba(0, 242, 254, 0.07), rgba(16, 185, 129, 0.05), rgba(138, 43, 226, 0.05)); border:1px solid rgba(0, 242, 254, 0.25); border-radius:12px; padding:10px 16px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
-            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="font-size:16px;">Y🧬</span>
-                    <span style="font-weight:800; font-size:12px; color:#fff; letter-spacing:0.5px;">KUANT EVRM & G-LGE RADARI:</span>
-                    <span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800;" id="cockpit-strip-status">48H D-NGo AKTF</span>
-                </div>
-                <div style="font-size:11.5px; color:#cbd5e1; display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
-                    <span>?? Sonraki Dng: <b><span id="cockpit-strip-countdown" style="color:#38bdf8;">47.4s</span></b></span>
-                    <span>??? SEI Kalkan Verimi: <b><span id="cockpit-strip-sei" style="color:#10b981;">%64.1</span></b></span>
-                    <span>?? Kurtarlan Zarar: <b><span id="cockpit-strip-saved" style="color:#10b981;">+$8.5K</span></b></span>
-                    <span>? Erken BE Zrh: <b><span id="cockpit-strip-erkenbe" style="color:#f59e0b;">4 Parite</span></b></span>
-                    <span>?? Frsat Avcs: <b><span id="cockpit-strip-firsat" style="color:#38bdf8;">17 Parite</span></b></span>
-                </div>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-                <button onclick="switchMainTab('evolution')" style="background:rgba(0,242,254,0.12); color:#00f2fe; border:1px solid rgba(0,242,254,0.35); padding:5px 12px; border-radius:7px; font-size:11px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.15s;">
-                    <span>Kuant Evrim Masas</span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </button>
-                <button onclick="switchMainTab('shadow')" style="background:rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.12); padding:5px 10px; border-radius:7px; font-size:11px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:5px;">
-                    <span>Glge (107 Canl)</span>
-                </button>
-            </div>
-        </div>
 
-        <!-- 4 HERO FINANSAL KPI KARTI -->
         <!-- 4 HERO FINANSAL KPI KARTI (MİKRO-SİMÜLASYONLU) -->
         <div class="cockpit-kpi-grid">
             <div class="cockpit-kpi-card kpi-card-vault" id="card-kpi-vault">
@@ -3628,6 +3601,33 @@ HTML_PAGE = """
 
         <!-- DİNAMİK AÇIK POZİSYONLAR BÖLÜMÜ -->
         <div id="cockpit-open-positions-container" style="margin: 20px 0; display:none;"></div>
+
+        <!-- OTONOM KUANT EVRİM & GÖLGE MOTORU CANLI KOKPİT ŞERİDİ -->
+        <div class="cockpit-quant-strip" style="background:linear-gradient(90deg, rgba(0, 242, 254, 0.07), rgba(16, 185, 129, 0.05), rgba(138, 43, 226, 0.05)); border:1px solid rgba(0, 242, 254, 0.22); border-radius:12px; padding:10px 16px; margin: 18px 0; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:16px;">🧬</span>
+                    <span style="font-weight:800; font-size:12px; color:#fff; letter-spacing:0.5px;">KUANT EVRİM &amp; GÖLGE RADARI:</span>
+                    <span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800;" id="cockpit-strip-status">48S DÖNGÜ AKTİF</span>
+                </div>
+                <div style="font-size:11.5px; color:#cbd5e1; display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                    <span>⏱️ Sonraki Döngü: <b><span id="cockpit-strip-countdown" style="color:#38bdf8;">47.4s</span></b></span>
+                    <span>🛡️ SEI Kalkan Verimi: <b><span id="cockpit-strip-sei" style="color:#10b981;">%64.1</span></b></span>
+                    <span>💰 Kurtarılan Zarar: <b><span id="cockpit-strip-saved" style="color:#10b981;">+$8.5K</span></b></span>
+                    <span>⏳ Erken BE Zırhı: <b><span id="cockpit-strip-erkenbe" style="color:#f59e0b;">4 Parite</span></b></span>
+                    <span>🔓 Fırsat Avcısı: <b><span id="cockpit-strip-firsat" style="color:#38bdf8;">17 Parite</span></b></span>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <button onclick="switchMainTab('evolution')" style="background:rgba(0,242,254,0.12); color:#00f2fe; border:1px solid rgba(0,242,254,0.35); padding:5px 12px; border-radius:7px; font-size:11px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.15s;">
+                    <span>Kuant Evrim Masası</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </button>
+                <button onclick="switchMainTab('shadow')" style="background:rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.12); padding:5px 10px; border-radius:7px; font-size:11px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:5px;">
+                    <span>Gölge (Canlı)</span>
+                </button>
+            </div>
+        </div>
 
         <!-- 🛡️ KUANT KALKANLARI & REDDEDİLEN SİNYAL İSTİHBARATI (SHIELD INTELLIGENCE) -->
         <div class="rejection-panel-card" id="cockpit-rejection-card">
