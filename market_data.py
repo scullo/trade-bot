@@ -1804,6 +1804,7 @@ class MarketDataManager:
         # 8. VPIN ve Kyle's Lambda
         vpin_info = calculate_vpin_toxicity(df_5m_chk, rolling_window=12, recent_cvd=cvd_acc_info)
         lambda_info = calculate_kyles_lambda(df_5m_chk)
+        hawkes_info = self.get_hawkes_avalanche(symbol)
 
         # Likidite Boşluğu (Hava Cebi / Liquidity Vacuum) Tespiti:
         # Önündeki derinlik karşı tarafın %40'ından az veya oran aşırı asimetrikse hava cebi vardır

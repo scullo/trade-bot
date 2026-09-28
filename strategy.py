@@ -318,6 +318,7 @@ class StrategyEngine:
         """
         default_climate = {
             "regime": "NEUTRAL",
+            "macro_regime": "NEUTRAL",
             "status": "⚪ NÖTR / DENGELİ PİYASA",
             "desc": "BTC ve ETH dengeli aralıkta işlem görüyor.",
             "is_dead_zone": False,
@@ -326,6 +327,9 @@ class StrategyEngine:
             "eth_range_1h": 0.0,
             "btc_chg_1h": 0.0,
             "eth_chg_1h": 0.0,
+            "btc_chg_4h": 0.0,
+            "eth_chg_4h": 0.0,
+            "btc_range_4h": 0.0,
             "eth_lead_pct": 0.0,
             "btc_price": 0.0,
             "eth_price": 0.0
@@ -439,6 +443,7 @@ class StrategyEngine:
 
         return {
             "regime": str(regime),
+            "macro_regime": str(regime),
             "status": str(status),
             "desc": str(desc),
             "is_dead_zone": bool(is_dead_zone),
