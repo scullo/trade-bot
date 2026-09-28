@@ -159,6 +159,9 @@ class StrategyEngine:
                             side = "LONG"
 
                     telemetry = kwargs.get("telemetry") or {}
+                    for k in ["macro_regime", "setup_archetype", "regime_alignment", "btc_chg_4h", "btc_chg_1h", "dynamic_rs_score", "cvd_ratio_60s"]:
+                        if k in kwargs and k not in telemetry:
+                            telemetry[k] = kwargs[k]
                     if self.market_data and hasattr(self.market_data, 'get_symbol_metrics'):
                         met = self.market_data.get_symbol_metrics(clean_s) or {}
                         telemetry.setdefault("atr_pct", met.get("atr_pct", 1.2))
@@ -345,10 +348,22 @@ class StrategyEngine:
             btc_range_1h = round(((btc_high_1h - btc_low_1h) / btc_close) * 100.0, 2) if btc_close > 0 else 0.0
             btc_chg_1h = round(((btc_close - df_btc['close'].iloc[-12]) / df_btc['close'].iloc[-12]) * 100.0, 2)
             btc_chg_5m = round(((btc_close - btc_open_5m) / btc_open_5m) * 100.0, 2) if btc_open_5m > 0 else 0.0
+
+            # 4 Saatlik (48 mum x 5M) Çoklu Zaman Dilimi Trend Tespiti
+            if len(df_btc) >= 48:
+                btc_high_4h = float(df_btc['high'].iloc[-48:].max())
+                btc_low_4h = float(df_btc['low'].iloc[-48:].min())
+                btc_range_4h = round(((btc_high_4h - btc_low_4h) / btc_close) * 100.0, 2) if btc_close > 0 else 0.0
+                btc_chg_4h = round(((btc_close - df_btc['close'].iloc[-48]) / df_btc['close'].iloc[-48]) * 100.0, 2)
+            else:
+                btc_high_4h = btc_high_1h
+                btc_low_4h = btc_low_1h
+                btc_range_4h = btc_range_1h
+                btc_chg_4h = btc_chg_1h
         except Exception:
             return default_climate
 
-        eth_close, eth_range_1h, eth_chg_1h = 0.0, 0.0, 0.0
+        eth_close, eth_range_1h, eth_chg_1h, eth_chg_4h = 0.0, 0.0, 0.0, 0.0
         if df_eth is not None and not df_eth.empty and len(df_eth) >= 12:
             try:
                 eth_close = float(df_eth['close'].iloc[-1])
@@ -356,6 +371,10 @@ class StrategyEngine:
                 eth_low_1h = float(df_eth['low'].iloc[-12:].min())
                 eth_range_1h = round(((eth_high_1h - eth_low_1h) / eth_close) * 100.0, 2) if eth_close > 0 else 0.0
                 eth_chg_1h = round(((eth_close - df_eth['close'].iloc[-12]) / df_eth['close'].iloc[-12]) * 100.0, 2)
+                if len(df_eth) >= 48:
+                    eth_chg_4h = round(((eth_close - df_eth['close'].iloc[-48]) / df_eth['close'].iloc[-48]) * 100.0, 2)
+                else:
+                    eth_chg_4h = eth_chg_1h
             except Exception:
                 pass
 
@@ -386,27 +405,37 @@ class StrategyEngine:
         status = "⚪ NÖTR / DENGELİ PİYASA"
         desc = f"BTC (%{btc_chg_1h:+.2f}) ve ETH (%{eth_chg_1h:+.2f}) dengeli bantta."
 
-        if eth_leading and (eth_chg_1h >= 0.8 or eth_above_r4):
+        # 1. Akut Sert Dökülme (Panic Dump)
+        if (btc_below_s4 or btc_chg_1h <= -1.2) or (eth_below_s4 or eth_chg_1h <= -1.5):
+            regime = "BEAR_DUMP"
+            status = "🔴 MAKRO AYI BASKISI (Sert Çöküş / Dump)"
+            desc = f"BTC (1S: %{btc_chg_1h:+.2f}) veya ETH (1S: %{eth_chg_1h:+.2f}) ana destekleri kırdı. Yüksek satış baskısı."
+        # 2. Süzülen Çoklu Zaman Dilimi Ayı Trendi (Multi-TF Sustained Grind Down / Bear Trend)
+        elif btc_chg_4h <= -1.2 or (btc_chg_4h <= -0.80 and btc_chg_1h <= -0.20) or (btc_chg_1h <= -0.75):
+            regime = "BEAR_TREND"
+            status = "🔴 MAKRO AYI TRENDİ (Süzülen Düşüş)"
+            desc = f"BTC 4S: %{btc_chg_4h:+.2f}, 1S: %{btc_chg_1h:+.2f}. Piyasa düşüş trendinde; karşı-trend Long sekmelerine ekstra teyit ve korumalı marjin uygulanır."
+        # 3. ETH Öncülüğünde Boğa Genişlemesi
+        elif eth_leading and (eth_chg_1h >= 0.8 or eth_above_r4):
             regime = "ETH_EXPANSION"
             status = "🟡 ETH ÖNCÜLÜĞÜNDE BOĞA GENİŞLEMESİ"
             desc = f"ETH, BTC'ye +%{eth_lead_pct:.2f} fark atarak altcoinlere rüzgar sağlıyor (ETH 1S: %{eth_chg_1h:+.2f}). Altcoin kırılımlarına yeşil ışık."
-        elif (btc_above_r4 or btc_chg_1h >= 1.2) and eth_chg_1h >= 0:
+        # 4. Makro Boğa Trendi (BTC Liderliği)
+        elif ((btc_above_r4 or btc_chg_1h >= 1.2 or btc_chg_4h >= 1.2 or (btc_chg_4h >= 0.80 and btc_chg_1h >= 0.20)) and eth_chg_1h >= -0.2):
             regime = "BULL_TREND"
             status = "🟢 MAKRO BOĞA TRENDİ (BTC Liderliği)"
-            desc = f"BTC kurumsal dirençleri kırıyor (1S: %{btc_chg_1h:+.2f}). Piyasa genelinde boğa ivmesi hakim."
-        elif (btc_below_s4 or btc_chg_1h <= -1.2) or (eth_below_s4 or eth_chg_1h <= -1.5):
-            regime = "BEAR_DUMP"
-            status = "🔴 MAKRO AYI BASKISI"
-            desc = f"BTC (%{btc_chg_1h:+.2f}) veya ETH (%{eth_chg_1h:+.2f}) ana destekleri kırdı. Yüksek satış baskısı."
+            desc = f"BTC kurumsal dirençleri kırdı (4S: %{btc_chg_4h:+.2f}, 1S: %{btc_chg_1h:+.2f}). Piyasa genelinde boğa ivmesi hakim."
+        # 5. Ölü Bölge / Değer Alanı Sıkışması
         elif btc_in_va and eth_in_va and btc_range_1h < 0.65 and eth_range_1h < 0.85:
             is_dead_zone = True
             regime = "DEAD_ZONE"
             status = "⚪ ÖLÜ BÖLGE / DEĞER ALANI SIKIŞMASI"
             desc = f"BTC (1S: %{btc_range_1h:.2f}) ve ETH (1S: %{eth_range_1h:.2f}) Camarilla S3-R3 Değer Alanı içine kilitlendi. Beta paritelerde sahte kırılım riski yüksek. nPOC/S3/R3 tepkileri ve bağımsız Alfa ayrışanlar aktif."
+        # 6. Yatay Konsolidasyon
         else:
             regime = "CONSOLIDATION"
             status = "⚪ YATAY KONSOLİDASYON"
-            desc = f"BTC 1S: %{btc_range_1h:.2f}, ETH 1S: %{eth_range_1h:.2f}. Piyasa seviye arıyor."
+            desc = f"BTC 1S: %{btc_range_1h:.2f}, 4S: %{btc_chg_4h:+.2f}, ETH 1S: %{eth_range_1h:.2f}. Piyasa seviye arıyor."
 
         return {
             "regime": str(regime),
@@ -418,6 +447,9 @@ class StrategyEngine:
             "eth_range_1h": float(eth_range_1h),
             "btc_chg_1h": float(btc_chg_1h),
             "eth_chg_1h": float(eth_chg_1h),
+            "btc_chg_4h": float(btc_chg_4h),
+            "eth_chg_4h": float(eth_chg_4h),
+            "btc_range_4h": float(btc_range_4h),
             "eth_lead_pct": float(eth_lead_pct),
             "btc_chg_5m": float(btc_chg_5m),
             "btc_price": float(btc_close),
@@ -2183,6 +2215,7 @@ class StrategyEngine:
         macro_clim = self.get_macro_climate()
         btc_chg_5m = macro_clim.get("btc_chg_5m", 0.0)
         btc_chg_1h = macro_clim.get("btc_chg_1h", 0.0)
+        btc_chg_4h = macro_clim.get("btc_chg_4h", btc_chg_1h)
         regime_clim = macro_clim.get("regime", "NEUTRAL")
 
         # 1. Anlık 5M Panik Çöküş Kalkanı: BTC son 5 dakikada sert düşüyorsa altcoinlerde LONG açma!
@@ -2198,24 +2231,110 @@ class StrategyEngine:
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "BTC_5M_PUMP_BLOCKED"}
 
-        # 2. Makro Ayı Karşı-Trend Kalkanı: BTC 1S trendi belirgin düşüşteyken (%-0.40 altı veya BEAR_DUMP)
-        #    altcoin sekme LONG'ları yalnızca pozitif göreceli güç (RS >= +0.80) veya yüksek kurumsal CVD emilimi (>= %65) varsa açılabilir!
-        if side == "LONG" and not is_breakout and (btc_chg_1h <= -0.40 or regime_clim == "BEAR_DUMP"):
-            cvd_r = float(cvd_data.get('ratio_60s', 50.0)) if 'cvd_data' in locals() and cvd_data else 50.0
-            if dynamic_rs_score < 0.80 and cvd_r < 65.0:
-                rej_msg = f"🛡️ Makro Ayı Yön Valisi: BTC 1S (%{btc_chg_1h:+.2f}) düşüşteyken ve parite bağımsız alfa üretmiyorken (RS: {dynamic_rs_score:+.2f}, CVD: %{cvd_r:.0f}) karşı-trend LONG engellendi."
-                self.log_rejection(symbol, reason, rej_msg)
-                return {"error": "MACRO_BEAR_LONG_BLOCKED"}
+        # ── 2. DİNAMİK KURULUM & MAKRO REJİM AĞIRLIKLANDIRMA MOTORU (SETUP-REGIME CONFLUENCE & MARGIN ALLOCATION) ──
+        s_id_u = str(setup_id).upper()
+        r_u = str(reason).upper()
+        if side == "LONG":
+            if is_breakout or any(k in s_id_u for k in ["BREAKOUT", "MVAH", "RECLAIM"]) or any(k in r_u for k in ["BREAKOUT", "KIRILIMI", "RECLAIM"]):
+                setup_archetype = "TREND_FOLLOWING_BULL"
+                setup_archetype_label = "Boğa Trend Devamı (Breakout)"
+            else:
+                setup_archetype = "COUNTER_TREND_DIP"
+                setup_archetype_label = "Dip Tepkisi / Sekme (Mean Reversion)"
+        else: # SHORT
+            if is_breakout or any(k in s_id_u for k in ["BREAKDOWN", "S4_BREAKDOWN", "MVAL", "SETUP_12", "SETUP_2", "SETUP_7", "SETUP_8", "SETUP_11", "SETUP_13"]) or any(k in r_u for k in ["BREAKDOWN", "ÇÖKÜŞ", "FLIP", "RETEST"]):
+                setup_archetype = "TREND_FOLLOWING_BEAR"
+                setup_archetype_label = "Ayı Trend Devamı / Çöküş (Breakdown & Flip)"
+            else:
+                setup_archetype = "COUNTER_TREND_CEILING"
+                setup_archetype_label = "Tepe Reddi / Tavan (Mean Reversion)"
 
-        # 2b. Makro Boğa Karşı-Trend Kalkanı: BTC 1S trendi belirgin yükselişteyken (%+0.40 üzeri veya BULL_PUMP)
-        #    altcoin direnç SHORT'ları kesinlikle engellenir (paritede kurumsal dökülme teyidi olanlar istisna)!
-        if side == "SHORT" and not is_breakout and (btc_chg_1h >= 0.40 or regime_clim in ["BULL_PUMP", "EXTREME_BULL"]):
-            cvd_r = float(cvd_data.get('ratio_60s', 50.0)) if 'cvd_data' in locals() and cvd_data else 50.0
-            if dynamic_rs_score > -0.80 and cvd_r > 35.0 and not self.is_gevset_coin(symbol):
-                rej_msg = f"🛡️ Makro Boğa Yön Valisi: BTC 1S (%{btc_chg_1h:+.2f}) boğa yükselişindeyken ve paritede kurumsal dökülme yokken (RS: {dynamic_rs_score:+.2f}, CVD: %{cvd_r:.0f}) altcoin direnç SHORT'u engellendi."
-                print(f">> [RED - MAKRO BOĞA YÖN VALİSİ] {symbol}: {rej_msg}")
-                self.log_rejection(symbol, reason, rej_msg)
-                return {"error": "MACRO_BULL_SHORT_BLOCKED"}
+        is_macro_bear = (regime_clim in ["BEAR_DUMP", "BEAR_TREND"]) or (btc_chg_4h <= -1.2) or (btc_chg_4h <= -0.80 and btc_chg_1h <= -0.20)
+        is_macro_bull = (regime_clim in ["BULL_TREND", "BULL_PUMP", "EXTREME_BULL"]) or (btc_chg_4h >= 1.2) or (btc_chg_4h >= 0.80 and btc_chg_1h >= 0.20)
+
+        regime_alignment = "⚪ NÖTR_PİYASA"
+        dyn_regime_margin_scale = 1.0
+
+        if is_macro_bear:
+            if setup_archetype == "TREND_FOLLOWING_BEAR":
+                regime_alignment = "🟢 REJİM_UYUMLU_TREND_SHORT"
+                dyn_regime_margin_scale = 1.15
+                if confluence_list is not None and isinstance(confluence_list, list):
+                    if "Makro_Ayı_Trendi_Uyumu" not in confluence_list:
+                        confluence_list.append("Makro_Ayı_Trendi_Uyumu")
+            elif setup_archetype == "COUNTER_TREND_DIP":
+                cvd_r_chk = float(cvd_data.get('ratio_60s', 50.0)) if ('cvd_data' in locals() and cvd_data) else 50.0
+                has_independent_alpha = (dynamic_rs_score >= 0.25 and cvd_r_chk >= 55.0) or ("ALFA" in decoupling_status and cvd_r_chk >= 52.0)
+                if has_independent_alpha:
+                    regime_alignment = "🚀 BAĞIMSIZ_ALFA_AYRIŞMASI"
+                    reason += f" [🚀 Bağımsız Alfa: Direnen Long (RS: {dynamic_rs_score:+.2f}, CVD: %{cvd_r_chk:.0f})]"
+                    if confluence_list is not None and isinstance(confluence_list, list):
+                        confluence_list.append("🚀_Bağımsız_Alfa_Ayrışması")
+                else:
+                    regime_alignment = "⚠️ KARŞI_TREND_DEFANSİF_LONG"
+                    # Asgari gereken confluence barajını +1 artır (Örn: 2/4 -> 3/4 veya 3/4 -> 4/4)
+                    base_req_conf = int(persona.get("min_confluence", 3))
+                    min_req_conf = min(4, base_req_conf + 1)
+                    cur_conf_cnt = len(confluence_list or [])
+                    if cur_conf_cnt < min_req_conf:
+                        rej_msg = (
+                            f"🛡️ Makro Ayı Düşüş Kalkanı: BTC düşüş trendindeyken (4S: %{btc_chg_4h:+.2f}, 1S: %{btc_chg_1h:+.2f}) "
+                            f"altcoin sekme Long'u için bağımsız alfa (RS: {dynamic_rs_score:+.2f} < 0.25, CVD: %{cvd_r_chk:.0f} < 55) "
+                            f"veya +1 ekstra teyit bulunamadı (Confluence: {cur_conf_cnt}/{min_req_conf}). Düşen bıçak engellendi."
+                        )
+                        print(f">> [RED - MAKRO AYI DÜŞÜŞ KALKANI] {symbol}: {rej_msg}")
+                        self.log_rejection(
+                            symbol, reason, rej_msg,
+                            macro_regime=regime_clim, setup_archetype=setup_archetype,
+                            regime_alignment=regime_alignment, btc_chg_4h=btc_chg_4h,
+                            btc_chg_1h=btc_chg_1h, dynamic_rs_score=dynamic_rs_score,
+                            cvd_ratio_60s=cvd_r_chk, hard_stop=hard_stop, tp1=tp1, tp2=tp2
+                        )
+                        return {"error": "MACRO_BEAR_COUNTER_TREND_LONG_BLOCKED"}
+                    else:
+                        # 4/4 tam teyit var ancak düşen bıçak riskine karşı %50 korumalı marjin
+                        dyn_regime_margin_scale = 0.50
+                        reason += " [🛡️ Ayı Rejimi Korumalı Marjin (x0.50)]"
+
+        elif is_macro_bull:
+            if setup_archetype == "TREND_FOLLOWING_BULL":
+                regime_alignment = "🟢 REJİM_UYUMLU_TREND_LONG"
+                dyn_regime_margin_scale = 1.15
+                if confluence_list is not None and isinstance(confluence_list, list):
+                    if "Makro_Boğa_Trendi_Uyumu" not in confluence_list:
+                        confluence_list.append("Makro_Boğa_Trendi_Uyumu")
+            elif setup_archetype == "COUNTER_TREND_CEILING":
+                cvd_r_chk = float(cvd_data.get('ratio_60s', 50.0)) if ('cvd_data' in locals() and cvd_data) else 50.0
+                has_independent_bear_alpha = (dynamic_rs_score <= -0.25 and cvd_r_chk <= 45.0) or ("AŞIRI_ZAYIF" in decoupling_status and cvd_r_chk <= 48.0)
+                if has_independent_bear_alpha:
+                    regime_alignment = "🩸 BAĞIMSIZ_AYI_AYRIŞMASI"
+                    reason += f" [🩸 Bağımsız Ayı: Çöken Short (RS: {dynamic_rs_score:+.2f}, CVD: %{cvd_r_chk:.0f})]"
+                    if confluence_list is not None and isinstance(confluence_list, list):
+                        confluence_list.append("🩸_Bağımsız_Ayı_Ayrışması")
+                else:
+                    regime_alignment = "⚠️ KARŞI_TREND_DEFANSİF_SHORT"
+                    base_req_conf = int(persona.get("min_confluence", 3))
+                    min_req_conf = min(4, base_req_conf + 1)
+                    cur_conf_cnt = len(confluence_list or [])
+                    if cur_conf_cnt < min_req_conf:
+                        rej_msg = (
+                            f"🛡️ Makro Boğa Tavan Kalkanı: BTC boğa trendindeyken (4S: %{btc_chg_4h:+.2f}, 1S: %{btc_chg_1h:+.2f}) "
+                            f"altcoin tepe Short'u için bağımsız ayı ayrışması veya +1 ekstra teyit bulunamadı (Confluence: {cur_conf_cnt}/{min_req_conf}). Rokete karşı tepe short engellendi."
+                        )
+                        print(f">> [RED - MAKRO BOĞA TAVAN KALKANI] {symbol}: {rej_msg}")
+                        self.log_rejection(
+                            symbol, reason, rej_msg,
+                            macro_regime=regime_clim, setup_archetype=setup_archetype,
+                            regime_alignment=regime_alignment, btc_chg_4h=btc_chg_4h,
+                            btc_chg_1h=btc_chg_1h, dynamic_rs_score=dynamic_rs_score,
+                            cvd_ratio_60s=cvd_r_chk, hard_stop=hard_stop, tp1=tp1, tp2=tp2
+                        )
+                        return {"error": "MACRO_BULL_COUNTER_TREND_SHORT_BLOCKED"}
+                    else:
+                        dyn_regime_margin_scale = 0.50
+                        reason += " [🛡️ Boğa Rejimi Korumalı Marjin (x0.50)]"
+
+        self.margin_multiplier *= dyn_regime_margin_scale
 
         # ── 6. ÜST ZAMAN DİLİMİ (HTF) MAKRO UYUMU ──
         mpoc_val = snaps.get('mpoc', 0.0)
@@ -2883,6 +3002,11 @@ class StrategyEngine:
             custom_margin=dyn_margin, custom_leverage=dyn_leverage, rs_vs_btc=rs_vs_btc, decoupling_status=decoupling_status,
             dynamic_rs_score=dynamic_rs_score,
             macro_climate=macro_clim.get('status', '⚪ Nötr / Dengeli Piyasa'),
+            macro_regime=str(regime_clim if 'regime_clim' in locals() else macro_clim.get('regime', 'NEUTRAL')),
+            setup_archetype=str(setup_archetype if 'setup_archetype' in locals() else 'UNKNOWN'),
+            regime_alignment=str(regime_alignment if 'regime_alignment' in locals() else '⚪ STANDART'),
+            btc_chg_4h=float(btc_chg_4h if 'btc_chg_4h' in locals() else macro_clim.get('btc_chg_4h', 0.0)),
+            btc_chg_1h=float(btc_chg_1h if 'btc_chg_1h' in locals() else macro_clim.get('btc_chg_1h', 0.0)),
             eth_leading=macro_clim.get('eth_leading', False),
             cvd_pct=cvd_pct, candle_velocity=candle_velocity,
             wick_ratio_pct=wick_ratio_pct,
@@ -3436,8 +3560,8 @@ class StrategyEngine:
         is_dead_zone = macro.get("is_dead_zone", False)
         eth_leading = macro.get("eth_leading", False)
         macro_regime = macro.get("regime", "NEUTRAL")
-        is_bear_dump = (macro_regime == "BEAR_DUMP")
-        is_bull_pump = (macro_regime in ["BULL_PUMP", "EXTREME_BULL"]) or (macro.get("btc_chg_1h", 0.0) >= 0.80)
+        is_bear_dump = (macro_regime in ["BEAR_DUMP", "BEAR_TREND"])
+        is_bull_pump = (macro_regime in ["BULL_PUMP", "EXTREME_BULL", "BULL_TREND"]) or (macro.get("btc_chg_1h", 0.0) >= 0.80)
         is_range_regime = is_dead_zone
 
         if tepe_avwap > 0 and p > 0 and close_price > tepe_avwap and close_price > p:
@@ -3483,13 +3607,13 @@ class StrategyEngine:
             is_range_regime = True
         elif is_gex_exp:
             # -GEX Rejiminde kurumsal gamma patlaması -> Trend Breakout / Breakdown
-            if "AYI" in regime_desc or macro_regime in ["BEAR_DUMP", "EXTREME_BEAR"]:
+            if "AYI" in regime_desc or macro_regime in ["BEAR_DUMP", "BEAR_TREND", "EXTREME_BEAR"]:
                 tri_modal_regime = "REGIME_BEAR_TREND"
             else:
                 tri_modal_regime = "REGIME_BULL_TREND"
-        elif "BOĞA" in regime_desc or macro_regime == "BOĞA" or macro_regime in ["BULL_PUMP", "EXTREME_BULL"]:
+        elif "BOĞA" in regime_desc or macro_regime in ["BULL_TREND", "BULL_PUMP", "EXTREME_BULL", "BOĞA"]:
             tri_modal_regime = "REGIME_BULL_TREND"
-        elif "AYI" in regime_desc or macro_regime == "BEAR_DUMP" or macro_regime in ["EXTREME_BEAR"]:
+        elif "AYI" in regime_desc or macro_regime in ["BEAR_DUMP", "BEAR_TREND", "EXTREME_BEAR"]:
             tri_modal_regime = "REGIME_BEAR_TREND"
         else:
             tri_modal_regime = "REGIME_RANGING_PINGPONG"
@@ -4137,22 +4261,23 @@ class StrategyEngine:
                 return
 
             # 🛡️ MAKRO VE TREND DÜŞÜŞÜ KALKANI: BTC düşerken veya genel dökülmede bıçak tutma engeli
-            # Kalibrasyon: BTC 1S %-0.75 gerçek satış baskısı eşiği (%-0.25 olağan gürültüdür)
-            # Eğer coinin kendisinde güçlü alıcı emilimi varsa (CVD >= 58%) sekmeye izin verilir
+            # Kalibrasyon: BTC 4S %-1.20 veya 1S %-0.75 gerçek satış baskısı eşiği
+            # Eğer coinin kendisinde güçlü alıcı emilimi ve bağımsız alfa varsa (CVD >= 55% ve RS >= +0.25) sekmeye izin verilir
             btc_chg_1h = macro.get("btc_chg_1h", 0.0)
+            btc_chg_4h = macro.get("btc_chg_4h", btc_chg_1h)
             cvd_data_macro_npoc = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
             cvd_ratio_macro_npoc = float(cvd_data_macro_npoc.get('ratio_60s', 50.0))
-            has_strong_buyer_escape_npoc = (cvd_ratio_macro_npoc >= 58.0 and coin_rs_score >= 0.0)
+            has_strong_buyer_escape_npoc = (cvd_ratio_macro_npoc >= 55.0 and coin_rs_score >= 0.25)
             if is_bear_dump and not has_strong_buyer_escape_npoc:
                 self.log_rejection(
                     symbol, "SETUP 9 nPOC Sekmesi",
-                    f"Makro Düşüş Kalkanı (BTC 1S: %{btc_chg_1h:+.2f}, RS: {coin_rs_score:+.2f}); Piyasa çöküşündeyken nPOC likidite sekmesi engellendi."
+                    f"Makro Düşüş Kalkanı (BTC 4S: %{btc_chg_4h:+.2f}, 1S: %{btc_chg_1h:+.2f}, RS: {coin_rs_score:+.2f}); Piyasa çöküşündeyken nPOC likidite sekmesi engellendi."
                 )
                 return
-            elif btc_chg_1h < -0.75 and coin_rs_score < -0.30 and not has_strong_buyer_escape_npoc:
+            elif (btc_chg_4h <= -1.2 or (btc_chg_4h <= -0.80 and btc_chg_1h <= -0.20) or btc_chg_1h < -0.75) and not has_strong_buyer_escape_npoc:
                 self.log_rejection(
                     symbol, "SETUP 9 nPOC Sekmesi",
-                    f"Makro Düşüş Kalkanı (BTC 1S: %{btc_chg_1h:+.2f}, RS: {coin_rs_score:+.2f}); Piyasa düşüşünde zayıf paritede nPOC sekmesi engellendi."
+                    f"Makro Düşüş Kalkanı (BTC 4S: %{btc_chg_4h:+.2f}, 1S: %{btc_chg_1h:+.2f}, RS: {coin_rs_score:+.2f}); Süzülen düşüş trendinde zayıf paritede nPOC sekmesi engellendi."
                 )
                 return
 
@@ -4608,8 +4733,9 @@ class StrategyEngine:
             if not struct_ok:
                 self.log_rejection(symbol, f"SETUP 14 {support_tag} Retest Reddi", struct_reason)
             else:
-                if "GÜÇLÜ AYI" in trend_regime or (is_bear_dump and coin_rs_score < 0.5):
-                    self.log_rejection(symbol, f"SETUP 14 {support_tag} Retest Reddi", f"Piyasa Güçlü Ayı rejimindeyken destek retest longu açılmadı.")
+                btc_4h_chk = macro.get("btc_chg_4h", macro.get("btc_chg_1h", 0.0))
+                if "GÜÇLÜ AYI" in trend_regime or (is_bear_dump and coin_rs_score < 0.25) or (btc_4h_chk <= -1.0 and coin_rs_score < 0.25):
+                    self.log_rejection(symbol, f"SETUP 14 {support_tag} Retest Reddi", f"Piyasa Ayı/Düşüş rejimindeyken (BTC 4S: %{btc_4h_chk:+.2f}, RS: {coin_rs_score:+.2f}) destek retest longu açılmadı.")
                 else:
                     c_high = current_candle.get('high', close_price)
                     c_low = current_candle.get('low', close_price)

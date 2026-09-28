@@ -103,7 +103,10 @@ HEADERS_GRANULAR = [
     ('CVD Uyumsuzluğu (Divergence)', 28),
     ('Göreceli Hacim (RVOL Z-Score)', 24),
     ('Makro Likidite & Dominans', 26),
-    ('Geometrik R-Oranı', 18)
+    ('Geometrik R-Oranı', 18),
+    ('Makro Rejim (BTC Trend)', 24),
+    ('Kurulum Tipi (Arketip)', 24),
+    ('Rejim Uyumu & Filtre', 26)
 ]
 headers_granular = HEADERS_GRANULAR
 
@@ -643,6 +646,15 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ws.write(r_idx, 87, f"{rvol_tag} ({rvol_z:+.1f}σ)", cell_center)
         ws.write(r_idx, 88, macro_dom, cell_center)
         ws.write(r_idx, 89, f"{planned_r_val:.2f}x", cell_roe_green if planned_r_val >= 1.8 else cell_roe_red)
+
+        # 3 Dinamik Rejim & Kurulum Uyumu Sütunları (90, 91, 92)
+        macro_reg = str(h.get('macro_regime', 'NEUTRAL'))
+        setup_arch = str(h.get('setup_archetype', 'UNKNOWN'))
+        reg_align = str(h.get('regime_alignment', 'NEUTRAL'))
+
+        ws.write(r_idx, 90, macro_reg, cell_center)
+        ws.write(r_idx, 91, setup_arch, cell_center)
+        ws.write(r_idx, 92, reg_align, cell_center)
 
     def render_table_sheet(ws_obj, t_list):
 
@@ -1307,32 +1319,36 @@ def create_shadow_dna_excel_report(
     ws3.set_column('E:E', 24)  # Setup
     ws3.set_column('F:F', 28)  # Kalkan
     ws3.set_column('G:G', 32)  # Ret Gerekçesi
-    ws3.set_column('H:H', 48)  # Adli Teşhis & Neden-Sonuç Hikayesi
-    ws3.set_column('I:I', 13)  # Giriş Fiyatı
-    ws3.set_column('J:J', 13)  # Çıkış Fiyatı
-    ws3.set_column('K:K', 13)  # Stop
-    ws3.set_column('L:L', 13)  # TP1
-    ws3.set_column('M:M', 13)  # TP2
-    ws3.set_column('N:N', 12)  # MFE %
-    ws3.set_column('O:O', 12)  # MAE %
-    ws3.set_column('P:P', 12)  # ROE %
-    ws3.set_column('Q:Q', 14)  # PnL $
-    ws3.set_column('R:R', 22)  # Verdict Teşhis
-    ws3.set_column('S:S', 14)  # ATR %
-    ws3.set_column('T:T', 14)  # Hacim Çarpanı
-    ws3.set_column('U:U', 14)  # CVD Alıcı %
-    ws3.set_column('V:V', 14)  # RS Skoru
-    ws3.set_column('W:W', 12)  # Süre dk
-    ws3.set_column('X:X', 18)  # Giriş Zamanı
-    ws3.set_column('Y:Y', 18)  # Çıkış Zamanı
+    ws3.set_column('H:H', 20)  # Makro Rejim
+    ws3.set_column('I:I', 22)  # Kurulum Arketipi
+    ws3.set_column('J:J', 24)  # Rejim Uyumu
+    ws3.set_column('K:K', 48)  # Adli Teşhis & Neden-Sonuç Hikayesi
+    ws3.set_column('L:L', 13)  # Giriş Fiyatı
+    ws3.set_column('M:M', 13)  # Çıkış Fiyatı
+    ws3.set_column('N:N', 13)  # Stop
+    ws3.set_column('O:O', 13)  # TP1
+    ws3.set_column('P:P', 13)  # TP2
+    ws3.set_column('Q:Q', 12)  # MFE %
+    ws3.set_column('R:R', 12)  # MAE %
+    ws3.set_column('S:S', 12)  # ROE %
+    ws3.set_column('T:T', 14)  # PnL $
+    ws3.set_column('U:U', 22)  # Verdict Teşhis
+    ws3.set_column('V:V', 14)  # ATR %
+    ws3.set_column('W:W', 14)  # Hacim Çarpanı
+    ws3.set_column('X:X', 14)  # CVD Alıcı %
+    ws3.set_column('Y:Y', 14)  # RS Skoru
+    ws3.set_column('Z:Z', 12)  # Süre dk
+    ws3.set_column('AA:AA', 18)  # Giriş Zamanı
+    ws3.set_column('AB:AB', 18)  # Çıkış Zamanı
 
-    ws3.merge_range('B2:Y2', 'MİKROSKOBİK GÖLGE İŞLEM DEFTERİ (CANLI PİYASA SİMÜLASYONU)', title_fmt)
-    ws3.merge_range('B3:Y3', 'Canlı Mumlarla Takip Edilerek TP1, TP2 veya Stop Akıbeti Belirlenmiş Tüm Sanal Pozisyonlar ve Adli Otopsi Raporu', subtitle_fmt)
+    ws3.merge_range('B2:AB2', 'MİKROSKOBİK GÖLGE İŞLEM DEFTERİ (CANLI PİYASA SİMÜLASYONU)', title_fmt)
+    ws3.merge_range('B3:AB3', 'Canlı Mumlarla Takip Edilerek TP1, TP2 veya Stop Akıbeti Belirlenmiş Tüm Sanal Pozisyonlar ve Adli Otopsi Raporu', subtitle_fmt)
     ws3.set_row(1, 28)
     ws3.set_row(2, 18)
 
     headers_s3 = [
         'Gölge ID', 'Parite', 'Yön', 'Giriş Stratejisi', 'Engelleyen Kalkan', 'Ret Gerekçesi',
+        'Makro Rejim', 'Kurulum Arketipi', 'Rejim Uyumu',
         'Adli Teşhis & Neden-Sonuç Hikayesi',
         'Giriş ($)', 'Çıkış ($)', 'Stop ($)', 'Planlanan TP1 ($)', 'Planlanan TP2 ($)',
         'Zirve MFE (%)', 'Maks MAE (%)', 'ROE (%)', 'Sanal Net PnL ($)', 'Kalkan Teşhisi',
@@ -1352,6 +1368,10 @@ def create_shadow_dna_excel_report(
         setup = t_item.get('setup', '-')
         shield = t_item.get('shield', '-')
         reason = t_item.get('reason', '-')
+        telem = t_item.get('telemetry', {}) or {}
+        macro_r = str(t_item.get('macro_regime') or telem.get('macro_regime', 'NEUTRAL'))
+        setup_a = str(t_item.get('setup_archetype') or telem.get('setup_archetype', 'UNKNOWN'))
+        reg_a = str(t_item.get('regime_alignment') or telem.get('regime_alignment', 'NEUTRAL'))
         narr = t_item.get('narrative', reason)
         entry_p = t_item.get('entry_price', 0.0)
         exit_p = t_item.get('exit_price', 0.0)
@@ -1363,7 +1383,6 @@ def create_shadow_dna_excel_report(
         roe = t_item.get('virtual_pnl_pct', 0.0)
         pnl = t_item.get('virtual_pnl_usd', 0.0)
         verd = t_item.get('verdict_badge', t_item.get('verdict', '-'))
-        telem = t_item.get('telemetry', {}) or {}
         atr_str = f"%{telem.get('atr_pct', 0.0):.2f}" if 'atr_pct' in telem else '-'
         vol_str = f"{telem.get('vol_mult', 1.0):.2f}x" if 'vol_mult' in telem else '-'
         cvd_str = f"%{telem.get('cvd_taker_pct', 50.0):.1f}" if 'cvd_taker_pct' in telem else '-'
@@ -1378,26 +1397,29 @@ def create_shadow_dna_excel_report(
         ws3.write(r3_idx, 4, setup, cell_l)
         ws3.write(r3_idx, 5, shield, cell_l)
         ws3.write(r3_idx, 6, reason, cell_l)
-        ws3.write(r3_idx, 7, narr, cell_l)
-        ws3.write(r3_idx, 8, entry_p, cell_curr4 if entry_p < 1.0 else cell_curr)
-        ws3.write(r3_idx, 9, exit_p, cell_curr4 if exit_p < 1.0 else cell_curr)
-        ws3.write(r3_idx, 10, sl_p, cell_curr4 if sl_p < 1.0 else cell_curr)
-        ws3.write(r3_idx, 11, tp1_p, cell_curr4 if tp1_p < 1.0 else cell_curr)
-        ws3.write(r3_idx, 12, tp2_p, cell_curr4 if tp2_p < 1.0 else cell_curr)
-        ws3.write(r3_idx, 13, f"+%{mfe:.2f}", cell_c)
-        ws3.write(r3_idx, 14, f"-%{mae:.2f}", cell_c)
-        ws3.write(r3_idx, 15, f"%{roe:+.2f}", cell_pnl_green if roe >= 0 else cell_pnl_red)
-        ws3.write(r3_idx, 16, pnl, cell_pnl_green if pnl >= 0 else cell_pnl_red)
+        ws3.write(r3_idx, 7, macro_r, cell_c)
+        ws3.write(r3_idx, 8, setup_a, cell_c)
+        ws3.write(r3_idx, 9, reg_a, cell_c)
+        ws3.write(r3_idx, 10, narr, cell_l)
+        ws3.write(r3_idx, 11, entry_p, cell_curr4 if entry_p < 1.0 else cell_curr)
+        ws3.write(r3_idx, 12, exit_p, cell_curr4 if exit_p < 1.0 else cell_curr)
+        ws3.write(r3_idx, 13, sl_p, cell_curr4 if sl_p < 1.0 else cell_curr)
+        ws3.write(r3_idx, 14, tp1_p, cell_curr4 if tp1_p < 1.0 else cell_curr)
+        ws3.write(r3_idx, 15, tp2_p, cell_curr4 if tp2_p < 1.0 else cell_curr)
+        ws3.write(r3_idx, 16, f"+%{mfe:.2f}", cell_c)
+        ws3.write(r3_idx, 17, f"-%{mae:.2f}", cell_c)
+        ws3.write(r3_idx, 18, f"%{roe:+.2f}", cell_pnl_green if roe >= 0 else cell_pnl_red)
+        ws3.write(r3_idx, 19, pnl, cell_pnl_green if pnl >= 0 else cell_pnl_red)
 
         badge_fmt = cell_badge_hero if 'KAHRAMAN' in verd else (cell_badge_spoiler if 'FRENLEYİCİ' in verd else cell_badge_neutral)
-        ws3.write(r3_idx, 17, verd, badge_fmt)
-        ws3.write(r3_idx, 18, atr_str, cell_c)
-        ws3.write(r3_idx, 19, vol_str, cell_c)
-        ws3.write(r3_idx, 20, cvd_str, cell_c)
-        ws3.write(r3_idx, 21, rs_str, cell_c)
-        ws3.write(r3_idx, 22, dur, cell_c)
-        ws3.write(r3_idx, 23, in_t, cell_c)
-        ws3.write(r3_idx, 24, out_t, cell_c)
+        ws3.write(r3_idx, 20, verd, badge_fmt)
+        ws3.write(r3_idx, 21, atr_str, cell_c)
+        ws3.write(r3_idx, 22, vol_str, cell_c)
+        ws3.write(r3_idx, 23, cvd_str, cell_c)
+        ws3.write(r3_idx, 24, rs_str, cell_c)
+        ws3.write(r3_idx, 25, dur, cell_c)
+        ws3.write(r3_idx, 26, in_t, cell_c)
+        ws3.write(r3_idx, 27, out_t, cell_c)
         r3_idx += 1
 
     # ══════════════════════════════════════════════════════════════════════

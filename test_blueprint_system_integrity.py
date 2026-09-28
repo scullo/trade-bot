@@ -256,7 +256,10 @@ class TestBlueprintSystemIntegrity(unittest.TestCase):
         self.assertIn('Göreceli Hacim (RVOL Z-Score)', header_names)
         self.assertIn('Makro Likidite & Dominans', header_names)
         self.assertIn('Geometrik R-Oranı', header_names)
-        self.assertEqual(len(HEADERS_GRANULAR), 90, "Toplam sütun sayısı 90 olmalı")
+        self.assertIn('Makro Rejim (BTC Trend)', header_names)
+        self.assertIn('Kurulum Tipi (Arketip)', header_names)
+        self.assertIn('Rejim Uyumu & Filtre', header_names)
+        self.assertEqual(len(HEADERS_GRANULAR), 93, "Toplam sütun sayısı 93 olmalı")
 
         # Gerçek bir rapor oluşturma testi
         dummy_trade = {

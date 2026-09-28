@@ -228,6 +228,11 @@ class AutonomousDNACalibrator:
                     self.strategy._calibrated_dna = updated_dna
                 print(f">> [OTONOM KALİBRASYON] Strateji motoruna {changes_applied} yeni DNA kuralı canlı enjekte edildi!")
 
+        # Rejim & Kurulum Uyum İstatistikleri
+        macro_shield_trades = [t for t in completed_trades if "Makro" in str(t.get("shield", "")) or "Rejim" in str(t.get("shield", ""))]
+        macro_hero_trades = [t for t in macro_shield_trades if t.get("verdict") == "HERO_SHIELD"]
+        macro_saved_usd = sum(abs(float(t.get("virtual_pnl_usd", 0.0))) for t in macro_hero_trades)
+
         # 7. Denetim Defterine Kaydet
         cycle_record = {
             "cycle_id": f"CYC_{int(now_ts)}",
@@ -239,6 +244,11 @@ class AutonomousDNACalibrator:
             "approved_coins": list(proposals.keys()),
             "details": {sym: {"status": cfg.get("calibration_status"), "be": cfg.get("chandelier_be_threshold_pct"), "conf": cfg.get("min_confluence")} for sym, cfg in proposals.items()},
             "rejections": rejected_proposals,
+            "macro_regime_audit": {
+                "total_macro_shields": len(macro_shield_trades),
+                "macro_hero_saved_count": len(macro_hero_trades),
+                "macro_saved_loss_usd": round(macro_saved_usd, 2)
+            },
             "overall_proof": "BAŞARILI - İÇSEL MATEMATİKSEL KANIT TEYİTLİ" if changes_applied > 0 else "DEĞİŞİKLİK GEREKMEDİ"
         }
         self.audit_history.append(cycle_record)

@@ -127,7 +127,11 @@ class ShadowExecutionEngine:
         elif "Hacim" in r or "patlama" in r:
             return "Hacim Patlama Eşiği (Volume Surge Filter)"
         elif "Makro" in r or "BTC" in r:
-            return "Makro Düşüş Kalkanı (BTC/ETH Dump Shield)"
+            if "Boğa Tavan" in r:
+                return "Makro Boğa Tavan Kalkanı (Counter-Trend Short Shield)"
+            elif "Ayı Düşüş" in r or "Düşüş" in r or "DUMP" in r:
+                return "Makro Ayı Düşüş Kalkanı (Counter-Trend Long Shield)"
+            return "Makro Trend & Düşüş Kalkanı (Macro Regime Shield)"
         elif "Buzdağı" in r or "Duvar" in r or "Tahta" in r or "Iceberg" in r or "WALL" in r:
             return "Tahta Likidite Duvarı Kalkanı (Orderbook Wall)"
         elif "Fitil" in r or "fitil" in r or "emilim" in r:
@@ -206,6 +210,13 @@ class ShadowExecutionEngine:
         now_dt = datetime.now(timezone(timedelta(hours=3)))
         shadow_id = f"SHD_{clean_sym.replace('/USDT', '')}_{int(now_ts * 1000)}"
 
+        telemetry_dict = telemetry or {}
+        macro_regime = telemetry_dict.get("macro_regime", "NEUTRAL")
+        setup_archetype = telemetry_dict.get("setup_archetype", "UNKNOWN")
+        regime_alignment = telemetry_dict.get("regime_alignment", "NEUTRAL")
+        btc_chg_4h = float(telemetry_dict.get("btc_chg_4h", 0.0) or 0.0)
+        btc_chg_1h = float(telemetry_dict.get("btc_chg_1h", 0.0) or 0.0)
+
         shadow_pos = {
             "id": shadow_id,
             "symbol": clean_sym,
@@ -213,6 +224,11 @@ class ShadowExecutionEngine:
             "setup": setup_name.split('(')[0].strip(),
             "shield": shield_name,
             "reason": reason,
+            "macro_regime": macro_regime,
+            "setup_archetype": setup_archetype,
+            "regime_alignment": regime_alignment,
+            "btc_chg_4h": btc_chg_4h,
+            "btc_chg_1h": btc_chg_1h,
             "entry_price": entry_p,
             "current_price": entry_p,
             "sl_price": sl_p,
@@ -240,7 +256,7 @@ class ShadowExecutionEngine:
             "margin_usd": 250.0,
             "leverage": 5.0,
             "notional_usd": 1250.0,
-            "telemetry": telemetry or {}
+            "telemetry": telemetry_dict
         }
 
         # Aktif kapasiteyi kontrol et (Azami 300 aktif gölge pozisyon)
@@ -447,16 +463,28 @@ class ShadowExecutionEngine:
         shield_txt = pos.get("shield", "Kuant Kalkan")
         pnl_val = pos["virtual_pnl_usd"]
 
+        macro_reg = pos.get("macro_regime", "")
+        reg_align = pos.get("regime_alignment", "")
+        setup_arch = pos.get("setup_archetype", "")
+
         if pos["virtual_pnl_usd"] < -2.0:
             pos["verdict"] = "HERO_SHIELD"
             pos["verdict_badge"] = "KAHRAMAN KALKAN (Zarar Kurtarıldı)"
             pos["impact_usd"] = abs(pos["virtual_pnl_usd"])
-            narrative = (
-                f"KAHRAMAN SAVUNMA: {symbol_clean} {side} sinyali '{shield_txt}' tarafından engellendi. "
-                f"Piyasa ters yöne kırıldı ve sanal stop seviyesini ({pos['sl_price']}) deldi. "
-                f"Kalkan tetiklenmeseydi kasadan -${abs(pnl_val):.2f} (%{abs(pos['virtual_pnl_pct']):.1f} ROE) eksilecekti. "
-                f"Kalkan sermayeyi kusursuz korudu!"
-            )
+            if "COUNTER_TREND" in str(setup_arch) or "VETO" in str(reg_align) or "Ayı Düşüş Kalkanı" in shield_txt or "Boğa Tavan Kalkanı" in shield_txt:
+                narrative = (
+                    f"🛡️ KAHRAMAN REJİM SAVUNMASI: {symbol_clean} {side} sinyali makro ters rejimde ({macro_reg or 'BEAR/BULL'}) '{shield_txt}' tarafından engellendi. "
+                    f"Piyasa ana akıntı yönünde ezici baskıyla sanal stop seviyesini ({pos['sl_price']}) deldi. "
+                    f"Bu bıçak tutma tuzağı engellenmeseydi kasadan -${abs(pnl_val):.2f} (%{abs(pos['virtual_pnl_pct']):.1f} ROE) eksilecekti. "
+                    f"Rejim kalkanı kasayı tam isabetle korudu!"
+                )
+            else:
+                narrative = (
+                    f"KAHRAMAN SAVUNMA: {symbol_clean} {side} sinyali '{shield_txt}' tarafından engellendi. "
+                    f"Piyasa ters yöne kırıldı ve sanal stop seviyesini ({pos['sl_price']}) deldi. "
+                    f"Kalkan tetiklenmeseydi kasadan -${abs(pnl_val):.2f} (%{abs(pos['virtual_pnl_pct']):.1f} ROE) eksilecekti. "
+                    f"Kalkan sermayeyi kusursuz korudu!"
+                )
         elif pos["virtual_pnl_usd"] > 2.0:
             pos["verdict"] = "SPOILER_SHIELD"
             pos["verdict_badge"] = "FRENLEYİCİ KALKAN (Kaçan Kâr)"
