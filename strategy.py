@@ -1253,6 +1253,17 @@ class StrategyEngine:
         is_koru = (p_calib_status == "KORU")
         is_breakout = (trade_type == "BREAKOUT" or "BREAKOUT" in str(setup_id) or "BREAKDOWN" in str(setup_id) or "Breakout" in reason or "Breakdown" in reason or "Kırılım" in reason)
         
+        # 🛡️ 1a. COIN DNA REJİM SÜZGECİ (REVERSAL_ONLY ENFORCEMENT)
+        # Eğer coin fitil/testere sebebiyle otonom olarak REVERSAL_ONLY kalibre edildiyse, tüm kırılım işlemlerini merkezi olarak engelle
+        if is_breakout and persona.get("allowed_strategy_regime") == "REVERSAL_ONLY":
+            rej_msg = (
+                f"🛡️ Kuant Rejim Kalkanı (Coin DNA): {symbol} paritesinde yüksek fitil/testere dinamikleri nedeniyle "
+                f"kırılım (Breakout/Breakdown) yasaklı. Yalnızca dip/tepe dönüşleri (Mean Reversion) açılabilir."
+            )
+            print(f">> [RED - COIN DNA REJİM KALKANI] {symbol}: {rej_msg}")
+            self.log_rejection(symbol, reason, rej_msg, setup_archetype="BREAKOUT_FORBIDDEN_BY_DNA")
+            return {"error": "COIN_DNA_BREAKOUT_BLOCKED"}
+
         if ENABLE_DYNAMIC_COIN_AUDIT:
             # JIT Confluence List Enrichment:
             if confluence_list is None:
