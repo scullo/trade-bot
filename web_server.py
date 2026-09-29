@@ -6640,13 +6640,13 @@ async function loadAdminMetrics() {
                     matchCount++;
                     let badgeStyle = 'background:rgba(255,255,255,0.06); color:#cbd5e1; border:1px solid rgba(255,255,255,0.15);';
                     let badgeIcon = '⚖️';
-                    if (status === 'GEVŞET') {
+                    if (status.includes('GEVŞET')) {
                         badgeStyle = 'background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.35);';
                         badgeIcon = '⚡';
-                    } else if (status === 'KORU') {
+                    } else if (status.includes('KORU')) {
                         badgeStyle = 'background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.35);';
                         badgeIcon = '🛡️';
-                    } else if (status === 'ERKEN BE') {
+                    } else if (status.includes('ERKEN BE')) {
                         badgeStyle = 'background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.35);';
                         badgeIcon = '⏱️';
                     }

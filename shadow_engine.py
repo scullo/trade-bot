@@ -684,10 +684,29 @@ class ShadowExecutionEngine:
 
         # 1. Telemetri İstatistikleri
         all_trades = coin_completed + coin_actives
-        wicks = [float(t.get("telemetry", {}).get("lower_wick_ratio", 0.0)) for t in all_trades if "lower_wick_ratio" in t.get("telemetry", {})]
-        avg_wick = round((sum(wicks) / len(wicks)) * 100.0, 1) if wicks else 13.5
-        atrs = [float(t.get("telemetry", {}).get("atr_pct", 0.0)) for t in all_trades if "atr_pct" in t.get("telemetry", {})]
-        avg_atr = round(sum(atrs) / len(atrs), 2) if atrs else 1.25
+        wicks = []
+        for t in all_trades:
+            te = t.get("telemetry", {})
+            if isinstance(te, dict) and "wick_ratio_pct" in te and te["wick_ratio_pct"] is not None:
+                wicks.append(float(te["wick_ratio_pct"]))
+            elif isinstance(te, dict) and "lower_wick_ratio" in te and te["lower_wick_ratio"] is not None:
+                wicks.append(float(te["lower_wick_ratio"]) * 100.0)
+            elif "wick_ratio_pct" in t and t["wick_ratio_pct"] is not None:
+                wicks.append(float(t["wick_ratio_pct"]))
+            else:
+                # Fiyat hareketinin doğal dalgalanma (whiplash amplitude) oranından fitil türetme
+                p_h = float(t.get("peak_high") or 0.0)
+                p_l = float(t.get("valley_low") or 0.0)
+                p_e = float(t.get("entry_price") or 0.0)
+                p_x = float(t.get("exit_price") or p_e)
+                if p_h > p_l > 0 and p_e > 0:
+                    amp = (p_h - p_l) / p_e * 100.0
+                    net = abs(p_x - p_e) / p_e * 100.0
+                    whip = max(8.0, min(55.0, ((amp - net) / max(1e-5, amp)) * 100.0 * 0.45))
+                    wicks.append(whip)
+        avg_wick = round((sum(wicks) / len(wicks)), 1) if wicks else 13.5
+        atrs = [float(t.get("telemetry", {}).get("atr_pct", 0.0)) for t in all_trades if isinstance(t.get("telemetry"), dict) and "atr_pct" in t.get("telemetry", {}) and t.get("telemetry", {}).get("atr_pct") is not None]
+        avg_atr = round(sum(atrs) / len(atrs), 2) if atrs else 0.68
 
         # En çok engelleyen kalkan
         top_shield = max(shield_counts.items(), key=lambda x: x[1])[0] if shield_counts else "Genel Kalkan"
@@ -743,7 +762,7 @@ class ShadowExecutionEngine:
                 f"Bu parite breakout hareketlerinde alıcıları içeri çekip hemen ardından stop patlatan bir piyasa yapısına sahip. "
                 f"Breakout kovalamak yerine sadece Camarilla S3/R3 ve nPOC ekstrem seviyelerinden tepki aranmalıdır."
             )
-        elif avg_atr >= 1.8 and len(heroes) >= 2:
+        elif avg_atr >= 0.90 and len(heroes) >= 2:
             calibrated = True
             rec_badge = "GENİŞ STOP"
             primary_scenario = "HIGH_BETA_SUFFOCATION"
@@ -839,27 +858,37 @@ class ShadowExecutionEngine:
             })
 
         # Mod 4: Sahte Fitil Toleransı
-        if avg_wick >= 18.0 or "WHIPSAW" in current_persona:
+        if avg_wick >= 18.0 or "WHIPSAW" in current_persona or len(spoilers) >= 2:
             modifications.append({
                 "parameter": "Sahte Fitil (Fakeout) Toleransı",
                 "code_key": f"fakeout_wick_threshold_{clean.lower()}",
                 "current_val": "%15.0",
-                "proposed_val": f"%{max(22.0, avg_wick + 3.0):.1f}",
+                "proposed_val": f"%{max(20.0, avg_wick + 3.0):.1f}",
                 "urgency": "YÜKSEK",
                 "reason": f"Paritenin doğal fitil boyu (%{avg_wick:.1f}) piyasa ortalamasının çok üstünde. Eşik artırılarak sahte kırılım alarmları dengelenmeli.",
                 "expected_impact": "Gereksiz Kalkan Retlerini %45 Azaltır"
             })
 
-        # Mod 5: Stop-Loss ATR Çarpanı
-        if avg_atr >= 1.6:
+        # Mod 5: Stop-Loss ATR Çarpanı (5M ortalaması %0.68 olduğundan 0.85 üstü yüksek volatiltedir)
+        if avg_atr >= 0.85:
             modifications.append({
                 "parameter": "Stop-Loss ATR Çarpanı",
                 "code_key": f"stop_atr_multiplier_{clean.lower()}",
                 "current_val": "1.5x ATR",
-                "proposed_val": "2.2x ATR (Genişletilmiş Koruma)",
+                "proposed_val": "2.0x ATR (Genişletilmiş Koruma)",
                 "urgency": "ORTA",
                 "reason": f"Yüksek volatilite (%{avg_atr:.2f} ATR) nedeniyle dar stoplar piyasa gürültüsüne takılıyor. Stop mesafesi genişletilmeli.",
                 "expected_impact": "Piyasa Gürültüsünden Stop Olmayı %30 Azaltır"
+            })
+        elif avg_atr <= 0.40 and tot_completed >= 5:
+            modifications.append({
+                "parameter": "Stop-Loss ATR Çarpanı",
+                "code_key": f"stop_atr_multiplier_{clean.lower()}",
+                "current_val": "1.5x ATR",
+                "proposed_val": "1.2x ATR (Sıkı Stop / Sermaye Verimi)",
+                "urgency": "DÜŞÜK",
+                "reason": f"Düşük volatilite (%{avg_atr:.2f} ATR) paritenin stabil olduğunu gösteriyor. Stop daraltılarak sermaye verimi artırılabilir.",
+                "expected_impact": "Stop Maliyetini %20 Düşürür"
             })
 
         # Mod 6: Dinamik Marjin Katsayısı
@@ -885,7 +914,7 @@ class ShadowExecutionEngine:
             })
 
         # Mod 7: İzin Verilen Stratejiler
-        if avg_wick >= 22.0 or "WHIPSAW" in current_persona:
+        if avg_wick >= 22.0 or "WHIPSAW" in current_persona or (len(spoilers) >= 3 and sei < 45.0):
             modifications.append({
                 "parameter": "İzin Verilen Strateji Rejimi",
                 "code_key": f"allowed_setups_{clean.lower()}",

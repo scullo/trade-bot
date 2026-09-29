@@ -308,18 +308,40 @@ class AutonomousDNACalibrator:
             else:
                 s["neutral_count"] += 1
 
-            # Erken Başa-Baş (BE) Tuzağı Tespiti:
+            # Erken Başa-Baş (BE) Tuzağı Tespiti (mfe >= 1.4):
             close_reason = str(t.get("close_reason", "")).upper()
             exit_status = str(t.get("exit_status", "")).upper()
             mfe_pct = float(t.get("max_mfe_pct", 0.0))
-            if ("BE" in close_reason or "BREAKEVEN" in exit_status or t.get("early_be_locked")) and mfe_pct >= 1.8:
+            st = str(t.get("status", "")).upper()
+            if ("BE" in close_reason or "BREAKEVEN" in exit_status or "BE" in st or t.get("early_be_locked")) and mfe_pct >= 1.4:
                 s["premature_be_count"] += 1
+
+            # Telemetri: ATR ve Fitil
+            te = t.get("telemetry", {})
+            if isinstance(te, dict) and "atr_pct" in te and te["atr_pct"] is not None:
+                s.setdefault("atrs", []).append(float(te["atr_pct"]))
+            if isinstance(te, dict) and "wick_ratio_pct" in te and te["wick_ratio_pct"] is not None:
+                s.setdefault("wicks", []).append(float(te["wick_ratio_pct"]))
+            elif isinstance(te, dict) and "lower_wick_ratio" in te and te["lower_wick_ratio"] is not None:
+                s.setdefault("wicks", []).append(float(te["lower_wick_ratio"]) * 100.0)
+            else:
+                p_h = float(t.get("peak_high") or 0.0)
+                p_l = float(t.get("valley_low") or 0.0)
+                p_e = float(t.get("entry_price") or 0.0)
+                p_x = float(t.get("exit_price") or p_e)
+                if p_h > p_l > 0 and p_e > 0:
+                    amp = (p_h - p_l) / p_e * 100.0
+                    net = abs(p_x - p_e) / p_e * 100.0
+                    whip = max(8.0, min(55.0, ((amp - net) / max(1e-5, amp)) * 100.0 * 0.45))
+                    s.setdefault("wicks", []).append(whip)
 
         for sym, s in stats.items():
             tot = s["total"]
             s["sei"] = round((s["hero_count"] / tot) * 100.0, 1) if tot > 0 else 50.0
             s["spoiler_ratio"] = round(s["missed_profit_usd"] / (s["saved_loss_usd"] + 0.01), 2)
             s["hero_ratio"] = round(s["saved_loss_usd"] / (s["missed_profit_usd"] + 0.01), 2)
+            s["avg_atr"] = round(sum(s.get("atrs", [])) / len(s["atrs"]), 2) if s.get("atrs") else 0.68
+            s["avg_wick"] = round(sum(s.get("wicks", [])) / len(s["wicks"]), 1) if s.get("wicks") else 13.5
 
         return stats
 
@@ -345,41 +367,81 @@ class AutonomousDNACalibrator:
             if not s or s["total"] < min_coin_req:
                 continue
 
-            current_status = cur_cfg.get("calibration_status", "DENGELİ")
             candidate_cfg = dict(cur_cfg)
-            candidate_reason = ""
+            candidate_reasons = []
             proposed = False
 
-            # Kural A: FIRSAT KAÇIRAN PARİTE (SPOILER) -> GEVŞETME ÖNERİSİ
-            if s["spoiler_ratio"] >= 1.4 and s["sei"] < 55.0 and current_status != "GEVŞET":
-                candidate_cfg["calibration_status"] = "GEVŞET"
+            avg_atr = s.get("avg_atr", 0.68)
+            avg_wick = s.get("avg_wick", 13.5)
+
+            # Boyut 1: Sermaye Koruma & Teyit Stratejisi (KORU / GEVŞET / DENGELİ)
+            base_status = cur_cfg.get("calibration_status", "DENGELİ")
+            if s["spoiler_ratio"] >= 1.4 and s["sei"] < 55.0:
+                base_status = "GEVŞET"
                 candidate_cfg["min_confluence"] = 2
                 candidate_cfg["dynamic_margin_scale"] = 0.5
-                candidate_cfg["fakeout_wick_threshold"] = 8.0
                 candidate_cfg["scenario"] = "Yüksek Kuant Kaçan Kârı (Fırsat Avcısı)"
-                candidate_reason = f"Spoiler Oranı {s['spoiler_ratio']}x ve SEI %{s['sei']} -> Confluence 4'ten 2'ye gevşetildi."
+                candidate_reasons.append(f"Spoiler Oranı {s['spoiler_ratio']}x ve SEI %{s['sei']} -> Confluence 2, Marjin 0.5x")
                 proposed = True
-
-            # Kural B: ÇELİK KORUMA PARİTESİ (HERO) -> KORUMA ÖNERİSİ
-            elif s["hero_ratio"] >= 2.0 and s["sei"] >= 70.0 and current_status != "KORU":
-                candidate_cfg["calibration_status"] = "KORU"
+            elif s["hero_ratio"] >= 2.0 and s["sei"] >= 70.0:
+                base_status = "KORU"
                 candidate_cfg["min_confluence"] = 3
                 candidate_cfg["dynamic_margin_scale"] = 1.25
-                candidate_cfg["fakeout_wick_threshold"] = 13.5
                 candidate_cfg["scenario"] = "Çelik Savunma Zırhı (Kusursuz Sermaye Koruması)"
-                candidate_reason = f"Hero Oranı {s['hero_ratio']}x ve SEI %{s['sei']} -> Kalkanlar sıkı korumaya alındı."
+                candidate_reasons.append(f"Hero Oranı {s['hero_ratio']}x ve SEI %{s['sei']} -> Kalkanlar sıkı korumada (Marjin 1.25x)")
                 proposed = True
 
-            # Kural C: ERKEN BE TUZAĞINA YAKALANAN PARİTE -> DİNAMİK NEFES PAYI
+            # Boyut 2: Erken Başa-Baş (BE) Nefes Payı
             if s["premature_be_count"] >= 2:
                 cur_be = float(candidate_cfg.get("chandelier_be_threshold_pct", 0.8))
                 new_be = min(1.6, round(cur_be + 0.3, 1))
                 if new_be > cur_be:
                     candidate_cfg["chandelier_be_threshold_pct"] = new_be
-                    candidate_cfg["calibration_status"] = "ERKEN BE"
-                    candidate_cfg["scenario"] = "Erken Başa-Baş (Chandelier) Kırbaç Tuzağı Nefes Payı"
-                    candidate_reason += f" {s['premature_be_count']} kez erken BE tuzağı tespit edildi -> BE eşiği %{cur_be} -> %{new_be}'ye genişletildi."
+                    candidate_reasons.append(f"{s['premature_be_count']} kez erken BE tuzağı -> BE %{cur_be} -> %{new_be}")
                     proposed = True
+                    if "KORU" in base_status:
+                        base_status = "KORU + ERKEN BE"
+                    elif "GEVŞET" in base_status:
+                        base_status = "GEVŞET + ERKEN BE"
+                    else:
+                        base_status = "ERKEN BE"
+
+            candidate_cfg["calibration_status"] = base_status
+
+            # Boyut 3: Stop-Loss ATR Çarpanı (5M mumda %0.85 üstü yüksek volatiltedir)
+            cur_stop_mult = float(candidate_cfg.get("stop_atr_multiplier", 1.5))
+            if avg_atr >= 0.85 and cur_stop_mult < 2.0:
+                candidate_cfg["stop_atr_multiplier"] = 2.0
+                candidate_reasons.append(f"Yüksek Volatilite (%{avg_atr} ATR) -> Stop 2.0x ATR Genişletildi")
+                proposed = True
+            elif avg_atr <= 0.40 and s["total"] >= 5 and cur_stop_mult > 1.2:
+                candidate_cfg["stop_atr_multiplier"] = 1.2
+                candidate_reasons.append(f"Düşük Volatilite (%{avg_atr} ATR) -> Stop 1.2x ATR Sıkılaştırıldı")
+                proposed = True
+
+            # Boyut 4: Sahte Fitil (Fakeout) Toleransı
+            cur_fakeout = float(candidate_cfg.get("fakeout_wick_threshold", 13.5))
+            if avg_wick >= 18.0:
+                new_fakeout = round(max(20.0, avg_wick + 3.0), 1)
+                if abs(new_fakeout - cur_fakeout) >= 1.0:
+                    candidate_cfg["fakeout_wick_threshold"] = new_fakeout
+                    candidate_reasons.append(f"Yüksek Fitil (%{avg_wick}) -> Fitil Toleransı %{new_fakeout}")
+                    proposed = True
+            elif avg_wick <= 10.0 and cur_fakeout > 8.0:
+                candidate_cfg["fakeout_wick_threshold"] = 8.0
+                candidate_reasons.append(f"Düşük Fitil (%{avg_wick}) -> Fitil Toleransı %8.0")
+                proposed = True
+
+            # Boyut 5: İzin Verilen Strateji Rejimi
+            if avg_wick >= 22.0 or (s["spoiler_ratio"] >= 2.0 and s["sei"] < 40.0):
+                if candidate_cfg.get("allowed_strategy_regime") != "REVERSAL_ONLY":
+                    candidate_cfg["allowed_strategy_regime"] = "REVERSAL_ONLY"
+                    candidate_reasons.append("Yüksek Whipsaw -> Strateji Sadece Dönüş (Reversal Only)")
+                    proposed = True
+            else:
+                candidate_cfg["allowed_strategy_regime"] = "ALL"
+
+            candidate_reason = " | ".join(candidate_reasons)
 
             if not proposed:
                 continue
@@ -427,13 +489,17 @@ class AutonomousDNACalibrator:
         old_peak = 0.0
         new_peak = 0.0
 
-        new_status = new_cfg.get("calibration_status")
+        new_status = new_cfg.get("calibration_status", "")
         new_be = float(new_cfg.get("chandelier_be_threshold_pct", 0.8))
         old_be = float(old_cfg.get("chandelier_be_threshold_pct", 0.8))
+        new_margin_scale = float(new_cfg.get("dynamic_margin_scale", 1.0))
+        new_stop_mult = float(new_cfg.get("stop_atr_multiplier", 1.5))
+        old_stop_mult = float(old_cfg.get("stop_atr_multiplier", 1.5))
 
         for t in trades:
             pnl_base = float(t.get("virtual_pnl_usd", 0.0))
             mfe_pct = float(t.get("max_mfe_pct", 0.0))
+            mae_pct = float(t.get("max_mae_pct", 0.0))
             verdict = t.get("verdict", "")
 
             # 1. Eski Durum
@@ -447,15 +513,18 @@ class AutonomousDNACalibrator:
                 old_dd_max = dd_old
 
             # 2. Yeni Durum Simülasyonu
-            new_pnl = pnl_base
+            new_pnl = pnl_base * new_margin_scale
             if new_be > old_be and mfe_pct >= new_be:
-                new_pnl = max(new_pnl, float(t.get("notional_usd", 250.0)) * (new_be / 100.0) * 0.8)
+                new_pnl = max(new_pnl, float(t.get("notional_usd", 250.0)) * (new_be / 100.0) * 0.8 * new_margin_scale)
 
-            if new_status == "GEVŞET" and verdict == "SPOILER_SHIELD":
-                new_pnl = float(t.get("impact_usd", 10.0)) * 0.5
+            if "GEVŞET" in new_status and verdict == "SPOILER_SHIELD":
+                new_pnl = float(t.get("impact_usd", 10.0)) * 0.5 * new_margin_scale
 
-            if new_status == "KORU" and verdict == "HERO_SHIELD":
+            if "KORU" in new_status and verdict == "HERO_SHIELD":
                 new_pnl = 0.0
+
+            if new_stop_mult > old_stop_mult and verdict == "HERO_SHIELD" and mae_pct <= 1.2 and mfe_pct >= 1.5:
+                new_pnl = float(t.get("notional_usd", 250.0)) * 0.015
 
             new_pnl_sum += new_pnl
             new_cum += new_pnl

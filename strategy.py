@@ -168,6 +168,19 @@ class StrategyEngine:
                         telemetry.setdefault("vol_surge", met.get("vol_surge", 1.0))
                         telemetry.setdefault("rs_score", met.get("dynamic_rs_score", 0.0))
 
+                    if df_c is not None and not df_c.empty:
+                        c_last = df_c.iloc[-1]
+                        c_h = float(c_last.get('high', entry_p))
+                        c_l = float(c_last.get('low', entry_p))
+                        c_o = float(c_last.get('open', entry_p))
+                        c_c = float(c_last.get('close', entry_p))
+                        c_rng = max(1e-8, c_h - c_l)
+                        l_wick = max(0.0, min(c_o, c_c) - c_l)
+                        u_wick = max(0.0, c_h - max(c_o, c_c))
+                        telemetry.setdefault("wick_ratio_pct", round(((l_wick + u_wick) / c_rng) * 100.0, 1))
+                        telemetry.setdefault("lower_wick_ratio", round(l_wick / c_rng, 3))
+                        telemetry.setdefault("upper_wick_ratio", round(u_wick / c_rng, 3))
+
                     self.shadow_engine.spawn_shadow_trade(
                         symbol=clean_s,
                         setup_name=setup_name,
@@ -476,33 +489,39 @@ class StrategyEngine:
         if calib_cfg:
             calib_status = str(calib_cfg.get("calibration_status", "DENGELİ")).strip()
             res["calibration_status"] = calib_status
-            res["min_confluence"] = int(calib_cfg.get("min_confluence", 2 if calib_status == "GEVŞET" else 3))
-            res["dynamic_margin_scale"] = float(calib_cfg.get("dynamic_margin_scale", 0.5 if calib_status == "GEVŞET" else (1.25 if calib_status == "KORU" else 1.0)))
+            res["min_confluence"] = int(calib_cfg.get("min_confluence", 2 if "GEVŞET" in calib_status else 3))
+            res["dynamic_margin_scale"] = float(calib_cfg.get("dynamic_margin_scale", 0.5 if "GEVŞET" in calib_status else (1.25 if "KORU" in calib_status else 1.0)))
             res["fakeout_wick_threshold"] = float(calib_cfg.get("fakeout_wick_threshold", 13.5))
             res["chandelier_be_threshold_pct"] = float(calib_cfg.get("chandelier_be_threshold_pct", 0.8))
+            res["stop_loss_atr_mult"] = float(calib_cfg.get("stop_atr_multiplier") or calib_cfg.get("stop_loss_atr_mult", 1.0))
+            res["stop_atr_multiplier"] = res["stop_loss_atr_mult"]
+            res["allowed_strategy_regime"] = str(calib_cfg.get("allowed_strategy_regime", "ALL"))
+            if res["allowed_strategy_regime"] == "REVERSAL_ONLY":
+                res["allow_breakout"] = False
             res["calibrated_scenario"] = str(calib_cfg.get("scenario", ""))
             res["sei_score"] = float(calib_cfg.get("sei_score", 50.0))
 
-            # 🔓 GEVŞET Ligi: Aşırı katı kalkan kurbanı olan 17 coin için kilit açma
-            if calib_status == "GEVŞET":
+            # 🔓 GEVŞET Ligi: Aşırı katı kalkan kurbanı olan coinler için kilit açma
+            if "GEVŞET" in calib_status:
                 res["persona_class"] = "GEVSET_OPPORTUNITY"
                 res["persona_name"] = "🔓 Fırsat Kilidi Açık (Gevşet / Marjin 0.5x)"
-                res["allow_breakout"] = True
+                res["allow_breakout"] = True if res["allowed_strategy_regime"] != "REVERSAL_ONLY" else False
                 res["allow_bounce"] = True
                 res["is_trading_allowed"] = True
                 res["margin_scale"] = res["dynamic_margin_scale"]
-                res["status_badge"] = "🔓 Fırsat Kilidi (2 Teyit, Marjin %50)"
-                res["strategy_permission"] = "Kâr Fırsatı Açık (2 Teyit, Marjin %50)"
+                res["status_badge"] = f"🔓 Fırsat ({res['min_confluence']} Teyit, Marjin {int(res['margin_scale']*100)}%)"
+                res["strategy_permission"] = "Kâr Fırsatı Açık"
 
-            # 🛡️ KORU Ligi: Sermayeyi stop loss'lardan koruyan 19 coin için çelik zırh
-            elif calib_status == "KORU":
+            # 🛡️ KORU Ligi: Sermayeyi stop loss'lardan koruyan coinler için çelik zırh
+            elif "KORU" in calib_status:
+                res["persona_class"] = "KORU_SHIELD"
                 res["persona_name"] = "🛡️ Çelik Savunma Zırhı (Koru / Sıkı Filtre)"
                 res["margin_scale"] = res["dynamic_margin_scale"]
-                res["status_badge"] = "🛡️ Çelik Zırh (3 Teyit, Marjin x1.25)"
-                res["strategy_permission"] = "Elit Teyitli Kırılım + Pusu (Marjin x1.25)"
+                res["status_badge"] = f"🛡️ Çelik Zırh ({res['min_confluence']} Teyit, Marjin x{res['margin_scale']})"
+                res["strategy_permission"] = "Elit Teyitli Kırılım + Pusu"
 
             # ⏳ ERKEN BE Ligi: Kırbaç dalgalanmasında erken kapanmayı engelleyen dinamik nefes ligi
-            elif calib_status == "ERKEN BE":
+            elif "ERKEN BE" in calib_status:
                 res["persona_name"] = f"⏳ Dinamik Başa-Baş (BE %{res['chandelier_be_threshold_pct']})"
                 res["margin_scale"] = res["dynamic_margin_scale"]
                 res["status_badge"] = f"⏳ Dinamik BE (%{res['chandelier_be_threshold_pct']})"
@@ -511,6 +530,9 @@ class StrategyEngine:
             res["calibration_status"] = "DENGELİ"
             res["min_confluence"] = 3
             res["dynamic_margin_scale"] = 1.0
+            res["stop_loss_atr_mult"] = 1.0
+            res["stop_atr_multiplier"] = 1.0
+            res["allowed_strategy_regime"] = "ALL"
         return res
 
     def get_coin_persona(self, symbol: str) -> dict:
