@@ -561,6 +561,19 @@ class AutonomousDNACalibrator:
             if new_stop_mult > old_stop_mult and verdict == "HERO_SHIELD" and mae_pct <= 1.2 and mfe_pct >= 1.5:
                 new_pnl = float(t.get("notional_usd", 250.0)) * 0.015
 
+            # Cerrahi Muted Setup & Reversal Only Simülasyon Koruması:
+            # Uyutulan toksik kurulumlar ve yasaklanan kırılımlar yeni simülasyonda elenerek sermaye korunur
+            t_canon = ""
+            if self.shadow_engine and hasattr(self.shadow_engine, 'extract_canonical_setup'):
+                t_canon = self.shadow_engine.extract_canonical_setup(t.get("setup", ""))
+            if t_canon and t_canon in new_cfg.get("muted_setups", []):
+                new_pnl = 0.0
+
+            if new_cfg.get("allowed_strategy_regime") == "REVERSAL_ONLY":
+                s_txt = str(t.get("setup", "")).upper()
+                if "BREAKOUT" in s_txt or "BREAKDOWN" in s_txt or "KIRILIM" in s_txt:
+                    new_pnl = 0.0
+
             new_pnl_sum += new_pnl
             new_cum += new_pnl
             if new_cum > new_peak:

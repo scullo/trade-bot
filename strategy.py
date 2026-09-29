@@ -533,6 +533,32 @@ class StrategyEngine:
             res["stop_loss_atr_mult"] = 1.0
             res["stop_atr_multiplier"] = 1.0
             res["allowed_strategy_regime"] = "ALL"
+
+        # 3 Katmanlı Dinamik Likidite Kademesi ve İndikatör Eşikleri (Tier-1, Tier-2, Tier-3)
+        tier_info = {}
+        if hasattr(self, 'shadow_engine') and self.shadow_engine and hasattr(self.shadow_engine, 'get_coin_liquidity_tier'):
+            try:
+                tier_info = self.shadow_engine.get_coin_liquidity_tier(raw_sym)
+            except Exception:
+                tier_info = {}
+
+        res["liquidity_tier"] = calib_cfg.get("liquidity_tier") or tier_info.get("tier", "TIER_2_DINAMIK")
+        res["liquidity_tier_label"] = calib_cfg.get("liquidity_tier_label") or tier_info.get("tier_label", "Tier-2")
+        res["dynamic_cvd_threshold"] = float(calib_cfg.get("dynamic_cvd_threshold") or tier_info.get("cvd_threshold", 55.0))
+        res["dynamic_obi_threshold"] = float(calib_cfg.get("dynamic_obi_threshold") or tier_info.get("obi_threshold", 1.20))
+        res["dynamic_vol_surge_threshold"] = float(calib_cfg.get("dynamic_vol_surge_threshold") or tier_info.get("vol_surge_threshold", 1.45))
+
+        # Cerrahi Setup Yönlendirme (Muted & Priority Setups)
+        res["muted_setups"] = list(calib_cfg.get("muted_setups", []))
+        res["priority_setups"] = list(calib_cfg.get("priority_setups", []))
+        if not res["muted_setups"] and hasattr(self, 'shadow_engine') and self.shadow_engine and hasattr(self.shadow_engine, 'get_coin_setup_matrix'):
+            try:
+                sm = self.shadow_engine.get_coin_setup_matrix(raw_sym)
+                res["muted_setups"] = [sid for sid, m in sm.items() if m.get("status") == "UYUTULDU"]
+                res["priority_setups"] = [sid for sid, m in sm.items() if m.get("status") == "A+ ONAYLI"]
+            except Exception:
+                pass
+
         return res
 
     def get_coin_persona(self, symbol: str) -> dict:
@@ -1282,11 +1308,17 @@ class StrategyEngine:
         # Eğer bu kurulum bu coinde geçmiş veride negatif alfa üretip uyutulduysa (MUTED), merkezi olarak engelle!
         muted_setups = persona.get("muted_setups", [])
         if muted_setups:
-            s_u = (str(setup_id) + " " + str(reason)).upper()
+            from shadow_engine import ShadowExecutionEngine
+            current_canonical = ShadowExecutionEngine.extract_canonical_setup(str(setup_id) + " " + str(reason))
             is_muted = False
             matched_muted = ""
             for m in muted_setups:
+                if m == current_canonical:
+                    is_muted = True
+                    matched_muted = m
+                    break
                 m_clean = m.replace("SETUP_", "").replace("_", " ").upper()
+                s_u = (str(setup_id) + " " + str(reason)).upper()
                 if m_clean in s_u or m in s_u:
                     is_muted = True
                     matched_muted = m
@@ -1328,7 +1360,7 @@ class StrategyEngine:
                     confluence_list.append("Gunluk_AVWAP_Alti_Ayi")
 
             # 3. Taker CVD Akış Teyidi (Likidite Katmanı Uyumlu Dinamik Eşik)
-            req_cvd_long = float(persona.get("dynamic_cvd_threshold", 50.0))
+            req_cvd_long = float(persona.get("dynamic_cvd_threshold", 55.0))
             req_cvd_short = 100.0 - req_cvd_long
             cvd_info_jit = self.market_data.get_symbol_cvd(symbol) if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
             cvd_ratio_jit = float(cvd_info_jit.get('ratio_60s', 50.0))
@@ -1340,7 +1372,7 @@ class StrategyEngine:
                     confluence_list.append("Taker_Satici_Baskisi_Teyidi")
 
             # 4. Derinlik (OrderBook OBI) Duvar Teyidi (Likidite Katmanı Uyumlu Dinamik Eşik)
-            req_obi_ratio = float(persona.get("dynamic_obi_threshold", 1.08))
+            req_obi_ratio = float(persona.get("dynamic_obi_threshold", 1.20))
             req_obi_imb = max(0.04, round((req_obi_ratio - 1.0) / 2.0, 2))
             obi_info_jit = self.market_data.get_orderbook_depth(symbol) if (self.market_data and hasattr(self.market_data, 'get_orderbook_depth')) else {}
             obi_imb = float(obi_info_jit.get('imbalance', 0.0))
@@ -1348,7 +1380,7 @@ class StrategyEngine:
             if side == "LONG" and (obi_imb >= req_obi_imb or obi_rat >= req_obi_ratio):
                 if not any("WALL" in str(c) or "DUVARI" in str(c) or "Tahta" in str(c) for c in confluence_list):
                     confluence_list.append("Tahta_Alis_Duvari_Destegi")
-            elif side == "SHORT" and (obi_imb <= -req_obi_imb or obi_rat <= (2.0 - req_obi_ratio)):
+            elif side == "SHORT" and (obi_imb <= -req_obi_imb or obi_rat <= round(1.0 / req_obi_ratio, 2)):
                 if not any("WALL" in str(c) or "DUVARI" in str(c) or "Tahta" in str(c) for c in confluence_list):
                     confluence_list.append("Tahta_Satis_Duvari_Baskisi")
 

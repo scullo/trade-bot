@@ -1124,38 +1124,42 @@ class ShadowExecutionEngine:
     def extract_canonical_setup(setup_raw: str) -> str:
         """Kurulum adından standart kanonik kod üretir."""
         s = str(setup_raw or "").upper()
-        if "SETUP 1" in s or "SETUP_1" in s or "R4 BREAKOUT" in s:
+        if "SETUP 1" in s or "SETUP_1" in s or "R4 BREAKOUT" in s or "R4 KIRILIMI" in s or "R4 K" in s:
             return "SETUP_1_R4_BREAKOUT"
-        elif "SETUP 2" in s or "S4 BREAKDOWN" in s:
+        elif "SETUP 2" in s or "SETUP_2" in s or "S4 BREAKDOWN" in s or "S4 KIRILIMI" in s or "S4 K" in s:
             return "SETUP_2_S4_BREAKDOWN"
-        elif "SETUP 3" in s or "S3 DESTEK" in s or "S3 SEKME" in s:
+        elif "SETUP 3" in s or "SETUP_3" in s or "S3 DESTEK" in s or "S3 SEKME" in s or "S3 RETEST" in s:
             return "SETUP_3_S3_REVERSAL"
-        elif "SETUP 4" in s or "R3 DİRENÇ" in s:
+        elif "SETUP 4" in s or "SETUP_4" in s or "R3 DİRENÇ" in s or "R3 DIRENC" in s or "R3 RETEST" in s:
             return "SETUP_4_R3_REVERSAL"
-        elif "SETUP 5" in s:
+        elif "SETUP 5" in s or "SETUP_5" in s or "RANGE BOUNCE" in s or "RANGE" in s:
             return "SETUP_5_RANGE_BOUNCE"
-        elif "SETUP 6" in s:
+        elif "SETUP 6" in s or "SETUP_6" in s or "TREND PULLBACK" in s:
             return "SETUP_6_TREND_PULLBACK"
-        elif "SETUP 7" in s or "MVAH" in s:
+        elif "SETUP 7" in s or "SETUP_7" in s or "MVAH" in s:
             return "SETUP_7_MVAH_BREAKOUT"
-        elif "SETUP 8" in s or "MVAL" in s:
+        elif "SETUP 8" in s or "SETUP_8" in s or "MVAL" in s:
             return "SETUP_8_MVAL_BREAKDOWN"
-        elif "SETUP 9" in s or ("NPOC" in s and ("SEKME" in s or "DESTEK" in s)):
-            return "SETUP_9_NPOC_BOUNCE"
-        elif "SETUP 10" in s or ("NPOC" in s and "RED" in s):
+        elif "SETUP 10" in s or "SETUP_10" in s or ("NPOC" in s and ("RED" in s or "DİRENÇ" in s or "DIRENC" in s or "YUKARI" in s)):
             return "SETUP_10_NPOC_REJECTION"
-        elif "SETUP 11" in s or ("FLIP" in s and "DİRENÇ" in s):
+        elif "SETUP 9" in s or "SETUP_9" in s or "NPOC" in s:
+            return "SETUP_9_NPOC_BOUNCE"
+        elif "SETUP 11" in s or "SETUP_11" in s or ("FLIP" in s and ("DİRENÇ" in s or "DIRENC" in s)):
             return "SETUP_11_RESISTANCE_FLIP"
-        elif "SETUP 12" in s or "ÇÖKÜŞ" in s or "BREAKDOWN" in s:
+        elif "SETUP 12" in s or "SETUP_12" in s or "ÇÖKÜŞ" in s or "COKUS" in s or "BREAKDOWN" in s:
             return "SETUP_12_SUPPORT_BREAKDOWN"
-        elif "SETUP 13" in s:
+        elif "SETUP 13" in s or "SETUP_13" in s or "S3 FLIP" in s:
             return "SETUP_13_S3_FLIP"
-        elif "SETUP 14" in s or ("AVWAP" in s and ("DİP" in s or "DESTEK" in s or "SEKME" in s)):
-            return "SETUP_14_AVWAP_SUPPORT"
-        elif "SETUP 15" in s or "RECLAIM" in s:
+        elif "SETUP 15" in s or "SETUP_15" in s or ("AVWAP" in s and ("RED" in s or "DİRENÇ" in s or "DIRENC" in s or "TEPE" in s or "RECLAIM" in s)):
             return "SETUP_15_AVWAP_RECLAIM"
-        elif "SETUP 16" in s:
+        elif "SETUP 14" in s or "SETUP_14" in s or ("AVWAP" in s and ("DİP" in s or "DIP" in s or "DESTEK" in s or "SEKME" in s)):
+            return "SETUP_14_AVWAP_SUPPORT"
+        elif "SETUP 16" in s or "SETUP_16" in s or "R3 FLIP" in s:
             return "SETUP_16_R3_FLIP"
+        elif "PIVOT" in s:
+            return "SETUP_PIVOT_REVERSAL"
+        elif "KURUMSAL" in s or "OI" in s:
+            return "SETUP_INSTITUTIONAL_OI"
         return "SETUP_DİĞER"
 
     def get_coin_setup_matrix(self, symbol: str) -> Dict[str, dict]:

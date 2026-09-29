@@ -1518,29 +1518,22 @@ def create_shadow_dna_excel_report(
     for c_i, h_txt in enumerate(headers_s5, start=1):
         ws5.write(4, c_i, h_txt, th_navy)
 
-    CANONICAL_SETUPS = [
-        "BB_SQUEEZE_EXPLOSION", "TREND_PULLBACK_EMA", "ICT_ORDER_BLOCK",
-        "MICRO_ABSORPTION", "ORDERBOOK_IMBALANCE", "VOLUME_SPREAD_ABSORPTION",
-        "BREAKOUT_VOLUME_EXPANSION", "VP_POC_BOUNCE", "MULTI_TIMEFRAME_ALIGN",
-        "PARABOLIC_EXHAUSTION", "MOMENTUM_EXPANSION", "RANGE_SWEEP_REVERSAL",
-        "LIQUIDITY_RUN", "VOLATILITY_EXPANSION", "ORDERBOOK_WALL_BOUNCE", "GENERIC_SETUP"
-    ]
-    
-    setup_stats = {s: {"count": 0, "wins": 0, "losses": 0, "pnl": 0.0, "mfe_sum": 0.0, "mae_sum": 0.0} for s in CANONICAL_SETUPS}
+    try:
+        from shadow_engine import ShadowExecutionEngine
+        _canonical = ShadowExecutionEngine.extract_canonical_setup
+    except Exception:
+        def _canonical(raw_setup):
+            return str(raw_setup or "SETUP_DİĞER")
 
-    def _canonical(raw_setup):
-        u = str(raw_setup or "").upper()
-        for c in CANONICAL_SETUPS:
-            if c != "GENERIC_SETUP" and c in u:
-                return c
-        return "GENERIC_SETUP"
-
+    setup_stats = {}
     all_trades = shadow_history if shadow_history else []
     if shadow_engine and hasattr(shadow_engine, 'completed_trades'):
         all_trades = list(shadow_engine.completed_trades)
 
     for t in all_trades:
         s_code = _canonical(t.get("setup", ""))
+        if s_code not in setup_stats:
+            setup_stats[s_code] = {"count": 0, "wins": 0, "losses": 0, "pnl": 0.0, "mfe_sum": 0.0, "mae_sum": 0.0}
         setup_stats[s_code]["count"] += 1
         pnl = t.get("virtual_pnl_usd", 0.0)
         setup_stats[s_code]["pnl"] += pnl
@@ -1552,7 +1545,7 @@ def create_shadow_dna_excel_report(
             setup_stats[s_code]["losses"] += 1
 
     r5_idx = 5
-    for s_name in sorted(CANONICAL_SETUPS, key=lambda x: setup_stats[x]["count"], reverse=True):
+    for s_name in sorted(setup_stats.keys(), key=lambda x: setup_stats[x]["count"], reverse=True):
         st = setup_stats[s_name]
         cnt = st["count"]
         if cnt == 0:
@@ -1564,14 +1557,14 @@ def create_shadow_dna_excel_report(
         pnl = st["pnl"]
         alpha_score = round((wr - 50.0) * 1.5 + (pnl / 20.0), 1)
 
-        if alpha_score >= 15.0 or (wr >= 65.0 and cnt >= 5):
+        if (alpha_score >= 15.0 or wr >= 65.0) and pnl > 0 and cnt >= 3:
             k_status = "A+ ONAYLI"
             k_badge = cell_badge_approved
-            k_reason = "Yüksek kazanma oranı ve pozitif alfa. Pozisyon çarpanı artırılabilir."
-        elif alpha_score <= -15.0 and cnt >= 3:
+            k_reason = "Yüksek kazanma oranı ve pozitif net kâr. Kurulum güvenle aktif."
+        elif (alpha_score <= -15.0 or wr < 45.0) and pnl < 0 and cnt >= 3:
             k_status = "UYUTULDU"
             k_badge = cell_badge_muted
-            k_reason = "Düşük kazanma ve kasanın aleyhine spoiler etkisi. Bu setup cerrahi olarak susturuldu."
+            k_reason = "Düşük kazanma ve kasanın aleyhine net zarar. Bu setup cerrahi olarak susturuldu."
         else:
             k_status = "STANDART"
             k_badge = cell_badge_neutral
