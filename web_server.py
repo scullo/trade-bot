@@ -13837,13 +13837,19 @@ function downloadExcelReport() {
                 badgeEl.style.borderColor = `${badgeColor}40`;
                 badgeEl.style.background = badgeBg;
 
-                const tier = d.liquidity_tier || { tier: 2, label: 'TIER-2 DİNAMİK', color: '#38bdf8' };
+                const tier = d.liquidity_tier || {};
+                const tierLabel = tier.tier_label || tier.label || 'TIER-2 DİNAMİK';
+                let tierCol = '#38bdf8';
+                if (String(tier.tier || '').includes('1') || String(tier.tier || '').includes('KURUMSAL')) tierCol = '#38bdf8';
+                else if (String(tier.tier || '').includes('3') || String(tier.tier || '').includes('MEME')) tierCol = '#f43f5e';
+                else tierCol = '#818cf8';
+
                 const tierBadgeEl = document.getElementById('shadow-modal-tier-badge');
                 if (tierBadgeEl) {
-                    tierBadgeEl.innerText = tier.label;
-                    tierBadgeEl.style.color = tier.color;
-                    tierBadgeEl.style.borderColor = `${tier.color}40`;
-                    tierBadgeEl.style.background = `${tier.color}15`;
+                    tierBadgeEl.innerText = tierLabel;
+                    tierBadgeEl.style.color = tierCol;
+                    tierBadgeEl.style.borderColor = `${tierCol}40`;
+                    tierBadgeEl.style.background = `${tierCol}15`;
                 }
 
                 document.getElementById('shadow-modal-persona').innerHTML = `Persona: <strong style="color:#fff;">${d.persona_name || 'Standart Kripto'}</strong> • Teşhis: <span style="color:#38bdf8; font-weight:700;">${d.scenario_title || 'Canlı Piyasa Gözlemi'}</span> • Toplam ${d.total_trades || 0} Sinyal (${d.active_count || 0} Aktif, ${d.completed_count || 0} Tamamlandı)`;
@@ -13980,7 +13986,8 @@ function downloadExcelReport() {
                 // 3.5 SETUP MATRİSİ
                 const setupsTbody = document.getElementById('shadow-modal-setups-tbody');
                 const setupBadgeSummary = document.getElementById('shadow-modal-setup-badge-summary');
-                const setupMatrix = d.setup_matrix || [];
+                const rawMatrix = d.setup_matrix || {};
+                const setupMatrix = Array.isArray(rawMatrix) ? rawMatrix : Object.values(rawMatrix);
                 if (setupsTbody) {
                     if (setupMatrix.length === 0) {
                         setupsTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:12px; color:#64748b;">Henüz yeterli kurulum verisi kaydedilmedi.</td></tr>`;
@@ -13993,16 +14000,22 @@ function downloadExcelReport() {
                         setupsTbody.innerHTML = setupMatrix.map(s => {
                             const stCol = s.status === 'A+ ONAYLI' ? '#10b981' : (s.status === 'UYUTULDU' ? '#f43f5e' : '#94a3b8');
                             const stBg = s.status === 'A+ ONAYLI' ? 'rgba(16,185,129,0.15)' : (s.status === 'UYUTULDU' ? 'rgba(244,63,94,0.15)' : 'rgba(255,255,255,0.05)');
-                            const pnlCol = (s.net_pnl || 0) >= 0 ? '#10b981' : '#f43f5e';
+                            const sName = s.setup || s.setup_id || '-';
+                            const sCount = s.count != null ? s.count : (s.total_trades || 0);
+                            const sWr = s.win_rate != null ? s.win_rate : (s.win_rate_pct || 0);
+                            const sPnl = s.net_pnl != null ? s.net_pnl : (s.net_pnl_usd || 0);
+                            const sMfe = s.max_mfe != null ? s.max_mfe : (s.max_mfe_pct || 0);
+                            const sAlpha = s.alpha_score != null ? s.alpha_score : 0;
+                            const pnlCol = sPnl >= 0 ? '#10b981' : '#f43f5e';
                             return `
                                 <tr style="border-bottom:1px solid rgba(255,255,255,0.04); font-family:'JetBrains Mono'; font-size:11.5px;">
-                                    <td style="font-weight:700; color:#fff; text-align:left;">${s.setup}</td>
-                                    <td style="text-align:center; color:#cbd5e1;">${s.count}</td>
-                                    <td style="text-align:center; color:${(s.win_rate || 0) >= 50 ? '#10b981' : '#f43f5e'}; font-weight:700;">%${(s.win_rate || 0).toFixed(1)}</td>
-                                    <td style="text-align:center; font-weight:700; color:${pnlCol};">${(s.net_pnl || 0) >= 0 ? '+$' : '-$'}${Math.abs(s.net_pnl || 0).toFixed(2)}</td>
-                                    <td style="text-align:center; color:#38bdf8;">+%${(s.max_mfe || 0).toFixed(1)}</td>
-                                    <td style="text-align:center; font-weight:800; color:${(s.alpha_score || 0) >= 0 ? '#10b981' : '#f43f5e'};">${(s.alpha_score || 0) > 0 ? '+' : ''}${(s.alpha_score || 0).toFixed(1)}</td>
-                                    <td style="text-align:center;"><span style="background:${stBg}; color:${stCol}; border:1px solid ${stCol}50; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800;">${s.status}</span></td>
+                                    <td style="font-weight:700; color:#fff; text-align:left;">${sName}</td>
+                                    <td style="text-align:center; color:#cbd5e1;">${sCount}</td>
+                                    <td style="text-align:center; color:${sWr >= 50 ? '#10b981' : '#f43f5e'}; font-weight:700;">%${sWr.toFixed(1)}</td>
+                                    <td style="text-align:center; font-weight:700; color:${pnlCol};">${sPnl >= 0 ? '+$' : '-$'}${Math.abs(sPnl).toFixed(2)}</td>
+                                    <td style="text-align:center; color:#38bdf8;">+%${sMfe.toFixed(1)}</td>
+                                    <td style="text-align:center; font-weight:800; color:${sAlpha >= 0 ? '#10b981' : '#f43f5e'};">${sAlpha > 0 ? '+' : ''}${sAlpha.toFixed(1)}</td>
+                                    <td style="text-align:center;"><span style="background:${stBg}; color:${stCol}; border:1px solid ${stCol}50; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800;">${s.status || 'STANDART'}</span></td>
                                 </tr>
                             `;
                         }).join('');
