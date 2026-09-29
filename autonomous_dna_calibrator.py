@@ -444,8 +444,10 @@ class AutonomousDNACalibrator:
             # Boyut 6: 3 Katmanlı Dinamik Likidite ve İndikatör Eşikleri (Tier-1, Tier-2, Tier-3)
             liq_tier_info = self.shadow_engine.get_coin_liquidity_tier(sym) if self.shadow_engine and hasattr(self.shadow_engine, 'get_coin_liquidity_tier') else {}
             if liq_tier_info:
-                candidate_cfg["liquidity_tier"] = liq_tier_info.get("tier", "TIER_2_DINAMIK")
-                candidate_cfg["liquidity_tier_label"] = liq_tier_info.get("tier_label", "Tier-2")
+                candidate_cfg["liquidity_tier"] = liq_tier_info.get("tier", "Tier-2")
+                candidate_cfg["liquidity_tier_badge"] = liq_tier_info.get("badge", "TIER-2 DİNAMİK")
+                candidate_cfg["liquidity_tier_color"] = liq_tier_info.get("color", "#38bdf8")
+                candidate_cfg["liquidity_tier_label"] = liq_tier_info.get("name", "Tier-2 Dinamik")
                 candidate_cfg["dynamic_cvd_threshold"] = liq_tier_info.get("cvd_threshold", 55.0)
                 candidate_cfg["dynamic_obi_threshold"] = liq_tier_info.get("obi_threshold", 1.20)
                 candidate_cfg["dynamic_vol_surge_threshold"] = liq_tier_info.get("vol_surge_threshold", 1.45)
@@ -684,6 +686,7 @@ class AutonomousDNACalibrator:
         now_ts = time.time()
         elapsed = now_ts - self.last_calibration_ts if self.last_calibration_ts > 0 else 0.0
         remaining_hours = max(0.0, round((CALIBRATION_CYCLE_SECONDS - elapsed) / 3600.0, 1))
+        next_cycle_ts = (self.last_calibration_ts + CALIBRATION_CYCLE_SECONDS) if self.last_calibration_ts > 0 else (now_ts + CALIBRATION_CYCLE_SECONDS)
 
         current_dna = self._load_current_calibrated_dna()
         counts = {"KORU": 0, "GEVŞET": 0, "ERKEN BE": 0, "DENGELİ": 0}
@@ -698,6 +701,8 @@ class AutonomousDNACalibrator:
             "last_calibration_ts": self.last_calibration_ts,
             "last_calibration_dt": datetime.fromtimestamp(self.last_calibration_ts, timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S") if self.last_calibration_ts > 0 else "İLK ÇALIŞMA BEKLENİYOR",
             "next_cycle_in_hours": remaining_hours,
+            "next_cycle_ts": next_cycle_ts,
+            "server_time_ts": now_ts,
             "total_cycles_executed": len(self.audit_history),
             "status_distribution": counts,
             "total_coins": len(current_dna),

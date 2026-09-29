@@ -2891,7 +2891,7 @@ HTML_PAGE = """
                             <span id="shadow-modal-tier-badge" style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px;">TIER-2 DİNAMİK</span>
                         </div>
                         <div style="font-size:11.5px; color:var(--text-muted); font-family:'JetBrains Mono', monospace;" id="shadow-modal-persona">
-                            Coin DNA & Canlı Piyasa Adli Kalibrasyon Masası
+                            Coin DNA ve Adli Kalibrasyon Masası
                         </div>
                     </div>
                 </div>
@@ -2925,11 +2925,11 @@ HTML_PAGE = """
                     </div>
                 </div>
 
-                <!-- 1.5 OPTIMALITY & STABILITY GAUGE (EN İYİ PARAMETRE & KORUMA GÜVENİ) -->
+                <!-- 1.5 OPTIMALITY & STABILITY GAUGE -->
                 <div id="shadow-modal-optimality-box" style="background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
                     <div style="flex:1; min-width:260px;">
                         <div style="font-size:10.5px; color:#94a3b8; text-transform:uppercase; font-weight:700; letter-spacing:0.5px; margin-bottom:2px;">
-                            Kuant Optimum Parametre Durumu & Kararlılık Kilidi
+                            Kuant Optimum Parametre ve Kararlılık Durumu
                         </div>
                         <div id="shadow-modal-optimality-status" style="font-size:14px; font-weight:800; color:#38bdf8;">
                             Analiz Ediliyor...
@@ -2946,10 +2946,10 @@ HTML_PAGE = """
                     </div>
                 </div>
 
-                <!-- 2. FORENSIC NARRATIVE (ADLİ TEŞHİS & NEDEN-SONUÇ HİKAYESİ) -->
+                <!-- 2. FORENSIC NARRATIVE -->
                 <div style="background:linear-gradient(135deg, rgba(168,85,247,0.08), rgba(15,23,42,0.95)); border:1px solid rgba(168,85,247,0.3); border-radius:12px; padding:16px;">
                     <div style="font-size:13px; font-weight:800; color:#c084fc; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
-                        Kuant Adli Otopsi & Neden-Sonuç Teşhisi
+                        Kuant Adli Teşhis ve Neden-Sonuç Özeti
                     </div>
                     <div id="shadow-modal-narrative" style="font-size:12.5px; line-height:1.6; color:#e2e8f0; font-family:'Segoe UI', sans-serif;">
                         Yükleniyor...
@@ -2959,18 +2959,18 @@ HTML_PAGE = """
                 <!-- 3. PARAMETER CALIBRATION DIFF -->
                 <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px;">
                     <div style="font-size:13px; font-weight:800; color:#38bdf8; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
-                        Otonom Kuant Kalibrasyon Eylem Planı (Çok Boyutlu Parametre Matrisi)
+                        Otonom Kuant Kalibrasyon Eylem Planı
                     </div>
                     <div style="display:flex; flex-direction:column; gap:10px;" id="shadow-modal-diff-grid">
                         <!-- Populated by JS -->
                     </div>
                 </div>
 
-                <!-- 3.5. 🎯 CERRAHİ SETUP PERFORMANS MATRİSİ -->
+                <!-- 3.5. 🎯 KURULUM PERFORMANS MATRİSİ -->
                 <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px;">
                     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
                         <div style="font-size:13px; font-weight:800; color:#10b981; display:flex; align-items:center; gap:6px;">
-                            🎯 Cerrahi Kurulum Karnesi (15 Setup Performansı & İzin Durumu)
+                            🎯 Kurulum Karnesi (15 Setup Performansı)
                         </div>
                         <div id="shadow-modal-setup-badge-summary" style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">
                             Kuant Setup Karnesi
@@ -2996,7 +2996,7 @@ HTML_PAGE = """
                     </div>
                 </div>
 
-                <!-- 3.6. 🔄 ÇİFT YÖNLÜ KARŞI-OLGUSAL KUANT MASASI (POST-EXIT & ZIT YÖN) -->
+                <!-- 3.6. 🔄 ÇİFT YÖNLÜ KARŞI-OLGUSAL KUANT MASASI -->
                 <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px;">
                     <!-- Post-Exit Continuation Card -->
                     <div style="background:rgba(56,189,248,0.03); border:1px solid rgba(56,189,248,0.2); border-radius:12px; padding:14px;">
@@ -3004,7 +3004,7 @@ HTML_PAGE = """
                             👻 "İşlem Devam Etseydi Ne Olurdu?" (Post-Exit)
                         </div>
                         <div style="font-size:11px; color:#94a3b8; line-height:1.4; margin-bottom:10px;">
-                            Kapanan pozisyonların ardından fiyatın 24 mum (2 saat) boyunca çizdiği gerçek patika analizi.
+                            Kapanış sonrası 2 saatlik fiyat seyrinin kâr potansiyeli analizi.
                         </div>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;" id="shadow-modal-post-exit-metrics">
                             <!-- Populated by JS -->
@@ -3017,7 +3017,7 @@ HTML_PAGE = """
                             🔄 "Tam Tersi Yön Açılsaydı Ne Olurdu?" (Zıt Yön)
                         </div>
                         <div style="font-size:11px; color:#94a3b8; line-height:1.4; margin-bottom:10px;">
-                            Kalkanların veto ettiği sinyallerde ters yönde pozisyon açılsaydı elde edilecek karşı-fırsat getirisi.
+                            Veto edilen sinyallerde ters yöne girilseydi oluşacak karşı-fırsat getirisi.
                         </div>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;" id="shadow-modal-inversion-metrics">
                             <!-- Populated by JS -->
@@ -4288,11 +4288,11 @@ HTML_PAGE = """
             <div>
                 <div style="display:flex; align-items:center; gap:12px;">
                     <div style="width:36px; height:36px; border-radius:8px; background:linear-gradient(135deg, rgba(168,85,247,0.25), rgba(56,189,248,0.25)); border:1px solid rgba(168,85,247,0.4); display:flex; align-items:center; justify-content:center; color:#c084fc; font-weight:900; font-size:13px; font-family:'JetBrains Mono', monospace; letter-spacing:1px;">SHD</div>
-                    <h2 style="font-size:18px; font-weight:800; color:#fff; margin:0; letter-spacing:0.5px;">GÖLGE İŞLEM TAKİP MOTORU & OTONOM COIN DNA MASASI</h2>
+                    <h2 style="font-size:18px; font-weight:800; color:#fff; margin:0; letter-spacing:0.5px;">GÖLGE İŞLEM TAKİP MOTORU & COIN DNA MASASI</h2>
                     <span style="background:rgba(168,85,247,0.18); color:#c084fc; border:1px solid rgba(168,85,247,0.4); font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px;">COUNTERFACTUAL SHADOW ENGINE</span>
                 </div>
                 <div style="font-size:12px; color:#94a3b8; margin-top:5px; font-family:'JetBrains Mono', monospace;">
-                    Reddedilen tüm sinyaller arka planda canlı fiyatla izlenir • Hero (Kurtarılan) vs Spoiler (Kaçan) kalkan analizi • Otonom parametre kalibrasyonu
+                    Kalkanların veto ettiği tüm sinyaller canlı fiyatla izlenerek sermaye koruma ve fırsat maliyeti ölçülür.
                 </div>
             </div>
             <div style="display:flex; gap:12px; align-items:center;">
@@ -4377,9 +4377,9 @@ HTML_PAGE = """
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:12px;">
                 <div>
                     <h3 style="font-size:15px; font-weight:700; color:#fff; margin:0; display:flex; align-items:center; gap:8px;">
-                        100 Parite Canlı Piyasa DNA'sı ve Otonom Kalibrasyon Masası
+                        100 Parite Canlı Piyasa DNA'sı ve Kalibrasyon Masası
                     </h3>
-                    <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Paritelerin canlı test sonuçları, fitil esneklikleri ve botun otonom parametre iyileştirme tavsiyeleri</div>
+                    <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Paritelerin canlı test sonuçları, fitil esneklikleri ve otonom parametre tavsiyeleri.</div>
                 </div>
                 <div style="display:flex; gap:8px; align-items:center;">
                     <input type="text" id="shadow-coin-search" placeholder="Coin ara (ENA, DOGE, MOVR...)" oninput="filterShadowCoinsTable()" style="background:#090d16; border:1px solid var(--border); color:#fff; padding:6px 12px; border-radius:6px; font-size:12px; width:235px; min-width:200px; font-family:'JetBrains Mono', monospace;">
@@ -4396,6 +4396,7 @@ HTML_PAGE = """
                     <thead style="position:sticky; top:0; z-index:10; background:#0b101b;">
                         <tr>
                             <th style="text-align:left; width:75px;">Parite</th>
+                            <th style="text-align:center; width:95px;">Katman</th>
                             <th style="text-align:center; width:60px;">Toplam</th>
                             <th style="text-align:center; width:65px;" title="Hero Kalkan (Zarardan Kurtarılan İşlem)">Hero</th>
                             <th style="text-align:center; width:65px;" title="Spoiler Kalkan (Kaçan Kârlı İşlem)">Spoiler</th>
@@ -4410,7 +4411,7 @@ HTML_PAGE = """
                         </tr>
                     </thead>
                     <tbody id="shadow-coin-matrix-tbody">
-                        <tr><td colspan="12" style="text-align:center; padding:24px; color:#64748b;">Henüz gölge işlem verisi toplanıyor...</td></tr>
+                        <tr><td colspan="13" style="text-align:center; padding:24px; color:#64748b;">Henüz gölge işlem verisi toplanıyor...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -4421,9 +4422,9 @@ HTML_PAGE = """
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:12px;">
                 <div>
                     <h3 style="font-size:15px; font-weight:700; color:#fff; margin:0; display:flex; align-items:center; gap:8px;">
-                        Güvenlik Kalkanları ve Filtre Verimlilik Karnesi (Shield Leaderboard)
+                        Güvenlik Kalkanları ve Filtre Verimlilik Karnesi
                     </h3>
-                    <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Hangi kalkan botu kaç dolarlık zarardan kurtardı? Hangisi kaç dolarlık kârı engelledi?</div>
+                    <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Kalkanların koruduğu toplam zarar ve engellediği kârların net getiri katkısı.</div>
                 </div>
                 <div>
                     <button class="nav-tab-btn" id="btn-toggle-shadow-shields" onclick="toggleShadowSection('shadow-shields')" style="padding:6px 12px; font-size:11px; border-color:rgba(56,189,248,0.4); color:#38bdf8;" title="Bu tabloyu gizle veya aç">
@@ -4460,9 +4461,9 @@ HTML_PAGE = """
                 <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                     <div>
                         <h3 style="font-size:15px; font-weight:700; color:#fff; margin:0; display:flex; align-items:center; gap:8px;">
-                            Canlı İzlenen Aktif Gölge Pozisyonlar (Live Shadow Tracking)
+                            Canlı İzlenen Aktif Gölge Pozisyonlar
                         </h3>
-                        <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Açılması engellenen fakat anlık fiyat ve 5M mum teyidiyle canlı takip edilen pozisyonlar</div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Veto edilen sinyallerin anlık fiyat hareketleriyle simüle edilen açık pozisyon takibi.</div>
                     </div>
                     <div style="display:flex; gap:8px; align-items:center;">
                         <span id="shadow-active-count-badge" style="background:rgba(168,85,247,0.15); color:#a855f7; border:1px solid rgba(168,85,247,0.3); font-size:11px; font-weight:700; padding:2px 8px; border-radius:12px;">0 Pozisyon</span>
@@ -4503,9 +4504,9 @@ HTML_PAGE = """
                 <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                     <div>
                         <h3 style="font-size:15px; font-weight:700; color:#fff; margin:0; display:flex; align-items:center; gap:8px;">
-                            Son Tamamlanan Gölge İşlem Defteri (Son 50 Sonuç)
+                            Tamamlanan Gölge İşlemler Defteri
                         </h3>
-                        <div style="font-size:11px; color:#94a3b8; margin-top:4px;">TP1, TP2, Stop veya Zaman Aşımıyla sonuçlanan sanal işlemler ve adli teşhis</div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:4px;">TP/SL ve Chandelier BE kurallarıyla sonuçlanmış karşıolgusal işlem kayıtları.</div>
                     </div>
                     <div>
                         <button class="nav-tab-btn" id="btn-toggle-shadow-history" onclick="toggleShadowSection('shadow-history')" style="padding:6px 12px; font-size:11px; border-color:rgba(56,189,248,0.4); color:#38bdf8;" title="Bu tabloyu gizle veya aç">
@@ -4557,7 +4558,7 @@ HTML_PAGE = """
                         <span style="background:rgba(6,182,212,0.15); color:#06b6d4; border:1px solid rgba(6,182,212,0.3); padding:3px 10px; border-radius:12px; font-size:11px; font-weight:700;">İÇSEL MATEMATİKSEL KANIT ZORUNLU</span>
                     </div>
                     <p style="margin:0; font-size:12px; color:#94a3b8; max-width:860px; line-height:1.5;">
-                        Valkyrie Otonom Evrim Motoru, son 48 saatin tüm gölge işlemlerini ve kalkan telemetrilerini tarar. Kaçan kârları ve erken başa-baş (BE) tuzaklarını tespit ederek coin parametrelerini optimize eder. Her değişiklik devreye alınmadan önce <strong>İÇSEL SİMÜLASYON TESTİNDEN</strong> geçer; net kâr artışı kanıtlanmayan hiçbir kural devreye alınmaz.
+                        Son 48 saatin gölge işlemlerini tarayarak net kâr artışı içsel simülasyonla kanıtlanan coin parametrelerini otonom günceller.
                     </p>
                 </div>
                 <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
@@ -4581,7 +4582,7 @@ HTML_PAGE = """
                     <span class="kpi-card-badge" style="background:rgba(16,185,129,0.15); color:#10b981;">Geri Sayım</span>
                 </div>
                 <div class="kpi-card-body">
-                    <span class="kpi-main-val" id="quant-kpi-countdown" style="color:#10b981;">48.0s Kaldı</span>
+                    <span class="kpi-main-val" id="quant-kpi-countdown" style="color:#10b981;">48s 00d 00sn Kaldı</span>
                     <span class="kpi-sub-text" id="quant-kpi-last-run">Son Çalışma: Bekleniyor</span>
                 </div>
             </div>
@@ -4642,6 +4643,7 @@ HTML_PAGE = """
                     <thead>
                         <tr style="background:rgba(255,255,255,0.03); color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.08);">
                             <th style="padding:10px 12px;">Parite</th>
+                            <th style="padding:10px 12px; text-align:center;">Katman</th>
                             <th style="padding:10px 12px;">Kalibrasyon Sınıfı</th>
                             <th style="padding:10px 12px;">Confluence Eşiği</th>
                             <th style="padding:10px 12px;">Dinamik BE Eşiği</th>
@@ -4653,7 +4655,7 @@ HTML_PAGE = """
                         </tr>
                     </thead>
                     <tbody id="quant-coin-matrix-tbody">
-                        <tr><td colspan="9" style="text-align:center; padding:20px; color:#64748b;">Yükleniyor...</td></tr>
+                        <tr><td colspan="10" style="text-align:center; padding:20px; color:#64748b;">Yükleniyor...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -4664,7 +4666,7 @@ HTML_PAGE = """
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <span style="font-size:16px;">📜</span>
-                    <h3 style="margin:0; font-size:15px; font-weight:700; color:#fff;">Kuant Evrim ve İçsel Simülasyon Denetim Günlüğü (Audit Trail)</h3>
+                    <h3 style="margin:0; font-size:15px; font-weight:700; color:#fff;">Kuant Evrim ve Simülasyon Denetim Günlüğü</h3>
                 </div>
             </div>
             <div id="quant-audit-timeline-container" style="display:flex; flex-direction:column; gap:10px;">
@@ -6428,15 +6430,24 @@ async function loadAdminMetrics() {
                     });
 
                     if (filteredCoins.length === 0) {
-                        coinTbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:24px; color:#64748b;">${coinMatrix.length === 0 ? 'Canlı mumlarla gölge pozisyonlar toplanıyor... Bot her 5M mumda verileri işler.' : 'Arama kriterine uygun coin bulunamadı.'}</td></tr>`;
+                        coinTbody.innerHTML = `<tr><td colspan="13" style="text-align:center; padding:24px; color:#64748b;">${coinMatrix.length === 0 ? 'Canlı mumlarla gölge pozisyonlar toplanıyor... Bot her 5M mumda verileri işler.' : 'Arama kriterine uygun coin bulunamadı.'}</td></tr>`;
                     } else {
                         coinTbody.innerHTML = filteredCoins.map(c => {
                             const badgeColor = c.recommendation_badge.includes('GEVŞET') ? '#f43f5e' : (c.recommendation_badge.includes('KORU') ? '#10b981' : '#f59e0b');
                             const badgeBg = c.recommendation_badge.includes('GEVŞET') ? 'rgba(244,63,94,0.12)' : (c.recommendation_badge.includes('KORU') ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)');
 
+                            const tierBadge = (c.liquidity_tier && c.liquidity_tier.badge) ? c.liquidity_tier.badge : (['BTC','ETH','SOL','BNB','XRP','ADA'].includes(c.symbol) ? 'TIER-1 MAJÖR' : (['PEPE','SHIB','DOGE','BONK','FLOKI','WIF','BOME','MEME','1000SATS','LUNC','USTC','TURBO','NEIRO','MYRO','POPCAT','BRETT'].includes(c.symbol) ? 'TIER-3 MEME' : 'TIER-2 DİNAMİK'));
+                            const tierColor = tierBadge.includes('TIER-1') ? '#10b981' : (tierBadge.includes('TIER-3') ? '#a855f7' : '#38bdf8');
+                            const tierBg = tierColor + '18';
+
                             return `
                                 <tr style="border-bottom:1px solid rgba(255,255,255,0.04); font-family:'JetBrains Mono', monospace; font-size:12px;">
                                     <td style="font-weight:700; color:#fff; padding:10px 12px; text-align:left;">${c.symbol}</td>
+                                    <td style="text-align:center;">
+                                        <span style="background:${tierBg}; color:${tierColor}; border:1px solid ${tierColor}40; padding:2px 7px; border-radius:6px; font-size:10px; font-weight:700; white-space:nowrap;">
+                                            ${tierBadge}
+                                        </span>
+                                    </td>
                                     <td style="text-align:center;">${c.total_shadows}</td>
                                     <td style="text-align:center; color:#10b981; font-weight:700;">${c.hero_count}</td>
                                     <td style="text-align:center; color:#f43f5e; font-weight:700;">${c.spoiler_count}</td>
@@ -6652,6 +6663,36 @@ async function loadAdminMetrics() {
             renderQuantEvolutionView();
         }
 
+        let quantCountdownTimer = null;
+        function startLiveQuantCountdown(targetTs) {
+            if (quantCountdownTimer) {
+                clearInterval(quantCountdownTimer);
+                quantCountdownTimer = null;
+            }
+            if (!targetTs) return;
+            function tick() {
+                const cdEl = document.getElementById('quant-kpi-countdown');
+                if (!cdEl) return;
+                const nowSec = Date.now() / 1000;
+                const diffSec = Math.max(0, Math.floor(targetTs - nowSec));
+                if (diffSec <= 0) {
+                    cdEl.innerText = "00s 00d 00sn (Döngü Zamanı)";
+                    cdEl.style.color = "#f59e0b";
+                    return;
+                }
+                const hours = Math.floor(diffSec / 3600);
+                const minutes = Math.floor((diffSec % 3600) / 60);
+                const seconds = Math.floor(diffSec % 60);
+                const hStr = String(hours).padStart(2, '0');
+                const mStr = String(minutes).padStart(2, '0');
+                const sStr = String(seconds).padStart(2, '0');
+                cdEl.innerText = `${hStr}s ${mStr}d ${sStr}sn Kaldı`;
+                cdEl.style.color = "#10b981";
+            }
+            tick();
+            quantCountdownTimer = setInterval(tick, 1000);
+        }
+
         function renderQuantEvolutionView() {
             if (!quantEvolutionState) return;
             const summary = quantEvolutionState.summary || {};
@@ -6661,8 +6702,12 @@ async function loadAdminMetrics() {
             // 1. KPI Kartları
             const cdEl = document.getElementById('quant-kpi-countdown');
             if (cdEl) {
-                const rem = summary.next_cycle_in_hours != null ? summary.next_cycle_in_hours : 48.0;
-                cdEl.innerText = `${rem.toFixed(1)}s Kaldı`;
+                if (summary.next_cycle_ts) {
+                    startLiveQuantCountdown(summary.next_cycle_ts);
+                } else {
+                    const rem = summary.next_cycle_in_hours != null ? summary.next_cycle_in_hours : 48.0;
+                    cdEl.innerText = `${rem.toFixed(1)}s Kaldı`;
+                }
             }
 
             const lastRunEl = document.getElementById('quant-kpi-last-run');
@@ -6711,9 +6756,14 @@ async function loadAdminMetrics() {
                         badgeIcon = '⏱️';
                     }
 
+                    const tierBadge = (cfg.liquidity_tier_badge) || (['BTC','ETH','SOL','BNB','XRP','ADA'].includes(sym) ? 'TIER-1 MAJÖR' : (['PEPE','SHIB','DOGE','BONK','FLOKI','WIF','BOME','MEME','1000SATS','LUNC','USTC','TURBO','NEIRO','MYRO','POPCAT','BRETT'].includes(sym) ? 'TIER-3 MEME' : 'TIER-2 DİNAMİK'));
+                    const tierColor = tierBadge.includes('TIER-1') ? '#10b981' : (tierBadge.includes('TIER-3') ? '#a855f7' : '#38bdf8');
+                    const tierBg = tierColor + '18';
+
                     const bePct = cfg.chandelier_be_threshold_pct != null ? `%${cfg.chandelier_be_threshold_pct}` : '%0.80';
                     const conf = cfg.min_confluence != null ? `${cfg.min_confluence} / 5` : '3 / 5';
-                    const wick = cfg.fakeout_wick_threshold != null ? `${cfg.fakeout_wick_threshold} bps` : '13.5 bps';
+                    const wickVal = cfg.fakeout_wick_threshold != null ? cfg.fakeout_wick_threshold : 13.5;
+                    const wick = `%${typeof wickVal === 'number' ? wickVal.toFixed(1) : wickVal}`;
                     const margin = cfg.dynamic_margin_scale != null ? `${cfg.dynamic_margin_scale}x` : '1.0x';
                     const sei = cfg.sei_score != null ? `%${cfg.sei_score}` : '%100';
 
@@ -6724,6 +6774,11 @@ async function loadAdminMetrics() {
                                     <span style="color:#00f2fe;">${sym}</span>
                                     <span style="font-size:10px; color:#64748b;">USDT</span>
                                 </div>
+                            </td>
+                            <td style="padding:10px 12px; text-align:center;">
+                                <span style="background:${tierBg}; color:${tierColor}; border:1px solid ${tierColor}40; padding:2px 7px; border-radius:6px; font-size:10px; font-weight:700; white-space:nowrap;">
+                                    ${tierBadge}
+                                </span>
                             </td>
                             <td style="padding:10px 12px;">
                                 <span style="display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:600; ${badgeStyle}">
@@ -6752,7 +6807,7 @@ async function loadAdminMetrics() {
                 }
 
                 if (matchCount === 0) {
-                    rowsHtml = '<tr><td colspan="9" style="text-align:center; padding:24px; color:#64748b;">Filtreye uygun parite bulunamadı.</td></tr>';
+                    rowsHtml = '<tr><td colspan="10" style="text-align:center; padding:24px; color:#64748b;">Filtreye uygun parite bulunamadı.</td></tr>';
                 }
                 tbody.innerHTML = rowsHtml;
             }

@@ -722,9 +722,12 @@ class ShadowExecutionEngine:
                 shield_counts=shield_counts
             )
 
+            liq_tier = self.get_coin_liquidity_tier(clean)
+
             coin_dna_list.append({
                 "symbol": clean,
                 "full_symbol": sym,
+                "liquidity_tier": liq_tier,
                 "total_shadows": tot + active_cnt,
                 "active_shadows": active_cnt,
                 "completed_shadows": tot,
