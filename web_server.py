@@ -6436,7 +6436,16 @@ async function loadAdminMetrics() {
                             const badgeColor = c.recommendation_badge.includes('GEVŞET') ? '#f43f5e' : (c.recommendation_badge.includes('KORU') ? '#10b981' : '#f59e0b');
                             const badgeBg = c.recommendation_badge.includes('GEVŞET') ? 'rgba(244,63,94,0.12)' : (c.recommendation_badge.includes('KORU') ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)');
 
-                            const tierBadge = (c.liquidity_tier && c.liquidity_tier.badge) ? c.liquidity_tier.badge : (['BTC','ETH','SOL','BNB','XRP','ADA'].includes(c.symbol) ? 'TIER-1 MAJÖR' : (['PEPE','SHIB','DOGE','BONK','FLOKI','WIF','BOME','MEME','1000SATS','LUNC','USTC','TURBO','NEIRO','MYRO','POPCAT','BRETT'].includes(c.symbol) ? 'TIER-3 MEME' : 'TIER-2 DİNAMİK'));
+                            let tierBadge = 'TIER-2 DİNAMİK';
+                            if (c.liquidity_tier) {
+                                if (typeof c.liquidity_tier === 'object') {
+                                    tierBadge = c.liquidity_tier.badge || (c.liquidity_tier.tier ? (c.liquidity_tier.tier.includes('1') ? 'TIER-1 MAJÖR' : (c.liquidity_tier.tier.includes('3') ? 'TIER-3 MEME' : 'TIER-2 DİNAMİK')) : 'TIER-2 DİNAMİK');
+                                } else if (typeof c.liquidity_tier === 'string') {
+                                    tierBadge = c.liquidity_tier.includes('1') ? 'TIER-1 MAJÖR' : (c.liquidity_tier.includes('3') ? 'TIER-3 MEME' : 'TIER-2 DİNAMİK');
+                                }
+                            } else {
+                                tierBadge = ['BTC','ETH','SOL','BNB','XRP','ADA'].includes(c.symbol) ? 'TIER-1 MAJÖR' : (['PEPE','SHIB','DOGE','BONK','FLOKI','WIF','BOME','MEME','1000SATS','LUNC','USTC','TURBO','NEIRO','MYRO','POPCAT','BRETT'].includes(c.symbol) ? 'TIER-3 MEME' : 'TIER-2 DİNAMİK');
+                            }
                             const tierColor = tierBadge.includes('TIER-1') ? '#10b981' : (tierBadge.includes('TIER-3') ? '#a855f7' : '#38bdf8');
                             const tierBg = tierColor + '18';
 
@@ -6756,7 +6765,18 @@ async function loadAdminMetrics() {
                         badgeIcon = '⏱️';
                     }
 
-                    const tierBadge = (cfg.liquidity_tier_badge) || (['BTC','ETH','SOL','BNB','XRP','ADA'].includes(sym) ? 'TIER-1 MAJÖR' : (['PEPE','SHIB','DOGE','BONK','FLOKI','WIF','BOME','MEME','1000SATS','LUNC','USTC','TURBO','NEIRO','MYRO','POPCAT','BRETT'].includes(sym) ? 'TIER-3 MEME' : 'TIER-2 DİNAMİK'));
+                    let tierBadge = 'TIER-2 DİNAMİK';
+                    if (cfg.liquidity_tier_badge) {
+                        tierBadge = cfg.liquidity_tier_badge;
+                    } else if (cfg.liquidity_tier) {
+                        if (typeof cfg.liquidity_tier === 'object') {
+                            tierBadge = cfg.liquidity_tier.badge || (cfg.liquidity_tier.tier ? (cfg.liquidity_tier.tier.includes('1') ? 'TIER-1 MAJÖR' : (cfg.liquidity_tier.tier.includes('3') ? 'TIER-3 MEME' : 'TIER-2 DİNAMİK')) : 'TIER-2 DİNAMİK');
+                        } else if (typeof cfg.liquidity_tier === 'string') {
+                            tierBadge = cfg.liquidity_tier.includes('1') ? 'TIER-1 MAJÖR' : (cfg.liquidity_tier.includes('3') ? 'TIER-3 MEME' : 'TIER-2 DİNAMİK');
+                        }
+                    } else {
+                        tierBadge = ['BTC','ETH','SOL','BNB','XRP','ADA'].includes(sym) ? 'TIER-1 MAJÖR' : (['PEPE','SHIB','DOGE','BONK','FLOKI','WIF','BOME','MEME','1000SATS','LUNC','USTC','TURBO','NEIRO','MYRO','POPCAT','BRETT'].includes(sym) ? 'TIER-3 MEME' : 'TIER-2 DİNAMİK');
+                    }
                     const tierColor = tierBadge.includes('TIER-1') ? '#10b981' : (tierBadge.includes('TIER-3') ? '#a855f7' : '#38bdf8');
                     const tierBg = tierColor + '18';
 

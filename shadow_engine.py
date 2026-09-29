@@ -1099,6 +1099,8 @@ class ShadowExecutionEngine:
             return {
                 "tier": "TIER_1_KURUMSAL",
                 "tier_label": "Tier-1 (Kurumsal Derinlik)",
+                "badge": "TIER-1 MAJÖR",
+                "color": "#10b981",
                 "cvd_threshold": 52.0,
                 "obi_threshold": 1.08,
                 "vol_surge_threshold": 1.20,
@@ -1108,6 +1110,8 @@ class ShadowExecutionEngine:
             return {
                 "tier": "TIER_3_MEME_SIG",
                 "tier_label": "Tier-3 (Sığ / Meme / Agresif Fitil)",
+                "badge": "TIER-3 MEME",
+                "color": "#a855f7",
                 "cvd_threshold": 60.0,
                 "obi_threshold": 1.40,
                 "vol_surge_threshold": 1.80,
@@ -1117,6 +1121,8 @@ class ShadowExecutionEngine:
             return {
                 "tier": "TIER_2_DINAMIK",
                 "tier_label": "Tier-2 (Dinamik Altcoin)",
+                "badge": "TIER-2 DİNAMİK",
+                "color": "#38bdf8",
                 "cvd_threshold": 55.0,
                 "obi_threshold": 1.20,
                 "vol_surge_threshold": 1.45,
