@@ -605,14 +605,28 @@ class AutonomousDNACalibrator:
                 f"_Detaylı telemetriyi web panelindeki Kuant Evrim Masası'ndan inceleyebilirsiniz._"
             )
 
-            if hasattr(self.notifier, "send_message"):
+            # Doğrudan HTTP POST ile thread bağımsız kurumsal gönderim
+            import urllib.request
+            token = getattr(self.notifier, "token", None) or os.environ.get("TELEGRAM_BOT_TOKEN", "")
+            if not token:
                 try:
-                    loop = asyncio.get_event_loop()
-                    if loop.is_running():
-                        asyncio.create_task(self.notifier.send_message(msg))
-                    else:
-                        loop.run_until_complete(self.notifier.send_message(msg))
+                    from config import TELEGRAM_BOT_TOKEN
+                    token = TELEGRAM_BOT_TOKEN
                 except Exception:
+                    pass
+            chat_id = getattr(self.notifier, "chat_id", None) or os.environ.get("TELEGRAM_CHAT_ID", "")
+            if not chat_id:
+                try:
+                    from config import TELEGRAM_CHAT_ID
+                    chat_id = TELEGRAM_CHAT_ID
+                except Exception:
+                    pass
+
+            if token and chat_id:
+                url = f"https://api.telegram.org/bot{token}/sendMessage"
+                payload = json.dumps({"chat_id": chat_id, "text": msg, "parse_mode": "Markdown"}).encode("utf-8")
+                req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req, timeout=10) as resp:
                     pass
         except Exception as e:
             print(f">> [OTONOM KALİBRASYON] Telegram bildirimi iletilemedi: {e}")
