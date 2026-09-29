@@ -441,6 +441,41 @@ class AutonomousDNACalibrator:
             else:
                 candidate_cfg["allowed_strategy_regime"] = "ALL"
 
+            # Boyut 6: 3 Katmanlı Dinamik Likidite ve İndikatör Eşikleri (Tier-1, Tier-2, Tier-3)
+            liq_tier_info = self.shadow_engine.get_coin_liquidity_tier(sym) if self.shadow_engine and hasattr(self.shadow_engine, 'get_coin_liquidity_tier') else {}
+            if liq_tier_info:
+                candidate_cfg["liquidity_tier"] = liq_tier_info.get("tier", "TIER_2_DINAMIK")
+                candidate_cfg["liquidity_tier_label"] = liq_tier_info.get("tier_label", "Tier-2")
+                candidate_cfg["dynamic_cvd_threshold"] = liq_tier_info.get("cvd_threshold", 55.0)
+                candidate_cfg["dynamic_obi_threshold"] = liq_tier_info.get("obi_threshold", 1.20)
+                candidate_cfg["dynamic_vol_surge_threshold"] = liq_tier_info.get("vol_surge_threshold", 1.45)
+
+            # Boyut 7: Granüler Setup Alfa Skoru & Cerrahi Kurulum Seçiciliği
+            muted = []
+            priority = []
+            if self.shadow_engine and hasattr(self.shadow_engine, 'get_coin_setup_matrix'):
+                setup_matrix = self.shadow_engine.get_coin_setup_matrix(sym)
+                muted = [sid for sid, m in setup_matrix.items() if m.get("status") == "UYUTULDU"]
+                priority = [sid for sid, m in setup_matrix.items() if m.get("status") == "A+ ONAYLI"]
+                candidate_cfg["muted_setups"] = muted
+                candidate_cfg["priority_setups"] = priority
+                candidate_cfg["setup_matrix"] = setup_matrix
+                if muted:
+                    candidate_reasons.append(f"{len(muted)} Zararlı Setup Uyutuldu ({', '.join(muted)})")
+                    proposed = True
+
+            # 360° Derin Kuant Teşhis Yorumcusu (Forensic Commentary)
+            commentary = (
+                f"{sym} paritesi {candidate_cfg.get('liquidity_tier_label', 'Tier-2')} katmanında analiz edildi. "
+                f"Son 48 saatte incelenen {s['total']} gölge işlemde Kalkan Verimlilik Skoru (SEI) %{s['sei']:.1f} olarak ölçüldü. "
+                f"Paritenin ortalama 5M dalgalanması %{avg_atr:.2f} ATR ve mum fitil boyu %{avg_wick:.1f} seviyesindedir. "
+            )
+            if muted:
+                commentary += f"Negatif alfa üreten {len(muted)} kurulum ({', '.join(muted)}) kasayı korumak için cerrahi olarak uyutuldu. "
+            if candidate_cfg.get("allowed_strategy_regime") == "REVERSAL_ONLY":
+                commentary += "Yüksek fitil/testere sebebiyle sahte kırılımları önlemek için yalnızca dip/tepe dönüşleri aktif tutuldu. "
+            candidate_cfg["forensic_commentary"] = commentary
+
             candidate_reason = " | ".join(candidate_reasons)
 
             if not proposed:

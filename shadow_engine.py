@@ -72,6 +72,10 @@ class ShadowExecutionEngine:
         self.symbol_active_map: Dict[str, str] = {}  # symbol -> shadow_id (son aktif)
         self.last_rejection_ts: Dict[str, float] = {} # (symbol, setup) -> timestamp (throttling)
 
+        # 👻 Çift Yönlü Karşı-Olgusal Takip: Post-Exit Hayalet İz Sürücüleri ("İşlem devam etseydi ne olurdu?")
+        self.post_exit_ghosts: Dict[str, dict] = {}
+        self.post_exit_history: deque = deque(maxlen=2000)
+
         # Standart Sanal İşlem Boyutu ($10,000 kasa, %2.5 marjin, 5x kaldıraç)
         self.virtual_margin = 250.0
         self.virtual_leverage = 5
@@ -424,7 +428,79 @@ class ShadowExecutionEngine:
                     closed_records.append(rec)
                 continue
 
+        # 5. ÖNCELİK: Post-Exit Hayalet İz Sürücülerini Güncelle (İşlem devam etseydi ne olurdu?)
+        for g_id in list(self.post_exit_ghosts.keys()):
+            g = self.post_exit_ghosts.get(g_id)
+            if not g or g["symbol"] != clean_sym:
+                continue
+            g["candles_elapsed"] += 1
+            if c_high > g["peak_high"]:
+                g["peak_high"] = c_high
+            if c_low < g["valley_low"] and c_low > 0:
+                g["valley_low"] = c_low
+
+            ex_p = g["exit_price"]
+            side = g["side"]
+            if side == "LONG":
+                mfe = ((g["peak_high"] - ex_p) / ex_p) * 100.0 if ex_p > 0 else 0.0
+                mae = ((ex_p - g["valley_low"]) / ex_p) * 100.0 if ex_p > 0 else 0.0
+            else:
+                mfe = ((ex_p - g["valley_low"]) / ex_p) * 100.0 if ex_p > 0 else 0.0
+                mae = ((g["peak_high"] - ex_p) / ex_p) * 100.0 if ex_p > 0 else 0.0
+
+            g["post_exit_mfe_pct"] = round(max(0.0, mfe), 2)
+            g["post_exit_mae_pct"] = round(max(0.0, mae), 2)
+
+            if g["candles_elapsed"] >= g["max_candles"]:
+                if g["post_exit_mfe_pct"] >= 1.6:
+                    g["verdict"] = "ERKEN_CIKIS_KACAN_DALGA"
+                elif g["post_exit_mae_pct"] >= 1.6 and "STOP" in g["exit_status"].upper():
+                    g["verdict"] = "KUSURSUZ_STOP_KORUMASI"
+                elif g["post_exit_mae_pct"] >= 1.2 and "TP" in g["exit_status"].upper():
+                    g["verdict"] = "SNIPER_TEPE_CIKISI"
+                else:
+                    g["verdict"] = "DENGELI_CIKIS"
+
+                completed_ghost = self.post_exit_ghosts.pop(g_id, None)
+                if completed_ghost:
+                    self.post_exit_history.append(completed_ghost)
+
         return closed_records
+
+    def spawn_post_exit_ghost(
+        self,
+        trade_id: str,
+        symbol: str,
+        side: str,
+        exit_price: float,
+        entry_price: float,
+        exit_status: str,
+        close_reason: str,
+        max_candles: int = 24
+    ):
+        """Kapanan işlem için 'İşlem devam etseydi ne olurdu?' hayalet takibini başlatır."""
+        clean_sym = symbol.replace("/USDT", "").replace(":USDT", "").replace("USDT", "").upper() + "/USDT"
+        if exit_price <= 0.0 or not side:
+            return
+        g_id = f"GHOST_{trade_id}_{int(time.time())}"
+        self.post_exit_ghosts[g_id] = {
+            "id": g_id,
+            "trade_id": str(trade_id),
+            "symbol": clean_sym,
+            "side": side.upper(),
+            "entry_price": float(entry_price),
+            "exit_price": float(exit_price),
+            "exit_status": str(exit_status),
+            "close_reason": str(close_reason),
+            "exit_ts": time.time(),
+            "candles_elapsed": 0,
+            "max_candles": max_candles,
+            "peak_high": float(exit_price),
+            "valley_low": float(exit_price),
+            "post_exit_mfe_pct": 0.0,
+            "post_exit_mae_pct": 0.0,
+            "verdict": "IZLENIYOR"
+        }
 
     # ──────────────────────────────────────────────────────────────────────────
     # GÖLGE İŞLEM KAPATMA & ADLİ TEŞHİS (VERDICT ASSIGNMENT)
@@ -506,6 +582,26 @@ class ShadowExecutionEngine:
 
         pos["narrative"] = narrative
         pos["status"] = exit_status
+
+        # 🔄 Zıt Yön (Inversion Counterfactual) Simülasyonu:
+        # Eğer Long işlem zararla kapandıysa (HERO_SHIELD), ters yön olan SHORT ne kazandırırdı?
+        inv_side = "SHORT" if side == "LONG" else "LONG"
+        inv_raw_pnl = -raw_pnl_pct
+        inv_net_pnl = inv_raw_pnl - fee_pct
+        pos["inversion_side"] = inv_side
+        pos["inversion_pnl_usd"] = round(self.virtual_notional * inv_net_pnl, 2)
+        pos["inversion_verdict"] = "PROFITABLE_INVERSION" if pos["inversion_pnl_usd"] > 1.5 else "UNPROFITABLE_INVERSION"
+
+        # 👻 Çift Yönlü Takip: Post-Exit Hayalet İz Sürücüsü Başlat ("İşlem devam etseydi ne olurdu?")
+        self.spawn_post_exit_ghost(
+            trade_id=pos["id"],
+            symbol=pos["symbol"],
+            side=pos["side"],
+            exit_price=exit_p,
+            entry_price=entry_p,
+            exit_status=exit_status,
+            close_reason=close_reason
+        )
 
         self.completed_trades.append(pos)
         self.save_history(critical=True)
@@ -985,6 +1081,136 @@ class ShadowExecutionEngine:
         }
 
     # ──────────────────────────────────────────────────────────────────────────
+    # 360° KUANT MİMARİSİ: LİKİDİTE KATMANI, SETUP MATRİSİ VE KANONİK EŞLEME
+    # ──────────────────────────────────────────────────────────────────────────
+    @staticmethod
+    def get_coin_liquidity_tier(symbol: str) -> dict:
+        """Paritenin piyasa derinliğine göre 3 Kuant Likidite Katmanından birine atar."""
+        clean = symbol.replace("/USDT", "").replace(":USDT", "").replace("USDT", "").replace("/", "").upper()
+        tier_1_majors = {"BTC", "ETH", "SOL", "BNB", "XRP", "ADA"}
+        tier_3_memes_and_thin = {
+            "PEPE", "BONK", "DOGE", "WIF", "1000SHIB", "SHIB", "FLOKI", "BOME", "MEME",
+            "TURBO", "NEIRO", "NOT", "1000PEPE", "1000FLOKI", "1000BONK", "BRETT", "POPCAT"
+        }
+        if clean in tier_1_majors:
+            return {
+                "tier": "TIER_1_KURUMSAL",
+                "tier_label": "Tier-1 (Kurumsal Derinlik)",
+                "cvd_threshold": 52.0,
+                "obi_threshold": 1.08,
+                "vol_surge_threshold": 1.20,
+                "fakeout_wick_tolerance": 15.0
+            }
+        elif clean in tier_3_memes_and_thin:
+            return {
+                "tier": "TIER_3_MEME_SIG",
+                "tier_label": "Tier-3 (Sığ / Meme / Agresif Fitil)",
+                "cvd_threshold": 60.0,
+                "obi_threshold": 1.40,
+                "vol_surge_threshold": 1.80,
+                "fakeout_wick_tolerance": 35.0
+            }
+        else:
+            return {
+                "tier": "TIER_2_DINAMIK",
+                "tier_label": "Tier-2 (Dinamik Altcoin)",
+                "cvd_threshold": 55.0,
+                "obi_threshold": 1.20,
+                "vol_surge_threshold": 1.45,
+                "fakeout_wick_tolerance": 25.0
+            }
+
+    @staticmethod
+    def extract_canonical_setup(setup_raw: str) -> str:
+        """Kurulum adından standart kanonik kod üretir."""
+        s = str(setup_raw or "").upper()
+        if "SETUP 1" in s or "SETUP_1" in s or "R4 BREAKOUT" in s:
+            return "SETUP_1_R4_BREAKOUT"
+        elif "SETUP 2" in s or "S4 BREAKDOWN" in s:
+            return "SETUP_2_S4_BREAKDOWN"
+        elif "SETUP 3" in s or "S3 DESTEK" in s or "S3 SEKME" in s:
+            return "SETUP_3_S3_REVERSAL"
+        elif "SETUP 4" in s or "R3 DİRENÇ" in s:
+            return "SETUP_4_R3_REVERSAL"
+        elif "SETUP 5" in s:
+            return "SETUP_5_RANGE_BOUNCE"
+        elif "SETUP 6" in s:
+            return "SETUP_6_TREND_PULLBACK"
+        elif "SETUP 7" in s or "MVAH" in s:
+            return "SETUP_7_MVAH_BREAKOUT"
+        elif "SETUP 8" in s or "MVAL" in s:
+            return "SETUP_8_MVAL_BREAKDOWN"
+        elif "SETUP 9" in s or ("NPOC" in s and ("SEKME" in s or "DESTEK" in s)):
+            return "SETUP_9_NPOC_BOUNCE"
+        elif "SETUP 10" in s or ("NPOC" in s and "RED" in s):
+            return "SETUP_10_NPOC_REJECTION"
+        elif "SETUP 11" in s or ("FLIP" in s and "DİRENÇ" in s):
+            return "SETUP_11_RESISTANCE_FLIP"
+        elif "SETUP 12" in s or "ÇÖKÜŞ" in s or "BREAKDOWN" in s:
+            return "SETUP_12_SUPPORT_BREAKDOWN"
+        elif "SETUP 13" in s:
+            return "SETUP_13_S3_FLIP"
+        elif "SETUP 14" in s or ("AVWAP" in s and ("DİP" in s or "DESTEK" in s or "SEKME" in s)):
+            return "SETUP_14_AVWAP_SUPPORT"
+        elif "SETUP 15" in s or "RECLAIM" in s:
+            return "SETUP_15_AVWAP_RECLAIM"
+        elif "SETUP 16" in s:
+            return "SETUP_16_R3_FLIP"
+        return "SETUP_DİĞER"
+
+    def get_coin_setup_matrix(self, symbol: str) -> Dict[str, dict]:
+        """Coin bazında 15 setup'ın performansını, kârlılığını ve alfa skorunu çıkarır."""
+        clean = symbol.replace("/USDT", "").replace(":USDT", "").replace("USDT", "").replace("/", "").upper()
+        coin_trades = [t for t in self.completed_trades if t.get("symbol", "").replace("/USDT", "").replace("USDT", "").replace("/", "").upper() == clean]
+        matrix = {}
+        for t in coin_trades:
+            s_canon = self.extract_canonical_setup(t.get("setup", ""))
+            if s_canon not in matrix:
+                matrix[s_canon] = {
+                    "setup_id": s_canon,
+                    "total_trades": 0,
+                    "wins": 0,
+                    "losses": 0,
+                    "net_pnl_usd": 0.0,
+                    "win_rate_pct": 0.0,
+                    "max_mfe_pct": 0.0,
+                    "max_mae_pct": 0.0,
+                    "alpha_score": 0.0,
+                    "status": "NÖTR"
+                }
+            m = matrix[s_canon]
+            m["total_trades"] += 1
+            pnl = float(t.get("virtual_pnl_usd", 0.0))
+            m["net_pnl_usd"] += pnl
+            if pnl > 0.0:
+                m["wins"] += 1
+            else:
+                m["losses"] += 1
+            m["max_mfe_pct"] = max(m["max_mfe_pct"], float(t.get("max_mfe_pct", 0.0)))
+            m["max_mae_pct"] = max(m["max_mae_pct"], float(t.get("max_mae_pct", 0.0)))
+
+        for s_canon, m in matrix.items():
+            tot = m["total_trades"]
+            m["net_pnl_usd"] = round(m["net_pnl_usd"], 2)
+            m["win_rate_pct"] = round((m["wins"] / tot) * 100.0, 1) if tot > 0 else 0.0
+            wr_ratio = m["win_rate_pct"] / 100.0
+            pnl_contribution = m["net_pnl_usd"] / (tot * 5.0) if tot > 0 else 0.0
+            alpha = round((wr_ratio * 2.0 - 1.0) + pnl_contribution, 2)
+            m["alpha_score"] = alpha
+
+            if tot >= 3:
+                if alpha >= 0.35 and m["net_pnl_usd"] > 0:
+                    m["status"] = "A+ ONAYLI"
+                elif alpha <= -0.25 and m["net_pnl_usd"] < 0:
+                    m["status"] = "UYUTULDU"
+                else:
+                    m["status"] = "STANDART"
+            else:
+                m["status"] = "STANDART"
+
+        return matrix
+
+    # ──────────────────────────────────────────────────────────────────────────
     # PARİTE DETAYLI ADLİ OTOPSİ PAKETİ (COIN FORENSIC DEEP-DIVE MODAL DATA)
     # ──────────────────────────────────────────────────────────────────────────
     def get_coin_forensic_detail(self, symbol: str) -> dict:
@@ -1045,6 +1271,32 @@ class ShadowExecutionEngine:
             shield_counts=shield_counts
         )
 
+        # Setup matrisi ve Likidite Katmanı
+        setup_matrix = self.get_coin_setup_matrix(clean)
+        liq_tier = self.get_coin_liquidity_tier(clean)
+
+        # Post-Exit Hayalet Analizi (İşlem devam etseydi ne olurdu?)
+        coin_ghosts = [g for g in self.post_exit_history if clean in g.get("symbol", "").upper()]
+        premature_exits = [g for g in coin_ghosts if g.get("verdict") == "ERKEN_CIKIS_KACAN_DALGA"]
+        sniper_exits = [g for g in coin_ghosts if g.get("verdict") == "SNIPER_TEPE_CIKISI"]
+        post_exit_summary = {
+            "total_tracked": len(coin_ghosts),
+            "premature_exit_count": len(premature_exits),
+            "sniper_exit_count": len(sniper_exits),
+            "recent_ghosts": coin_ghosts[-5:]
+        }
+
+        # Zıt Yön (Inversion Counterfactual) Analizi
+        inverted_trades = [t for t in coin_completed if "inversion_pnl_usd" in t]
+        prof_inversions = [t for t in inverted_trades if t.get("inversion_verdict") == "PROFITABLE_INVERSION"]
+        total_inv_profit = sum(t.get("inversion_pnl_usd", 0.0) for t in prof_inversions)
+        inversion_summary = {
+            "total_evaluated": len(inverted_trades),
+            "profitable_count": len(prof_inversions),
+            "inversion_win_rate_pct": round((len(prof_inversions) / max(1, len(inverted_trades))) * 100.0, 1),
+            "total_inversion_profit_usd": round(total_inv_profit, 2)
+        }
+
         return {
             "symbol": clean,
             "full_symbol": sym,
@@ -1069,6 +1321,10 @@ class ShadowExecutionEngine:
             "modifications_summary": diag["modifications_summary"],
             "suggested_diff": diag["suggested_diff"],
             "shields_breakdown": shields_breakdown,
+            "setup_matrix": setup_matrix,
+            "liquidity_tier": liq_tier,
+            "post_exit_summary": post_exit_summary,
+            "inversion_summary": inversion_summary,
             "active_positions": coin_actives,
             "completed_trades": coin_completed[-25:]  # son 25 işlem
         }

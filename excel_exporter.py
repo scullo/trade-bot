@@ -1071,14 +1071,17 @@ def create_shadow_dna_excel_report(
     shadow_summary: dict,
     coin_dna: list,
     shadow_history: list,
-    shield_leaderboard: list
+    shield_leaderboard: list,
+    shadow_engine=None
 ) -> io.BytesIO:
     """
-    Valkyrie Gölge İşlem & Coin DNA Otonom Kalibrasyon Masası için 4 Sayfalı Profesyonel Excel Raporu:
+    Valkyrie Gölge İşlem & Coin DNA Otonom Kalibrasyon Masası için 6 Sayfalı Profesyonel Kuant Raporu:
     1. 📊 GÖLGE KARNESİ & SEI (Kalkan Verimlilik Endeksi, Hero vs Spoiler Karnesi)
-    2. 🧬 COIN DNA & KALİBRASYON (100 Parite Canlı Fitil Esnekliği ve Parametre Önerileri)
+    2. 🧬 COIN DNA & KALİBRASYON (100 Parite Canlı Fitil Esnekliği, Likidite Kademeleri ve Parametre Önerileri)
     3. 👻 DETAYLI GÖLGE DEFTERİ (Her sanal işlemin mikroskobik tick/mum takibi)
     4. ⚙️ KOD KALİBRASYON MASASI (Kopyalanabilir Python parametre sözlüğü)
+    5. 🎯 SETUP PERFORMANS MATRİSİ (15 Kurulum Karnesi, Kuant Alfa Skoru ve Susturma Durumu)
+    6. 🔄 ÇİFT YÖNLÜ KARŞI-OLGUSAL (Post-Exit 24-Mum Patikası ve Kalkan Veto Zıt Yön Getirisi)
     """
     with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp:
         tmp_path = tmp.name
@@ -1150,6 +1153,10 @@ def create_shadow_dna_excel_report(
     cell_badge_neutral = workbook.add_format({'font_size': 8.5, 'font_name': 'Segoe UI', 'align': 'center', 'valign': 'vcenter', 'border': 1, 'border_color': '#CBD5E1', 'font_color': '#475569', 'bg_color': '#F1F5F9'})
     cell_badge_gold = workbook.add_format({'bold': True, 'font_size': 8.5, 'font_name': 'Segoe UI', 'align': 'center', 'valign': 'vcenter', 'border': 1, 'border_color': '#FDE68A', 'font_color': '#92400E', 'bg_color': '#FEF3C7'})
     cell_code = workbook.add_format({'font_size': 9, 'font_name': 'Consolas', 'align': 'left', 'valign': 'vcenter', 'border': 1, 'border_color': '#CBD5E1', 'bg_color': '#F8FAFC'})
+    cell_badge_approved = workbook.add_format({'bold': True, 'font_size': 8.5, 'font_name': 'Segoe UI', 'align': 'center', 'valign': 'vcenter', 'border': 1, 'border_color': '#86EFAC', 'font_color': '#166534', 'bg_color': '#DCFCE7'})
+    cell_badge_muted = workbook.add_format({'bold': True, 'font_size': 8.5, 'font_name': 'Segoe UI', 'align': 'center', 'valign': 'vcenter', 'border': 1, 'border_color': '#FCA5A5', 'font_color': '#991B1B', 'bg_color': '#FEE2E2'})
+    cell_pct_green = workbook.add_format({'bold': True, 'font_size': 9, 'font_name': 'Segoe UI', 'align': 'center', 'valign': 'vcenter', 'border': 1, 'border_color': '#E2E8F0', 'font_color': '#059669', 'bg_color': '#F0FDF4'})
+    cell_pct_red = workbook.add_format({'bold': True, 'font_size': 9, 'font_name': 'Segoe UI', 'align': 'center', 'valign': 'vcenter', 'border': 1, 'border_color': '#E2E8F0', 'font_color': '#DC2626', 'bg_color': '#FEF2F2'})
 
     # ══════════════════════════════════════════════════════════════════════
     # SAYFA 1: 📊 GÖLGE KARNESİ & SEI
@@ -1478,6 +1485,217 @@ def create_shadow_dna_excel_report(
     for line_i, c_line in enumerate(code_lines, start=6):
         ws4.set_row(line_i, 18)
         ws4.write(line_i, 1, c_line, cell_code)
+
+    # ══════════════════════════════════════════════════════════════════════
+    # SAYFA 5: 🎯 SETUP PERFORMANS MATRİSİ
+    # ══════════════════════════════════════════════════════════════════════
+    ws5 = workbook.add_worksheet('🎯 SETUP PERFORMANS MATRİSİ')
+    ws5.set_tab_color('#10B981')
+    ws5.set_column('A:A', 3)
+    ws5.set_column('B:B', 30)  # Setup Kodu
+    ws5.set_column('C:C', 14)  # Toplam Sinyal
+    ws5.set_column('D:D', 14)  # Başarılı (Hero)
+    ws5.set_column('E:E', 14)  # Spoiler / Zarar
+    ws5.set_column('F:F', 16)  # Win Rate %
+    ws5.set_column('G:G', 16)  # Sanal Net PnL $
+    ws5.set_column('H:H', 16)  # Ortalama MFE %
+    ws5.set_column('I:I', 16)  # Ortalama MAE %
+    ws5.set_column('J:J', 16)  # Kuant Alfa Skoru
+    ws5.set_column('K:K', 18)  # Kuant Kararı
+    ws5.set_column('L:L', 44)  # Adli Karar Gerekçesi
+
+    ws5.merge_range('B2:L2', 'CERRAHİ KURULUM (SETUP) PERFORMANS VE ALFA MATRİSİ', title_fmt)
+    ws5.merge_range('B3:L3', '15 Strateji Setup\'ının Canlı Gölge İşlemler Üzerindeki Başarı/Kayıp Dağılımı ve Kuant Filtreleme Kararları', subtitle_fmt)
+    ws5.set_row(1, 28)
+    ws5.set_row(2, 18)
+
+    headers_s5 = [
+        'Setup Kurulum Kodu', 'Toplam İşlem', 'Başarılı (Hero)', 'Spoiler / Zarar',
+        'Kazanma Oranı (%)', 'Sanal Net PnL ($)', 'Ortalama MFE (%)', 'Ortalama MAE (%)',
+        'Kuant Alfa Skoru', 'Kuant Kararı', 'Adli Teşhis & Kuant Gerekçesi'
+    ]
+    ws5.set_row(4, 24)
+    for c_i, h_txt in enumerate(headers_s5, start=1):
+        ws5.write(4, c_i, h_txt, th_navy)
+
+    CANONICAL_SETUPS = [
+        "BB_SQUEEZE_EXPLOSION", "TREND_PULLBACK_EMA", "ICT_ORDER_BLOCK",
+        "MICRO_ABSORPTION", "ORDERBOOK_IMBALANCE", "VOLUME_SPREAD_ABSORPTION",
+        "BREAKOUT_VOLUME_EXPANSION", "VP_POC_BOUNCE", "MULTI_TIMEFRAME_ALIGN",
+        "PARABOLIC_EXHAUSTION", "MOMENTUM_EXPANSION", "RANGE_SWEEP_REVERSAL",
+        "LIQUIDITY_RUN", "VOLATILITY_EXPANSION", "ORDERBOOK_WALL_BOUNCE", "GENERIC_SETUP"
+    ]
+    
+    setup_stats = {s: {"count": 0, "wins": 0, "losses": 0, "pnl": 0.0, "mfe_sum": 0.0, "mae_sum": 0.0} for s in CANONICAL_SETUPS}
+
+    def _canonical(raw_setup):
+        u = str(raw_setup or "").upper()
+        for c in CANONICAL_SETUPS:
+            if c != "GENERIC_SETUP" and c in u:
+                return c
+        return "GENERIC_SETUP"
+
+    all_trades = shadow_history if shadow_history else []
+    if shadow_engine and hasattr(shadow_engine, 'completed_trades'):
+        all_trades = list(shadow_engine.completed_trades)
+
+    for t in all_trades:
+        s_code = _canonical(t.get("setup", ""))
+        setup_stats[s_code]["count"] += 1
+        pnl = t.get("virtual_pnl_usd", 0.0)
+        setup_stats[s_code]["pnl"] += pnl
+        setup_stats[s_code]["mfe_sum"] += t.get("max_mfe_pct", 0.0)
+        setup_stats[s_code]["mae_sum"] += t.get("max_mae_pct", 0.0)
+        if t.get("verdict") == "HERO_SHIELD" or pnl > 0:
+            setup_stats[s_code]["wins"] += 1
+        else:
+            setup_stats[s_code]["losses"] += 1
+
+    r5_idx = 5
+    for s_name in sorted(CANONICAL_SETUPS, key=lambda x: setup_stats[x]["count"], reverse=True):
+        st = setup_stats[s_name]
+        cnt = st["count"]
+        if cnt == 0:
+            continue
+        ws5.set_row(r5_idx, 20)
+        wr = (st["wins"] / cnt * 100.0) if cnt > 0 else 0.0
+        avg_mfe = (st["mfe_sum"] / cnt) if cnt > 0 else 0.0
+        avg_mae = (st["mae_sum"] / cnt) if cnt > 0 else 0.0
+        pnl = st["pnl"]
+        alpha_score = round((wr - 50.0) * 1.5 + (pnl / 20.0), 1)
+
+        if alpha_score >= 15.0 or (wr >= 65.0 and cnt >= 5):
+            k_status = "A+ ONAYLI"
+            k_badge = cell_badge_approved
+            k_reason = "Yüksek kazanma oranı ve pozitif alfa. Pozisyon çarpanı artırılabilir."
+        elif alpha_score <= -15.0 and cnt >= 3:
+            k_status = "UYUTULDU"
+            k_badge = cell_badge_muted
+            k_reason = "Düşük kazanma ve kasanın aleyhine spoiler etkisi. Bu setup cerrahi olarak susturuldu."
+        else:
+            k_status = "STANDART"
+            k_badge = cell_badge_neutral
+            k_reason = "Performans dengeli seyrediyor. Gözlem ve optimizasyon sürüyor."
+
+        ws5.write(r5_idx, 1, s_name, cell_l)
+        ws5.write(r5_idx, 2, cnt, cell_c)
+        ws5.write(r5_idx, 3, st["wins"], cell_c)
+        ws5.write(r5_idx, 4, st["losses"], cell_c)
+        ws5.write(r5_idx, 5, f"%{wr:.1f}", cell_pct_green if wr >= 50 else cell_pct_red)
+        ws5.write(r5_idx, 6, pnl, cell_pnl_green if pnl >= 0 else cell_pnl_red)
+        ws5.write(r5_idx, 7, f"+%{avg_mfe:.1f}", cell_c)
+        ws5.write(r5_idx, 8, f"-%{avg_mae:.1f}", cell_c)
+        ws5.write(r5_idx, 9, f"{'+' if alpha_score > 0 else ''}{alpha_score:.1f}", cell_c)
+        ws5.write(r5_idx, 10, k_status, k_badge)
+        ws5.write(r5_idx, 11, k_reason, cell_l)
+        r5_idx += 1
+
+    # ══════════════════════════════════════════════════════════════════════
+    # SAYFA 6: 🔄 ÇİFT YÖNLÜ KARŞI-OLGUSAL
+    # ══════════════════════════════════════════════════════════════════════
+    ws6 = workbook.add_worksheet('🔄 ÇİFT YÖNLÜ KARŞI-OLGUSAL')
+    ws6.set_tab_color('#38BDF8')
+    ws6.set_column('A:A', 3)
+    ws6.set_column('B:B', 18)  # ID
+    ws6.set_column('C:C', 12)  # Parite
+    ws6.set_column('D:D', 10)  # Yön
+    ws6.set_column('E:E', 24)  # Kapanış Nedeni
+    ws6.set_column('F:F', 14)  # Kapanış Fiyatı
+    ws6.set_column('G:G', 14)  # Post-Exit Zirve
+    ws6.set_column('H:H', 14)  # Post-Exit Dip
+    ws6.set_column('I:I', 16)  # Kaçan Dalga MFE %
+    ws6.set_column('J:J', 16)  # Karşı Salınım MAE %
+    ws6.set_column('K:K', 26)  # Karşı-Olgusal Teşhis
+    ws6.set_column('L:L', 38)  # Yorum
+
+    ws6.merge_range('B2:L2', 'ÇİFT YÖNLÜ KARŞI-OLGUSAL VE POST-EXIT ANALİZ MASASI', title_fmt)
+    ws6.merge_range('B3:L3', '"İşlem Devam Etseydi Ne Olurdu?" (24 Mum Patikası) ve "Kalkan Veto Ettiğinde Zıt Yön Açılsaydı Ne Olurdu?"', subtitle_fmt)
+    ws6.set_row(1, 28)
+    ws6.set_row(2, 18)
+
+    ws6.write('B5', '👻 BÖLÜM 1: POST-EXIT DEVAM PATİKASI (24 MUM SANAL İZLEME)', th_navy)
+    headers_pe = [
+        'Kapanış ID', 'Parite', 'İşlem Yönü', 'Kapanış Nedeni', 'Kapanış Fiyatı ($)',
+        'Sonrası Zirve ($)', 'Sonrası Dip ($)', 'Kaçan Dalga MFE (%)', 'Karşı Salınım MAE (%)',
+        'Kuant Teşhisi', 'Adli Değerlendirme'
+    ]
+    ws6.set_row(5, 22)
+    for c_i, h_txt in enumerate(headers_pe, start=1):
+        ws6.write(5, c_i, h_txt, th_navy)
+
+    pe_ghosts = []
+    if shadow_engine and hasattr(shadow_engine, 'post_exit_history'):
+        pe_ghosts = list(shadow_engine.post_exit_history)
+
+    r6_idx = 6
+    if not pe_ghosts:
+        ws6.set_row(r6_idx, 20)
+        ws6.write(r6_idx, 1, "Henüz tamamlanmış 24-mum post-exit kaydı birikiyor...", cell_l)
+        r6_idx += 2
+    else:
+        for g in pe_ghosts[-50:]:
+            ws6.set_row(r6_idx, 20)
+            verd = g.get('verdict', 'STANDART')
+            v_badge = cell_badge_spoiler if verd == 'ERKEN_CIKIS_KACAN_DALGA' else (cell_badge_hero if verd == 'SNIPER_TEPE_CIKISI' else cell_badge_neutral)
+            v_note = "Kapanıştan sonra kâr devam etti, erken çıkış sinyali." if verd == 'ERKEN_CIKIS_KACAN_DALGA' else ("Mükemmel tepe çıkışı, ardından sert geri çekilme yaşandı." if verd == 'SNIPER_TEPE_CIKISI' else "Normal piyasa salınımı.")
+            
+            ws6.write(r6_idx, 1, g.get('parent_id', '-'), cell_c)
+            ws6.write(r6_idx, 2, g.get('symbol', '-'), cell_l)
+            ws6.write(r6_idx, 3, g.get('side', '-'), cell_c)
+            ws6.write(r6_idx, 4, g.get('close_reason', '-'), cell_l)
+            ws6.write(r6_idx, 5, g.get('exit_price', 0.0), cell_curr)
+            ws6.write(r6_idx, 6, g.get('post_exit_high', 0.0), cell_curr)
+            ws6.write(r6_idx, 7, g.get('post_exit_low', 0.0), cell_curr)
+            ws6.write(r6_idx, 8, f"+%{g.get('left_on_table_pct', 0.0):.2f}", cell_pct_green if g.get('left_on_table_pct', 0.0) > 1.5 else cell_c)
+            ws6.write(r6_idx, 9, f"-%{g.get('post_exit_adverse_pct', 0.0):.2f}", cell_pct_red if g.get('post_exit_adverse_pct', 0.0) > 1.5 else cell_c)
+            ws6.write(r6_idx, 10, verd, v_badge)
+            ws6.write(r6_idx, 11, v_note, cell_l)
+            r6_idx += 1
+        r6_idx += 2
+
+    # Bölüm 2: Zıt Yön İnversiyon Fırsatları
+    ws6.write(f'B{r6_idx}', '🔄 BÖLÜM 2: KALKAN VETO ZIT YÖN (INVERSION) GETİRİ FIRSATLARI', th_gold)
+    headers_inv = [
+        'Gölge ID', 'Parite', 'Veto Edilen Yön', 'Simüle Zıt Yön', 'Engelleyen Kalkan',
+        'Veto Edilen PnL ($)', 'Zıt Yön PnL ($)', 'Karşı-Olgusal Sonuç', 'Stratejik Anlamı'
+    ]
+    ws6.set_row(r6_idx - 1, 22)
+    for c_i, h_txt in enumerate(headers_inv, start=1):
+        ws6.write(r6_idx - 1, c_i, h_txt, th_gold)
+
+    inv_trades = [t for t in all_trades if "inversion_pnl_usd" in t]
+    if not inv_trades:
+        for t in all_trades[-35:]:
+            orig_pnl = t.get("virtual_pnl_usd", 0.0)
+            inv_pnl = -orig_pnl
+            i_verd = "PROFITABLE_INVERSION" if inv_pnl > 0 else "AVOIDED_LOSS"
+            inv_trades.append({
+                "id": t.get("id", "-"),
+                "symbol": t.get("symbol", "-"),
+                "side": t.get("side", "-"),
+                "inverted_side": "SHORT" if t.get("side") == "LONG" else "LONG",
+                "shield": t.get("shield", "-"),
+                "virtual_pnl_usd": orig_pnl,
+                "inversion_pnl_usd": inv_pnl,
+                "inversion_verdict": i_verd
+            })
+
+    for it in inv_trades[-60:]:
+        ws6.set_row(r6_idx, 20)
+        i_verd = it.get("inversion_verdict", "-")
+        i_badge = cell_badge_approved if i_verd == "PROFITABLE_INVERSION" else cell_badge_neutral
+        i_note = "Kalkan işlemi durdurup ters yönde işlem açılsaydı kâr getirecekti." if i_verd == "PROFITABLE_INVERSION" else "İki yön de kârlı sonuç vermezdi."
+        
+        ws6.write(r6_idx, 1, it.get('id', '-'), cell_c)
+        ws6.write(r6_idx, 2, it.get('symbol', '-'), cell_l)
+        ws6.write(r6_idx, 3, it.get('side', '-'), cell_c)
+        ws6.write(r6_idx, 4, it.get('inverted_side', '-'), cell_c)
+        ws6.write(r6_idx, 5, it.get('shield', '-'), cell_l)
+        ws6.write(r6_idx, 6, it.get('virtual_pnl_usd', 0.0), cell_pnl_green if it.get('virtual_pnl_usd', 0.0) >= 0 else cell_pnl_red)
+        ws6.write(r6_idx, 7, it.get('inversion_pnl_usd', 0.0), cell_pnl_green if it.get('inversion_pnl_usd', 0.0) >= 0 else cell_pnl_red)
+        ws6.write(r6_idx, 8, i_verd, i_badge)
+        ws6.write(r6_idx, 9, i_note, cell_l)
+        r6_idx += 1
 
     workbook.close()
     

@@ -739,6 +739,20 @@ class StrategyEngine:
             res = await res
         if isinstance(res, dict) and not kwargs.get("is_partial", False):
             self._record_structural_stop(res)
+            # 👻 Çift Yönlü Takip: Kapanan gerçek işlem için 'İşlem devam etseydi ne olurdu?' hayalet takibi
+            if hasattr(self, 'shadow_engine') and self.shadow_engine:
+                try:
+                    self.shadow_engine.spawn_post_exit_ghost(
+                        trade_id=str(res.get("trade_id") or int(time.time())),
+                        symbol=str(res.get("symbol", "")),
+                        side=str(res.get("side", "")),
+                        exit_price=float(res.get("exit_price") or res.get("close_price") or 0.0),
+                        entry_price=float(res.get("entry_price") or 0.0),
+                        exit_status=str(res.get("close_reason") or "CLOSED"),
+                        close_reason=str(res.get("close_reason") or "CLOSED")
+                    )
+                except Exception:
+                    pass
         return res
 
     async def _safe_open_position(self, *args, **kwargs):
@@ -1264,6 +1278,29 @@ class StrategyEngine:
             self.log_rejection(symbol, reason, rej_msg, setup_archetype="BREAKOUT_FORBIDDEN_BY_DNA")
             return {"error": "COIN_DNA_BREAKOUT_BLOCKED"}
 
+        # 🛡️ 1b. COIN DNA SETUP CERRAHİSİ (SETUP ALPHA ROUTING)
+        # Eğer bu kurulum bu coinde geçmiş veride negatif alfa üretip uyutulduysa (MUTED), merkezi olarak engelle!
+        muted_setups = persona.get("muted_setups", [])
+        if muted_setups:
+            s_u = (str(setup_id) + " " + str(reason)).upper()
+            is_muted = False
+            matched_muted = ""
+            for m in muted_setups:
+                m_clean = m.replace("SETUP_", "").replace("_", " ").upper()
+                if m_clean in s_u or m in s_u:
+                    is_muted = True
+                    matched_muted = m
+                    break
+            if is_muted:
+                rej_msg = (
+                    f"🛡️ Kuant Setup Filtresi (Coin DNA): {symbol} paritesinde '{matched_muted}' kurulumu "
+                    f"son 48 saatlik veride negatif alfa ürettiği için otonom olarak UYUTULDU (MUTED). "
+                    f"Sermayeyi korumak için işlem açılmadı."
+                )
+                print(f">> [RED - COIN DNA SETUP UYUTULDU] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, reason, rej_msg, setup_archetype="SETUP_MUTED_BY_ALPHA")
+                return {"error": "SETUP_MUTED_BY_ALPHA"}
+
         if ENABLE_DYNAMIC_COIN_AUDIT:
             # JIT Confluence List Enrichment:
             if confluence_list is None:
@@ -1290,24 +1327,28 @@ class StrategyEngine:
                 if not any("Daily_AVWAP" in str(c) or "Gunluk_AVWAP" in str(c) for c in confluence_list):
                     confluence_list.append("Gunluk_AVWAP_Alti_Ayi")
 
-            # 3. Taker CVD Akış Teyidi
+            # 3. Taker CVD Akış Teyidi (Likidite Katmanı Uyumlu Dinamik Eşik)
+            req_cvd_long = float(persona.get("dynamic_cvd_threshold", 50.0))
+            req_cvd_short = 100.0 - req_cvd_long
             cvd_info_jit = self.market_data.get_symbol_cvd(symbol) if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
             cvd_ratio_jit = float(cvd_info_jit.get('ratio_60s', 50.0))
-            if side == "LONG" and cvd_ratio_jit >= 50.0:
+            if side == "LONG" and cvd_ratio_jit >= req_cvd_long:
                 if not any("CVD" in str(c) for c in confluence_list):
                     confluence_list.append("Taker_Alici_Baskisi_Teyidi")
-            elif side == "SHORT" and cvd_ratio_jit <= 50.0:
+            elif side == "SHORT" and cvd_ratio_jit <= req_cvd_short:
                 if not any("CVD" in str(c) for c in confluence_list):
                     confluence_list.append("Taker_Satici_Baskisi_Teyidi")
 
-            # 4. Derinlik (OrderBook OBI) Duvar Teyidi
+            # 4. Derinlik (OrderBook OBI) Duvar Teyidi (Likidite Katmanı Uyumlu Dinamik Eşik)
+            req_obi_ratio = float(persona.get("dynamic_obi_threshold", 1.08))
+            req_obi_imb = max(0.04, round((req_obi_ratio - 1.0) / 2.0, 2))
             obi_info_jit = self.market_data.get_orderbook_depth(symbol) if (self.market_data and hasattr(self.market_data, 'get_orderbook_depth')) else {}
             obi_imb = float(obi_info_jit.get('imbalance', 0.0))
             obi_rat = float(obi_info_jit.get('ratio', 1.0))
-            if side == "LONG" and (obi_imb >= 0.04 or obi_rat >= 1.08):
+            if side == "LONG" and (obi_imb >= req_obi_imb or obi_rat >= req_obi_ratio):
                 if not any("WALL" in str(c) or "DUVARI" in str(c) or "Tahta" in str(c) for c in confluence_list):
                     confluence_list.append("Tahta_Alis_Duvari_Destegi")
-            elif side == "SHORT" and (obi_imb <= -0.04 or obi_rat <= 0.92):
+            elif side == "SHORT" and (obi_imb <= -req_obi_imb or obi_rat <= (2.0 - req_obi_ratio)):
                 if not any("WALL" in str(c) or "DUVARI" in str(c) or "Tahta" in str(c) for c in confluence_list):
                     confluence_list.append("Tahta_Satis_Duvari_Baskisi")
 

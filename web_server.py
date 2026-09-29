@@ -2888,6 +2888,7 @@ HTML_PAGE = """
                         <div style="display:flex; align-items:center; gap:8px;">
                             <span style="font-size:17px; font-weight:800; color:#fff;" id="shadow-modal-symbol">PARİTE / USDT</span>
                             <span id="shadow-modal-badge" style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px;">KORU</span>
+                            <span id="shadow-modal-tier-badge" style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px;">TIER-2 DİNAMİK</span>
                         </div>
                         <div style="font-size:11.5px; color:var(--text-muted); font-family:'JetBrains Mono', monospace;" id="shadow-modal-persona">
                             Coin DNA & Canlı Piyasa Adli Kalibrasyon Masası
@@ -2962,6 +2963,65 @@ HTML_PAGE = """
                     </div>
                     <div style="display:flex; flex-direction:column; gap:10px;" id="shadow-modal-diff-grid">
                         <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- 3.5. 🎯 CERRAHİ SETUP PERFORMANS MATRİSİ -->
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+                        <div style="font-size:13px; font-weight:800; color:#10b981; display:flex; align-items:center; gap:6px;">
+                            🎯 Cerrahi Kurulum Karnesi (15 Setup Performansı & İzin Durumu)
+                        </div>
+                        <div id="shadow-modal-setup-badge-summary" style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">
+                            Kuant Setup Karnesi
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table" style="width:100%; font-size:11.5px;">
+                            <thead>
+                                <tr>
+                                    <th style="text-align:left;">Setup Kodu</th>
+                                    <th>İşlem Sayısı</th>
+                                    <th>Kazanma (Win %)</th>
+                                    <th>Net PnL ($)</th>
+                                    <th>Max MFE</th>
+                                    <th>Alfa Skoru</th>
+                                    <th>Kuant Kararı</th>
+                                </tr>
+                            </thead>
+                            <tbody id="shadow-modal-setups-tbody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 3.6. 🔄 ÇİFT YÖNLÜ KARŞI-OLGUSAL KUANT MASASI (POST-EXIT & ZIT YÖN) -->
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px;">
+                    <!-- Post-Exit Continuation Card -->
+                    <div style="background:rgba(56,189,248,0.03); border:1px solid rgba(56,189,248,0.2); border-radius:12px; padding:14px;">
+                        <div style="font-size:12.5px; font-weight:800; color:#38bdf8; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                            👻 "İşlem Devam Etseydi Ne Olurdu?" (Post-Exit)
+                        </div>
+                        <div style="font-size:11px; color:#94a3b8; line-height:1.4; margin-bottom:10px;">
+                            Kapanan pozisyonların ardından fiyatın 24 mum (2 saat) boyunca çizdiği gerçek patika analizi.
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;" id="shadow-modal-post-exit-metrics">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Inversion Counter-Trade Card -->
+                    <div style="background:rgba(168,85,247,0.03); border:1px solid rgba(168,85,247,0.2); border-radius:12px; padding:14px;">
+                        <div style="font-size:12.5px; font-weight:800; color:#c084fc; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                            🔄 "Tam Tersi Yön Açılsaydı Ne Olurdu?" (Zıt Yön)
+                        </div>
+                        <div style="font-size:11px; color:#94a3b8; line-height:1.4; margin-bottom:10px;">
+                            Kalkanların veto ettiği sinyallerde ters yönde pozisyon açılsaydı elde edilecek karşı-fırsat getirisi.
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;" id="shadow-modal-inversion-metrics">
+                            <!-- Populated by JS -->
+                        </div>
                     </div>
                 </div>
 
@@ -13777,6 +13837,15 @@ function downloadExcelReport() {
                 badgeEl.style.borderColor = `${badgeColor}40`;
                 badgeEl.style.background = badgeBg;
 
+                const tier = d.liquidity_tier || { tier: 2, label: 'TIER-2 DİNAMİK', color: '#38bdf8' };
+                const tierBadgeEl = document.getElementById('shadow-modal-tier-badge');
+                if (tierBadgeEl) {
+                    tierBadgeEl.innerText = tier.label;
+                    tierBadgeEl.style.color = tier.color;
+                    tierBadgeEl.style.borderColor = `${tier.color}40`;
+                    tierBadgeEl.style.background = `${tier.color}15`;
+                }
+
                 document.getElementById('shadow-modal-persona').innerHTML = `Persona: <strong style="color:#fff;">${d.persona_name || 'Standart Kripto'}</strong> • Teşhis: <span style="color:#38bdf8; font-weight:700;">${d.scenario_title || 'Canlı Piyasa Gözlemi'}</span> • Toplam ${d.total_trades || 0} Sinyal (${d.active_count || 0} Aktif, ${d.completed_count || 0} Tamamlandı)`;
 
                 document.getElementById('shadow-modal-kpi-saved').innerText = `+$${(d.saved_loss_usd || 0).toFixed(2)}`;
@@ -13906,6 +13975,78 @@ function downloadExcelReport() {
                             </tr>
                         `;
                     }).join('');
+                }
+
+                // 3.5 SETUP MATRİSİ
+                const setupsTbody = document.getElementById('shadow-modal-setups-tbody');
+                const setupBadgeSummary = document.getElementById('shadow-modal-setup-badge-summary');
+                const setupMatrix = d.setup_matrix || [];
+                if (setupsTbody) {
+                    if (setupMatrix.length === 0) {
+                        setupsTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:12px; color:#64748b;">Henüz yeterli kurulum verisi kaydedilmedi.</td></tr>`;
+                    } else {
+                        const mutedCount = setupMatrix.filter(s => s.status === 'UYUTULDU').length;
+                        const approvedCount = setupMatrix.filter(s => s.status === 'A+ ONAYLI').length;
+                        if (setupBadgeSummary) {
+                            setupBadgeSummary.innerHTML = `<span style="color:#10b981; font-weight:700;">${approvedCount} Onaylı</span> • <span style="color:#f43f5e; font-weight:700;">${mutedCount} Kuant-Susturuldu</span>`;
+                        }
+                        setupsTbody.innerHTML = setupMatrix.map(s => {
+                            const stCol = s.status === 'A+ ONAYLI' ? '#10b981' : (s.status === 'UYUTULDU' ? '#f43f5e' : '#94a3b8');
+                            const stBg = s.status === 'A+ ONAYLI' ? 'rgba(16,185,129,0.15)' : (s.status === 'UYUTULDU' ? 'rgba(244,63,94,0.15)' : 'rgba(255,255,255,0.05)');
+                            const pnlCol = (s.net_pnl || 0) >= 0 ? '#10b981' : '#f43f5e';
+                            return `
+                                <tr style="border-bottom:1px solid rgba(255,255,255,0.04); font-family:'JetBrains Mono'; font-size:11.5px;">
+                                    <td style="font-weight:700; color:#fff; text-align:left;">${s.setup}</td>
+                                    <td style="text-align:center; color:#cbd5e1;">${s.count}</td>
+                                    <td style="text-align:center; color:${(s.win_rate || 0) >= 50 ? '#10b981' : '#f43f5e'}; font-weight:700;">%${(s.win_rate || 0).toFixed(1)}</td>
+                                    <td style="text-align:center; font-weight:700; color:${pnlCol};">${(s.net_pnl || 0) >= 0 ? '+$' : '-$'}${Math.abs(s.net_pnl || 0).toFixed(2)}</td>
+                                    <td style="text-align:center; color:#38bdf8;">+%${(s.max_mfe || 0).toFixed(1)}</td>
+                                    <td style="text-align:center; font-weight:800; color:${(s.alpha_score || 0) >= 0 ? '#10b981' : '#f43f5e'};">${(s.alpha_score || 0) > 0 ? '+' : ''}${(s.alpha_score || 0).toFixed(1)}</td>
+                                    <td style="text-align:center;"><span style="background:${stBg}; color:${stCol}; border:1px solid ${stCol}50; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800;">${s.status}</span></td>
+                                </tr>
+                            `;
+                        }).join('');
+                    }
+                }
+
+                // 3.6 POST-EXIT & ZIT YÖN
+                const peEl = document.getElementById('shadow-modal-post-exit-metrics');
+                const invEl = document.getElementById('shadow-modal-inversion-metrics');
+                const pe = d.post_exit_summary || {};
+                const inv = d.inversion_summary || {};
+
+                if (peEl) {
+                    peEl.innerHTML = `
+                        <div style="background:rgba(0,0,0,0.25); padding:8px 10px; border-radius:8px;">
+                            <div style="font-size:10px; color:#94a3b8;">Takip Edilen Kapanış</div>
+                            <div style="font-size:15px; font-weight:800; color:#fff; font-family:'JetBrains Mono';">${pe.total_tracked || 0} Pozisyon</div>
+                        </div>
+                        <div style="background:rgba(0,0,0,0.25); padding:8px 10px; border-radius:8px;">
+                            <div style="font-size:10px; color:#94a3b8;">Erken Çıkış (Kaçan Dalga)</div>
+                            <div style="font-size:15px; font-weight:800; color:#f59e0b; font-family:'JetBrains Mono';">${pe.premature_exit_count || 0} Adet</div>
+                        </div>
+                        <div style="background:rgba(0,0,0,0.25); padding:8px 10px; border-radius:8px; grid-column:span 2;">
+                            <div style="font-size:10px; color:#94a3b8;">Kusursuz Tepe Çıkışı (Sniper)</div>
+                            <div style="font-size:13px; font-weight:700; color:#10b981; font-family:'JetBrains Mono';">${pe.sniper_exit_count || 0} Adet (Doğru Zamanda Çıkıldı)</div>
+                        </div>
+                    `;
+                }
+
+                if (invEl) {
+                    invEl.innerHTML = `
+                        <div style="background:rgba(0,0,0,0.25); padding:8px 10px; border-radius:8px;">
+                            <div style="font-size:10px; color:#94a3b8;">İncelenen Veto Sinyali</div>
+                            <div style="font-size:15px; font-weight:800; color:#fff; font-family:'JetBrains Mono';">${inv.total_evaluated || 0} Sinyal</div>
+                        </div>
+                        <div style="background:rgba(0,0,0,0.25); padding:8px 10px; border-radius:8px;">
+                            <div style="font-size:10px; color:#94a3b8;">Zıt Yön Kazanma Oranı</div>
+                            <div style="font-size:15px; font-weight:800; color:#c084fc; font-family:'JetBrains Mono';">%${(inv.inversion_win_rate_pct || 0).toFixed(1)}</div>
+                        </div>
+                        <div style="background:rgba(0,0,0,0.25); padding:8px 10px; border-radius:8px; grid-column:span 2;">
+                            <div style="font-size:10px; color:#94a3b8;">Zıt Yön Potansiyel Getirisi</div>
+                            <div style="font-size:13px; font-weight:700; color:#10b981; font-family:'JetBrains Mono';">+$${(inv.total_inversion_profit_usd || 0).toFixed(2)} Ek Kasa Getirisi</div>
+                        </div>
+                    `;
                 }
 
                 const tradesTbody = document.getElementById('shadow-modal-trades-tbody');
@@ -14398,7 +14539,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 shadow_summary=summary,
                 coin_dna=coin_dna,
                 shadow_history=shadow_history,
-                shield_leaderboard=shield_leaderboard
+                shield_leaderboard=shield_leaderboard,
+                shadow_engine=strategy.shadow_engine if (strategy and hasattr(strategy, 'shadow_engine')) else None
             )
             filename = f"Valkyrie_Golge_Islem_ve_Coin_DNA_Raporu_{datetime.now(timezone(timedelta(hours=3))).strftime('%Y%m%d_%H%M')}.xlsx"
             import gc
