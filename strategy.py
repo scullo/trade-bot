@@ -141,6 +141,7 @@ class StrategyEngine:
         if hasattr(self, "shadow_engine") and self.shadow_engine:
             try:
                 clean_s = symbol if '/' in symbol else (symbol + '/USDT')
+                df_c = None
                 entry_p = float(kwargs.get("entry_price") or 0.0)
                 if entry_p <= 0.0 and self.market_data:
                     entry_p = float(self.market_data.current_prices.get(clean_s, 0.0))
@@ -3224,7 +3225,7 @@ class StrategyEngine:
             deribit_net_gex=float(l2_info.get('deribit_net_gex', 0.0)) if 'l2_info' in locals() and l2_info else 0.0,
             hawkes_eta=float(l2_info.get('hawkes_eta', 0.15)) if 'l2_info' in locals() and l2_info else 0.15,
             is_avalanche_active=bool(l2_info.get('is_avalanche_active', False)) if 'l2_info' in locals() and l2_info else False,
-            cvd_accel_60s=float((locals().get('cvd_data') or locals().get('cvd_info') or {}).get('accel_60s', 0.0)),
+            cvd_accel_60s=float(l2_info.get('cvd_acceleration', 0.0)) if 'l2_info' in locals() and l2_info else float((locals().get('cvd_data') or {}).get('acceleration', 0.0)),
             tri_modal_regime=str(getattr(self, 'current_market_regime', 'RANGING_PINGPONG')),
             cvd_divergence=cvd_div_tag,
             rvol_ratio=rvol_ratio_v,
