@@ -49,8 +49,10 @@ class ValkyrieAegisSentinel:
             if tepe_avwap > 0 or dip_avwap > 0:
                 valid_avwap += 1
 
-            npoc_info = lev.get('npoc', {})
-            if isinstance(npoc_info, dict) and npoc_info.get('price', 0.0) > 0:
+            # VDA-38: market_data.py seviye sözlüğünde nPOC 'above_npoc' ve 'below_npoc' (float) olarak saklanır
+            above_npoc = float(lev.get('above_npoc', 0.0) or 0.0)
+            below_npoc = float(lev.get('below_npoc', 0.0) or 0.0)
+            if above_npoc > 0 or below_npoc > 0:
                 valid_npoc += 1
 
         cam_sync_pct = (valid_camarilla / max(1, total_syms)) * 100.0

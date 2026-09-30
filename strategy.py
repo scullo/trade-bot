@@ -1313,16 +1313,22 @@ class StrategyEngine:
             is_muted = False
             matched_muted = ""
             for m in muted_setups:
-                if m == current_canonical:
+                m_canon = ShadowExecutionEngine.extract_canonical_setup(m)
+                if m == current_canonical or m_canon == current_canonical:
                     is_muted = True
                     matched_muted = m
                     break
                 m_clean = m.replace("SETUP_", "").replace("_", " ").upper()
                 s_u = (str(setup_id) + " " + str(reason)).upper()
-                if m_clean in s_u or m in s_u:
-                    is_muted = True
-                    matched_muted = m
-                    break
+                if (m_clean in s_u or m in s_u) and (current_canonical != "SETUP_DİĞER"):
+                    cur_parts = current_canonical.split("_")
+                    m_parts = m.split("_")
+                    cur_num = cur_parts[1] if len(cur_parts) > 1 and cur_parts[1].isdigit() else ""
+                    m_num = m_parts[1] if len(m_parts) > 1 and m_parts[1].isdigit() else ""
+                    if cur_num and m_num and cur_num == m_num:
+                        is_muted = True
+                        matched_muted = m
+                        break
             if is_muted:
                 rej_msg = (
                     f"🛡️ Kuant Setup Filtresi (Coin DNA): {symbol} paritesinde '{matched_muted}' kurulumu "
@@ -1390,9 +1396,9 @@ class StrategyEngine:
                     confluence_list.append("Hacim_Artisi_Teyidi")
 
             c_cnt = len(confluence_list or [])
-            has_whale = any("Balina" in str(c) or "Whale" in str(c) or "Iceberg" in str(c) or "Buzdağı" in str(c) for c in (confluence_list or []))
+            has_whale = any("BALINA" in str(c).upper().replace("İ", "I") or "WHALE" in str(c).upper() or "ICEBERG" in str(c).upper() or "BUZDAGI" in str(c).upper().replace("Ğ", "G").replace("İ", "I") for c in (confluence_list or []))
             has_vol = vol_surge >= (1.35 if is_gevset else 1.8)
-            has_wall = any("DUVARI" in str(c) or "WALL" in str(c) for c in (confluence_list or []))
+            has_wall = any("DUVAR" in str(c).upper().replace("İ", "I") or "WALL" in str(c).upper() for c in (confluence_list or []))
             
             # a. Hacimsiz Kırılım Tuzağı Denetimi: Yalnızca KORU ve katı WHIPSAW paritelerinde engelle, GEVŞET liginde izin ver
             # Kurumsal akış veya patlayıcı hacim teyidi:
@@ -1486,12 +1492,24 @@ class StrategyEngine:
         # ── 1c-2. AÇIK POZİSYON (OPEN INTEREST) & DELTA-OI RADARI (ERKEN VETO & CONFLUENCE) ──
         oi_data = {}
         if self.market_data and hasattr(self.market_data, 'get_symbol_open_interest'):
-            oi_data = self.market_data.get_symbol_open_interest(symbol) or {}
+            try:
+                res_oi = self.market_data.get_symbol_open_interest(symbol)
+                oi_data = res_oi if isinstance(res_oi, dict) else {}
+            except Exception:
+                oi_data = {}
             # Eğer son güncelleme 60s'den eskiyse, Just-in-Time taze OI çek
-            if oi_data.get('open_interest', 0.0) <= 0 or (time.time() - oi_data.get('last_update', 0.0)) > 60.0:
+            try:
+                oi_val = float(oi_data.get('open_interest', 0.0) or 0.0)
+                oi_upd = float(oi_data.get('last_update', 0.0) or 0.0)
+            except Exception:
+                oi_val = 0.0
+                oi_upd = 0.0
+            if oi_val <= 0 or (time.time() - oi_upd) > 60.0:
                 if hasattr(self.market_data, 'fetch_symbol_open_interest'):
                     try:
-                        oi_data = await self.market_data.fetch_symbol_open_interest(symbol)
+                        res_f = await self.market_data.fetch_symbol_open_interest(symbol)
+                        if isinstance(res_f, dict):
+                            oi_data = res_f
                     except Exception:
                         pass
 
@@ -1540,23 +1558,26 @@ class StrategyEngine:
         cb_spread_bps = float(cb_lead.get('spread_bps', 0.0))
         cb_dir = cb_lead.get('direction', 'NEUTRAL')
         cb_status = cb_lead.get('status', '')
+        cb_last_upd = float(cb_lead.get('last_update', 0.0))
+        cb_age_s = (time.time() - cb_last_upd) if cb_last_upd > 0 else 999.0
+        cb_is_stale = cb_age_s > 60.0  # VDA-08: 60 saniyeden eski Coinbase verisinde bypass devreye girer
 
         # Veto 1: Coinbase Spot Satış Baskısı (Kurumsal Ayı Öncüsü) varken Altcoin Boğa Tuzağı (Exit Liquidity Shield)
-        if ENABLE_COINBASE_LEAD_LAG and side == "LONG" and is_breakout and cb_spread_bps <= -COINBASE_LEAD_SPREAD_BPS:
+        if ENABLE_COINBASE_LEAD_LAG and not cb_is_stale and side == "LONG" and is_breakout and cb_spread_bps <= -COINBASE_LEAD_SPREAD_BPS:
             rej_msg = f"🛡️ Coinbase Spot Çapraz Borsa Kalkanı: Coinbase Spot BTC Binance'e kıyasla {cb_spread_bps:+.1f} bps negatif iskontolu (Kurumsal Satıcı Baskısı). Sahte boğa kırılımı riski sebebiyle LONG engellendi."
             print(f">> [RED - COINBASE SPOT DUMP] {symbol}: {rej_msg}")
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "COINBASE_SPOT_DUMP_GATE"}
 
         # Veto 2: Coinbase Spot Alıcı Rallisi varken Altcoin Ayı Tuzağı (Short Squeeze Shield)
-        if ENABLE_COINBASE_LEAD_LAG and side == "SHORT" and is_breakout and cb_spread_bps >= COINBASE_LEAD_SPREAD_BPS:
+        if ENABLE_COINBASE_LEAD_LAG and not cb_is_stale and side == "SHORT" and is_breakout and cb_spread_bps >= COINBASE_LEAD_SPREAD_BPS:
             rej_msg = f"🛡️ Coinbase Spot Çapraz Borsa Kalkanı: Coinbase Spot BTC Binance'e kıyasla {cb_spread_bps:+.1f} bps primli (Kurumsal Alıcı Baskısı). Ayı tuzağı riski sebebiyle SHORT breakdown engellendi."
             print(f">> [RED - COINBASE SPOT PUMP] {symbol}: {rej_msg}")
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "COINBASE_SPOT_PUMP_GATE"}
 
         # Coinbase Confluence Teyitleri:
-        if ENABLE_COINBASE_LEAD_LAG:
+        if ENABLE_COINBASE_LEAD_LAG and not cb_is_stale:
             if side == "LONG" and cb_spread_bps >= COINBASE_LEAD_SPREAD_BPS:
                 if confluence_list is not None and isinstance(confluence_list, list):
                     confluence_list.append("Coinbase_Spot_Boğa_Öncüsü_Teyitli")
@@ -1909,29 +1930,29 @@ class StrategyEngine:
             self.log_rejection(symbol, reason, "Seviye 3. kez test edildiği için taze likidite tükendi, işlem açılmadı")
             return {"error": "MAX_TOUCH_REACHED"}
 
-        self.margin_multiplier = 1.0
+        local_margin_mult = 1.0
         if cvd_margin_mult != 1.0:
-            self.margin_multiplier *= cvd_margin_mult
+            local_margin_mult *= cvd_margin_mult
         if obi_margin_mult != 1.0:
-            self.margin_multiplier *= obi_margin_mult
+            local_margin_mult *= obi_margin_mult
 
         # OI ve Coinbase Pro Spot Lead-Lag Pozisyon Büyütme Çarpanları
         if ENABLE_OI_VELOCITY_RADAR:
             if side == "LONG" and (oi_status == "AGGRESSIVE_LONG_EXPANSION" or delta_oi_pct >= OI_EXPANSION_THRESHOLD_PCT):
-                self.margin_multiplier *= 1.15
+                local_margin_mult *= 1.15
             elif side == "SHORT" and (oi_status == "AGGRESSIVE_SHORT_EXPANSION" or (delta_oi_pct >= OI_EXPANSION_THRESHOLD_PCT and oi_status != "BALANCED")):
-                self.margin_multiplier *= 1.15
+                local_margin_mult *= 1.15
 
         if ENABLE_COINBASE_LEAD_LAG:
             if side == "LONG" and cb_spread_bps >= COINBASE_LEAD_SPREAD_BPS:
-                self.margin_multiplier *= 1.10
+                local_margin_mult *= 1.10
             elif side == "SHORT" and cb_spread_bps <= -COINBASE_LEAD_SPREAD_BPS:
-                self.margin_multiplier *= 1.10
+                local_margin_mult *= 1.10
         
         # Madde 5 Kuralı (2. Temas)
         is_mean_rev = (trade_type == "SCALP" or any(k in reason for k in ["nPOC", "Destek", "Retest", "Reclaim", "Sekmesi", "S3", "R3", "Flip"]))
         if current_touch == 2:
-            self.margin_multiplier *= 0.5
+            local_margin_mult *= 0.5
             min_touch2_vol = 1.25 if is_mean_rev else 2.0
             if vol_surge < min_touch2_vol:
                 print(f">> [RED - MADDE 5] {symbol}: 2. Temasta hacim patlaması {min_touch2_vol:.2f}x altında ({vol_surge}x). İptal.")
@@ -1957,19 +1978,19 @@ class StrategyEngine:
         if vol_surge >= 4.0:
             if trade_type == "BREAKOUT":
                 print(f">> [CLIMAX KALKANI] {symbol}: Aşırı Hacim Climax ({vol_surge:.2f}x). Tepe tükeniş riskine karşı marjin x0.5 kısıldı.")
-                self.margin_multiplier *= 0.5
+                local_margin_mult *= 0.5
             elif "nPOC" in reason or "Reddi" in reason:
                 print(f">> [CLIMAX ONAYI] {symbol}: nPOC Reddi için {vol_surge:.2f}x hacim likidite emilimini onaylıyor. Marjin x1.2")
-                self.margin_multiplier *= 1.2
+                local_margin_mult *= 1.2
             else:
-                self.margin_multiplier *= 0.8
+                local_margin_mult *= 0.8
         elif vol_surge >= 2.0:
-            self.margin_multiplier *= 1.5
+            local_margin_mult *= 1.5
             
         # Confluence 4/4 Odulu
         c_count = len(confluence_list or [1])
         if c_count >= 4:
-            self.margin_multiplier *= 1.2
+            local_margin_mult *= 1.2
 
         # 1b. GÖRECELİ GÜÇ (RELATIVE STRENGTH VS BTC + ETH) & DİNAMİK RS HESABI (MADDE 9)
         rs_vs_btc = 0.0
@@ -2281,8 +2302,19 @@ class StrategyEngine:
         # ── ⚡ 2. BTC ANİ MİKRO-ŞOK KALKANI (60s Flush / Spike Gate) ──
         btc_velocity_60s = 0.0
         if self.market_data and hasattr(self.market_data, 'is_btc_shock_active'):
-            is_shock, shock_pct, rem_sec = self.market_data.is_btc_shock_active()
-            btc_velocity_60s = self.market_data.get_btc_velocity_60s()
+            try:
+                res_shock = self.market_data.is_btc_shock_active()
+                if isinstance(res_shock, (tuple, list)) and len(res_shock) >= 3:
+                    is_shock, shock_pct, rem_sec = res_shock[0], res_shock[1], res_shock[2]
+                else:
+                    is_shock, shock_pct, rem_sec = False, 0.0, 0
+            except Exception:
+                is_shock, shock_pct, rem_sec = False, 0.0, 0
+            try:
+                btc_velocity_60s = float(self.market_data.get_btc_velocity_60s() or 0.0)
+            except Exception:
+                btc_velocity_60s = 0.0
+
             if is_shock:
                 if shock_pct <= -BTC_SHOCK_60S_PCT and side == "LONG":
                     rej_msg = f"⚡ BTC 60s Mikro-Çöküş Kalkanı: Bitcoin son 60 saniyede %{shock_pct:+.2f} ani tasfiye şoku üretti ({rem_sec:.0f}s soğuma kaldı). Altcoin LONG engellendi."
@@ -2298,8 +2330,9 @@ class StrategyEngine:
         # ── ⚖️ 4. SPOT VS VADELİ AYRIŞMASI & BASIS KALKANI (Spot-Perp Basis & Absorption) ──
         spot_basis_bps = 0.0
         if self.market_data and hasattr(self.market_data, 'get_spot_perp_basis'):
-            sp_info = self.market_data.get_spot_perp_basis(symbol)
-            if sp_info.get("is_available", False):
+            sp_res = self.market_data.get_spot_perp_basis(symbol)
+            sp_info = sp_res if isinstance(sp_res, dict) else {}
+            if bool(sp_info.get("is_available", False)):
                 spot_basis_bps = float(sp_info.get("basis_bps", 0.0))
                 s_div = float(sp_info.get("spot_perp_divergence", 0.0))
 
@@ -2445,7 +2478,7 @@ class StrategyEngine:
                         dyn_regime_margin_scale = 0.50
                         reason += " [🛡️ Boğa Rejimi Korumalı Marjin (x0.50)]"
 
-        self.margin_multiplier *= dyn_regime_margin_scale
+        local_margin_mult *= dyn_regime_margin_scale
 
         # ── 6. ÜST ZAMAN DİLİMİ (HTF) MAKRO UYUMU ──
         mpoc_val = snaps.get('mpoc', 0.0)
@@ -2483,21 +2516,21 @@ class StrategyEngine:
         # Her paritede potansiyel dolar riskini ~$1.50 - $2.50 seviyesinde eşitlemek için:
         if "LONDRA" in session_str:
             if side == "SHORT":
-                self.margin_multiplier *= 1.1
+                local_margin_mult *= 1.1
             elif side == "LONG":
-                self.margin_multiplier *= 0.9
+                local_margin_mult *= 0.9
         elif "ASYA" in session_str:
             # Asya seansında yön ayrımı yapılmaz; hem Long hem Short eşit riskle çalışır
-            self.margin_multiplier *= 0.95
+            local_margin_mult *= 0.95
 
         # OTONOM COIN DNA LİGİ MARJİN VE RİSK ÖLÇEKLEMESİ
         persona_margin_mult = persona.get("margin_scale", 1.0)
-        self.margin_multiplier *= persona_margin_mult
+        local_margin_mult *= persona_margin_mult
 
         # 🎯 MODÜL 6: SETUP ÖNCELİĞİ & MAKRO HACİM PROFİLİ (mVAL / mVAH) TEŞVİKİ
         is_macro_volume_setup = any(s in setup_id for s in ["MVAH", "MVAL"]) or "mVAH" in reason or "mVAL" in reason
         if is_macro_volume_setup:
-            self.margin_multiplier *= 1.15
+            local_margin_mult *= 1.15
 
         # ⚖️ 1. DİNAMİK KASA VE BİLEŞİK GETİRİ RİSK PARİTESİ (DYNAMIC EQUITY RISK PARITY & COMPOUNDING ENGINE)
         # Kasanın anlık bakiyesine endeksli %0.80 dinamik risk hedeflenir ($10,000 için $80.00 net stop riski).
@@ -2520,7 +2553,7 @@ class StrategyEngine:
         # 🐋 KURUMSAL BALİNA ONAYLI SEVİYE HÜCUM MARJİNİ (Sniper Sizing)
         has_whale_flow = (cvd_confirmed or cvd_margin_mult > 1.0) and (obi_confirmed or obi_margin_mult > 1.0)
         if has_whale_flow:
-            self.margin_multiplier *= 1.15
+            local_margin_mult *= 1.15
             reason += " [🐋 Balina Teyitli Seviye]"
             if confluence_list is not None and isinstance(confluence_list, list) and "🐋_Balina_Akışı_Teyidi" not in confluence_list:
                 confluence_list.append("🐋_Balina_Akışı_Teyidi")
@@ -2529,9 +2562,9 @@ class StrategyEngine:
         is_gex_pin = bool(sym_met.get("is_gex_pinning", False)) if sym_met else False
         is_ice_sniper_active = bool(sym_met.get("is_iceberg_sniper_buy", False) or sym_met.get("is_iceberg_sniper_sell", False)) if sym_met else False
         if is_gex_pin and trade_type == "SCALP":
-            self.margin_multiplier *= 1.25
+            local_margin_mult *= 1.25
         if is_ice_sniper_active:
-            self.margin_multiplier *= 1.20
+            local_margin_mult *= 1.20
 
         c_count = len(confluence_list or [1])
 
@@ -2583,7 +2616,8 @@ class StrategyEngine:
         p_margin_scale = float(persona.get("dynamic_margin_scale", persona.get("margin_scale", 1.0)))
         scaled_min_bound = dyn_min_margin_bound * min(1.0, p_margin_scale)
         scaled_max_cap = max_margin_cap * p_margin_scale
-        dyn_margin = round(max(scaled_min_bound, min(scaled_max_cap, base_calc_margin * kelly_mult * getattr(self, 'margin_multiplier', 1.0) * p_margin_scale)), 2)
+        self.margin_multiplier = local_margin_mult
+        dyn_margin = round(max(scaled_min_bound, min(scaled_max_cap, base_calc_margin * kelly_mult * local_margin_mult * p_margin_scale)), 2)
 
         # Katı Dolar Riski Tavanı (Maksimum $25 Dolar Riski Kalkanı - Hiçbir işlem $25'ten fazla riske atamaz)
         calculated_dollar_risk = round(dyn_margin * float(dyn_leverage) * effective_stop_pct, 2)
@@ -2733,20 +2767,22 @@ class StrategyEngine:
 
         if side == "LONG":
             atr_hard_stop = round(entry_price - stop_dist, 6)
+            has_structural_stop = False
             
             # 1. Öncelik: Kurulumun kendi yapısal seviye stopu (Camarilla S4, AVWAP, nPOC)
             if caller_hard_stop and 0 < caller_hard_stop <= (entry_price - min_allowed_stop_dist):
                 caller_dist_pct = abs(entry_price - caller_hard_stop) / entry_price * 100.0
                 if caller_dist_pct <= MAX_ENTRY_STOP_DIST_PCT:
                     chosen_stop = caller_hard_stop
+                    has_structural_stop = True
                 else:
                     chosen_stop = atr_hard_stop
             else:
                 chosen_stop = atr_hard_stop
 
-            # 2. Öncelik: Swing Low arkasına gizleme (Sadece sniper sınırları içindeyse)
-            if swing_stop and (entry_price - min_allowed_stop_dist) >= swing_stop >= (entry_price * (1.0 - MAX_ENTRY_STOP_DIST_PCT / 100.0)):
-                chosen_stop = max(chosen_stop, swing_stop)
+            # 2. Öncelik: Swing Low arkasına gizleme (VDA-18: Kurulum yapısal stop verdiyse swing_stop bunu ezemez)
+            if not has_structural_stop and swing_stop and (entry_price - min_allowed_stop_dist) >= swing_stop >= (entry_price * (1.0 - MAX_ENTRY_STOP_DIST_PCT / 100.0)):
+                chosen_stop = swing_stop
             
             # Mutlak Sermaye Zırhı: MAX_ABSOLUTE_STOP_PCT tavanını aşamaz
             absolute_floor = round(entry_price * (1.0 - (MAX_ABSOLUTE_STOP_PCT / 100.0)), 6)
@@ -2777,20 +2813,22 @@ class StrategyEngine:
                 tp2 = round(max(tp1 * 1.015, entry_price + tp2_dist), 6)
         else:
             atr_hard_stop = round(entry_price + stop_dist, 6)
+            has_structural_stop = False
             
             # 1. Öncelik: Kurulumun kendi yapısal seviye stopu (Camarilla R4, AVWAP, nPOC)
             if caller_hard_stop and caller_hard_stop >= (entry_price + min_allowed_stop_dist):
                 caller_dist_pct = abs(caller_hard_stop - entry_price) / entry_price * 100.0
                 if caller_dist_pct <= MAX_ENTRY_STOP_DIST_PCT:
                     chosen_stop = caller_hard_stop
+                    has_structural_stop = True
                 else:
                     chosen_stop = atr_hard_stop
             else:
                 chosen_stop = atr_hard_stop
 
-            # 2. Öncelik: Swing High arkasına gizleme (Sadece sniper sınırları içindeyse)
-            if swing_stop and (entry_price + min_allowed_stop_dist) <= swing_stop <= (entry_price * (1.0 + MAX_ENTRY_STOP_DIST_PCT / 100.0)):
-                chosen_stop = min(chosen_stop, swing_stop)
+            # 2. Öncelik: Swing High arkasına gizleme (VDA-18: Kurulum yapısal stop verdiyse swing_stop bunu ezemez)
+            if not has_structural_stop and swing_stop and (entry_price + min_allowed_stop_dist) <= swing_stop <= (entry_price * (1.0 + MAX_ENTRY_STOP_DIST_PCT / 100.0)):
+                chosen_stop = swing_stop
             
             # Mutlak Sermaye Zırhı: MAX_ABSOLUTE_STOP_PCT tavanını aşamaz
             absolute_ceiling = round(entry_price * (1.0 + (MAX_ABSOLUTE_STOP_PCT / 100.0)), 6)
@@ -2823,7 +2861,11 @@ class StrategyEngine:
         # ── 8b. JUST-IN-TIME (JIT) L2 DERİNLİK & SPOOFING KALKANI (COIN DNA ADAPTİF) ──
         if self.market_data and hasattr(self.market_data, 'get_jit_l2_depth'):
             try:
-                l2_info = await self.market_data.get_jit_l2_depth(symbol)
+                res_l2 = self.market_data.get_jit_l2_depth(symbol)
+                if asyncio.iscoroutine(res_l2) or hasattr(res_l2, '__await__'):
+                    l2_info = await res_l2
+                else:
+                    l2_info = res_l2 if isinstance(res_l2, dict) else {}
                 l2_ratio = float(l2_info.get('l2_ratio', 1.0))
                 top_ratio = float(l2_info.get('top_ratio', 1.0))
                 depth_ok = bool(l2_info.get('depth_available', False))
@@ -2926,16 +2968,18 @@ class StrategyEngine:
 
 
                     # 🌡️ LUDWIG BOLTZMANN EMİR DEFTERİ ENTROPİ KALKANI:
-                    # L2 tahtasındaki likidite dağılımının kaotik mi yoksa kristalleşmiş kurumsal blokaj mı olduğunu ölçer.
+                    # L2 tahtasındaki likidite dağılımının dengeli kurumsal derinlik mi yoksa tek duvar spoofing mi olduğunu ölçer.
                     entropy_norm = float(l2_info.get('entropy_norm', 0.70))
-                    if entropy_norm >= 0.88:
-                        rej_msg = f"🌡️ Boltzmann Entropi Kalkanı [{archetype_label}]: L2 tahta entropisi %{entropy_norm*100:.1f} >= %88.0 (Kaotik & Dağınık Tahta). Kurumsal savunma çapası yok, işlem engellendi."
-                        print(f">> [RED - BOLTZMANN KAOS] {symbol}: {rej_msg}")
+                    # VDA-25: Düşük entropi (<0.40) likiditenin tek bir kademede anormal yoğunlaştığını (spoofing/çöküş riski) gösterir.
+                    # Yüksek entropi (>=0.80) ise 20 kademeye eşit dağılmış derin, sağlıklı kurumsal tahtadır.
+                    if entropy_norm < 0.40:
+                        rej_msg = f"🌡️ Boltzmann Entropi Kalkanı [{archetype_label}]: L2 tahta entropisi %{entropy_norm*100:.1f} < %40.0 (Anormal Yoğunlaşma / Tek Duvar Spoofing Riski). Tahta kırılgan, işlem engellendi."
+                        print(f">> [RED - BOLTZMANN ANORMAL YOĞUNLAŞMA] {symbol}: {rej_msg}")
                         self.log_rejection(symbol, reason, rej_msg, entropyNorm=entropy_norm, isChaotic=True)
-                        return {"error": "BOLTZMANN_HIGH_ENTROPY_CHAOS_BLOCKED"}
-                    elif entropy_norm <= 0.60:
-                        if confluence_list is not None and isinstance(confluence_list, list) and "🌡️_Boltzmann_Kristal_Tahta_Teyidi" not in confluence_list:
-                            confluence_list.append("🌡️_Boltzmann_Kristal_Tahta_Teyidi")
+                        return {"error": "BOLTZMANN_LOW_ENTROPY_SPOOF_BLOCKED"}
+                    elif entropy_norm >= 0.80:
+                        if confluence_list is not None and isinstance(confluence_list, list) and "🌡️_Boltzmann_Derin_Likidite_Teyidi" not in confluence_list:
+                            confluence_list.append("🌡️_Boltzmann_Derin_Likidite_Teyidi")
 
                     # 🧊 KEN GRIFFIN GİZLİ LİKİDİTE (ICEBERG / BUZDAĞI) KALKANI:
                     # Dirençte veya destekte görünmeyen kurumsal buzdağı emirlerini yakalar.
@@ -3101,6 +3145,28 @@ class StrategyEngine:
         except Exception:
             pass
 
+        # VDA-32: VAMPİR BTC VE AYI CVD UYUMSUZLUĞU VETO KALKANI
+        is_btc = symbol in ["BTC/USDT", "BTCUSDT", "BTC/USDT:USDT"]
+        macro_dom_clean = str(macro_dom_tag).upper().replace("İ", "I")
+        if not is_btc and side == "LONG" and ("VAMPIR_BTC" in macro_dom_clean or "VAMPIR" in macro_dom_clean):
+            rej_msg = f"🧛 Vampir BTC Kalkanı: BTC likiditeyi emerken altcoin LONG işlemi veto edildi ({macro_dom_tag})"
+            try:
+                print(f">> [RED - VAMPIR BTC VETO] {symbol}: {rej_msg}")
+            except Exception:
+                pass
+            self.log_rejection(symbol, setup_id or reason, rej_msg)
+            return {"error": "VAMPIRE_BTC_ALT_LONG_VETO", "reason": rej_msg}
+
+        cvd_div_clean = str(cvd_div_tag).upper().replace("İ", "I").replace("Ğ", "G")
+        if side == "LONG" and ("BREAKOUT" in str(trade_type).upper() or "BREAKOUT" in str(setup_id).upper()) and ("AYI_UYUMSUZLUGU" in cvd_div_clean or "AYI" in cvd_div_clean):
+            rej_msg = f"🚨 CVD Ayı Uyumsuzluğu Kalkanı: Zirvede alıcı tükenişi (Bull Trap riski) sebebiyle Breakout LONG veto edildi ({cvd_div_tag})"
+            try:
+                print(f">> [RED - CVD AYI UYUMSUZLUGU VETO] {symbol}: {rej_msg}")
+            except Exception:
+                pass
+            self.log_rejection(symbol, setup_id or reason, rej_msg)
+            return {"error": "BEARISH_CVD_DIVERGENCE_BREAKOUT_VETO", "reason": rej_msg}
+
         macro_clim = self.get_macro_climate()
         res = await self._safe_open_position(
             symbol=symbol, side=side, entry_price=entry_price,
@@ -3121,7 +3187,7 @@ class StrategyEngine:
             eth_leading=macro_clim.get('eth_leading', False),
             cvd_pct=cvd_pct, candle_velocity=candle_velocity,
             wick_ratio_pct=wick_ratio_pct,
-            margin_multiplier=getattr(self, 'margin_multiplier', 1.0),
+            margin_multiplier=local_margin_mult if 'local_margin_mult' in locals() else getattr(self, 'margin_multiplier', 1.0),
             touch_count=current_touch if 'current_touch' in locals() else 1,
             entry_funding_rate=f_rate_pct,
             funding_status=squeeze_status,
@@ -3591,37 +3657,41 @@ class StrategyEngine:
             cvd_info_rec = self.market_data.get_symbol_cvd(symbol) if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
             cvd_ratio_rec = cvd_info_rec.get('ratio_60s', 50.0)
             
-            # SHORT TUZAĞI (Bear Trap Reclaim):
-            # Önceki SHORT pozisyon sahte fitille yukarı stoplandı; ancak fiyat tekrar direncin altına satıcı hacmiyle çöktü
+            # SHORT TUZAĞI (Bull Trap Reclaim - Direnç Üstünde Boğalar Avlandı, Fiyat Seviye Altına Döndü):
             if stopped_side == "SHORT" and close_price < orig_level and cvd_ratio_rec <= 48.0:
                 print(f">> [🪤 FAKEOUT RECLAIM SHORT] {symbol}: Fiyat ${orig_level:.4f} altına satıcı baskısıyla (%{cvd_ratio_rec:.1f}) geri kazanıldı! İntikam Short açılıyor...")
                 del self.recently_stopped_levels[symbol]
-                fakeout_short_stop = min(orig_level * 1.004, close_price * 1.0055)
+                coin_atr_rec = self.get_symbol_atr_pct(symbol)
+                dyn_rec_pct = max(0.0060, min(0.0150, coin_atr_rec * 0.35))
+                fakeout_short_stop = max(orig_level * (1.0 + dyn_rec_pct * 0.5), close_price * (1.0 + dyn_rec_pct))
+                fakeout_soft_stop = max(orig_level * (1.0 + dyn_rec_pct * 0.4), close_price * (1.0 + max(0.0060, dyn_rec_pct * 0.85)))
                 await self._handle_open(
                     symbol=symbol, side="SHORT", entry_price=close_price,
                     reason=f"🪤 Fakeout Reclaim Sniper Short (${orig_level:.4f} Direnç Tuzağı İntikamı)",
-                    soft_stop=min(orig_level * 1.003, close_price * 1.0050), hard_stop=fakeout_short_stop,
+                    soft_stop=fakeout_soft_stop, hard_stop=fakeout_short_stop,
                     tp1=reclaim_info.get("tp1"), tp2=reclaim_info.get("tp2"),
                     trade_type="SCALP", snapshot_levels=levels,
                     setup_id="SETUP_FAKEOUT_RECLAIM_SHORT",
-                    confluence_list=["🪤_Fakeout_Reclaim_Teyidi", "🛡️_Ayı_Tuzağı_İntikamı"]
+                    confluence_list=["🪤_Fakeout_Reclaim_Teyidi", "🛡️_Boğa_Tuzağı_İntikamı"]
                 )
                 return
 
-            # LONG TUZAĞI (Bull Trap Reclaim):
-            # Önceki LONG pozisyon sahte fitille aşağı stoplandı; ancak fiyat tekrar desteğin üstüne alıcı hacmiyle sıçradı
+            # LONG TUZAĞI (Bear Trap Reclaim - Destek Altında Ayılar Avlandı, Fiyat Seviye Üstüne Fırladı):
             elif stopped_side == "LONG" and close_price > orig_level and cvd_ratio_rec >= 52.0:
                 print(f">> [🪤 FAKEOUT RECLAIM LONG] {symbol}: Fiyat ${orig_level:.4f} üstüne alıcı baskısıyla (%{cvd_ratio_rec:.1f}) geri kazanıldı! İntikam Long açılıyor...")
                 del self.recently_stopped_levels[symbol]
-                fakeout_long_stop = max(orig_level * 0.996, close_price * 0.9945)
+                coin_atr_rec = self.get_symbol_atr_pct(symbol)
+                dyn_rec_pct = max(0.0060, min(0.0150, coin_atr_rec * 0.35))
+                fakeout_long_stop = min(orig_level * (1.0 - dyn_rec_pct * 0.5), close_price * (1.0 - dyn_rec_pct))
+                fakeout_soft_stop = min(orig_level * (1.0 - dyn_rec_pct * 0.4), close_price * (1.0 - max(0.0060, dyn_rec_pct * 0.85)))
                 await self._handle_open(
                     symbol=symbol, side="LONG", entry_price=close_price,
                     reason=f"🪤 Fakeout Reclaim Sniper Long (${orig_level:.4f} Destek Tuzağı İntikamı)",
-                    soft_stop=max(orig_level * 0.997, close_price * 0.9950), hard_stop=fakeout_long_stop,
+                    soft_stop=fakeout_soft_stop, hard_stop=fakeout_long_stop,
                     tp1=reclaim_info.get("tp1"), tp2=reclaim_info.get("tp2"),
                     trade_type="SCALP", snapshot_levels=levels,
                     setup_id="SETUP_FAKEOUT_RECLAIM_LONG",
-                    confluence_list=["🪤_Fakeout_Reclaim_Teyidi", "🛡️_Boğa_Tuzağı_İntikamı"]
+                    confluence_list=["🪤_Fakeout_Reclaim_Teyidi", "🛡️_Ayı_Tuzağı_İntikamı"]
                 )
                 return
 
@@ -3787,11 +3857,11 @@ class StrategyEngine:
                 candidates = [c for c in [above_npoc, above_nvah, tepe_avwap] if c and c >= tp1 * 1.008]
                 tp2 = min(candidates) if candidates else (mvah if (mvah >= tp1 * 1.008) else None)
                 coin_atr = self.get_symbol_atr_pct(symbol)
-                dyn_stop_pct = max(0.0030, min(0.0055, coin_atr * 0.35))
+                dyn_stop_pct = max(0.0060, min(0.0150, coin_atr * 0.35))
                 buffer = r4 * dyn_stop_pct
-                soft_stop = r4 - buffer
-                raw_stop = r3 if (r3 > 0 and r3 < r4 and (r4 - r3)/r4 <= 0.0075) else (r4 - buffer)
-                hard_stop = max(raw_stop, close_price * 0.9940)
+                raw_stop = r3 if (r3 > 0 and r3 < r4 and (r4 - r3)/r4 <= 0.015) else (r4 - buffer)
+                hard_stop = min(raw_stop, close_price * (1.0 - dyn_stop_pct))
+                soft_stop = min(raw_stop, close_price * (1.0 - max(0.0060, dyn_stop_pct * 0.85)))
 
                 setup_label = "SETUP_1_OI_LONG_EXPANSION" if is_oi_bull_expansion else "SETUP_1_R4_BREAKOUT"
                 reason_label = "Kurumsal OI Boğa Taarruzu (Taze Long Akışı + R4 Üstü)" if is_oi_bull_expansion else "Taze R4 Breakout + Tepe AVWAP Ustu Onay"
@@ -3881,11 +3951,11 @@ class StrategyEngine:
                 candidates = [c for c in [below_npoc, below_nval, dip_avwap] if c and c <= tp1 * 0.992]
                 tp2 = max(candidates) if candidates else (mval if (mval > 0 and mval <= tp1 * 0.992) else None)
                 coin_atr = self.get_symbol_atr_pct(symbol)
-                dyn_stop_pct = max(0.0030, min(0.0055, coin_atr * 0.35))
+                dyn_stop_pct = max(0.0060, min(0.0150, coin_atr * 0.35))
                 buffer = s4 * dyn_stop_pct
-                soft_stop = s4 + buffer
-                raw_stop = s3 if (s3 > 0 and s3 > s4 and (s3 - s4)/s4 <= 0.0075) else (s4 + buffer)
-                hard_stop = min(raw_stop, close_price * 1.0060)
+                raw_stop = s3 if (s3 > 0 and s3 > s4 and (s3 - s4)/s4 <= 0.015) else (s4 + buffer)
+                hard_stop = max(raw_stop, close_price * (1.0 + dyn_stop_pct))
+                soft_stop = max(raw_stop, close_price * (1.0 + max(0.0060, dyn_stop_pct * 0.85)))
 
                 setup_label = "SETUP_2_OI_SHORT_EXPANSION" if is_oi_bear_expansion else "SETUP_2_S4_BREAKDOWN"
                 reason_label = "Kurumsal OI Ayı Taarruzu (Taze Short Akışı + S4 Altı)" if is_oi_bear_expansion else "Taze S4 Breakdown + Ayı İvmesi Onayı"
@@ -4023,10 +4093,12 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 3 S3 Destek", f"CVD Emilim Kalkanı: S3 desteğinde taker satıcı baskısı (%{100-cvd_ratio_s3_abs:.1f} satıcı) aşırı agresif. Akıllı para emilimi görülmedi.")
                 return
 
-            buffer = (s3 - s4) * BUFFER_RATIO if (s3 > s4) else (s3 * 0.003)
-            soft_stop = max(s3 - buffer, close_price * 0.9950)
-            raw_stop = s4 if (s4 > 0 and s4 < s3 and (s3 - s4)/s3 <= 0.0075) else (s3 - buffer)
-            hard_stop = max(raw_stop, close_price * 0.9945)
+            coin_atr = self.get_symbol_atr_pct(symbol)
+            dyn_stop_pct = max(0.0060, min(0.0150, coin_atr * 0.35))
+            buffer = max(s3 * 0.003, (s3 - s4) * BUFFER_RATIO if (s3 > s4) else (s3 * dyn_stop_pct * 0.5))
+            raw_stop = s4 if (s4 > 0 and s4 < s3 and (s3 - s4)/s3 <= 0.015) else (s3 - buffer)
+            hard_stop = min(raw_stop, close_price * (1.0 - dyn_stop_pct))
+            soft_stop = min(raw_stop, close_price * (1.0 - max(0.0060, dyn_stop_pct * 0.85)))
             up_targets = [lvl for lvl in [dip_avwap, tepe_avwap, mpoc, p, r3] if lvl and lvl > close_price * 1.008]
             up_targets.sort()
             tp1 = up_targets[0] if up_targets else (close_price * 1.012)
@@ -4041,9 +4113,9 @@ class StrategyEngine:
             if is_ice_sniper:
                 ice_reason = sym_met.get("iceberg_offense_reason", "")
                 c_list.append("Iceberg_Offense_Sniper_Long")
-                # Kurumsal alıcı buzdağı arkasına asimetrik dar stop (%0.25 taban)
-                soft_stop = max(s3 - buffer * 0.4, close_price * 0.9975)
-                hard_stop = max(close_price * 0.9970, s3 - buffer * 0.6)
+                # Kurumsal alıcı buzdağı arkasına güvenli stop (en az %0.60 nefes payı - VDA-16)
+                soft_stop = min(s3 - buffer * 0.5, close_price * (1.0 - max(0.0060, dyn_stop_pct * 0.85)))
+                hard_stop = min(s3 - buffer * 0.6, close_price * (1.0 - dyn_stop_pct))
                 reason_label = f"S3 Destek Sekmesi + {ice_reason} (İlk Hedef {target_name}: ${tp1:.4f})"
             else:
                 reason_label = f"S3 Destek Sekmesi (İlk Hedef {target_name}: ${tp1:.4f})"
@@ -4103,10 +4175,12 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 4 R3 Direnç", f"CVD Boğa İtişi Kalkanı: R3 test ediliyor fakat taker alıcı baskısı (%{cvd_ratio_r3:.1f} alıcı) aşırı agresif. Tepeye kafa atılmadı.")
                 return
 
-            buffer = (r4 - r3) * BUFFER_RATIO if (r4 > r3) else (r3 * 0.003)
-            soft_stop = min(r3 + buffer, close_price * 1.0050)
-            raw_stop = r4 if (r4 > 0 and r4 > r3 and (r4 - r3)/r3 <= 0.0075) else (r3 + buffer)
-            hard_stop = min(raw_stop, close_price * 1.0055)
+            coin_atr = self.get_symbol_atr_pct(symbol)
+            dyn_stop_pct = max(0.0060, min(0.0150, coin_atr * 0.35))
+            buffer = max(r3 * 0.003, (r4 - r3) * BUFFER_RATIO if (r4 > r3) else (r3 * dyn_stop_pct * 0.5))
+            raw_stop = r4 if (r4 > 0 and r4 > r3 and (r4 - r3)/r3 <= 0.015) else (r3 + buffer)
+            hard_stop = max(raw_stop, close_price * (1.0 + dyn_stop_pct))
+            soft_stop = max(raw_stop, close_price * (1.0 + max(0.0060, dyn_stop_pct * 0.85)))
             down_targets = [lvl for lvl in [tepe_avwap, dip_avwap, mpoc, p, s3] if lvl and lvl < close_price * 0.992]
             down_targets.sort(reverse=True)
             tp1 = down_targets[0] if down_targets else (close_price * 0.988)
@@ -4121,9 +4195,9 @@ class StrategyEngine:
             if is_ice_sniper:
                 ice_reason = sym_met.get("iceberg_offense_reason", "")
                 c_list.append("Iceberg_Offense_Sniper_Short")
-                # Kurumsal satıcı buzdağı arkasına asimetrik dar stop (%0.25 taban)
-                soft_stop = min(r3 + buffer * 0.4, close_price * 1.0025)
-                hard_stop = min(close_price * 1.0030, r3 + buffer * 0.6)
+                # Kurumsal satıcı buzdağı arkasına güvenli stop (en az %0.60 nefes payı - VDA-16)
+                soft_stop = max(r3 + buffer * 0.5, close_price * (1.0 + max(0.0060, dyn_stop_pct * 0.85)))
+                hard_stop = max(r3 + buffer * 0.6, close_price * (1.0 + dyn_stop_pct))
                 reason_label = f"R3 Direnc Tepkisi + {ice_reason} (İlk Hedef {target_name}: ${tp1:.4f})"
             else:
                 reason_label = f"R3 Direnc Tepkisi (İlk Hedef {target_name}: ${tp1:.4f})"
@@ -4185,18 +4259,30 @@ class StrategyEngine:
                 return
 
             coin_atr = self.get_symbol_atr_pct(symbol)
-            dyn_stop_pct = max(0.0030, min(0.0055, coin_atr * 0.35))
+            dyn_stop_pct = max(0.0060, min(0.0150, coin_atr * 0.35))
             buffer = r4 * dyn_stop_pct
-            soft_stop = max(r4 - buffer, close_price * 0.9950)
-            hard_stop = max(r4 - buffer, close_price * 0.9945)
+            soft_stop = min(r4 - buffer, close_price * (1.0 - max(0.0060, dyn_stop_pct * 0.85)))
+            hard_stop = min(r4 - buffer, close_price * (1.0 - dyn_stop_pct))
             target_r5 = r5 if (r5 >= close_price * 1.008) else (mvah if (mvah >= close_price * 1.008) else close_price * 1.015)
+            tp2_target = round(target_r5 * 1.015, 6) if (mvah and mvah > target_r5 * 1.008) else round(target_r5 * 1.015, 6)
+
+            c_list = ["R4_Retest", "Support_Flip"]
+            if wick_ratio >= 0.20:
+                c_list.append("Buyer_Wick_Absorption")
+            if vol_surge >= 1.20:
+                c_list.append(f"Volume_Surge_{vol_surge:.1f}x")
+            if tepe_avwap > 0 and close_price >= tepe_avwap:
+                c_list.append("Above_Tepe_AVWAP")
+            if daily_avwap > 0 and close_price > daily_avwap:
+                c_list.append("Daily_AVWAP_Bull")
+
             await self._handle_open(
                 symbol=symbol, side="LONG", entry_price=close_price,
                 reason="R4 Destek Retest Sekmesi (Support Flip)",
                 soft_stop=soft_stop, hard_stop=hard_stop,
-                tp1=target_r5, trade_type="SCALP",
+                tp1=target_r5, tp2=tp2_target, trade_type="SCALP",
                 snapshot_levels=levels, setup_id="SETUP_5_R4_SUPPORT_FLIP",
-                confluence_list=["R4_Retest", "Support_Flip"]
+                confluence_list=c_list
             )
             return
 
@@ -4228,10 +4314,11 @@ class StrategyEngine:
             candidates = [c for c in [above_npoc, above_nvah, r5, tepe_avwap] if c and c >= close_price * 1.008]
             target = min(candidates) if candidates else close_price * 1.018
             coin_atr = self.get_symbol_atr_pct(symbol)
-            dyn_stop_pct = max(0.0030, min(0.0055, coin_atr * 0.35))
+            dyn_stop_pct = max(0.0060, min(0.0150, coin_atr * 0.35))
             buffer = mvah * dyn_stop_pct
-            soft_stop = round(max(mvah - buffer, close_price * 0.9950), 6)
-            hard_stop = round(max(mvah - buffer, close_price * 0.9940), 6)
+            soft_stop = round(min(mvah - buffer, close_price * (1.0 - max(0.0060, dyn_stop_pct * 0.85))), 6)
+            hard_stop = round(min(mvah - buffer, close_price * (1.0 - dyn_stop_pct)), 6)
+            tp2_target = round(target * 1.020, 6)
             reason_lbl6 = "mVAH Aylik Direnc Kirilimi (Macro Breakout)"
             c_list6 = ["mVAH_Breakout", "Volume_Profile_Expansion"]
             if sym_met.get("is_stoikov_bull", False):
@@ -4254,7 +4341,7 @@ class StrategyEngine:
                 symbol=symbol, side="LONG", entry_price=close_price,
                 reason=reason_lbl6,
                 soft_stop=soft_stop, hard_stop=hard_stop,
-                tp1=target, trade_type="BREAKOUT",
+                tp1=target, tp2=tp2_target, trade_type="BREAKOUT",
                 snapshot_levels=levels, setup_id="SETUP_6_MVAH_MACRO_BREAKOUT",
                 confluence_list=c_list6
             )
@@ -4285,18 +4372,30 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 7 S4 Resistance Flip", f"Retest hacmi {vol_surge:.2f}x yetersiz (en az {min_retest_vol:.2f}x aranıyor)")
                 return
 
-            buffer = (s3 - s4) * BUFFER_RATIO if (s3 > s4) else (s4 * 0.003)
-            soft_stop = min(s4 + buffer, close_price * 1.0050)
-            raw_stop = s3 if (s3 > 0 and s3 > s4 and (s3 - s4)/s4 <= 0.0075) else (s4 + buffer)
-            hard_stop = min(raw_stop, close_price * 1.0055)
+            coin_atr = self.get_symbol_atr_pct(symbol)
+            dyn_stop_pct = max(0.0060, min(0.0150, coin_atr * 0.35))
+            buffer = max(s4 * 0.003, (s3 - s4) * BUFFER_RATIO if (s3 > s4) else (s4 * dyn_stop_pct * 0.5))
+            raw_stop = s3 if (s3 > 0 and s3 > s4 and (s3 - s4)/s4 <= 0.015) else (s4 + buffer)
+            hard_stop = max(raw_stop, close_price * (1.0 + dyn_stop_pct))
+            soft_stop = max(raw_stop, close_price * (1.0 + max(0.0060, dyn_stop_pct * 0.85)))
             target_s5 = s5 if (s5 > 0 and s5 <= close_price * 0.992) else (mval if (mval > 0 and mval <= close_price * 0.992) else close_price * 0.985)
+            tp2_target7 = round(target_s5 * 0.985, 6)
+
+            c_list7 = ["S4_Retest", "Resistance_Flip"]
+            if wick_ratio >= 0.20:
+                c_list7.append("Seller_Wick_Rejection")
+            if vol_surge >= 1.20:
+                c_list7.append(f"Volume_Surge_{vol_surge:.1f}x")
+            if daily_avwap > 0 and close_price < daily_avwap:
+                c_list7.append("Daily_AVWAP_Bear")
+
             await self._handle_open(
                 symbol=symbol, side="SHORT", entry_price=close_price,
                 reason="S4 Direnc Retest Sekmesi (Resistance Flip)",
                 soft_stop=soft_stop, hard_stop=hard_stop,
-                tp1=target_s5, trade_type="SCALP",
+                tp1=target_s5, tp2=tp2_target7, trade_type="SCALP",
                 snapshot_levels=levels, setup_id="SETUP_7_S4_RESISTANCE_FLIP",
-                confluence_list=["S4_Retest", "Resistance_Flip"]
+                confluence_list=c_list7
             )
             return
 
@@ -4328,10 +4427,11 @@ class StrategyEngine:
             candidates = [c for c in [below_npoc, below_nval, s5, dip_avwap] if c and c <= close_price * 0.992]
             target = max(candidates) if candidates else close_price * 0.982
             coin_atr = self.get_symbol_atr_pct(symbol)
-            dyn_stop_pct = max(0.0030, min(0.0055, coin_atr * 0.35))
+            dyn_stop_pct = max(0.0060, min(0.0150, coin_atr * 0.35))
             buffer = mval * dyn_stop_pct
-            soft_stop = round(min(mval + buffer, close_price * 1.0050), 6)
-            hard_stop = round(min(mval + buffer, close_price * 1.0060), 6)
+            soft_stop = round(max(mval + buffer, close_price * (1.0 + max(0.0060, dyn_stop_pct * 0.85))), 6)
+            hard_stop = round(max(mval + buffer, close_price * (1.0 + dyn_stop_pct)), 6)
+            tp2_target8 = round(target * 0.980, 6)
             reason_lbl8 = "mVAL Aylik Destek Kirilimi (Macro Breakdown)"
             c_list8 = ["mVAL_Breakdown", "Volume_Profile_Collapse"]
             if sym_met.get("is_stoikov_bear", False):
@@ -4354,7 +4454,7 @@ class StrategyEngine:
                 symbol=symbol, side="SHORT", entry_price=close_price,
                 reason=reason_lbl8,
                 soft_stop=soft_stop, hard_stop=hard_stop,
-                tp1=target, trade_type="BREAKOUT",
+                tp1=target, tp2=tp2_target8, trade_type="BREAKOUT",
                 snapshot_levels=levels, setup_id="SETUP_8_MVAL_MACRO_BREAKDOWN",
                 confluence_list=c_list8
             )
@@ -4459,10 +4559,12 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 9 nPOC Sekmesi", f"CVD Emilim Kalkanı: nPOC seviyesinde taker satıcı baskısı (%{100-cvd_ratio_npoc_abs:.1f} satıcı) aşırı agresif. Akıllı para emilimi görülmedi.")
                 return
 
-            buffer = (p - support_npoc) * BUFFER_RATIO if (p > support_npoc) else (support_npoc * 0.003)
-            soft_stop = max(support_npoc - buffer, close_price * 0.9950)
-            raw_hard_stop = s4 if (s4 > 0 and s4 < support_npoc and (support_npoc - s4)/support_npoc <= 0.0075) else (support_npoc - buffer)
-            hard_stop = max(raw_hard_stop, close_price * 0.9945)
+            coin_atr = self.get_symbol_atr_pct(symbol)
+            dyn_stop_pct = max(0.0060, min(0.0150, coin_atr * 0.35))
+            buffer = max(support_npoc * 0.003, (p - support_npoc) * BUFFER_RATIO if (p > support_npoc) else (support_npoc * dyn_stop_pct * 0.5))
+            raw_hard_stop = s4 if (s4 > 0 and s4 < support_npoc and (support_npoc - s4)/support_npoc <= 0.015) else (support_npoc - buffer)
+            hard_stop = min(raw_hard_stop, close_price * (1.0 - dyn_stop_pct))
+            soft_stop = min(raw_hard_stop, close_price * (1.0 - max(0.0060, dyn_stop_pct * 0.85)))
 
             # Smart Multi-Target: En yakin ilk direnci TP1, nihai hedefi TP2 yap
             up_targets = [
@@ -4494,8 +4596,8 @@ class StrategyEngine:
             if is_ice_sniper:
                 ice_reason = sym_met.get("iceberg_offense_reason", "")
                 c_list.append("Iceberg_Offense_Sniper_Long")
-                soft_stop = max(support_npoc - buffer * 0.4, close_price * 0.9975)
-                hard_stop = max(close_price * 0.9970, support_npoc - buffer * 0.6)
+                soft_stop = min(support_npoc - buffer * 0.5, close_price * (1.0 - max(0.0060, dyn_stop_pct * 0.85)))
+                hard_stop = min(support_npoc - buffer * 0.6, close_price * (1.0 - dyn_stop_pct))
                 reason_text += f" + {ice_reason}"
 
             await self._handle_open(
@@ -4579,10 +4681,12 @@ class StrategyEngine:
                 self.log_rejection(symbol, "Yukarı nPOC Reddi", f"Üst fitil veya satıcı dönüşü yetersiz (Fitil: %{upper_wick_ratio*100:.1f}, Kapanış: {close_price:.4f})")
                 return
 
-            buffer = (resist_npoc - p) * BUFFER_RATIO if (resist_npoc > p) else (resist_npoc * 0.003)
-            soft_stop = min(resist_npoc + buffer, close_price * 1.0050)
-            raw_hard_stop = r4 if (r4 > 0 and r4 > resist_npoc and (r4 - resist_npoc)/resist_npoc <= 0.0075) else (resist_npoc + buffer)
-            hard_stop = min(raw_hard_stop, close_price * 1.0055)
+            coin_atr = self.get_symbol_atr_pct(symbol)
+            dyn_stop_pct = max(0.0060, min(0.0150, coin_atr * 0.35))
+            buffer = max(resist_npoc * 0.003, (resist_npoc - p) * BUFFER_RATIO if (resist_npoc > p) else (resist_npoc * dyn_stop_pct * 0.5))
+            raw_hard_stop = r4 if (r4 > 0 and r4 > resist_npoc and (r4 - resist_npoc)/resist_npoc <= 0.015) else (resist_npoc + buffer)
+            hard_stop = max(raw_hard_stop, close_price * (1.0 + dyn_stop_pct))
+            soft_stop = max(raw_hard_stop, close_price * (1.0 + max(0.0060, dyn_stop_pct * 0.85)))
 
             # Smart Multi-Target: En yakin ilk destegi TP1, nihai hedefi TP2 yap
             down_targets = [
@@ -4614,8 +4718,8 @@ class StrategyEngine:
             if is_ice_sniper:
                 ice_reason = sym_met.get("iceberg_offense_reason", "")
                 c_list.append("Iceberg_Offense_Sniper_Short")
-                soft_stop = min(resist_npoc + buffer * 0.4, close_price * 1.0025)
-                hard_stop = min(close_price * 1.0030, resist_npoc + buffer * 0.6)
+                soft_stop = max(resist_npoc + buffer * 0.5, close_price * (1.0 + max(0.0060, dyn_stop_pct * 0.85)))
+                hard_stop = max(resist_npoc + buffer * 0.6, close_price * (1.0 + dyn_stop_pct))
                 reason_text += f" + {ice_reason}"
 
             await self._handle_open(
@@ -4697,9 +4801,21 @@ class StrategyEngine:
                         tp1_target = down_targets[0] if down_targets else close_price * 0.985
                         tp2_target = down_targets[-1] if len(down_targets) > 1 else (s4 if (s4 > 0 and s4 < tp1_target) else None)
 
-                        buffer = resist_lvl * 0.0025
-                        soft_stop = min(resist_lvl + buffer, close_price * 1.0050)
-                        hard_stop = min(resist_lvl + buffer, close_price * 1.0055)
+                        coin_atr = self.get_symbol_atr_pct(symbol)
+                        dyn_stop_pct = max(0.0060, min(0.0150, coin_atr * 0.35))
+                        buffer = max(resist_lvl * 0.003, resist_lvl * dyn_stop_pct * 0.5)
+                        soft_stop = max(resist_lvl + buffer, close_price * (1.0 + max(0.0060, dyn_stop_pct * 0.85)))
+                        hard_stop = max(resist_lvl + buffer, close_price * (1.0 + dyn_stop_pct))
+
+                        c_list11 = [f"{resist_tag}_Retest_Reddi", "Bearish_Flow"]
+                        if upper_wick_ratio >= 0.08:
+                            c_list11.append("Seller_Wick_Rejection")
+                        if cvd_ratio <= 46.0:
+                            c_list11.append("CVD_Seller_Absorption")
+                        if obi_imbalance <= -0.04:
+                            c_list11.append("OrderBook_Ask_Pressure")
+                        if daily_avwap > 0 and close_price < daily_avwap:
+                            c_list11.append("Daily_AVWAP_Bear")
 
                         await self._handle_open(
                             symbol=symbol, side="SHORT", entry_price=close_price,
@@ -4707,7 +4823,7 @@ class StrategyEngine:
                             soft_stop=soft_stop, hard_stop=hard_stop,
                             tp1=tp1_target, tp2=tp2_target, trade_type="SCALP",
                             snapshot_levels=levels, setup_id="SETUP_11_RESISTANCE_FLIP",
-                            confluence_list=[f"{resist_tag}_Retest_Reddi", "Bearish_Flow"]
+                            confluence_list=c_list11
                         )
                         return
 
@@ -4751,9 +4867,19 @@ class StrategyEngine:
                     tp1_target = down_targets[0] if down_targets else close_price * 0.985
                     tp2_target = down_targets[-1] if len(down_targets) > 1 else None
 
-                    buffer = break_support * 0.003
-                    soft_stop = min(break_support + buffer, close_price * 1.0050)
-                    hard_stop = min(break_support + buffer, close_price * 1.0060)
+                    coin_atr = self.get_symbol_atr_pct(symbol)
+                    dyn_stop_pct = max(0.0060, min(0.0150, coin_atr * 0.35))
+                    buffer = max(break_support * 0.003, break_support * dyn_stop_pct * 0.5)
+                    soft_stop = max(break_support + buffer, close_price * (1.0 + max(0.0060, dyn_stop_pct * 0.85)))
+                    hard_stop = max(break_support + buffer, close_price * (1.0 + dyn_stop_pct))
+
+                    c_list12 = [f"{support_type}_Breakdown", "Satıcı_Baskısı_Teyitli"]
+                    if obi_imbalance <= -0.10:
+                        c_list12.append("OrderBook_Heavy_Wall")
+                    if cvd_ratio <= 42.0:
+                        c_list12.append("Aggressive_Taker_Selling")
+                    if vol_surge >= 1.3:
+                        c_list12.append(f"Volume_Surge_{vol_surge:.1f}x")
 
                     await self._handle_open(
                         symbol=symbol, side="SHORT", entry_price=close_price,
@@ -4761,7 +4887,7 @@ class StrategyEngine:
                         soft_stop=soft_stop, hard_stop=hard_stop,
                         tp1=tp1_target, tp2=tp2_target, trade_type="BREAKOUT",
                         snapshot_levels=levels, setup_id="SETUP_12_SUPPORT_BREAKDOWN",
-                        confluence_list=[f"{support_type}_Breakdown", "Satıcı_Baskısı_Teyitli"]
+                        confluence_list=c_list12
                     )
                     return
 
@@ -4813,10 +4939,20 @@ class StrategyEngine:
                     tp1_target = down_targets[0] if down_targets else close_price * 0.985
                     tp2_target = down_targets[-1] if len(down_targets) > 1 else None
 
-                    buffer = (p - s3) * BUFFER_RATIO if (p > s3) else (s3 * 0.003)
-                    soft_stop = min(s3 + buffer, close_price * 1.0050)
-                    raw_stop = p if (p > 0 and p > s3 and (p - s3)/s3 <= 0.0075) else (s3 + buffer)
-                    hard_stop = min(raw_stop, close_price * 1.0055)
+                    coin_atr = self.get_symbol_atr_pct(symbol)
+                    dyn_stop_pct = max(0.0060, min(0.0150, coin_atr * 0.35))
+                    buffer = max(s3 * 0.003, (p - s3) * BUFFER_RATIO if (p > s3) else (s3 * dyn_stop_pct * 0.5))
+                    raw_stop = p if (p > 0 and p > s3 and (p - s3)/s3 <= 0.015) else (s3 + buffer)
+                    hard_stop = max(raw_stop, close_price * (1.0 + dyn_stop_pct))
+                    soft_stop = max(raw_stop, close_price * (1.0 + max(0.0060, dyn_stop_pct * 0.85)))
+
+                    c_list13 = ["S3_Retest", "Bearish_Continuation"]
+                    if upper_wick_ratio >= 0.10:
+                        c_list13.append("Seller_Wick_Rejection")
+                    if cvd_ratio <= 46.0:
+                        c_list13.append("Seller_CVD_Flow")
+                    if daily_avwap > 0 and close_price < daily_avwap:
+                        c_list13.append("Daily_AVWAP_Bear")
 
                     await self._handle_open(
                         symbol=symbol, side="SHORT", entry_price=close_price,
@@ -4824,7 +4960,7 @@ class StrategyEngine:
                         soft_stop=soft_stop, hard_stop=hard_stop,
                         tp1=tp1_target, tp2=tp2_target, trade_type="SCALP",
                         snapshot_levels=levels, setup_id="SETUP_13_S3_RESISTANCE_FLIP",
-                        confluence_list=["S3_Retest", "Bearish_Continuation"]
+                        confluence_list=c_list13
                     )
                     return
 
@@ -4893,9 +5029,19 @@ class StrategyEngine:
                         tp1_target = up_targets[0] if up_targets else close_price * 1.015
                         tp2_target = up_targets[-1] if len(up_targets) > 1 else (r4 if (r4 > 0 and r4 > tp1_target) else None)
 
-                        buffer = support_lvl * 0.0025
-                        soft_stop = max(support_lvl - buffer, close_price * 0.9950)
-                        hard_stop = max(support_lvl - buffer, close_price * 0.9945)
+                        coin_atr = self.get_symbol_atr_pct(symbol)
+                        dyn_stop_pct = max(0.0060, min(0.0150, coin_atr * 0.35))
+                        buffer = max(support_lvl * 0.003, support_lvl * dyn_stop_pct * 0.5)
+                        soft_stop = min(support_lvl - buffer, close_price * (1.0 - max(0.0060, dyn_stop_pct * 0.85)))
+                        hard_stop = min(support_lvl - buffer, close_price * (1.0 - dyn_stop_pct))
+
+                        c_list14 = [f"{support_tag}_Retest", "Bullish_Continuation"]
+                        if lower_wick_ratio >= 0.10:
+                            c_list14.append("Buyer_Wick_Absorption")
+                        if cvd_ratio >= 48.0:
+                            c_list14.append("Buyer_CVD_Flow")
+                        if daily_avwap > 0 and close_price > daily_avwap:
+                            c_list14.append("Daily_AVWAP_Bull")
 
                         await self._handle_open(
                             symbol=symbol, side="LONG", entry_price=close_price,
@@ -4903,7 +5049,7 @@ class StrategyEngine:
                             soft_stop=soft_stop, hard_stop=hard_stop,
                             tp1=tp1_target, tp2=tp2_target, trade_type="SCALP",
                             snapshot_levels=levels, setup_id="SETUP_14_PIVOT_SUPPORT_FLIP",
-                            confluence_list=[f"{support_tag}_Retest", "Bullish_Continuation"]
+                            confluence_list=c_list14
                         )
                         return
 
@@ -4938,9 +5084,19 @@ class StrategyEngine:
                         tp1_target = up_targets[0] if up_targets else close_price * 1.018
                         tp2_target = up_targets[-1] if len(up_targets) > 1 else None
 
-                        buffer = reclaim_lvl * 0.003
-                        soft_stop = max(reclaim_lvl - buffer, close_price * 0.9950)
-                        hard_stop = max(reclaim_lvl - buffer, close_price * 0.9945)
+                        coin_atr = self.get_symbol_atr_pct(symbol)
+                        dyn_stop_pct = max(0.0060, min(0.0150, coin_atr * 0.35))
+                        buffer = max(reclaim_lvl * 0.003, reclaim_lvl * dyn_stop_pct * 0.5)
+                        soft_stop = min(reclaim_lvl - buffer, close_price * (1.0 - max(0.0060, dyn_stop_pct * 0.85)))
+                        hard_stop = min(reclaim_lvl - buffer, close_price * (1.0 - dyn_stop_pct))
+
+                        c_list15 = [f"{reclaim_tag}_Reclaim", "Macro_Absorption_Confirmed"]
+                        if cvd_ratio >= 50.0:
+                            c_list15.append("Buyer_CVD_Support")
+                        if vol_surge >= 1.15:
+                            c_list15.append(f"Volume_Surge_{vol_surge:.1f}x")
+                        if daily_avwap > 0 and close_price > daily_avwap:
+                            c_list15.append("Daily_AVWAP_Bull")
 
                         await self._handle_open(
                             symbol=symbol, side="LONG", entry_price=close_price,
@@ -4948,7 +5104,7 @@ class StrategyEngine:
                             soft_stop=soft_stop, hard_stop=hard_stop,
                             tp1=tp1_target, tp2=tp2_target, trade_type="BOUNCE",
                             snapshot_levels=levels, setup_id="SETUP_15_AVWAP_MVAH_RECLAIM",
-                            confluence_list=[f"{reclaim_tag}_Reclaim", "Macro_Absorption_Confirmed"]
+                            confluence_list=c_list15
                         )
                         return
 
@@ -5001,10 +5157,20 @@ class StrategyEngine:
                     tp1_target = up_targets[0] if up_targets else close_price * 1.015
                     tp2_target = up_targets[-1] if len(up_targets) > 1 else None
 
-                    buffer = (r3 - p) * BUFFER_RATIO if (r3 > p) else (r3 * 0.003)
-                    soft_stop = max(r3 - buffer, close_price * 0.9950)
-                    raw_stop = p if (p > 0 and p < r3 and (r3 - p)/r3 <= 0.0075) else (r3 - buffer)
-                    hard_stop = max(raw_stop, close_price * 0.9945)
+                    coin_atr = self.get_symbol_atr_pct(symbol)
+                    dyn_stop_pct = max(0.0060, min(0.0150, coin_atr * 0.35))
+                    buffer = max(r3 * 0.003, (r3 - p) * BUFFER_RATIO if (r3 > p) else (r3 * dyn_stop_pct * 0.5))
+                    raw_stop = p if (p > 0 and p < r3 and (r3 - p)/r3 <= 0.015) else (r3 - buffer)
+                    hard_stop = min(raw_stop, close_price * (1.0 - dyn_stop_pct))
+                    soft_stop = min(raw_stop, close_price * (1.0 - max(0.0060, dyn_stop_pct * 0.85)))
+
+                    c_list16 = ["R3_Support_Flip", "Bullish_Continuation"]
+                    if lower_wick_ratio >= 0.10:
+                        c_list16.append("Buyer_Wick_Absorption")
+                    if cvd_ratio_16 >= 50.0:
+                        c_list16.append("Buyer_CVD_Flow")
+                    if daily_avwap > 0 and close_price > daily_avwap:
+                        c_list16.append("Daily_AVWAP_Bull")
 
                     await self._handle_open(
                         symbol=symbol, side="LONG", entry_price=close_price,
@@ -5012,6 +5178,6 @@ class StrategyEngine:
                         soft_stop=soft_stop, hard_stop=hard_stop,
                         tp1=tp1_target, tp2=tp2_target, trade_type="SCALP",
                         snapshot_levels=levels, setup_id="SETUP_16_R3_SUPPORT_FLIP",
-                        confluence_list=["R3_Support_Flip", "Bullish_Continuation"]
+                        confluence_list=c_list16
                     )
                     return

@@ -58,6 +58,8 @@ class PaperTrader:
         self._push_lock = threading.Lock()
         self._open_lock = threading.Lock()  # Eşzamanlı pozisyon açılışlarında mükerrer girişi önleyen atomik kilit
         self.emergency_alert = None  # Bakiye ve sistem anomalisi kritik uyarı bayrağı
+        self.is_safety_stopped = False  # VDA-13: Kasa < $1,000 olduğunda otomatik güvenli durdurma modu
+        self.trading_halted = False
         self.load_history()
 
     def reset_state(self):
@@ -66,6 +68,9 @@ class PaperTrader:
         self.open_positions = {}
         self.history = []
         self._pending_state = None
+        self.is_safety_stopped = False
+        self.trading_halted = False
+        self.emergency_alert = None
         self.save_history(critical=True)
         print(f">> [RESET] Kasa ${self.balance:.2f} USDT olarak sıfırlandı. Tüm pozisyonlar ve geçmiş temizlendi.")
 
@@ -482,6 +487,18 @@ class PaperTrader:
             return self._open_position_unlocked(*args, **kwargs)
 
     def _open_position_unlocked(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None, atr_pct: float = 1.0, trend_regime: str = "YATAY", session: str = "LONDRA", volume_surge: float = 1.0, confluence_score: str = "2/4", htf_alignment: str = "TREND YÖNÜNDE", custom_margin: float = None, rs_vs_btc: float = 0.0, decoupling_status: str = "⚪ NÖTR_TAKİPÇİ", cvd_pct: float = 50.0, candle_velocity: float = 1.0, custom_leverage: int = None, **kwargs):
+        # VDA-13: Kasa < $1,000 olduğunda otomatik güvenli durdurma modu
+        if getattr(self, 'is_safety_stopped', False) or getattr(self, 'trading_halted', False) or self.balance < 1000.0:
+            self.is_safety_stopped = True
+            self.trading_halted = True
+            msg = f"Kasa kritik eşik altında (${self.balance:.2f} < $1,000). Güvenli durdurma modunda yeni pozisyon açılamaz."
+            print(f">> [GÜVENLİ DURDURMA ENGELİ] {symbol}: {msg}")
+            return {
+                "error": "SAFETY_STOP_ACTIVE",
+                "message": msg,
+                "current_balance": self.balance
+            }
+
         if symbol in self.open_positions:
             return None
 
@@ -600,7 +617,7 @@ class PaperTrader:
         print(f">> [POZISYON ACILDI] {symbol} {side} @ {entry_price} | Marjin: {margin}$ ({active_leverage}x) | Setup: {pos['setup_id']}")
         return pos
 
-    def close_position(self, symbol: str, exit_price: float, close_reason: str, is_partial: bool = False):
+    def close_position(self, symbol: str, exit_price: float, close_reason: str, is_partial: bool = False, slippage_pct: float = 0.0):
         if symbol not in self.open_positions:
             return None
 
@@ -609,6 +626,26 @@ class PaperTrader:
         entry_p = pos["entry_price"]
         margin = pos.get("margin", 50.0)
         entry_fee = pos.get("entry_fee", 0.0)
+
+        # Multiplier Guard (1000x ve 1M coinlerde spot/vadeli ölçek eşitlemesi - VDA-36)
+        if entry_p > 0 and exit_price > 0:
+            if exit_price < entry_p * 0.02:
+                if exit_price * 1000 >= entry_p * 0.4 and exit_price * 1000 <= entry_p * 2.5:
+                    exit_price = exit_price * 1000.0
+                elif exit_price * 1000000 >= entry_p * 0.4 and exit_price * 1000000 <= entry_p * 2.5:
+                    exit_price = exit_price * 1000000.0
+            elif exit_price > entry_p * 50.0:
+                if (exit_price / 1000.0) >= entry_p * 0.4 and (exit_price / 1000.0) <= entry_p * 2.5:
+                    exit_price = exit_price / 1000.0
+                elif (exit_price / 1000000.0) >= entry_p * 0.4 and (exit_price / 1000000.0) <= entry_p * 2.5:
+                    exit_price = exit_price / 1000000.0
+
+        # Gerçekçi Slippage Modeli (VDA-37)
+        if slippage_pct > 0.0:
+            if side == "LONG":
+                exit_price = round(exit_price * (1.0 - slippage_pct), 8)
+            else:
+                exit_price = round(exit_price * (1.0 + slippage_pct), 8)
 
         if is_partial and not pos.get("is_half_closed", False):
             # %50 TP1 Kapatma
@@ -624,7 +661,8 @@ class PaperTrader:
                 gross_pnl = (entry_p - exit_price) * closed_qty
 
             total_fees = portion_entry_fee + exit_fee
-            net_pnl = gross_pnl - total_fees
+            # VDA-37: İzole Marjin Tasfiye Tavanı (Kayıp pozisyona yatırılan teminatı aşamaz)
+            net_pnl = max(-closed_margin, gross_pnl - total_fees)
             roe_pct = (net_pnl / closed_margin) * 100.0
 
             self.balance += net_pnl
@@ -726,7 +764,9 @@ class PaperTrader:
                 "hawkes_eta": pos.get("hawkes_eta", 0.15),
                 "is_avalanche_active": pos.get("is_avalanche_active", False),
                 "cvd_accel_60s": pos.get("cvd_accel_60s", 0.0),
-                "tri_modal_regime": pos.get("tri_modal_regime", "RANGING_PINGPONG")
+                "tri_modal_regime": pos.get("tri_modal_regime", "RANGING_PINGPONG"),
+                "exit_slippage_pct": round(slippage_pct * 100.0, 3),
+                "is_liquidated": False
             }
             self.history.append(record)
 
@@ -746,15 +786,28 @@ class PaperTrader:
             else:
                 gross_pnl = (entry_p - exit_price) * qty
 
-            net_pnl = gross_pnl - total_fees
-            roe_pct = (net_pnl / margin) * 100.0
+            # VDA-37: İzole Marjin Tasfiye Tavanı (Kayıp pozisyona yatırılan teminatı aşamaz)
+            is_liquidated = (gross_pnl - total_fees) <= -margin
+            net_pnl = max(-margin, gross_pnl - total_fees)
+            roe_pct = max(-100.0, (net_pnl / margin) * 100.0)
+
+            if is_liquidated:
+                close_reason = close_reason + " [🚨 İZOLE MARJİN TASFİYESİ]"
 
             self.balance += net_pnl
-            if self.balance > 150000.0 or self.balance < 1000.0:
-                clean_alert = f"[KRİTİK KASA ALARMI] Bakiye sınırı aşıldı! (${self.balance:,.2f}) -> Başlangıç kasasına (${self.initial_balance:,.2f}) emniyet sıfırlaması yapıldı."
+            
+            # VDA-13: Otomatik sıfırlama yerine güvenli durdurma moduna geçiş
+            if self.balance > 150000.0:
+                clean_alert = f"[KRİTİK KASA ALARMI] Bakiye tavanı aşıldı! (${self.balance:,.2f}) -> Başlangıç kasasına (${self.initial_balance:,.2f}) emniyet sıfırlaması yapıldı."
                 print(f">> {clean_alert}")
                 self.emergency_alert = f"🚨 {clean_alert}"
                 self.balance = float(self.initial_balance)
+            elif self.balance < 1000.0:
+                self.is_safety_stopped = True
+                self.trading_halted = True
+                clean_alert = f"[KRİTİK KASA ALARMI] Bakiye kritik eşik altına indi! (${self.balance:,.2f} < $1,000). Otomatik işlem durduruldu (GÜVENLİ DURDURMA MODU). Kasa sıfırlaması yalnızca yetkili API isteğiyle yapılabilir."
+                print(f">> {clean_alert}")
+                self.emergency_alert = f"🛑 {clean_alert}"
             exit_time_str = datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S")
 
             # Duration format
@@ -840,7 +893,9 @@ class PaperTrader:
                 "hawkes_eta": pos.get("hawkes_eta", 0.15),
                 "is_avalanche_active": pos.get("is_avalanche_active", False),
                 "cvd_accel_60s": pos.get("cvd_accel_60s", 0.0),
-                "tri_modal_regime": pos.get("tri_modal_regime", "RANGING_PINGPONG")
+                "tri_modal_regime": pos.get("tri_modal_regime", "RANGING_PINGPONG"),
+                "exit_slippage_pct": round(slippage_pct * 100.0, 3),
+                "is_liquidated": is_liquidated
             }
             self.history.append(record)
 

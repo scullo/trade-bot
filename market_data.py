@@ -67,6 +67,7 @@ class MarketDataManager:
         # Anlık Mikro-CVD (Cumulative Volume Delta) & Agresyon Veri Yapıları
         self.symbol_cvd = {}          # norm_s -> {taker_buy_usd, taker_sell_usd, delta_usd, cvd_pct, delta_60s, ratio_60s, bias, last_update}
         self.symbol_cvd_history = {}  # norm_s -> deque(maxlen=60) of (timestamp, taker_buy_usd, taker_sell_usd)
+        self.symbol_cvd_offsets = {}  # VDA-01: norm_s -> candle rollover offset tracker for continuous 60s CVD
         self.symbol_price_history = {}  # norm_s -> deque(maxlen=60) of (timestamp, price) for 60s micro price change
         # Order Book Imbalance (OBI) & Tahta Derinlik Duvarı Veri Yapıları
         self.orderbook_depth = {s: {
@@ -612,6 +613,17 @@ class MarketDataManager:
 
     def get_symbol_liquidation_stats(self, symbol: str) -> dict:
         data = getattr(self, 'symbol_liquidations_15m', {}).get(symbol, {'long_usd': 0.0, 'short_usd': 0.0, 'last_update': 0})
+        # VDA-07: 15 dakikadan (900s) eski tasfiyeleri 0.0 olarak döndür (bayat tasfiye vetosu kalkar)
+        if (time.time() - data.get('last_update', 0)) > 900.0:
+            return {
+                'symbol': symbol,
+                'long_usd': 0.0,
+                'short_usd': 0.0,
+                'total_usd': 0.0,
+                'dominant_bias': 'NEUTRAL',
+                'dominant_side': 'NEUTRAL',
+                'last_update': data.get('last_update', 0)
+            }
         long_usd = float(data.get('long_usd', 0.0))
         short_usd = float(data.get('short_usd', 0.0))
         total = long_usd + short_usd
@@ -952,7 +964,7 @@ class MarketDataManager:
                         is_spot = "binance.vision" in ep
                         mult = spot_mult if is_spot else 1.0
                         url_1d_v = f"{ep}&interval=1d&limit=35"
-                        url_5m_v = f"{ep}&interval=5m&limit=200"
+                        url_5m_v = f"{ep}&interval=5m&limit=300"
                         t_1d, t_5m = None, None
                         async with session.get(url_1d_v, timeout=aiohttp.ClientTimeout(total=4)) as r1:
                             if r1.status == 200:
@@ -991,7 +1003,25 @@ class MarketDataManager:
             if df_1d is not None and not df_1d.empty and (df_5m is None or df_5m.empty):
                 df_5m = df_1d.copy()
             if df_5m is not None and not df_5m.empty and (df_1d is None or df_1d.empty):
-                df_1d = df_5m.copy()
+                # VDA-03: 5M mumlarından gerçekçi sentetik günlük mum üret (High=max, Low=min, Open=first, Close=last)
+                bars_to_use = min(len(df_5m), 288)
+                sub_5m = df_5m.iloc[-bars_to_use:]
+                synth_row = {
+                    'timestamp': sub_5m['timestamp'].iloc[0],
+                    'open': float(sub_5m['open'].iloc[0]),
+                    'high': float(sub_5m['high'].max()),
+                    'low': float(sub_5m['low'].min()),
+                    'close': float(sub_5m['close'].iloc[-1]),
+                    'volume': float(sub_5m['volume'].sum()),
+                    'close_time': sub_5m['close_time'].iloc[-1] if 'close_time' in sub_5m.columns else sub_5m['timestamp'].iloc[-1],
+                    'qav': float(sub_5m['qav'].sum()) if 'qav' in sub_5m.columns else float(sub_5m['volume'].sum() * sub_5m['close'].iloc[-1]),
+                    'num_trades': int(sub_5m['num_trades'].sum()) if 'num_trades' in sub_5m.columns else 1000,
+                    'taker_base': float(sub_5m['taker_base'].sum()) if 'taker_base' in sub_5m.columns else float(sub_5m['volume'].sum() * 0.5),
+                    'taker_quote': float(sub_5m['taker_quote'].sum()) if 'taker_quote' in sub_5m.columns else 0.0,
+                    'ignore': 0
+                }
+                # Camarilla ve dünün seviyeleri için en az 2 satır üret
+                df_1d = pd.DataFrame([synth_row, synth_row])
 
             if df_1d is not None and df_5m is not None and not df_1d.empty and not df_5m.empty:
                 self.candles_1d[symbol] = df_1d
@@ -1594,8 +1624,15 @@ class MarketDataManager:
         """
         clean = self._clean_symbol(symbol).replace('/', '').replace(':USDT', '')
         headers = {'User-Agent': 'Mozilla/5.0'}
-        oi_val = 0.0
+        oi_val_usd = 0.0
+        provider = "binance"
         now_ts = time.time()
+        c_price = float(self.current_prices.get(symbol, 0.0))
+        if c_price <= 0 and symbol in self.candles_5m and not self.candles_5m[symbol].empty:
+            try:
+                c_price = float(self.candles_5m[symbol]['close'].iloc[-1])
+            except Exception:
+                pass
 
         try:
             async with aiohttp.ClientSession(headers=headers) as session:
@@ -1604,11 +1641,14 @@ class MarketDataManager:
                     async with session.get(url_binance, timeout=aiohttp.ClientTimeout(total=2.5)) as resp:
                         if resp.status == 200:
                             d = await resp.json()
-                            oi_val = float(d.get('openInterest', 0.0))
+                            raw_oi = float(d.get('openInterest', 0.0))
+                            if raw_oi > 0:
+                                p = c_price if c_price > 0 else 1.0
+                                oi_val_usd = raw_oi * p
                 except Exception:
                     pass
 
-                if oi_val == 0.0:
+                if oi_val_usd == 0.0:
                     raw = symbol.replace('/USDT', '_USDT')
                     url_gate = f"https://api.gateio.ws/api/v4/futures/usdt/tickers?contract={raw}"
                     try:
@@ -1616,20 +1656,37 @@ class MarketDataManager:
                             if resp.status == 200:
                                 d = await resp.json()
                                 if isinstance(d, list) and d:
-                                    oi_val = float(d[0].get('total_size', 0.0))
+                                    provider = "gate"
+                                    raw_size = float(d[0].get('total_size', 0.0))
+                                    last_p = float(d[0].get('last', 0.0) or c_price or 1.0)
+                                    gate_mult = 1.0
+                                    c_name = raw.replace('_', '')
+                                    if 'BTC' in c_name:
+                                        gate_mult = 0.0001
+                                    elif 'ETH' in c_name:
+                                        gate_mult = 0.01
+                                    elif any(m in c_name for m in ['PEPE', 'SHIB', 'BONK', 'FLOKI', 'SATS', 'RATS', 'LUNC', 'XEC', 'CHEEMS', 'WHY', 'CAT']):
+                                        gate_mult = 1000.0
+                                    elif 'MOG' in c_name:
+                                        gate_mult = 1000000.0
+                                    oi_val_usd = raw_size * gate_mult * last_p
                     except Exception:
                         pass
         except Exception:
             pass
 
         prev_info = self.symbol_oi.get(symbol, {})
-        prev_oi = prev_info.get('open_interest', 0.0)
-        oi_5m_ago = prev_info.get('oi_5m_ago', prev_oi)
+        cur_hist = list(prev_info.get('oi_history', []))
+        last_provider = prev_info.get('provider', provider)
+        if last_provider != provider:
+            cur_hist = []
 
-        if oi_5m_ago <= 0:
-            oi_5m_ago = oi_val if oi_val > 0 else 1.0
+        if oi_val_usd > 0:
+            cur_hist.append((now_ts, oi_val_usd))
+            cur_hist = [(t, v) for (t, v) in cur_hist if (now_ts - t) <= 360.0]
 
-        delta_pct = round(((oi_val - oi_5m_ago) / oi_5m_ago) * 100.0, 2) if (oi_val > 0 and oi_5m_ago > 0) else 0.0
+        oi_5m_ago = cur_hist[0][1] if cur_hist else (prev_info.get('oi_5m_ago', oi_val_usd) if oi_val_usd > 0 else 1.0)
+        delta_pct = round(((oi_val_usd - oi_5m_ago) / oi_5m_ago) * 100.0, 2) if (oi_val_usd > 0 and oi_5m_ago > 0) else 0.0
 
         price_chg_5m = 0.0
         df = self.candles_5m.get(symbol, pd.DataFrame())
@@ -1658,14 +1715,19 @@ class MarketDataManager:
 
         res = {
             'symbol': symbol,
-            'open_interest': oi_val,
+            'open_interest': oi_val_usd,
             'oi_5m_ago': oi_5m_ago,
+            'oi_history': cur_hist,
             'delta_oi_pct': delta_pct,
             'price_chg_5m': price_chg_5m,
             'status': status,
+            'provider': provider,
             'last_update': now_ts
         }
         self.symbol_oi[symbol] = res
+        if hasattr(self, 'symbol_metrics') and symbol in self.symbol_metrics:
+            self.symbol_metrics[symbol]['delta_oi_pct'] = delta_pct
+            self.symbol_metrics[symbol]['oi_status'] = status
         return res
 
     def get_symbol_open_interest(self, symbol: str) -> dict:
@@ -1712,9 +1774,17 @@ class MarketDataManager:
                     try:
                         async with session.get(url_gate_ob, timeout=aiohttp.ClientTimeout(total=2.5)) as resp:
                             if resp.status == 200:
-                                d = await resp.json()
-                                bids = [(float(item['p']), float(item['s'])) for item in d.get('bids', [])]
-                                asks = [(float(item['p']), float(item['s'])) for item in d.get('asks', [])]
+                                gate_mult = 1.0
+                                if 'BTC' in symbol:
+                                    gate_mult = 0.0001
+                                elif 'ETH' in symbol:
+                                    gate_mult = 0.01
+                                elif any(m in symbol for m in ['PEPE', 'SHIB', 'BONK', 'FLOKI', 'SATS', 'RATS', 'LUNC', 'XEC', 'CHEEMS', 'WHY', 'CAT']):
+                                    gate_mult = 1000.0
+                                elif 'MOG' in symbol:
+                                    gate_mult = 1000000.0
+                                bids = [(float(item['p']), float(item['s']) * gate_mult) for item in d.get('bids', [])]
+                                asks = [(float(item['p']), float(item['s']) * gate_mult) for item in d.get('asks', [])]
                     except Exception:
                         pass
         except Exception:
@@ -2082,8 +2152,10 @@ class MarketDataManager:
                             if live_ws_p > 0:
                                 delta_p = abs(cur_candle['close'] - live_ws_p) / live_ws_p * 100.0
                                 if delta_p > 1.5:
-                                    # Otomatik Onarım: Mum kapanışını anlık canlı vadeli fiyata eşitle (akış bozulmaz!)
+                                    # Otomatik Onarım: Mum kapanışını anlık canlı vadeli fiyata eşitle, High ve Low geometrisini koru
                                     cur_candle['close'] = live_ws_p
+                                    cur_candle['high'] = max(float(cur_candle.get('high', live_ws_p)), live_ws_p)
+                                    cur_candle['low'] = min(float(cur_candle.get('low', live_ws_p)), live_ws_p)
 
                             self.current_prices[s] = cur_candle['close']
                             if s in self.candles_5m and not self.candles_5m[s].empty:
@@ -2094,8 +2166,8 @@ class MarketDataManager:
                                 elif cur_candle['timestamp'] > last_ts:
                                     self.candles_5m[s] = pd.concat([self.candles_5m[s], pd.DataFrame([cur_candle])], ignore_index=True)
                                 self.candles_5m[s] = self.candles_5m[s].drop_duplicates(subset=['timestamp'], keep='last').reset_index(drop=True)
-                                if len(self.candles_5m[s]) > 200:
-                                    self.candles_5m[s] = self.candles_5m[s].iloc[-200:].reset_index(drop=True)
+                                if len(self.candles_5m[s]) > 300:
+                                    self.candles_5m[s] = self.candles_5m[s].iloc[-300:].reset_index(drop=True)
                                 self.recalculate_levels(s)
                             else:
                                 self.candles_5m[s] = pd.DataFrame([cur_candle])
@@ -2117,10 +2189,13 @@ class MarketDataManager:
         for s in self.all_symbols:
             clean = self._clean_symbol(s).replace('/', '').replace(':USDT', '').upper()
             symbol_map[clean] = s
-            if clean.startswith('SHIB'): symbol_map['1000SHIBUSDT'] = s
-            if clean.startswith('PEPE'): symbol_map['1000PEPEUSDT'] = s
-            if clean.startswith('BONK'): symbol_map['1000BONKUSDT'] = s
-            if clean.startswith('FLOKI'): symbol_map['1000FLOKIUSDT'] = s
+            # VDA-06: 1000x ve 1M önekli vadeli meme paritelerinin WebSocket eşleşmesi
+            symbol_map['1000' + clean] = s
+            symbol_map['1000000' + clean] = s
+            clean_no_mult = clean.replace('1000000', '').replace('1000', '')
+            symbol_map[clean_no_mult] = s
+            symbol_map['1000' + clean_no_mult] = s
+            symbol_map['1000000' + clean_no_mult] = s
 
         print(f">> [WEBSOCKET] Ultra Hizli Binance Akisi Baslatiliyor ({len(self.all_symbols)} Parite)...")
 
@@ -2172,8 +2247,12 @@ class MarketDataManager:
                                                 current_wall_p = bid if wall_side == 'BID_WALL' else (ask if wall_side == 'ASK_WALL' else 0.0)
                                                 p_shift = abs(current_wall_p - prev_wall_p) / prev_wall_p if (prev_wall_p > 0 and current_wall_p > 0) else 0.0
 
-                                                # Fiyata Sabit (Price-Anchored) Duvar Yaşlanması: Duvar yönü aynı ve fiyat kayması <= %0.08 olmalı
-                                                if wall_side != 'BALANCED' and wall_side == prev_wall and p_shift <= 0.0008:
+                                                # VDA-11: Fiyat toleransı paritenin ATR'sinin %10'u olarak dinamikleştirilecek
+                                                sym_atr_pct = float(getattr(self, 'symbol_metrics', {}).get(norm_s, {}).get('atr_pct', 1.2))
+                                                dyn_wall_tolerance = max(0.0008, (sym_atr_pct / 100.0) * 0.10)
+
+                                                # Fiyata Sabit (Price-Anchored) Duvar Yaşlanması: Duvar yönü aynı ve fiyat kayması <= dyn_wall_tolerance olmalı
+                                                if wall_side != 'BALANCED' and wall_side == prev_wall and p_shift <= dyn_wall_tolerance:
                                                     duration_sec = (now_ts - first_seen) if first_seen > 0 else 0.0
                                                 elif wall_side != 'BALANCED':
                                                     first_seen = now_ts
@@ -2268,12 +2347,36 @@ class MarketDataManager:
                                                 delta = t_buy - t_sell
                                                 ratio = (t_buy / cur_q * 100.0)
 
+                                                if norm_s not in self.symbol_cvd_offsets:
+                                                    self.symbol_cvd_offsets[norm_s] = {
+                                                        'last_candle_t': kline.get('t', 0),
+                                                        'offset_buy': 0.0,
+                                                        'offset_sell': 0.0,
+                                                        'prev_last_buy': 0.0,
+                                                        'prev_last_sell': 0.0
+                                                    }
+
+                                                c_off = self.symbol_cvd_offsets[norm_s]
+                                                candle_start_t = kline.get('t', 0)
+                                                if candle_start_t != c_off['last_candle_t']:
+                                                    c_off['offset_buy'] += c_off['prev_last_buy']
+                                                    c_off['offset_sell'] += c_off['prev_last_sell']
+                                                    c_off['last_candle_t'] = candle_start_t
+                                                    c_off['prev_last_buy'] = 0.0
+                                                    c_off['prev_last_sell'] = 0.0
+
+                                                c_off['prev_last_buy'] = t_buy
+                                                c_off['prev_last_sell'] = t_sell
+
+                                                abs_buy = c_off['offset_buy'] + t_buy
+                                                abs_sell = c_off['offset_sell'] + t_sell
+
                                                 if norm_s not in self.symbol_cvd_history:
                                                     self.symbol_cvd_history[norm_s] = deque(maxlen=60)
 
                                                 h_deque = self.symbol_cvd_history[norm_s]
                                                 if not h_deque or (now_ts - h_deque[-1][0] >= 1.0):
-                                                    h_deque.append((now_ts, t_buy, t_sell))
+                                                    h_deque.append((now_ts, abs_buy, abs_sell))
 
                                                 delta_60s = delta
                                                 ratio_60s = ratio
@@ -2284,8 +2387,8 @@ class MarketDataManager:
                                                         if s_item[0] >= t_cutoff:
                                                             old_sample = s_item
                                                             break
-                                                    diff_buy = max(0.0, t_buy - old_sample[1])
-                                                    diff_sell = max(0.0, t_sell - old_sample[2])
+                                                    diff_buy = max(0.0, abs_buy - old_sample[1])
+                                                    diff_sell = max(0.0, abs_sell - old_sample[2])
                                                     tot_diff = diff_buy + diff_sell
                                                     if tot_diff > 0:
                                                         delta_60s = diff_buy - diff_sell
@@ -2337,8 +2440,8 @@ class MarketDataManager:
                                             else:
                                                 self.candles_5m[norm_s] = pd.DataFrame([new_candle])
                                             self.candles_5m[norm_s] = self.candles_5m[norm_s].drop_duplicates(subset=['timestamp'], keep='last').reset_index(drop=True)
-                                            if len(self.candles_5m[norm_s]) > 200:
-                                                self.candles_5m[norm_s] = self.candles_5m[norm_s].iloc[-200:].reset_index(drop=True)
+                                            if len(self.candles_5m[norm_s]) > 300:
+                                                self.candles_5m[norm_s] = self.candles_5m[norm_s].iloc[-300:].reset_index(drop=True)
                                             self.recalculate_levels(norm_s)
                                             if self.on_candle_close_callback and norm_s in self.active_symbols:
                                                 c_ts = new_candle.get('timestamp', 0)
@@ -2446,8 +2549,8 @@ class MarketDataManager:
                                         }
                                         self.recent_liquidations.append(event)
 
-                                        # 15 Dakikalık Parite Bazlı Kümülatif Takip
-                                        if norm_s not in self.symbol_liquidations_15m:
+                                        # 15 Dakikalık Parite Bazlı Kümülatif Takip (900s üzeri bayat tasfiyeler sıfırlanır)
+                                        if norm_s not in self.symbol_liquidations_15m or (now_ts - self.symbol_liquidations_15m[norm_s].get('last_update', 0) > 900.0):
                                             self.symbol_liquidations_15m[norm_s] = {'long_usd': 0.0, 'short_usd': 0.0, 'last_update': now_ts}
                                         if is_long_liq:
                                             self.symbol_liquidations_15m[norm_s]['long_usd'] += usd_size
@@ -2573,11 +2676,13 @@ class MarketDataManager:
                                             self.coinbase_prices[base_asset] = p
                                             self.coinbase_prices['last_update'] = now_t
 
-                                            # Binance BTC/USDT ile Lead-Lag Karşılaştırması
+                                            # Binance BTC/USDT ile Lead-Lag Karşılaştırması (VDA-09: USDT/USD peg sapmasından arındırılmış)
                                             binance_btc = self.current_prices.get("BTC/USDT", 0.0)
                                             cb_btc = self.coinbase_prices.get("BTC", 0.0)
                                             if binance_btc > 0 and cb_btc > 0:
-                                                spread_bps = round(((cb_btc - binance_btc) / binance_btc) * 10000.0, 1)
+                                                usdt_peg = self.current_prices.get("USDT/USD", self.current_prices.get("USDC/USDT", 1.0))
+                                                adj_binance_btc = binance_btc * usdt_peg if (0.95 <= usdt_peg <= 1.05) else binance_btc
+                                                spread_bps = round(((cb_btc - adj_binance_btc) / adj_binance_btc) * 10000.0, 1)
                                                 direction = "NEUTRAL"
                                                 status_str = "⚪ DENGELİ NAKİT AKIŞI"
                                                 desc_str = f"Coinbase (${cb_btc:,.1f}) ile Binance (${binance_btc:,.1f}) dengede ({spread_bps:+.1f} bps)."
@@ -2615,6 +2720,7 @@ class MarketDataManager:
                 try:
                     now_sec = time.time()
                     oi_batch = {}
+                    provider = "bybit"
                     async with aiohttp.ClientSession(headers=headers, timeout=aiohttp.ClientTimeout(total=5)) as session:
                         # 1. Öncelik: Bybit Vadeli Tickers (Tüm pariteler tek istekte, US geoblock yok)
                         try:
@@ -2630,7 +2736,7 @@ class MarketDataManager:
                         except Exception:
                             pass
 
-                        # 2. Öncelik: Gate.io Vadeli Tickers (Yedek borsa)
+                        # 2. Öncelik: Gate.io Vadeli Tickers (Yedek borsa - VDA-04: Kontrat lotları USD değerine normalize edilir)
                         if not oi_batch:
                             try:
                                 url_gate = "https://api.gateio.ws/api/v4/futures/usdt/tickers"
@@ -2638,25 +2744,54 @@ class MarketDataManager:
                                     if resp.status == 200:
                                         d = await resp.json()
                                         if isinstance(d, list):
+                                            provider = "gate"
                                             for item in d:
                                                 c_name = item.get('contract', '').replace('_', '')
-                                                val = float(item.get('total_size', 0.0))
-                                                if val > 0:
-                                                    oi_batch[c_name] = val
+                                                raw_size = float(item.get('total_size', 0.0))
+                                                last_p = float(item.get('last', 0.0) or 0.0)
+                                                if raw_size > 0 and last_p > 0:
+                                                    gate_mult = 1.0
+                                                    if 'BTC' in c_name:
+                                                        gate_mult = 0.0001
+                                                    elif 'ETH' in c_name:
+                                                        gate_mult = 0.01
+                                                    elif any(m in c_name for m in ['PEPE', 'SHIB', 'BONK', 'FLOKI', 'SATS', 'RATS', 'LUNC', 'XEC', 'CHEEMS', 'WHY', 'CAT']):
+                                                        gate_mult = 1000.0
+                                                    elif 'MOG' in c_name:
+                                                        gate_mult = 1000000.0
+                                                    val_usd = raw_size * gate_mult * last_p
+                                                    oi_batch[c_name] = val_usd
                             except Exception:
                                 pass
 
                     if oi_batch:
                         for s in list(self.all_symbols):
-                            clean = s.replace('/', '').replace(':USDT', '')
-                            cur_oi = oi_batch.get(clean, 0.0)
-                            if cur_oi <= 0:
-                                cur_oi = oi_batch.get('1000' + clean, 0.0)
-                            if cur_oi <= 0:
-                                cur_oi = oi_batch.get('1000000' + clean, 0.0)
+                            clean = s.replace('/', '').replace(':USDT', '').upper()
+                            clean_base = clean.replace('USDT', '')
+                            if clean_base.startswith('1000000'):
+                                clean_base = clean_base[7:]
+                            elif clean_base.startswith('1000'):
+                                clean_base = clean_base[4:]
+
+                            candidates = [
+                                clean,
+                                clean_base + 'USDT',
+                                '1000' + clean_base + 'USDT',
+                                '1000000' + clean_base + 'USDT',
+                                clean_base,
+                            ]
+                            cur_oi = 0.0
+                            for cand in candidates:
+                                if cand in oi_batch and float(oi_batch[cand]) > 0:
+                                    cur_oi = float(oi_batch[cand])
+                                    break
 
                             if cur_oi > 0:
-                                cur_hist = self.symbol_oi.get(s, {}).get('oi_history', [])
+                                prev_info = self.symbol_oi.get(s, {})
+                                cur_hist = prev_info.get('oi_history', [])
+                                last_provider = prev_info.get('provider', provider)
+                                if last_provider != provider:
+                                    cur_hist = []  # VDA-04: Borsa gecislerinde sahte delta_pct patlamalarini onlemek icin sifirla
                                 cur_hist.append((now_sec, cur_oi))
                                 cur_hist = [(t, v) for (t, v) in cur_hist if (now_sec - t) <= 360.0]
                                 oi_5m_ago = cur_hist[0][1] if cur_hist else cur_oi
@@ -2697,6 +2832,7 @@ class MarketDataManager:
                                     'delta_oi_pct': delta_pct,
                                     'price_chg_5m': price_chg_5m,
                                     'status': status,
+                                    'provider': provider,
                                     'last_update': now_sec
                                 }
                                 if hasattr(self, 'symbol_metrics') and s in self.symbol_metrics:

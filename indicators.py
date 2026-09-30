@@ -15,7 +15,8 @@ def calculate_camarilla_pivots(high: float, low: float, close: float) -> dict:
     
     s3 = float(close - range_hl * 1.1 / 4.0)
     s4 = float(close - range_hl * 1.1 / 2.0)
-    s5 = float(close - (r5 - close))
+    # VDA-33: Asiri volatilite gunlerinde (H/L > 2) S5'in negatif fiyata dusmesini onleyen taban korumasi
+    s5 = float(max(close * 0.05, close - (r5 - close)))
     
     return {
         "P": p,
@@ -105,15 +106,29 @@ def calculate_volume_profile(df_candles: pd.DataFrame, num_rows: int = 24, value
         next_up_vol = total_vols[up_idx + 1] if up_idx < num_rows - 1 else 0.0
         next_dn_vol = total_vols[dn_idx - 1] if dn_idx > 0 else 0.0
         
-        if next_up_vol >= next_dn_vol and up_idx < num_rows - 1:
+        # VDA-29: Hacim esitliginde veya sifir hacimde POC'ye olan yakinlik ve iki yonlu dengeli genisleme saglanir
+        if next_up_vol > next_dn_vol and up_idx < num_rows - 1:
             up_idx += 1
             va_accum += next_up_vol
-        elif dn_idx > 0:
+        elif next_dn_vol > next_up_vol and dn_idx > 0:
             dn_idx -= 1
             va_accum += next_dn_vol
-        elif up_idx < num_rows - 1:
-            up_idx += 1
-            va_accum += next_up_vol
+        elif up_idx < num_rows - 1 or dn_idx > 0:
+            dist_up = (up_idx - poc_idx)
+            dist_dn = (poc_idx - dn_idx)
+            if dist_up < dist_dn and up_idx < num_rows - 1:
+                up_idx += 1
+                va_accum += next_up_vol
+            elif dist_dn < dist_up and dn_idx > 0:
+                dn_idx -= 1
+                va_accum += next_dn_vol
+            else:
+                if up_idx < num_rows - 1:
+                    up_idx += 1
+                    va_accum += next_up_vol
+                if dn_idx > 0:
+                    dn_idx -= 1
+                    va_accum += next_dn_vol
         else:
             break
             
@@ -227,11 +242,18 @@ def get_tradingview_naked_lines(df_5m: pd.DataFrame, current_price: float) -> di
     above_hvns = [p for p in hvn_peaks if p > current_price]
     below_hvns = [p for p in hvn_peaks if p < current_price]
     
-    above_npoc = min(above_pocs) if above_pocs else (min(above_hvns) if above_hvns else (main_poc if main_poc > current_price else max_p * 0.995))
-    below_npoc = max(below_pocs) if below_pocs else (max(below_hvns) if below_hvns else (main_poc if main_poc < current_price else min_p * 1.005))
-    
-    above_nvah = vah if vah > current_price else (max_p * 0.99)
-    below_nval = val if val < current_price else (min_p * 1.01)
+    # VDA-26: Kesin yon kurali: above_* kesinlikle > current_price, below_* kesinlikle < current_price olmalidir
+    raw_above_npoc = min(above_pocs) if above_pocs else (min(above_hvns) if above_hvns else (main_poc if main_poc > current_price else max_p))
+    above_npoc = max(current_price * 1.003, raw_above_npoc)
+
+    raw_below_npoc = max(below_pocs) if below_pocs else (max(below_hvns) if below_hvns else (main_poc if main_poc < current_price else min_p))
+    below_npoc = min(current_price * 0.997, raw_below_npoc)
+
+    raw_above_nvah = vah if vah > current_price else max_p
+    above_nvah = max(current_price * 1.003, raw_above_nvah)
+
+    raw_below_nval = val if val < current_price else min_p
+    below_nval = min(current_price * 0.997, raw_below_nval)
     
     return {
         "above_npoc": float(above_npoc),
@@ -316,18 +338,25 @@ def calculate_orderbook_entropy(bids: list, asks: list, top_n: int = 20) -> dict
         ent_ask = _entropy_of_side(sub_asks)
         ent_norm = round(float((ent_bid + ent_ask) / 2.0), 3)
 
+        # VDA-25: Entropi mantığı düzeltildi:
+        # S_norm >= 0.80: Derin & Sağlıklı Likidite Dağılımı (20 kademeye eşit yayılmış kurumsal tahta)
+        # S_norm < 0.40: Anormal Yoğunlaşma / Tek Duvar Riski (Spoofing ve ani kayma riski)
         return {
             "entropy_norm": ent_norm,
             "entropy_bid": round(ent_bid, 3),
             "entropy_ask": round(ent_ask, 3),
-            "is_chaotic": ent_norm >= 0.88,
-            "is_crystalline": ent_norm <= 0.60
+            "is_healthy_deep": ent_norm >= 0.80,
+            "is_abnormal_concentration": ent_norm < 0.40,
+            "is_chaotic": ent_norm < 0.40,
+            "is_crystalline": ent_norm < 0.40
         }
     except Exception:
         return {
             "entropy_norm": 0.70,
             "entropy_bid": 0.70,
             "entropy_ask": 0.70,
+            "is_healthy_deep": False,
+            "is_abnormal_concentration": False,
             "is_chaotic": False,
             "is_crystalline": False
         }
@@ -336,23 +365,32 @@ def calculate_orderbook_entropy(bids: list, asks: list, top_n: int = 20) -> dict
 def calculate_hurst_exponent(price_series, min_lags: int = 10, max_lags: int = None) -> float:
     """
     2. BENOIT MANDELBROT — Hurst Üssü (H) ve Fraktal Rejim Dedektörü:
-    - Rescaled Range (R/S) analiziyle zaman serisinin uzun dönem hafızasını ölçer.
+    - VDA-22: R/S analizi ham fiyatlar yerine finansal log-getiriler (r_t = ln(P_t / P_{t-1})) üzerine kurulur.
     - H > 0.55: Kalıcı (Persistent / Trending) -> Breakout izinli.
     - H < 0.45: Ortalamaya Dönen (Anti-persistent / Mean-Reverting) -> Breakout TUZAK, Sekme oyna!
     - 0.45 <= H <= 0.55: Rastgele Yürüyüş (Brownian Motion / Gürültü).
     """
     try:
-        if price_series is None or len(price_series) < 30:
+        if price_series is None or len(price_series) < 32:
             return 0.50
 
-        ts = np.array(price_series, dtype=np.float64)
-        n = len(ts)
-        if max_lags is None:
-            max_lags = min(n // 2, 50)
-        if max_lags <= min_lags:
-            max_lags = min_lags + 5
+        prices = np.array(price_series, dtype=np.float64)
+        prices = prices[prices > 0]
+        if len(prices) < 32:
+            return 0.50
 
-        lags = range(min_lags, max_lags)
+        # VDA-22: Finansal ekonometri standardı: Log-getiriler (Durağan seri)
+        ts = np.diff(np.log(prices))
+        n = len(ts)
+        if n < 30:
+            return 0.50
+
+        if max_lags is None:
+            max_lags = min(n // 4, 100)
+        if max_lags <= min_lags:
+            max_lags = min_lags + 10
+
+        lags = range(min_lags, max_lags, 2)
         rs_values = []
 
         for lag in lags:
@@ -613,21 +651,30 @@ def calculate_cvd_acceleration(cvd_series, window: int = 5) -> dict:
         if len(acc) < 2:
             return default_res
 
-        cur_vel = float(vel[-1])
-        cur_acc = float(acc[-1])
-        prev_acc = float(acc[-2])
+        # VDA-31: Sayısal türev basamak süreksizliklerini ve Dirac-delta sahte ivme patlamalarını filtrele
+        cur_vel = float(vel[-1]) if not np.isnan(vel[-1]) else 0.0
+        cur_acc = float(acc[-1]) if not np.isnan(acc[-1]) else 0.0
+        prev_acc = float(acc[-2]) if not np.isnan(acc[-2]) else 0.0
+
+        acc_std = float(np.std(acc)) if len(acc) > 2 else 0.0
+        acc_median = float(np.median(acc)) if len(acc) > 2 else 0.0
+        if acc_std > 0 and abs(cur_acc - acc_median) > 5.0 * acc_std:
+            cur_acc = float(np.clip(cur_acc, acc_median - 3.0 * acc_std, acc_median + 3.0 * acc_std))
 
         is_ex_top = False
         is_ex_bottom = False
         zero_cross = 'NONE'
 
-        # Sıfır Geçişi Tespiti (Son 2 veri noktasında)
-        if (prev_acc > 0 and cur_acc <= 0) or (len(acc) >= 3 and acc[-3] > 0 and acc[-2] <= 0):
-            zero_cross = 'BULL_EXHAUSTION_TOP'
-            is_ex_top = True
-        elif (prev_acc < 0 and cur_acc >= 0) or (len(acc) >= 3 and acc[-3] < 0 and acc[-2] >= 0):
-            zero_cross = 'BEAR_EXHAUSTION_BOTTOM'
-            is_ex_bottom = True
+        # Sıfır Geçişi Tespiti (Son 4 veri noktasında)
+        for i in range(len(acc) - 1, max(0, len(acc) - 4), -1):
+            if acc[i-1] > 0 and acc[i] <= 0:
+                zero_cross = 'BULL_EXHAUSTION_TOP'
+                is_ex_top = True
+                break
+            elif acc[i-1] < 0 and acc[i] >= 0:
+                zero_cross = 'BEAR_EXHAUSTION_BOTTOM'
+                is_ex_bottom = True
+                break
 
         if cur_vel > 0 and cur_acc > 0:
             regime = 'ACCELERATING_BUY'
@@ -820,12 +867,19 @@ def calculate_stoikov_micro_price(bids: list, asks: list, current_price: float =
 
         # Stoikov Micro-Price:
         micro_price = mid_price + (imb * (spread / 2.0))
-        drift_bps = round(((micro_price - mid_price) / mid_price) * 10000.0, 2)
+        drift_bps = round(((micro_price - mid_price) / mid_price) * 10000.0, 4)
+        spread_bps = (spread / mid_price) * 10000.0
+
+        # VDA-24: Eşik paritenin kendi ortalama spread oranına ve emir defteri dengesizliğine (imb) endekslenir.
+        # Sabit 1.2 bps BTC/ETH gibi sığ spread'li (0.01 bps) paritelerde imkansızdı.
+        dyn_threshold_bps = max(0.005, spread_bps * 0.35)
+        is_bull_drift = (drift_bps >= dyn_threshold_bps and imb >= 0.30) or (imb >= 0.60)
+        is_bear_drift = (drift_bps <= -dyn_threshold_bps and imb <= -0.30) or (imb <= -0.60)
 
         bias = 'NEUTRAL'
-        if drift_bps >= 1.2:
+        if is_bull_drift:
             bias = 'BULL_MICRO_DRIFT'
-        elif drift_bps <= -1.2:
+        elif is_bear_drift:
             bias = 'BEAR_MICRO_DRIFT'
 
         # Yatay Mod Mıknatıs (Mean-Reversion Magnet) Tespiti
@@ -838,13 +892,13 @@ def calculate_stoikov_micro_price(bids: list, asks: list, current_price: float =
 
             # Destek sekme mıknatısı: Fiyat S3 yakınında ve mikro-fiyat ortalamaya (yukarı) çekiyor
             if s3 > 0 and abs(current_price - s3) / current_price <= 0.0040:
-                if drift_bps > 0.5:
+                if is_bull_drift:
                     magnet_status = 'S3_MAGNET_REBOUND'
                     magnet_desc = f'🧲 Stoikov Destek Mıknatısı: Mikro-fiyat (${micro_price:.4f}, +{drift_bps} bps) yukarı çekiyor.'
 
             # Direnç tepki mıknatısı: Fiyat R3 yakınında ve mikro-fiyat ortalamaya (aşağı) çekiyor
             elif r3 > 0 and abs(current_price - r3) / current_price <= 0.0040:
-                if drift_bps < -0.5:
+                if is_bear_drift:
                     magnet_status = 'R3_MAGNET_REJECTION'
                     magnet_desc = f'🧲 Stoikov Direnç Mıknatısı: Mikro-fiyat (${micro_price:.4f}, {drift_bps} bps) aşağı çekiyor.'
 
@@ -853,8 +907,8 @@ def calculate_stoikov_micro_price(bids: list, asks: list, current_price: float =
             'mid_price': round(mid_price, 6),
             'micro_drift_bps': drift_bps,
             'micro_bias': bias,
-            'is_micro_bull': drift_bps >= 1.2,
-            'is_micro_bear': drift_bps <= -1.2,
+            'is_micro_bull': is_bull_drift,
+            'is_micro_bear': is_bear_drift,
             'magnet_status': magnet_status,
             'magnet_desc': magnet_desc
         }
@@ -891,11 +945,20 @@ def calculate_vpin_toxicity(df_candles: pd.DataFrame, rolling_window: int = 12, 
                 continue
             total_v += vol
 
-            # Taker alım hacmi varsa
-            if 'taker_buy_volume' in row and float(row['taker_buy_volume']) > 0:
+            # VDA-23: Binance/CCXT gercek borsa taker hacim akisi ('taker_base', 'taker_quote')
+            buy_v = None
+            if 'taker_base' in row and float(row['taker_base']) > 0:
+                buy_v = float(row['taker_base'])
+                sell_v = max(0.0, vol - buy_v)
+            elif 'taker_buy_volume' in row and float(row['taker_buy_volume']) > 0:
                 buy_v = float(row['taker_buy_volume'])
                 sell_v = max(0.0, vol - buy_v)
-            else:
+            elif 'taker_quote' in row and float(row['taker_quote']) > 0 and 'quote_volume' in row and float(row.get('quote_volume', 0.0)) > 0:
+                buy_ratio = float(row['taker_quote']) / float(row['quote_volume'])
+                buy_v = vol * buy_ratio
+                sell_v = max(0.0, vol - buy_v)
+
+            if buy_v is None:
                 o = float(row.get('open', 0.0))
                 c = float(row.get('close', 0.0))
                 h = float(row.get('high', 0.0))
@@ -997,15 +1060,29 @@ def calculate_kyles_lambda(df_candles: pd.DataFrame, current_candle: dict = None
         cur_usd_vol = cur_c * cur_v
         cur_ret = abs(cur_c - cur_o) / cur_o if cur_o > 0 else 0.0
 
-        if cur_usd_vol > 500.0:
-            cur_lambda = (cur_ret / cur_usd_vol) * 1e6
+        # VDA-30: Canli acik mumun gecen suresine gore hacim ekstrapolasyonu yapilir
+        # Henuz acilmis (orn. 15. saniyesindeki) mumun sig hacmi 300 saniyelik gecmis barlarla
+        # kiyaslanip sahte 'Hava Cebi Tuzagi' (Vacuum Trap) uretmesi engellenir.
+        candle_ts = float(cur_candle.get('timestamp', 0.0))
+        now_ts = time.time()
+        elapsed_sec = 300.0
+        if candle_ts > 1e11:  # ms timestamp
+            c_sec = candle_ts / 1000.0
+            diff_s = now_ts - c_sec
+            if 0 < diff_s < 300.0:
+                elapsed_sec = max(15.0, diff_s)
+
+        projected_usd_vol = cur_usd_vol * (300.0 / elapsed_sec)
+
+        if projected_usd_vol > 500.0:
+            cur_lambda = (cur_ret / projected_usd_vol) * 1e6
         else:
             cur_lambda = mean_lambda
 
         lambda_ratio = round(cur_lambda / mean_lambda, 2)
 
-        # 1. Hava Cebi Tuzağı (Fiyat %0.30'dan fazla sıçramış ama hacim sığ -> Lambda 2.5x üstü)
-        is_vacuum = (lambda_ratio >= 2.5 and cur_ret >= 0.0030)
+        # 1. Hava Cebi Tuzağı (En az 60s geçmiş olmalı ve projekte edilmiş hacim sığ olmalı)
+        is_vacuum = (lambda_ratio >= 2.5 and cur_ret >= 0.0030 and elapsed_sec >= 60.0)
 
         # 2. Likit Kurumsal Genişleme (Hacim yüksek, Lambda normal veya düşük, fiyat kaymıyor)
         is_liquid = (lambda_ratio <= 1.2 and cur_ret >= 0.0025)
@@ -1127,15 +1204,37 @@ def calculate_deribit_gex(options_book: list, spot_price: float = None) -> dict:
         net_gex = calls_gex - puts_gex
         pcr = round(total_put_oi / total_call_oi, 3) if total_call_oi > 0 else 1.0
 
-        # Gamma Flip Seviyesi (Net Gamma'nın sıfırı kestiği kullanım fiyatı)
+        # VDA-27: Gamma Flip Seviyesi (Net Gamma'nın sıfırı kestiği gerçek kullanım fiyatı)
         sorted_strikes = sorted(strikes_gex.items(), key=lambda x: x[0])
-        cum_gex = 0.0
         flip_strike = spot_price
+        zero_crossings = []
+
+        # 1. Kümülatif Gamma sıfır kesişim adayları
+        cum_gex = 0.0
+        cum_series = []
         for st, g_val in sorted_strikes:
             cum_gex += g_val
-            if cum_gex >= 0:
-                flip_strike = st
-                break
+            cum_series.append((st, cum_gex))
+
+        for i in range(len(cum_series) - 1):
+            st1, c1 = cum_series[i]
+            st2, c2 = cum_series[i + 1]
+            if (c1 <= 0 and c2 > 0) or (c1 >= 0 and c2 < 0):
+                interp_st = st1 + (0.0 - c1) / (c2 - c1) * (st2 - st1)
+                zero_crossings.append(interp_st)
+
+        # 2. Strike-bazlı Net Gamma sıfır kesişim adayları
+        for i in range(len(sorted_strikes) - 1):
+            st1, g1 = sorted_strikes[i]
+            st2, g2 = sorted_strikes[i + 1]
+            if (g1 <= 0 and g2 > 0) or (g1 >= 0 and g2 < 0):
+                interp_st = st1 + (0.0 - g1) / (g2 - g1) * (st2 - st1)
+                zero_crossings.append(interp_st)
+
+        if zero_crossings:
+            # Spot fiyata en yakın gerçekçi sıfır kesişim noktasını seç
+            flip_strike = min(zero_crossings, key=lambda s: abs(s - spot_price))
+            flip_strike = round(float(flip_strike), 2)
 
         tot_abs = (calls_gex + puts_gex)
         rel_bias = net_gex / tot_abs if tot_abs > 0 else 0.0
@@ -1236,15 +1335,21 @@ def calculate_hawkes_avalanche(
 
         mu = 0.05
         decay_sum = 0.0
+        weights = []
 
         for t, usd, _ in valid_events:
             dt = max(0.0, now_ts - t)
             w = float(np.clip(np.sqrt(usd / 10000.0), 0.5, 3.0))
+            weights.append(w)
             decay_sum += alpha * w * np.exp(-beta * dt)
 
         cur_intensity = mu + decay_sum
 
-        eta = float(np.clip((alpha / (beta * 10.0)) * (cur_intensity / max(mu, 0.01)) * 0.15, 0.05, 1.45))
+        # VDA-28: Hawkes dallanma orani (Branching Ratio) teorik standardi:
+        # eta = (alpha / beta) * mean_weight (anlik yogunluk ile yapay carpim kaldirildi)
+        mean_w = float(np.mean(weights)) if weights else 1.0
+        base_eta = (alpha / (beta * 10.0))
+        eta = float(np.clip(base_eta * mean_w, 0.05, 1.45))
 
         if long_usd >= short_usd * 1.5 and long_usd > 5000.0:
             av_side = 'LONG_LIQ_DUMP_CASCADE'
@@ -1255,8 +1360,8 @@ def calculate_hawkes_avalanche(
         else:
             av_side = 'NONE'
 
-        is_active = (eta >= 0.80 and cur_intensity >= 0.35)
-        is_exhausted = (not is_active and cnt >= 5 and eta < 0.40)
+        is_active = (eta >= 0.75 and cur_intensity >= 0.30)
+        is_exhausted = (not is_active and cnt >= 4 and cur_intensity <= 0.15)
 
         if is_active:
             regime = 'AVALANCHE_RUNNER_ACTIVE'

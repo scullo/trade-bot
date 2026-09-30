@@ -59,12 +59,12 @@ async def main():
             await asyncio.sleep(60)
             # Agresif bellek temizliği (Render 512MB RAM Koruması)
             gc.collect()
-            # 5M mum verilerini 150 satıra sınırla (her döngüde, OOM önleme)
+            # 5M mum verilerini 300 satıra (25 saat) sınırla (Asya seansı ve 24s AVWAP korunur, OOM önlenir)
             try:
                 for sym in list(market_data.candles_5m.keys()):
                     df = market_data.candles_5m[sym]
-                    if hasattr(df, '__len__') and len(df) > 150:
-                        market_data.candles_5m[sym] = df.iloc[-150:].reset_index(drop=True)
+                    if hasattr(df, '__len__') and len(df) > 300:
+                        market_data.candles_5m[sym] = df.iloc[-300:].reset_index(drop=True)
             except Exception:
                 pass
 

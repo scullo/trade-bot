@@ -95,6 +95,91 @@ class ShadowExecutionEngine:
         self.load_history()
 
     # ──────────────────────────────────────────────────────────────────────────
+    # STANDART SEMBOL VE YÖN NORMALİZASYONU (VDA-12 & VDA-17)
+    # ──────────────────────────────────────────────────────────────────────────
+    @staticmethod
+    def clean_symbol(symbol: str) -> str:
+        """
+        Standart sembol normalizasyonu (VDA-12).
+        1000 ve 1000000 vadeli kontrat çarpan ön eklerini kaldırarak pariteyi
+        'BASE/USDT' kanonik formatına dönüştürür.
+        Örn: '1000PEPE/USDT' -> 'PEPE/USDT', '1000000MOG:USDT' -> 'MOG/USDT'
+        """
+        raw = str(symbol or "").strip().upper()
+        raw = raw.replace(":USDT", "").replace("/USDT", "").replace("USDT", "").replace("/", "")
+        if raw.startswith("1000000"):
+            raw = raw[7:]
+        elif raw.startswith("1000"):
+            raw = raw[4:]
+        return f"{raw}/USDT" if raw else ""
+
+    @staticmethod
+    def clean_base_symbol(symbol: str) -> str:
+        """Pariteyi çıplak ana varlık sembolüne dönüştürür (örn: '1000PEPE/USDT' -> 'PEPE')."""
+        s = ShadowExecutionEngine.clean_symbol(symbol)
+        return s.replace("/USDT", "") if s else ""
+
+    @staticmethod
+    def get_setup_direction(canonical_setup: str) -> str:
+        """
+        Kanonik setup koduna göre beklenen işlem yönünü (LONG veya SHORT) döndürür (VDA-17).
+        """
+        s = str(canonical_setup or "").strip().upper()
+        long_setups = {
+            "SETUP_1_R4_BREAKOUT",
+            "SETUP_1_OI_BULL_EXPANSION",
+            "SETUP_3_S3_BOUNCE",
+            "SETUP_3_S3_REVERSAL",
+            "SETUP_5_R4_SUPPORT_FLIP",
+            "SETUP_5_RANGE_BOUNCE",
+            "SETUP_6_MVAH_BREAKOUT",
+            "SETUP_6_MVAH_MACRO_BREAKOUT",
+            "SETUP_9_BELOW_NPOC_BOUNCE",
+            "SETUP_9_NPOC_BOUNCE",
+            "SETUP_12_PDL_SWEEP_RECLAIM_LONG",
+            "SETUP_14_ASIA_SWEEP_LONG",
+            "SETUP_14_PIVOT_SUPPORT_FLIP",
+            "SETUP_14_AVWAP_SUPPORT",
+            "SETUP_15_AVWAP_MVAH_RECLAIM",
+            "SETUP_15_AVWAP_RECLAIM",
+            "SETUP_16_FAKEOUT_RECLAIM_LONG",
+            "SETUP_16_R3_SUPPORT_FLIP",
+            "SETUP_16_R3_FLIP",
+            "SETUP_FAKEOUT_RECLAIM_LONG"
+        }
+        short_setups = {
+            "SETUP_2_S4_BREAKDOWN",
+            "SETUP_2_OI_SHORT_EXPANSION",
+            "SETUP_4_R3_REJECTION",
+            "SETUP_4_R3_REVERSAL",
+            "SETUP_7_S4_BREAKDOWN",
+            "SETUP_7_S4_RESISTANCE_FLIP",
+            "SETUP_8_MVAL_BREAKDOWN",
+            "SETUP_8_MVAL_MACRO_BREAKDOWN",
+            "SETUP_10_ABOVE_NPOC_REJECTION",
+            "SETUP_10_NPOC_REJECTION",
+            "SETUP_11_FAKEOUT_RECLAIM_SHORT",
+            "SETUP_11_RESISTANCE_FLIP",
+            "SETUP_12_SUPPORT_BREAKDOWN",
+            "SETUP_13_ASIA_SWEEP_SHORT",
+            "SETUP_13_S3_RESISTANCE_FLIP",
+            "SETUP_13_S3_FLIP",
+            "SETUP_15_PDH_SWEEP_RECLAIM_SHORT",
+            "SETUP_FAKEOUT_RECLAIM_SHORT"
+        }
+        if s in long_setups:
+            return "LONG"
+        if s in short_setups:
+            return "SHORT"
+
+        # Anahtar kelime tabanlı yedek yön tespiti
+        if any(w in s for w in ["SHORT", "BREAKDOWN", "REJECTION", "REDDİ", "REDDI", "DİRENÇ", "DIRENC", "AYI"]):
+            return "SHORT"
+        if any(w in s for w in ["LONG", "BREAKOUT", "BOUNCE", "SEKME", "SUPPORT", "DESTEK", "BOĞA", "BOGA"]):
+            return "LONG"
+        return "UNKNOWN"
+
+    # ──────────────────────────────────────────────────────────────────────────
     # KALKAN VE ENGEL SINIFLANDIRICI
     # ──────────────────────────────────────────────────────────────────────────
     def extract_shield_name(self, reason: str) -> str:
@@ -167,7 +252,7 @@ class ShadowExecutionEngine:
         Reddedilen sinyal için sanal bir gölge işlem başlatır.
         Throttling: Aynı coin ve setup için son 15 dakika içinde aktif bir işlem varsa tekrar açmaz.
         """
-        clean_sym = symbol.replace("/USDT", "").replace(":USDT", "").replace("USDT", "").upper() + "/USDT"
+        clean_sym = self.clean_symbol(symbol)
         now_ts = time.time()
 
         # 1. Throttling Kontrolü (15 dakika içinde aynı coin ve setup için çifte kayıt engelle)
@@ -182,13 +267,18 @@ class ShadowExecutionEngine:
             if act_id in self.active_positions:
                 return None
 
-        # 3. Yönü (Side) tespit et
+        # 3. Yönü (Side) tespit et (VDA-17: extract_canonical_setup & get_setup_direction ile kusursuz yön hizalaması)
         if not side:
-            s_name = (setup_name + " " + reason).upper()
-            if any(w in s_name for w in ["SHORT", "AYI", "BREAKDOWN", "DİRENÇ", "REDDİ", "S4", "R3"]):
-                side = "SHORT"
+            canon = self.extract_canonical_setup(f"{setup_name} {reason}")
+            side_detected = self.get_setup_direction(canon)
+            if side_detected in ("LONG", "SHORT"):
+                side = side_detected
             else:
-                side = "LONG"
+                s_name = (setup_name + " " + reason).upper()
+                if any(w in s_name for w in ["SHORT", "AYI", "BREAKDOWN", "DİRENÇ", "REDDİ", "S4"]):
+                    side = "SHORT"
+                else:
+                    side = "LONG"
 
         # 4. Giriş Fiyatı ve Seviyeleri Doğrula / Hesapla
         entry_p = float(entry_price or 0.0)
@@ -280,7 +370,7 @@ class ShadowExecutionEngine:
     def update_tick(self, symbol: str, current_price: float) -> List[dict]:
         """Anlık milisaniyelik fiyat güncellemesi (MFE, MAE, Acil Stop, Chandelier BE)."""
         self.last_tick_ts = time.time()
-        clean_sym = symbol.replace("/USDT", "").replace(":USDT", "").replace("USDT", "").upper() + "/USDT"
+        clean_sym = self.clean_symbol(symbol)
         closed_records = []
         cur_p = float(current_price)
         if cur_p <= 0.0:
@@ -352,7 +442,7 @@ class ShadowExecutionEngine:
     def update_candle(self, symbol: str, current_candle: dict) -> List[dict]:
         """5 Dakikalık mum kapanışı ile fitil ve kapanış kontrolleri."""
         self.last_candle_ts = time.time()
-        clean_sym = symbol.replace("/USDT", "").replace(":USDT", "").replace("USDT", "").upper() + "/USDT"
+        clean_sym = self.clean_symbol(symbol)
         closed_records = []
         c_high = float(current_candle.get("high", 0.0))
         c_low = float(current_candle.get("low", 0.0))
@@ -479,7 +569,7 @@ class ShadowExecutionEngine:
         max_candles: int = 24
     ):
         """Kapanan işlem için 'İşlem devam etseydi ne olurdu?' hayalet takibini başlatır."""
-        clean_sym = symbol.replace("/USDT", "").replace(":USDT", "").replace("USDT", "").upper() + "/USDT"
+        clean_sym = self.clean_symbol(symbol)
         if exit_price <= 0.0 or not side:
             return
         g_id = f"GHOST_{trade_id}_{int(time.time())}"
@@ -660,14 +750,18 @@ class ShadowExecutionEngine:
         symbols_map: Dict[str, List[dict]] = {}
 
         for t in completed:
-            sym = t.get("symbol", "")
+            sym = self.clean_symbol(t.get("symbol", ""))
+            if not sym:
+                continue
             if sym not in symbols_map:
                 symbols_map[sym] = []
             symbols_map[sym].append(t)
 
         # Aktif pozisyonları da sembol haritasına dahil et
         for s_id, pos in self.active_positions.items():
-            sym = pos.get("symbol", "")
+            sym = self.clean_symbol(pos.get("symbol", ""))
+            if not sym:
+                continue
             if sym not in symbols_map:
                 symbols_map[sym] = []
 
@@ -676,11 +770,11 @@ class ShadowExecutionEngine:
         if self.dna_baseline:
             for b_k, b_v in self.dna_baseline.items():
                 s_fmt = b_v.get("symbol") or (b_k.replace("USDT", "") + "/USDT")
-                all_syms.add(s_fmt)
+                all_syms.add(self.clean_symbol(s_fmt))
 
         coin_dna_list = []
         for sym in all_syms:
-            clean = sym.replace("/USDT", "").replace(":USDT", "").replace("USDT", "")
+            clean = self.clean_base_symbol(sym)
             t_list = symbols_map.get(sym, [])
             tot = len(t_list)
 
@@ -1089,7 +1183,7 @@ class ShadowExecutionEngine:
     @staticmethod
     def get_coin_liquidity_tier(symbol: str) -> dict:
         """Paritenin piyasa derinliğine göre 3 Kuant Likidite Katmanından birine atar."""
-        clean = symbol.replace("/USDT", "").replace(":USDT", "").replace("USDT", "").replace("/", "").upper()
+        clean = ShadowExecutionEngine.clean_base_symbol(symbol)
         tier_1_majors = {"BTC", "ETH", "SOL", "BNB", "XRP", "ADA"}
         tier_3_memes_and_thin = {
             "PEPE", "BONK", "DOGE", "WIF", "1000SHIB", "SHIB", "FLOKI", "BOME", "MEME",
@@ -1131,50 +1225,108 @@ class ShadowExecutionEngine:
 
     @staticmethod
     def extract_canonical_setup(setup_raw: str) -> str:
-        """Kurulum adından standart kanonik kod üretir."""
-        s = str(setup_raw or "").upper()
-        if "SETUP 1" in s or "SETUP_1" in s or "R4 BREAKOUT" in s or "R4 KIRILIMI" in s or "R4 K" in s:
-            return "SETUP_1_R4_BREAKOUT"
-        elif "SETUP 2" in s or "SETUP_2" in s or "S4 BREAKDOWN" in s or "S4 KIRILIMI" in s or "S4 K" in s:
-            return "SETUP_2_S4_BREAKDOWN"
-        elif "SETUP 3" in s or "SETUP_3" in s or "S3 DESTEK" in s or "S3 SEKME" in s or "S3 RETEST" in s:
-            return "SETUP_3_S3_REVERSAL"
-        elif "SETUP 4" in s or "SETUP_4" in s or "R3 DİRENÇ" in s or "R3 DIRENC" in s or "R3 RETEST" in s:
-            return "SETUP_4_R3_REVERSAL"
-        elif "SETUP 5" in s or "SETUP_5" in s or "RANGE BOUNCE" in s or "RANGE" in s:
-            return "SETUP_5_RANGE_BOUNCE"
-        elif "SETUP 6" in s or "SETUP_6" in s or "TREND PULLBACK" in s:
-            return "SETUP_6_TREND_PULLBACK"
-        elif "SETUP 7" in s or "SETUP_7" in s or "MVAH" in s:
-            return "SETUP_7_MVAH_BREAKOUT"
-        elif "SETUP 8" in s or "SETUP_8" in s or "MVAL" in s:
-            return "SETUP_8_MVAL_BREAKDOWN"
-        elif "SETUP 10" in s or "SETUP_10" in s or ("NPOC" in s and ("RED" in s or "DİRENÇ" in s or "DIRENC" in s or "YUKARI" in s)):
-            return "SETUP_10_NPOC_REJECTION"
-        elif "SETUP 9" in s or "SETUP_9" in s or "NPOC" in s:
-            return "SETUP_9_NPOC_BOUNCE"
-        elif "SETUP 11" in s or "SETUP_11" in s or ("FLIP" in s and ("DİRENÇ" in s or "DIRENC" in s)):
-            return "SETUP_11_RESISTANCE_FLIP"
-        elif "SETUP 12" in s or "SETUP_12" in s or "ÇÖKÜŞ" in s or "COKUS" in s or "BREAKDOWN" in s:
+        """
+        Kurulum adından standart kanonik kod üretir (VDA-17).
+        strategy.py'deki 16 kurulum ve guncellev1 taksonomisiyle %100 birebir eşleşme sağlar.
+        İki basamaklı kurulumlar (10-16) tek basamaklıların (1-9) alt dizesiyle çakışmaması için
+        azalan sırada (16 -> 1) denetlenir.
+        """
+        s = str(setup_raw or "").strip().upper()
+        if not s:
+            return "SETUP_DİĞER"
+
+        # 16. SETUP 16: FAKEOUT RECLAIM LONG / R3 SUPPORT FLIP (LONG)
+        if "SETUP_FAKEOUT_RECLAIM_LONG" in s or "FAKEOUT_RECLAIM_LONG" in s or ("FAKEOUT" in s and "LONG" in s) or ("AYI TUZAĞI" in s and "LONG" in s) or ("BEAR TRAP" in s and "LONG" in s) or "SETUP_16_FAKEOUT_RECLAIM_LONG" in s:
+            return "SETUP_16_FAKEOUT_RECLAIM_LONG"
+        if "SETUP 16" in s or "SETUP_16" in s or "R3_SUPPORT_FLIP" in s or "R3 SUPPORT FLIP" in s or "R3 FLIP" in s:
+            return "SETUP_16_R3_SUPPORT_FLIP"
+
+        # 15. SETUP 15: PDH SWEEP SHORT / AVWAP MVAH RECLAIM LONG
+        if "PDH_SWEEP" in s or "PDH SWEEP" in s or ("SWEEP" in s and "SHORT" in s) or "SETUP_15_PDH_SWEEP_RECLAIM_SHORT" in s:
+            return "SETUP_15_PDH_SWEEP_RECLAIM_SHORT"
+        if "SETUP 15" in s or "SETUP_15" in s or "AVWAP_MVAH_RECLAIM" in s or "AVWAP_RECLAIM" in s or ("AVWAP" in s and "MVAH" in s) or ("AVWAP" in s and "RECLAIM" in s):
+            return "SETUP_15_AVWAP_MVAH_RECLAIM"
+
+        # 14. SETUP 14: ASIA SWEEP LONG / PIVOT SUPPORT FLIP (LONG)
+        if "ASIA_SWEEP_LONG" in s or ("ASIA" in s and "LONG" in s) or "SETUP_14_ASIA_SWEEP_LONG" in s:
+            return "SETUP_14_ASIA_SWEEP_LONG"
+        if "SETUP 14" in s or "SETUP_14" in s or "PIVOT_SUPPORT_FLIP" in s or "PIVOT SUPPORT FLIP" in s or ("PIVOT" in s and "FLIP" in s) or "AVWAP_SUPPORT" in s or "BULLISH SUPPORT FLIP" in s:
+            return "SETUP_14_PIVOT_SUPPORT_FLIP"
+
+        # 13. SETUP 13: ASIA SWEEP SHORT / S3 RESISTANCE FLIP (SHORT)
+        if "ASIA_SWEEP_SHORT" in s or ("ASIA" in s and "SHORT" in s) or "SETUP_13_ASIA_SWEEP_SHORT" in s:
+            return "SETUP_13_ASIA_SWEEP_SHORT"
+        if "SETUP 13" in s or "SETUP_13" in s or "S3_RESISTANCE_FLIP" in s or "S3 RESISTANCE FLIP" in s or "S3 FLIP" in s:
+            return "SETUP_13_S3_RESISTANCE_FLIP"
+
+        # 12. SETUP 12: PDL SWEEP RECLAIM LONG / SUPPORT BREAKDOWN SHORT
+        if "PDL_SWEEP" in s or "PDL SWEEP" in s or ("SWEEP" in s and "LONG" in s) or "SETUP_12_PDL_SWEEP_RECLAIM_LONG" in s:
+            return "SETUP_12_PDL_SWEEP_RECLAIM_LONG"
+        if "SETUP 12" in s or "SETUP_12" in s or "SUPPORT_BREAKDOWN" in s or "DESTEK ÇÖKÜŞÜ" in s or "DESTEK COKUSU" in s or "ÇÖKÜŞ" in s or "COKUS" in s:
             return "SETUP_12_SUPPORT_BREAKDOWN"
-        elif "SETUP 13" in s or "SETUP_13" in s or "S3 FLIP" in s:
-            return "SETUP_13_S3_FLIP"
-        elif "SETUP 15" in s or "SETUP_15" in s or ("AVWAP" in s and ("RED" in s or "DİRENÇ" in s or "DIRENC" in s or "TEPE" in s or "RECLAIM" in s)):
-            return "SETUP_15_AVWAP_RECLAIM"
-        elif "SETUP 14" in s or "SETUP_14" in s or ("AVWAP" in s and ("DİP" in s or "DIP" in s or "DESTEK" in s or "SEKME" in s)):
-            return "SETUP_14_AVWAP_SUPPORT"
-        elif "SETUP 16" in s or "SETUP_16" in s or "R3 FLIP" in s:
-            return "SETUP_16_R3_FLIP"
-        elif "PIVOT" in s:
-            return "SETUP_PIVOT_REVERSAL"
-        elif "KURUMSAL" in s or "OI" in s:
-            return "SETUP_INSTITUTIONAL_OI"
+
+        # 11. SETUP 11: FAKEOUT RECLAIM SHORT / RESISTANCE FLIP (SHORT)
+        if "SETUP_FAKEOUT_RECLAIM_SHORT" in s or "FAKEOUT_RECLAIM_SHORT" in s or ("FAKEOUT" in s and "SHORT" in s) or ("BOĞA TUZAĞI" in s and "SHORT" in s) or ("BULL TRAP" in s) or "SETUP_11_FAKEOUT_RECLAIM_SHORT" in s:
+            return "SETUP_11_FAKEOUT_RECLAIM_SHORT"
+        if "SETUP 11" in s or "SETUP_11" in s or "SETUP_11_RESISTANCE_FLIP" in s or ("RESISTANCE_FLIP" in s and not any(k in s for k in ["S4", "S3", "SETUP_7", "SETUP 7", "SETUP_13", "SETUP 13"])):
+            return "SETUP_11_RESISTANCE_FLIP"
+
+        # 10. SETUP 10: ABOVE NPOC REJECTION (SHORT)
+        if "SETUP 10" in s or "SETUP_10" in s or "ABOVE_NPOC_REJECTION" in s or "ABOVE NPOC" in s or "YUKARI NPOC" in s or ("NPOC" in s and ("RED" in s or "DİRENÇ" in s or "DIRENC" in s or "REJECTION" in s)):
+            return "SETUP_10_ABOVE_NPOC_REJECTION"
+
+        # 9. SETUP 9: BELOW NPOC BOUNCE (LONG)
+        if "SETUP 9" in s or "SETUP_9" in s or "BELOW_NPOC_BOUNCE" in s or "BELOW NPOC" in s or "AŞAĞI NPOC" in s or "ASAGI NPOC" in s or ("NPOC" in s and ("BOUNCE" in s or "SEKME" in s or "DESTEK" in s)):
+            return "SETUP_9_BELOW_NPOC_BOUNCE"
+
+        # 8. SETUP 8: MVAL BREAKDOWN (SHORT)
+        if "SETUP 8" in s or "SETUP_8" in s or "MVAL_MACRO_BREAKDOWN" in s or "MVAL_BREAKDOWN" in s or "MVAL BREAKDOWN" in s or "MVAL KIRILIMI" in s or "MVAL DESTEK" in s or "MVAL ÇÖKÜŞÜ" in s or "MVAL COKUSU" in s:
+            return "SETUP_8_MVAL_BREAKDOWN"
+
+        # 7. SETUP 7: S4 BREAKDOWN / RESISTANCE FLIP (SHORT)
+        if "SETUP 7" in s or "SETUP_7" in s or "S4_RESISTANCE_FLIP" in s or "S4 RESISTANCE FLIP" in s or "S4 RETEST REDDİ" in s or "S4 RETEST REDDI" in s or "S4 DİRENÇ RETEST" in s or "S4 DIRENC RETEST" in s or ("S4" in s and "FLIP" in s):
+            return "SETUP_7_S4_BREAKDOWN"
+
+        # 6. SETUP 6: MVAH BREAKOUT (LONG)
+        if "SETUP 6" in s or "SETUP_6" in s or "MVAH_MACRO_BREAKOUT" in s or "MVAH_BREAKOUT" in s or "MVAH BREAKOUT" in s or "MVAH KIRILIMI" in s or ("MVAH" in s and ("DİRENÇ KIRILIMI" in s or "DIRENC KIRILIMI" in s or "MACRO BREAKOUT" in s or "BOĞA" in s or "BULL" in s or "LONG" in s)):
+            return "SETUP_6_MVAH_BREAKOUT"
+
+        # 5. SETUP 5: R4 SUPPORT FLIP (LONG)
+        if "SETUP 5" in s or "SETUP_5" in s or "R4_SUPPORT_FLIP" in s or "R4 SUPPORT FLIP" in s or "R4 FLIP" in s or "R4 DESTEK RETEST" in s or "RANGE BOUNCE" in s:
+            return "SETUP_5_R4_SUPPORT_FLIP"
+
+        # 4. SETUP 4: R3 REJECTION (SHORT)
+        if "SETUP 4" in s or "SETUP_4" in s or "R3 DİRENÇ" in s or "R3 DIRENC" in s or "R3 REDDİ" in s or "R3 REDDI" in s or "R3_REJECTION" in s or "R3 REJECTION" in s or "R3_REVERSAL" in s:
+            return "SETUP_4_R3_REJECTION"
+
+        # 3. SETUP 3: S3 BOUNCE (LONG)
+        if "SETUP 3" in s or "SETUP_3" in s or "S3 DESTEK" in s or "S3 SEKME" in s or "S3 RETEST" in s or "S3_BOUNCE" in s or "S3 BOUNCE" in s or "S3_REVERSAL" in s:
+            return "SETUP_3_S3_BOUNCE"
+
+        # 2. SETUP 2: S4 BREAKDOWN (SHORT)
+        if "SETUP 2" in s or "SETUP_2" in s or "S4 BREAKDOWN" in s or "S4 KIRILIMI" in s or "S4 K" in s or "OI_SHORT_EXPANSION" in s:
+            return "SETUP_2_S4_BREAKDOWN"
+
+        # 1. SETUP 1: R4 BREAKOUT (LONG)
+        if "SETUP 1" in s or "SETUP_1" in s or "R4 BREAKOUT" in s or "R4 KIRILIMI" in s or "R4 K" in s or "OI_BULL_EXPANSION" in s:
+            return "SETUP_1_R4_BREAKOUT"
+
+        # Fallback keyword checks
+        if "MVAH" in s:
+            return "SETUP_6_MVAH_BREAKOUT"
+        if "MVAL" in s:
+            return "SETUP_8_MVAL_BREAKDOWN"
+        if "NPOC" in s:
+            return "SETUP_9_BELOW_NPOC_BOUNCE" if ("BOUNCE" in s or "SEKME" in s or "DESTEK" in s) else "SETUP_10_ABOVE_NPOC_REJECTION"
+        if "PIVOT" in s:
+            return "SETUP_14_PIVOT_SUPPORT_FLIP"
+
         return "SETUP_DİĞER"
 
     def get_coin_setup_matrix(self, symbol: str) -> Dict[str, dict]:
-        """Coin bazında 15 setup'ın performansını, kârlılığını ve alfa skorunu çıkarır."""
-        clean = symbol.replace("/USDT", "").replace(":USDT", "").replace("USDT", "").replace("/", "").upper()
-        coin_trades = [t for t in self.completed_trades if t.get("symbol", "").replace("/USDT", "").replace("USDT", "").replace("/", "").upper() == clean]
+        """Coin bazında 16 setup'ın performansını, kârlılığını ve alfa skorunu çıkarır."""
+        clean = self.clean_base_symbol(symbol)
+        coin_trades = [t for t in self.completed_trades if self.clean_base_symbol(t.get("symbol", "")) == clean]
         matrix = {}
         for t in coin_trades:
             s_canon = self.extract_canonical_setup(t.get("setup", ""))
@@ -1231,12 +1383,12 @@ class ShadowExecutionEngine:
         Kullanıcı dashboard'da bir coinin [Detay] butonuna bastığında açılacak
         en ince ayrıntılı adli inceleme ve çok boyutlu parametre optimizasyon paketi.
         """
-        clean = symbol.replace("/USDT", "").replace(":USDT", "").replace("USDT", "").upper()
+        clean = self.clean_base_symbol(symbol)
         sym = f"{clean}/USDT"
 
         # Bu coine ait aktif ve tamamlanmış işlemleri topla
-        coin_actives = [p for p in self.active_positions.values() if clean in p.get("symbol", "").upper()]
-        coin_completed = [t for t in self.completed_trades if clean in t.get("symbol", "").upper()]
+        coin_actives = [p for p in self.active_positions.values() if self.clean_base_symbol(p.get("symbol", "")) == clean]
+        coin_completed = [t for t in self.completed_trades if self.clean_base_symbol(t.get("symbol", "")) == clean]
 
         heroes = [t for t in coin_completed if t.get("verdict") == "HERO_SHIELD"]
         spoilers = [t for t in coin_completed if t.get("verdict") == "SPOILER_SHIELD"]
@@ -1289,7 +1441,7 @@ class ShadowExecutionEngine:
         liq_tier = self.get_coin_liquidity_tier(clean)
 
         # Post-Exit Hayalet Analizi (İşlem devam etseydi ne olurdu?)
-        coin_ghosts = [g for g in self.post_exit_history if clean in g.get("symbol", "").upper()]
+        coin_ghosts = [g for g in self.post_exit_history if self.clean_base_symbol(g.get("symbol", "")) == clean]
         premature_exits = [g for g in coin_ghosts if g.get("verdict") == "ERKEN_CIKIS_KACAN_DALGA"]
         sniper_exits = [g for g in coin_ghosts if g.get("verdict") == "SNIPER_TEPE_CIKISI"]
         post_exit_summary = {
