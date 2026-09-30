@@ -1,5 +1,1 @@
-{
-  "updated_at": "2026-09-30 20:50:00",
-  "completed": [],
-  "actives": []
-}
+{"updated_at":"2026-09-30 22:43:33","completed":[],"actives":[{"id":"SHD_SOL_1790797413534","symbol":"SOL/USDT","side":"LONG","setup":"SETUP_1_R4_BREAKOUT","shield":"Makro Trend & Düşüş Kalkanı (Macro Regime Shield)","reason":"🧛 Vampir BTC Kalkanı: BTC likiditeyi emerken altcoin LONG işlemi veto edildi (🧛 VAMPİR_BTC (Altcoin Likidite Drenajı))","macro_regime":"NEUTRAL","setup_archetype":"UNKNOWN","regime_alignment":"NEUTRAL","btc_chg_4h":0.0,"btc_chg_1h":0.0,"entry_price":150.0,"current_price":150.0,"sl_price":147.75,"tp1_price":153.375,"tp2_price":156.3,"be_price":null,"tp1_hit":false,"tp2_hit":false,"early_be_locked":false,"candles_elapsed":0,"entry_time":"2026-09-30 22:43:33","entry_ts":1790797413.5342474,"peak_high":150.0,"valley_low":150.0,"max_mfe_pct":0.0,"max_mae_pct":0.0,"status":"OPEN","exit_price":null,"exit_time":null,"virtual_pnl_usd":0.0,"virtual_pnl_pct":0.0,"verdict":null,"verdict_badge":"TAKİPTE (Açık Pozisyon)","narrative":"Pozisyon canlı fiyat ve mum teyidiyle takip ediliyor.","margin_usd":250.0,"leverage":5.0,"notional_usd":1250.0,"telemetry":{"atr_pct":1.5,"vol_surge":1.9,"rs_score":0.0}}]}
