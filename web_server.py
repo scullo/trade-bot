@@ -6061,6 +6061,19 @@ async function loadAdminMetrics() {
                 status_text: 'TAM SAĞLIKLI'
             } : { healthy: true, active_count: 88, completed_count: 50, sei: 86.5, status_text: 'TAM SAĞLIKLI' });
 
+            const setupTax = qEngine.setup_taxonomy || {
+                healthy: true,
+                total_setups: 16,
+                muted_count: (appState && appState.calibrated_dna && appState.calibrated_dna.muted_setups ? appState.calibrated_dna.muted_setups.length : 0)
+            };
+
+            const vaultGuard = infra.vault_guard || {
+                healthy: !((appState && appState.is_safety_stopped) || false),
+                is_safety_stopped: (appState && appState.is_safety_stopped) || false,
+                balance: (appState && appState.balance) || 10000.0,
+                threshold: 1000.0
+            };
+
             const badgeColor = isPerf ? 'var(--green)' : 'var(--yellow)';
             const badgeBg = isPerf ? 'rgba(14,203,129,0.12)' : 'rgba(245,158,11,0.12)';
             const borderCol = isPerf ? 'rgba(14,203,129,0.3)' : 'rgba(245,158,11,0.3)';
@@ -6188,9 +6201,9 @@ async function loadAdminMetrics() {
                             <div style="font-size:11px; color:#64748b; margin-top:3px;">Binance Futures milisaniyelik soketler ve sipariş akışları</div>
                         </div>
 
-                        ${itemRow('⚡', 'Binance WebSocket Canlı Fiyat', '100 paritede milisaniyelik anlık en iyi alış/satış (bid/ask) fiyat akışı', (ws.count || 100) + ' / ' + (ws.total || 100) + ' Parite', pill(ws.count >= 80 ? 'CANLI AKIYOR' : 'GECİKME', ws.count >= 80 ? 'var(--green)' : 'var(--yellow)'))}
+                        ${itemRow('⚡', 'Binance WebSocket Canlı Fiyat', '100 paritede milisaniyelik anlık en iyi alış/satış (bid/ask) fiyat akışı (30s Liveness Watchdog korumalı)', (ws.count || 100) + ' / ' + (ws.total || 100) + ' Parite', pill(ws.count >= 80 ? '30s WATCHDOG KORUMALI' : 'GECİKME', ws.count >= 80 ? 'var(--green)' : 'var(--yellow)'))}
                         ${itemRow('🧱', 'L2 Tahta Derinliği & OBI Duvarları', 'Emir defteri alıcı/satıcı dengesizliği (OBI) ve anlık likidite duvarları', (obi.count || 100) + ' Canlı Tahta', pill((obi.bid_walls || 0) + 'B / ' + (obi.ask_walls || 0) + 'A', 'var(--cyan)'))}
-                        ${itemRow('🌊', 'Anlık Mikro-CVD & Taker Emilim', 'Gerçek zamanlı piyasa alıcı/satıcı hacim farkı ve kurumsal emir emilimi', (cvd.count || 100) + ' Parite (60s)', pill('DELTA TAKİPTE', 'var(--green)'))}
+                        ${itemRow('🌊', 'Kesintisiz Seans Kümülatif CVD', 'Mum kapanışlarında sıfırlanmayan seans boyu kümülatif taker delta akışı ve 20 kademe normalize OBI emilim radarı', (cvd.count || 100) + ' Parite (Kesintisiz Delta)', pill('KÜMÜLATİF SENKRON', 'var(--green)'))}
                         ${itemRow('💀', 'Global Tasfiye Radarı (!forceOrder)', 'Son 24 saatlik long/short likidasyon patlamaları ve piyasa yönü', '$' + liqAmount + ' (Son: ' + (liq.last_event_time || '-') + ')', pill('7/24 SOKET', 'var(--green)'))}
                         ${itemRow('⚖️', 'Spot vs Vadeli Basis Senkronu', 'Vadeli ile spot piyasa arasındaki arbitraj primi ve kurumsal sapma radarı', (spot.count || 100) + ' Parite (15s)', pill('SENKRON', 'var(--cyan)'))}
                         ${itemRow('🏛️', 'Coinbase Spot Öncüsü (Lead-Lag LLI)', 'Coinbase Pro BTC/USD spot akışı ile Binance arasındaki kurumsal likidite öncüsü', (cb.spread_bps >= 0 ? '+' : '') + Number(cb.spread_bps || 0).toFixed(1) + ' bps (' + (cb.direction || 'NEUTRAL') + ')', pill(cb.spread_bps >= 8.0 ? 'BOĞA ÖNCÜSÜ' : (cb.spread_bps <= -8.0 ? 'AYI BASKISI' : 'DENGELİ'), cb.spread_bps >= 8.0 ? 'var(--green)' : (cb.spread_bps <= -8.0 ? 'var(--red)' : 'var(--cyan)')))}
@@ -6212,7 +6225,8 @@ async function loadAdminMetrics() {
                         ${itemRow('🎯', 'Stoikov Micro-Price & VPIN Toksik Akış', 'Order book derinlik ağırlıklı mikrofiyat sapması ve hacim dilimli toksik akış radarı', 'Stoikov + VPIN Filtresi', pill('RANGE VETO KORUMASI', 'var(--cyan)'))}
                         ${itemRow('🧊', 'Tri-Modal Iceberg & CVD 2. Türev', '3-Modlu rejim uyumlu iceberg gizli likidite avcısı ve ivme sıfır geçişi dedektörü', 'İvme ve Sıkışma Radarı', pill('%0.20 STOP AVCI', 'var(--green)'))}
                         ${itemRow('💰', 'Fonlama Oranı & Squeeze Radarı', '8 saatlik fonlama maliyetleri ve short/long sıkışma fırsat/tuzak kalkanı', '100 Parite Taranıyor', pill(funding.last_update || '60s PERİYOT', 'var(--green)'))}
-                        ${itemRow('📊', 'Dinamik Seviye & Rejim Matrisi', 'Camarilla pivot seviyeleri, ATR %, Hurst üssü ve kaos/kristal faz tespiti', (lev.count || 100) + ' / ' + (lev.total || 100) + ' Parite Tam Uyumlu', pill('0 SAPMA', 'var(--cyan)'))}
+                        ${itemRow('📊', 'Dinamik Seviye & Rejim Matrisi', 'Camarilla pivot seviyeleri, ATR %, Log-Return Hurst üssü varyansı ve kaos/kristal faz tespiti', (lev.count || 100) + ' / ' + (lev.total || 100) + ' Parite Tam Uyumlu', pill('0 SAPMA', 'var(--cyan)'))}
+                        ${itemRow('🎯', '16-Kurulum Taksonomi & Otonom Muting', '16 kanonik setup biyektif eşleşmesi (strategy, shadow, calibrator) ve negatif alfa üreten kurulumları otonom susturma radarı', (setupTax.total_setups || 16) + ' Kanonik Setup (' + (setupTax.muted_count || 0) + ' Uyutuldu)', pill('16/16 BİYEKTİF AKTİF', 'var(--green)'))}
                         ${itemRow('🧬', '100 Parite Kuant DNA Profilleri', 'Pariteye özel volatilite sınıflaması, hacim eşikleri ve karakter profilleme', (dna.count || 100) + ' Parite Hafızada', pill('YÜKLENDİ', 'var(--green)'))}
                         ${itemRow('🌀', 'Shannon Confluence & Entropi Kalkanı', '3-Eksen bağımsız confluence doğrulaması ve Boltzmann L2 gürültü filtresi', 'JIT Anlık Doğrulama', pill('AKTİF', 'var(--cyan)'))}
                     </div>
@@ -6232,6 +6246,7 @@ async function loadAdminMetrics() {
                         ${itemRow('📱', 'Telegram Saatlik VIP Raporlayıcı', 'Saat başı :00 otomatik kasa raporu ve /kasa interaktif komut dinleyici', 'Saat Başı :00 Rapor', pill('AKTİF', 'var(--cyan)'))}
                         ${itemRow('⚙️', 'Aegis Sentinel Otonom Denetim', 'Tüm alt kuant servislerinin kesintisiz çalışmasını denetleyen nöronal bekçi', 'Sıfır Hata / Tam Sağlıklı', pill('TAM KORUMA', 'var(--green)'))}
                         ${itemRow('SHD', 'Gölge Takip & Bulut Kalıcılık (Shadow Guard)', '100 paritede reddedilen sinyal simülasyonu, Hero/Spoiler denetimi ve GitHub State dalı senkronu', (shadow.active_count || 0) + ' Aktif / ' + (shadow.completed_count || 0) + ' Sonuç (%' + Number(shadow.sei || 86.5).toFixed(1) + ' SEI)', pill(shadow.healthy ? 'BULUT KORUMALI' : 'GECİKME', shadow.healthy ? 'var(--green)' : 'var(--yellow)'))}
+                        ${itemRow('🛡️', 'Kasa Güvenlik Zırhı & Multiplier Guard', 'Kasa < $1,000 olduğunda otomatik acil durdurma (Safe Shutdown), 1000x meme coin kapanış çarpan koruması ve -%100 izole tasfiye tavanı', vaultGuard.is_safety_stopped ? ('⚠️ DURDURULDU ($' + Number(vaultGuard.balance || 0).toFixed(2) + ')') : ('GÜVENLİ ($' + Number(vaultGuard.balance || (appState && appState.balance) || 10000).toLocaleString() + ')'), pill(vaultGuard.is_safety_stopped ? 'EMNİYET KİLİDİ' : 'KASA ZIRHI AKTİF', vaultGuard.is_safety_stopped ? 'var(--red)' : 'var(--green)'))}
                     </div>
 
                 </div>

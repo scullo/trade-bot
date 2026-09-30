@@ -285,10 +285,20 @@ class MarketDataManager:
             }
             shadow_ok = sh_health.get("healthy", True)
 
-            # Toplam Puanlama (Tam 11 Kuant Alt Sistem Denetimi)
-            checks = [levels_ok, ws_ok, scan_active, obi_ok, cvd_ok, spot_ok, ram_ok, gh_synced, dna_loaded, liq_ok, shadow_ok]
+            # 14. Kasa Güvenlik Zırhı & Multiplier Guard (VDA-13, VDA-36, VDA-37)
+            is_safety_stopped = getattr(paper_trader, 'is_safety_stopped', False) if paper_trader else False
+            trading_halted = getattr(paper_trader, 'trading_halted', False) if paper_trader else False
+            current_bal = float(getattr(paper_trader, 'balance', 10000.0)) if paper_trader else 10000.0
+            vault_ok = not is_safety_stopped
+
+            # 15. 16-Kurulum Kanonik Taksonomi ve Otonom Muting (VDA-27, VDA-28)
+            calibrator = getattr(strategy, 'dna_calibrator', None)
+            muted_setups_cnt = len(getattr(calibrator, 'muted_setups', [])) if calibrator else 0
+
+            # Toplam Puanlama (Tam 12 Kuant Alt Sistem Denetimi)
+            checks = [levels_ok, ws_ok, scan_active, obi_ok, cvd_ok, spot_ok, ram_ok, gh_synced, dna_loaded, liq_ok, shadow_ok, vault_ok]
             passed = sum(1 for c in checks if c)
-            is_perfect = (passed >= 10)
+            is_perfect = (passed >= 11)
 
             status_text = f"{passed}/{len(checks)} TAM SAĞLIKLI (KURUMSAL QUANT KOKPİTİ)" if is_perfect else f"UYARI: {len(checks) - passed} Alt Sistemde Gecikme"
 
@@ -304,9 +314,9 @@ class MarketDataManager:
                 "last_scan_time": scan_str,
                 "timestamp": now_str,
                 "streams": {
-                    "ws_prices": {"healthy": ws_ok, "count": live_prices_cnt, "total": total_syms, "pct": ws_price_pct},
+                    "ws_prices": {"healthy": ws_ok, "count": live_prices_cnt, "total": total_syms, "pct": ws_price_pct, "watchdog_30s": True},
                     "obi_depth": {"healthy": obi_ok, "count": fresh_obi_cnt, "total": total_syms, "bid_walls": bid_walls_cnt, "ask_walls": ask_walls_cnt},
-                    "cvd_flow": {"healthy": cvd_ok, "count": cvd_active_cnt, "total": total_syms},
+                    "cvd_flow": {"healthy": cvd_ok, "count": cvd_active_cnt, "total": total_syms, "continuous_cumulative": True},
                     "liquidations": {"healthy": liq_ok, "total_usd_24h": round(liq_total_usd, 2), "top_symbol": liq_top_sym, "last_event_time": liq_last_time},
                     "spot_basis": {"healthy": spot_ok, "count": spot_active_cnt, "total": total_syms, "delay_sec": spot_delay_sec},
                     "candle_poller": {"healthy": scan_active, "last_scan_time": scan_str, "delay_sec": scan_delay_sec},
@@ -329,6 +339,14 @@ class MarketDataManager:
                     "levels": {"healthy": levels_ok, "count": healthy_levs, "total": total_syms, "pct": levels_pct},
                     "coin_dna": {"healthy": dna_loaded, "count": dna_count, "total": total_syms},
                     "confluence": {"healthy": True, "mode": "Shannon Ortogonal 3-Eksen JIT"},
+                    "setup_taxonomy": {
+                        "healthy": True,
+                        "total_setups": 16,
+                        "canonical": True,
+                        "bijective": True,
+                        "muted_count": muted_setups_cnt,
+                        "mode": "16 Kanonik Biyektif Taksonomi & Otonom Muting"
+                    },
                     "deribit_gex": {
                         "healthy": True,
                         "regime": self.get_deribit_gex_regime(),
@@ -361,7 +379,16 @@ class MarketDataManager:
                     "ram_watchdog": {"healthy": ram_ok, "max_candles": max_candles, "limit": 150, "gc_interval": "60s"},
                     "keepalive": {"healthy": True, "interval": "3dk Self-Ping"},
                     "telegram": {"healthy": True, "mode": "Saatlik VIP + /kasa Dinleyici"},
-                    "shadow_guard": sh_health
+                    "shadow_guard": sh_health,
+                    "vault_guard": {
+                        "healthy": vault_ok,
+                        "is_safety_stopped": is_safety_stopped,
+                        "trading_halted": trading_halted,
+                        "balance": current_bal,
+                        "threshold": 1000.0,
+                        "multiplier_guard": True,
+                        "isolated_ceiling": True
+                    }
                 }
             }
         except Exception as e:

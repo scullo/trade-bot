@@ -275,6 +275,23 @@ class ValkyrieAegisSentinel:
             if cleaned_nan > 0:
                 actions_taken.append(f"🛡️ {cleaned_nan} adet CVD NaN/Inf değeri 0.0 ile onarıldı.")
 
+        # 7. Kasa Güvenlik Zırhı Denetimi (VDA-13 Auto-Intervention)
+        if trader_manager:
+            pt = getattr(trader_manager, 'paper_trader', trader_manager)
+            bal = float(getattr(pt, 'balance', 10000.0))
+            is_stopped = getattr(pt, 'is_safety_stopped', False)
+            if bal < 1000.0 and not is_stopped:
+                pt.is_safety_stopped = True
+                pt.trading_halted = True
+                actions_taken.append(f"🚨 KASA KRİTİK EŞİKTE (${bal:.2f} < $1,000): Aegis Sentinel acil durdurma zırhını (Safe Shutdown) otonom kilitledi.")
+
+        # 8. WebSocket 35s Liveness Watchdog Denetimi (VDA-01 Auto-Intervention)
+        last_ws_tick = getattr(market_data, 'last_stream_tick_time', 0.0)
+        if last_ws_tick > 0 and (time.time() - last_ws_tick) > 35.0:
+            if hasattr(market_data, 'reconnect'):
+                asyncio.create_task(market_data.reconnect())
+                actions_taken.append("⚡ WebSocket akışı 35s gecikti: Aegis Sentinel otonom reconnect tetikledi.")
+
         if actions_taken:
             self.healing_history.append({
                 "time": now_str,

@@ -1,9 +1,9 @@
 {
-  "updated_at": "2026-09-30 20:16:29",
+  "updated_at": "2026-09-30 20:44:55",
   "completed": [],
   "actives": [
     {
-      "id": "SHD_PEPE_1790788589969",
+      "id": "SHD_PEPE_1790790295941",
       "symbol": "PEPE/USDT",
       "side": "LONG",
       "setup": "SETUP_1_R4_BREAKOUT",
@@ -24,8 +24,8 @@
       "tp2_hit": false,
       "early_be_locked": false,
       "candles_elapsed": 0,
-      "entry_time": "2026-09-30 20:16:29",
-      "entry_ts": 1790788589.9698584,
+      "entry_time": "2026-09-30 20:44:55",
+      "entry_ts": 1790790295.9416454,
       "peak_high": 0.01,
       "valley_low": 0.01,
       "max_mfe_pct": 0.0,
