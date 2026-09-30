@@ -57,6 +57,7 @@ class TestPhase4TaxonomyCalibratorProof(unittest.TestCase):
 
     def setUp(self):
         self.shadow_engine = ShadowExecutionEngine()
+        self.shadow_engine.save_history = MagicMock()
         self.shadow_engine.active_positions.clear()
         self.shadow_engine.completed_trades.clear()
         self.shadow_engine.symbol_active_map.clear()

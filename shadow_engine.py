@@ -607,6 +607,17 @@ class ShadowExecutionEngine:
         side = pos["side"]
         entry_p = pos["entry_price"]
         exit_p = float(exit_price)
+
+        # VDA-36: Meme Coin Multiplier Guard (1000x ve 1M sözleşmelerinde spot/vadeli ölçek sapmasını normalize et)
+        clean_base = self.clean_base_symbol(pos["symbol"])
+        ratio = exit_p / entry_p if entry_p > 0 else 1.0
+        if ratio > 500.0:
+            if clean_base in ["PEPE", "SHIB", "BONK", "FLOKI", "LUNC", "CAT", "CHEEMS"]:
+                exit_p = exit_p / 1000.0
+        elif ratio < 0.002:
+            if clean_base in ["PEPE", "SHIB", "BONK", "FLOKI", "LUNC", "CAT", "CHEEMS"]:
+                exit_p = exit_p * 1000.0
+
         pos["exit_price"] = exit_p
         pos["exit_status"] = exit_status
         pos["close_reason"] = close_reason
@@ -621,8 +632,17 @@ class ShadowExecutionEngine:
 
         fee_pct = 0.0008  # %0.08 taker roundtrip komisyonu
         net_pct = raw_pnl_pct - fee_pct
-        pos["virtual_pnl_pct"] = round(net_pct * self.virtual_leverage * 100.0, 2)
-        pos["virtual_pnl_usd"] = round(self.virtual_notional * net_pct, 2)
+
+        # VDA-37: İzole Marjin Tasfiye Tavanı (Maksimum kayıp yatırılan teminat ve -%100 ROE ile sınırlıdır)
+        margin = float(pos.get("margin_usd", self.virtual_margin))
+        gross_pnl = round(self.virtual_notional * raw_pnl_pct, 2)
+        total_fees = round(self.virtual_notional * fee_pct, 2)
+
+        net_pnl = max(-margin, gross_pnl - total_fees)
+        roe_pct = max(-100.0, round(net_pct * self.virtual_leverage * 100.0, 2))
+
+        pos["virtual_pnl_pct"] = roe_pct
+        pos["virtual_pnl_usd"] = net_pnl
 
         # ADLİ TEŞHİS (HERO vs SPOILER)
         symbol_clean = pos["symbol"].replace("/USDT", "")
@@ -679,7 +699,7 @@ class ShadowExecutionEngine:
         inv_raw_pnl = -raw_pnl_pct
         inv_net_pnl = inv_raw_pnl - fee_pct
         pos["inversion_side"] = inv_side
-        pos["inversion_pnl_usd"] = round(self.virtual_notional * inv_net_pnl, 2)
+        pos["inversion_pnl_usd"] = max(-margin, round(self.virtual_notional * inv_net_pnl, 2))
         pos["inversion_verdict"] = "PROFITABLE_INVERSION" if pos["inversion_pnl_usd"] > 1.5 else "UNPROFITABLE_INVERSION"
 
         # 👻 Çift Yönlü Takip: Post-Exit Hayalet İz Sürücüsü Başlat ("İşlem devam etseydi ne olurdu?")
