@@ -2970,7 +2970,7 @@ HTML_PAGE = """
                 <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px;">
                     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
                         <div style="font-size:13px; font-weight:800; color:#10b981; display:flex; align-items:center; gap:6px;">
-                            🎯 Kurulum Karnesi (15 Setup Performansı)
+                            🎯 Kurulum Karnesi (16 Setup Performansı)
                         </div>
                         <div id="shadow-modal-setup-badge-summary" style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">
                             Kuant Setup Karnesi
