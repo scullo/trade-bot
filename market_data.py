@@ -1933,7 +1933,7 @@ class MarketDataManager:
             best_bid = bids[0][0]
             best_ask = asks[0][0]
             if best_bid > 0:
-                spread_pct = round(((best_ask - best_bid) / best_bid) * 100.0, 3)
+                spread_pct = round(((best_ask - best_bid) / best_bid) * 100.0, 6)
 
             mid_p = (best_bid + best_ask) / 2.0
             if mid_p > 0:
@@ -1943,33 +1943,35 @@ class MarketDataManager:
                 a_depth = sum(p * q for p, q in asks if p <= p_max)
                 depth_usd_03 = round(b_depth + a_depth, 1)
 
-            # Simüle Kayma
+            # Simüle Kayma (VWAP tabanlı — $500 piyasa emri simülasyonu)
             req_usd = 500.0
             accum_usd = 0.0
-            vwap_buy = 0.0
+            total_qty_buy = 0.0
             for p, q in asks:
                 tier_usd = p * q
-                take = min(tier_usd, req_usd - accum_usd)
-                vwap_buy += p * (take / p)
-                accum_usd += take
+                take_usd = min(tier_usd, req_usd - accum_usd)
+                take_qty = take_usd / p
+                total_qty_buy += take_qty
+                accum_usd += take_usd
                 if accum_usd >= req_usd:
                     break
-            if accum_usd > 0 and best_ask > 0:
-                avg_exec = vwap_buy / (accum_usd / best_ask) if best_ask > 0 else best_ask
-                sim_slip_long = round(max(0.0, (avg_exec - best_ask) / best_ask * 100.0), 3)
+            if total_qty_buy > 0 and best_ask > 0:
+                avg_exec = accum_usd / total_qty_buy
+                sim_slip_long = round(max(0.0, (avg_exec - best_ask) / best_ask * 100.0), 6)
 
             accum_usd_s = 0.0
-            vwap_sell = 0.0
+            total_qty_sell = 0.0
             for p, q in bids:
                 tier_usd = p * q
-                take = min(tier_usd, req_usd - accum_usd_s)
-                vwap_sell += p * (take / p)
-                accum_usd_s += take
+                take_usd = min(tier_usd, req_usd - accum_usd_s)
+                take_qty = take_usd / p
+                total_qty_sell += take_qty
+                accum_usd_s += take_usd
                 if accum_usd_s >= req_usd:
                     break
-            if accum_usd_s > 0 and best_bid > 0:
-                avg_exec_s = vwap_sell / (accum_usd_s / best_bid) if best_bid > 0 else best_bid
-                sim_slip_short = round(max(0.0, (best_bid - avg_exec_s) / best_bid * 100.0), 3)
+            if total_qty_sell > 0 and best_bid > 0:
+                avg_exec_s = accum_usd_s / total_qty_sell
+                sim_slip_short = round(max(0.0, (best_bid - avg_exec_s) / best_bid * 100.0), 6)
 
         res_depth = {
             'symbol': symbol,
