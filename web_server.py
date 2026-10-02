@@ -9,6 +9,7 @@ import pandas as pd
 import time
 from datetime import datetime, timezone, timedelta
 from aiohttp import web
+import config
 from config import SYMBOLS
 
 SERVER_START_TS = time.time()
