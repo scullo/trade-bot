@@ -2980,13 +2980,13 @@ HTML_PAGE = """
                         <table class="data-table" style="width:100%; font-size:11.5px;">
                             <thead>
                                 <tr>
-                                    <th style="text-align:left;">Setup Kodu</th>
-                                    <th>İşlem Sayısı</th>
-                                    <th>Kazanma (Win %)</th>
-                                    <th>Net PnL ($)</th>
-                                    <th>Max MFE</th>
-                                    <th>Alfa Skoru</th>
-                                    <th>Kuant Kararı</th>
+                                    <th style="text-align:left; padding:8px 10px;">Setup Kodu</th>
+                                    <th style="text-align:center; padding:8px 10px;">İşlem Sayısı</th>
+                                    <th style="text-align:center; padding:8px 10px;">Kazanma (Win %)</th>
+                                    <th style="text-align:center; padding:8px 10px;">Net PnL ($)</th>
+                                    <th style="text-align:center; padding:8px 10px;">Max MFE</th>
+                                    <th style="text-align:center; padding:8px 10px;">Alfa Skoru</th>
+                                    <th style="text-align:center; padding:8px 10px;">Kuant Kararı</th>
                                 </tr>
                             </thead>
                             <tbody id="shadow-modal-setups-tbody">
@@ -3034,12 +3034,12 @@ HTML_PAGE = """
                         <table class="data-table" style="width:100%; font-size:12px;">
                             <thead>
                                 <tr>
-                                    <th style="text-align:left;">Kalkan Adı</th>
-                                    <th>Kahraman (Hero)</th>
-                                    <th>Frenleyici (Spoiler)</th>
-                                    <th>Kurtarılan Zarar ($)</th>
-                                    <th>Kaçan Kâr ($)</th>
-                                    <th>Kalkan SEI</th>
+                                    <th style="text-align:left; padding:8px 10px;">Kalkan Adı</th>
+                                    <th style="text-align:center; padding:8px 10px;">Kahraman (Hero)</th>
+                                    <th style="text-align:center; padding:8px 10px;">Frenleyici (Spoiler)</th>
+                                    <th style="text-align:center; padding:8px 10px;">Kurtarılan Zarar ($)</th>
+                                    <th style="text-align:center; padding:8px 10px;">Kaçan Kâr ($)</th>
+                                    <th style="text-align:center; padding:8px 10px;">Kalkan SEI</th>
                                 </tr>
                             </thead>
                             <tbody id="shadow-modal-shields-tbody">
@@ -4251,15 +4251,15 @@ HTML_PAGE = """
                 <table class="trade-table">
                     <thead>
                         <tr>
-                            <th>Parite</th>
-                            <th>Mevcut Lig / Persona</th>
-                            <th>Son Havuz</th>
-                            <th>Kazanma Oranı (WR %)</th>
-                            <th>Tuzak Fitil (Fakeout %)</th>
-                            <th>Net Kâr ($)</th>
-                            <th>🎯 İzin Verilen Stratejiler</th>
-                            <th>🛡️ Risk & Marjin Katsayısı</th>
-                            <th>Aksiyon</th>
+                            <th style="padding:10px 12px; text-align:left;">Parite</th>
+                            <th style="padding:10px 12px; text-align:left;">Mevcut Lig / Persona</th>
+                            <th style="padding:10px 12px; text-align:center;">Örneklem</th>
+                            <th style="padding:10px 12px; text-align:center;">Kazanma (WR %)</th>
+                            <th style="padding:10px 12px; text-align:center;">Tuzak Fitil (%)</th>
+                            <th style="padding:10px 12px; text-align:right;">Net Kâr ($)</th>
+                            <th style="padding:10px 12px; text-align:left;">🎯 İzin Verilen Stratejiler</th>
+                            <th style="padding:10px 12px; text-align:left;">🛡️ Risk & Marjin Katsayısı</th>
+                            <th style="padding:10px 12px; text-align:center;">Aksiyon</th>
                         </tr>
                     </thead>
                     <tbody id="persona-table-body">
@@ -4395,19 +4395,19 @@ HTML_PAGE = """
                 <table class="data-table" style="width:100%; border-collapse:collapse;">
                     <thead style="position:sticky; top:0; z-index:10; background:#0b101b;">
                         <tr>
-                            <th style="text-align:left; width:75px;">Parite</th>
-                            <th style="text-align:center; width:95px;">Katman</th>
-                            <th style="text-align:center; width:60px;">Toplam</th>
-                            <th style="text-align:center; width:65px;" title="Hero Kalkan (Zarardan Kurtarılan İşlem)">Hero</th>
-                            <th style="text-align:center; width:65px;" title="Spoiler Kalkan (Kaçan Kârlı İşlem)">Spoiler</th>
-                            <th style="text-align:center; width:85px;">Kurtarılan</th>
-                            <th style="text-align:center; width:85px;">Kaçan Kâr</th>
-                            <th style="text-align:center; width:65px;" title="Shield Efficiency Index">SEI (%)</th>
-                            <th style="text-align:left; width:190px; min-width:170px;">En Çok Engelleyen Kalkan</th>
-                            <th style="text-align:center; width:65px;" title="Fitil Esnekliği">Fitil %</th>
-                            <th style="text-align:center; width:95px;">Durum</th>
-                            <th style="text-align:left; min-width:320px;">Otonom Kalibrasyon Teşhisi</th>
-                            <th style="text-align:center; width:75px;">Detay</th>
+                            <th style="text-align:left; width:75px; padding:10px 12px;">Parite</th>
+                            <th style="text-align:center; width:95px; padding:10px 12px;">Katman</th>
+                            <th style="text-align:center; width:60px; padding:10px 12px;">Toplam</th>
+                            <th style="text-align:center; width:65px; padding:10px 12px;" title="Hero Kalkan (Zarardan Kurtarılan İşlem)">Hero</th>
+                            <th style="text-align:center; width:65px; padding:10px 12px;" title="Spoiler Kalkan (Kaçan Kârlı İşlem)">Spoiler</th>
+                            <th style="text-align:right; width:95px; padding:10px 12px;">Kurtarılan</th>
+                            <th style="text-align:right; width:95px; padding:10px 12px;">Kaçan Kâr</th>
+                            <th style="text-align:center; width:65px; padding:10px 12px;" title="Shield Efficiency Index">SEI (%)</th>
+                            <th style="text-align:left; width:180px; min-width:160px; padding:10px 12px;">En Çok Engelleyen Kalkan</th>
+                            <th style="text-align:center; width:65px; padding:10px 12px;" title="Fitil Esnekliği">Fitil %</th>
+                            <th style="text-align:center; width:95px; padding:10px 12px;">Durum</th>
+                            <th style="text-align:left; min-width:300px; padding:10px 12px;">Otonom Kalibrasyon Teşhisi</th>
+                            <th style="text-align:center; width:80px; padding:10px 12px;">Detay</th>
                         </tr>
                     </thead>
                     <tbody id="shadow-coin-matrix-tbody">
@@ -4642,16 +4642,16 @@ HTML_PAGE = """
                 <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;">
                     <thead>
                         <tr style="background:rgba(255,255,255,0.03); color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.08);">
-                            <th style="padding:10px 12px;">Parite</th>
+                            <th style="padding:10px 14px; text-align:left;">Parite</th>
                             <th style="padding:10px 12px; text-align:center;">Katman</th>
-                            <th style="padding:10px 12px;">Kalibrasyon Sınıfı</th>
-                            <th style="padding:10px 12px;">Confluence Eşiği</th>
-                            <th style="padding:10px 12px;">Dinamik BE Eşiği</th>
-                            <th style="padding:10px 12px;">Fitil Toleransı</th>
-                            <th style="padding:10px 12px;">Marjin Ölçeği</th>
-                            <th style="padding:10px 12px;">Kalkan Skoru (SEI)</th>
-                            <th style="padding:10px 12px;">İçsel Doğrulama</th>
-                            <th style="padding:10px 12px; text-align:right;">Derin İncele</th>
+                            <th style="padding:10px 12px; text-align:center;">Kalibrasyon Sınıfı</th>
+                            <th style="padding:10px 12px; text-align:center;">Confluence (A+)</th>
+                            <th style="padding:10px 12px; text-align:center;">Dinamik BE Eşiği</th>
+                            <th style="padding:10px 12px; text-align:center;">Fitil Toleransı</th>
+                            <th style="padding:10px 12px; text-align:center;">Marjin Ölçeği</th>
+                            <th style="padding:10px 12px; text-align:center;">Kalkan Skoru (SEI)</th>
+                            <th style="padding:10px 12px; text-align:center;">İçsel Doğrulama</th>
+                            <th style="padding:10px 14px; text-align:right;">Derin İncele</th>
                         </tr>
                     </thead>
                     <tbody id="quant-coin-matrix-tbody">
@@ -6464,37 +6464,38 @@ async function loadAdminMetrics() {
                             const tierColor = tierBadge.includes('TIER-1') ? '#10b981' : (tierBadge.includes('TIER-3') ? '#a855f7' : '#38bdf8');
                             const tierBg = tierColor + '18';
 
+                            const safeRec = (c.recommendation || '').replace(/"/g, '&quot;');
                             return `
-                                <tr style="border-bottom:1px solid rgba(255,255,255,0.04); font-family:'JetBrains Mono', monospace; font-size:12px;">
-                                    <td style="font-weight:700; color:#fff; padding:10px 12px; text-align:left;">${c.symbol}</td>
-                                    <td style="text-align:center;">
+                                <tr style="border-bottom:1px solid rgba(255,255,255,0.04); font-family:'JetBrains Mono', monospace; font-size:12px; transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                                    <td style="vertical-align:middle; font-weight:800; color:#fff; padding:10px 12px; text-align:left;">${c.symbol}</td>
+                                    <td style="vertical-align:middle; text-align:center; padding:10px 12px;">
                                         <span style="background:${tierBg}; color:${tierColor}; border:1px solid ${tierColor}40; padding:2px 7px; border-radius:6px; font-size:10px; font-weight:700; white-space:nowrap;">
                                             ${tierBadge}
                                         </span>
                                     </td>
-                                    <td style="text-align:center;">${c.total_shadows}</td>
-                                    <td style="text-align:center; color:#10b981; font-weight:700;">${c.hero_count}</td>
-                                    <td style="text-align:center; color:#f43f5e; font-weight:700;">${c.spoiler_count}</td>
-                                    <td style="text-align:center; color:#10b981; font-weight:600;">+$${(c.saved_loss_usd || 0).toFixed(2)}</td>
-                                    <td style="text-align:center; color:#f43f5e; font-weight:600;">-$${(c.missed_profit_usd || 0).toFixed(2)}</td>
-                                    <td style="text-align:center; font-weight:700; color:${c.sei >= 70 ? '#10b981' : (c.sei <= 35 ? '#f43f5e' : '#f59e0b')};">%${(c.sei || 100).toFixed(1)}</td>
-                                    <td style="text-align:left; color:#94a3b8; font-size:11.5px; white-space:normal; line-height:1.3;">${c.top_shield || '-'}</td>
-                                    <td style="text-align:center; color:#38bdf8;">%${(c.wick_elasticity || 12).toFixed(1)}</td>
-                                    <td style="text-align:center;">
-                                        <span style="background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeColor}40; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700; white-space:nowrap;">
+                                    <td style="vertical-align:middle; text-align:center; padding:10px 12px; font-variant-numeric:tabular-nums; color:#cbd5e1;">${c.total_shadows}</td>
+                                    <td style="vertical-align:middle; text-align:center; padding:10px 12px; color:#10b981; font-weight:800; font-variant-numeric:tabular-nums;">${c.hero_count}</td>
+                                    <td style="vertical-align:middle; text-align:center; padding:10px 12px; color:#f43f5e; font-weight:800; font-variant-numeric:tabular-nums;">${c.spoiler_count}</td>
+                                    <td style="vertical-align:middle; text-align:right; padding:10px 12px; color:#10b981; font-weight:700; font-variant-numeric:tabular-nums;">+$${(c.saved_loss_usd || 0).toFixed(2)}</td>
+                                    <td style="vertical-align:middle; text-align:right; padding:10px 12px; color:#f43f5e; font-weight:700; font-variant-numeric:tabular-nums;">-$${(c.missed_profit_usd || 0).toFixed(2)}</td>
+                                    <td style="vertical-align:middle; text-align:center; padding:10px 12px; font-weight:800; font-variant-numeric:tabular-nums; color:${c.sei >= 70 ? '#10b981' : (c.sei <= 35 ? '#f43f5e' : '#f59e0b')};">%${(c.sei || 100).toFixed(1)}</td>
+                                    <td style="vertical-align:middle; text-align:left; padding:10px 12px; color:#94a3b8; font-size:11.5px; white-space:normal; line-height:1.3;">${c.top_shield || '-'}</td>
+                                    <td style="vertical-align:middle; text-align:center; padding:10px 12px; color:#38bdf8; font-weight:600; font-variant-numeric:tabular-nums;">%${(c.wick_elasticity || 12).toFixed(1)}</td>
+                                    <td style="vertical-align:middle; text-align:center; padding:10px 12px;">
+                                        <span style="background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeColor}40; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:800; white-space:nowrap; letter-spacing:0.3px;">
                                             ${c.recommendation_badge}
                                         </span>
                                     </td>
-                                    <td style="text-align:left; color:#cbd5e1; font-size:11.5px;">
-                                        <div style="font-weight:700; color:#38bdf8; font-size:11.5px; margin-bottom:3px; display:flex; align-items:center; gap:6px;">
+                                    <td style="vertical-align:middle; text-align:left; padding:10px 12px; font-size:11.5px; font-family:'Segoe UI', sans-serif;">
+                                        <div style="font-weight:700; color:#38bdf8; font-size:11.5px; margin-bottom:2px; display:flex; align-items:center; gap:6px;">
                                             <span>${c.scenario_title || 'Canlı Piyasa Gözlemi'}</span>
                                         </div>
-                                        <div style="color:#cbd5e1; margin-bottom:4px; line-height:1.4;">${c.recommendation}</div>
-                                        ${(c.modifications_count > 0 && c.modifications_summary) ? `<div style="display:inline-block; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); border-radius:4px; padding:1px 6px; font-size:10px; color:#38bdf8; font-weight:600;">${c.modifications_summary}</div>` : ''}
+                                        <div style="color:#94a3b8; font-size:11px; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;" title="${safeRec}">${c.recommendation}</div>
+                                        ${(c.modifications_count > 0 && c.modifications_summary) ? `<div style="display:inline-block; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); border-radius:4px; padding:1px 6px; font-size:10px; color:#38bdf8; font-weight:600; margin-top:3px;">${c.modifications_summary}</div>` : ''}
                                     </td>
-                                    <td style="text-align:center;">
-                                        <button onclick="openShadowCoinDetail('${c.symbol}')" style="background:linear-gradient(135deg, rgba(56,189,248,0.2), rgba(168,85,247,0.2)); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:700; font-size:11px; font-family:'JetBrains Mono', monospace; transition:all 0.15s ease; white-space:nowrap;">
-                                            Detay
+                                    <td style="vertical-align:middle; text-align:center; padding:10px 12px;">
+                                        <button onclick="openShadowCoinDetail('${c.symbol}')" style="background:rgba(56,189,248,0.1); color:#38bdf8; border:1px solid rgba(56,189,248,0.35); padding:5px 11px; border-radius:6px; cursor:pointer; font-weight:700; font-size:11px; font-family:'JetBrains Mono', monospace; transition:all 0.2s; white-space:nowrap;" onmouseover="this.style.background='rgba(56,189,248,0.2)'" onmouseout="this.style.background='rgba(56,189,248,0.1)'">
+                                            Detay 🔍
                                         </button>
                                     </td>
                                 </tr>
@@ -6803,38 +6804,38 @@ async function loadAdminMetrics() {
                     const sei = cfg.sei_score != null ? `%${cfg.sei_score}` : '%100';
 
                     rowsHtml += `
-                        <tr style="border-bottom:1px solid rgba(255,255,255,0.05); transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
-                            <td style="padding:10px 12px; font-weight:700; color:#fff;">
-                                <div style="display:flex; align-items:center; gap:6px;">
-                                    <span style="color:#00f2fe;">${sym}</span>
-                                    <span style="font-size:10px; color:#64748b;">USDT</span>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.04); transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                            <td style="padding:10px 14px; vertical-align:middle; text-align:left;">
+                                <div style="display:flex; align-items:baseline; gap:3px;">
+                                    <span style="color:#ffffff; font-weight:800; font-size:13.5px; font-family:'JetBrains Mono';">${sym}</span>
+                                    <span style="font-size:10.5px; color:#64748b; font-weight:600; font-family:'JetBrains Mono';">/USDT</span>
                                 </div>
                             </td>
-                            <td style="padding:10px 12px; text-align:center;">
+                            <td style="padding:10px 12px; vertical-align:middle; text-align:center;">
                                 <span style="background:${tierBg}; color:${tierColor}; border:1px solid ${tierColor}40; padding:2px 7px; border-radius:6px; font-size:10px; font-weight:700; white-space:nowrap;">
                                     ${tierBadge}
                                 </span>
                             </td>
-                            <td style="padding:10px 12px;">
-                                <span style="display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:600; ${badgeStyle}">
+                            <td style="padding:10px 12px; vertical-align:middle; text-align:center;">
+                                <span style="display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:700; ${badgeStyle}">
                                     <span>${badgeIcon}</span>
                                     <span>${status}</span>
                                 </span>
                             </td>
-                            <td style="padding:10px 12px; font-weight:600; color:${conf.startsWith('2') ? '#10b981' : '#cbd5e1'};">${conf}</td>
-                            <td style="padding:10px 12px; font-weight:600; color:${status === 'ERKEN BE' ? '#f59e0b' : '#cbd5e1'};">${bePct}</td>
-                            <td style="padding:10px 12px; color:#94a3b8;">${wick}</td>
-                            <td style="padding:10px 12px; color:#cbd5e1; font-weight:600;">${margin}</td>
-                            <td style="padding:10px 12px; font-weight:700; color:#38bdf8;">${sei}</td>
-                            <td style="padding:10px 12px;">
-                                <span style="display:inline-flex; align-items:center; gap:4px; color:#10b981; font-size:11px; font-weight:600;">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            <td style="padding:10px 12px; vertical-align:middle; text-align:center; font-family:'JetBrains Mono'; font-weight:700; font-variant-numeric:tabular-nums; color:${conf.startsWith('2') ? '#10b981' : '#cbd5e1'};">${conf}</td>
+                            <td style="padding:10px 12px; vertical-align:middle; text-align:center; font-family:'JetBrains Mono'; font-weight:700; font-variant-numeric:tabular-nums; color:${status === 'ERKEN BE' ? '#f59e0b' : '#38bdf8'};">${bePct}</td>
+                            <td style="padding:10px 12px; vertical-align:middle; text-align:center; font-family:'JetBrains Mono'; color:#94a3b8; font-weight:600; font-variant-numeric:tabular-nums;">${wick}</td>
+                            <td style="padding:10px 12px; vertical-align:middle; text-align:center; font-family:'JetBrains Mono'; color:#cbd5e1; font-weight:700; font-variant-numeric:tabular-nums;">${margin}</td>
+                            <td style="padding:10px 12px; vertical-align:middle; text-align:center; font-family:'JetBrains Mono'; font-weight:800; font-variant-numeric:tabular-nums; color:#38bdf8;">${sei}</td>
+                            <td style="padding:10px 12px; vertical-align:middle; text-align:center;">
+                                <span style="display:inline-flex; align-items:center; gap:5px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); color:#10b981; padding:3px 9px; border-radius:6px; font-size:10.5px; font-weight:800; letter-spacing:0.3px;">
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                     <span>DOĞRULANDI</span>
                                 </span>
                             </td>
-                            <td style="padding:10px 12px; text-align:right;">
-                                <button onclick="openQuantCoinModal('${sym}')" style="background:rgba(0,242,254,0.1); color:#00f2fe; border:1px solid rgba(0,242,254,0.3); padding:4px 10px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; transition:all 0.15s;">
-                                    Derin İncele
+                            <td style="padding:10px 14px; vertical-align:middle; text-align:right;">
+                                <button onclick="openQuantCoinModal('${sym}')" style="background:rgba(0,242,254,0.08); color:#00f2fe; border:1px solid rgba(0,242,254,0.35); padding:5px 12px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.2s; white-space:nowrap;" onmouseover="this.style.background='rgba(0,242,254,0.2)'" onmouseout="this.style.background='rgba(0,242,254,0.08)'">
+                                    Derin İncele 🔍
                                 </button>
                             </td>
                         </tr>
@@ -7106,18 +7107,29 @@ async function loadAdminMetrics() {
 
                     // Source Badge: Baz DNA vs Canli
                     const sourceBadge = isBaseline
-                        ? `<span style="background:rgba(148,163,184,0.15); color:#94a3b8; border:1px solid rgba(148,163,184,0.3); font-size:9.5px; padding:2px 6px; border-radius:4px; margin-left:6px; font-weight:700;">BAZ DNA</span>`
-                        : `<span style="background:rgba(34,197,94,0.18); color:#22c55e; border:1px solid rgba(34,197,94,0.4); font-size:9.5px; padding:2px 6px; border-radius:4px; margin-left:6px; font-weight:800;">CANLI</span>`;
+                        ? `<span style="background:rgba(148,163,184,0.12); color:#94a3b8; border:1px solid rgba(148,163,184,0.25); font-size:9px; padding:1px 5px; border-radius:4px; margin-left:4px; font-weight:700;">BAZ</span>`
+                        : `<span style="background:rgba(34,197,94,0.15); color:#22c55e; border:1px solid rgba(34,197,94,0.35); font-size:9px; padding:1px 5px; border-radius:4px; margin-left:4px; font-weight:800;">CANLI</span>`;
 
                     // Lig Badge
                     let badgeHtml = '';
-                    const displayName = item.persona_name || (isGold ? '👑 Altın Lig (Pusu Ustası)' : (isWhipsaw ? '⚠️ Whipsaw (Tuzakçı)' : '⚪ Standart / Dengeli'));
                     if (isGold) {
-                        badgeHtml = `<span style="background:rgba(251,197,49,0.15); color:#fbc531; border:1px solid #fbc531; padding:4px 10px; border-radius:6px; font-weight:800; font-size:11.5px; font-family:'JetBrains Mono';">${displayName}</span>`;
+                        badgeHtml = `
+                            <div style="display:flex; flex-direction:column; gap:2px;">
+                                <span style="background:rgba(251,197,49,0.12); color:#fbc531; border:1px solid rgba(251,197,49,0.35); padding:3px 8px; border-radius:5px; font-weight:800; font-size:11px; letter-spacing:0.3px; width:fit-content;">👑 ALTIN LİG</span>
+                                <span style="color:#94a3b8; font-size:10px; font-family:'JetBrains Mono';">Pusu & Kırılım Ustası</span>
+                            </div>`;
                     } else if (isWhipsaw) {
-                        badgeHtml = `<span style="background:rgba(244,63,94,0.15); color:#f43f5e; border:1px solid #f43f5e; padding:4px 10px; border-radius:6px; font-weight:800; font-size:11.5px; font-family:'JetBrains Mono';">${displayName}</span>`;
+                        badgeHtml = `
+                            <div style="display:flex; flex-direction:column; gap:2px;">
+                                <span style="background:rgba(244,63,94,0.12); color:#f43f5e; border:1px solid rgba(244,63,94,0.35); padding:3px 8px; border-radius:5px; font-weight:800; font-size:11px; letter-spacing:0.3px; width:fit-content;">⚠️ WHIPSAW / TUZAK</span>
+                                <span style="color:#94a3b8; font-size:10px; font-family:'JetBrains Mono';">2x Stop Pusu Korumalı</span>
+                            </div>`;
                     } else {
-                        badgeHtml = `<span style="background:rgba(255,255,255,0.06); color:#cbd5e1; border:1px solid rgba(255,255,255,0.14); padding:4px 10px; border-radius:6px; font-weight:700; font-size:11.5px; font-family:'JetBrains Mono';">${displayName}</span>`;
+                        badgeHtml = `
+                            <div style="display:flex; flex-direction:column; gap:2px;">
+                                <span style="background:rgba(148,163,184,0.1); color:#cbd5e1; border:1px solid rgba(148,163,184,0.25); padding:3px 8px; border-radius:5px; font-weight:700; font-size:11px; width:fit-content;">⚪ STANDART</span>
+                                <span style="color:#64748b; font-size:10px; font-family:'JetBrains Mono';">Dengeli Rejim</span>
+                            </div>`;
                     }
 
                     // Win rate color
@@ -7132,51 +7144,61 @@ async function loadAdminMetrics() {
                     // Strategy permissions
                     let stratHtml = '';
                     if (isWhipsaw) {
-                        stratHtml = `<span style="color:#fbc531; font-weight:800; font-size:11.5px;">🟡 Yalnızca Sekme Pususu <span style="color:var(--red); font-weight:900;">(Kırılım Kilitli 🔒)</span></span>`;
+                        stratHtml = `
+                            <div style="display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
+                                <span style="background:rgba(234,179,8,0.12); color:#eab308; border:1px solid rgba(234,179,8,0.3); padding:2px 7px; border-radius:4px; font-size:10.5px; font-weight:700;">🟡 Sadece Sekme</span>
+                                <span style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:2px 7px; border-radius:4px; font-size:10.5px; font-weight:700;">🔒 Kırılım Kilitli</span>
+                            </div>`;
                     } else if (isGold) {
-                        stratHtml = `<span style="color:var(--green); font-weight:800; font-size:11.5px;">🟢 Kırılım + Pusu (Öncelikli x1.3)</span>`;
+                        stratHtml = `
+                            <div style="display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
+                                <span style="background:rgba(34,197,94,0.12); color:#22c55e; border:1px solid rgba(34,197,94,0.3); padding:2px 7px; border-radius:4px; font-size:10.5px; font-weight:700;">🟢 Kırılım + Pusu</span>
+                                <span style="background:rgba(251,197,49,0.12); color:#fbc531; border:1px solid rgba(251,197,49,0.3); padding:2px 7px; border-radius:4px; font-size:10.5px; font-weight:700;">⚡ Öncelikli x1.3</span>
+                            </div>`;
                     } else {
-                        stratHtml = `<span style="color:#38bdf8; font-weight:700; font-size:11.5px;">🟢 Kırılım + Sekme Açık</span>`;
+                        stratHtml = `
+                            <div style="display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
+                                <span style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:2px 7px; border-radius:4px; font-size:10.5px; font-weight:700;">🟢 Kırılım + Sekme</span>
+                            </div>`;
                     }
 
                     // Dynamic Margin & Stop Setting
                     const mScale = item.margin_scale != null ? Number(item.margin_scale) : (isGold ? 1.3 : (isWhipsaw ? 0.5 : 1.0));
                     const atrMult = item.stop_loss_atr_mult != null ? Number(item.stop_loss_atr_mult) : (isWhipsaw ? 1.5 : 1.0);
-                    let riskHtml = '';
-                    if (isWhipsaw) {
-                        riskHtml = `<span style="color:#f43f5e; font-family:'JetBrains Mono'; font-size:11.5px; font-weight:700;">x${mScale.toFixed(1)} ($8 taban) | ${atrMult.toFixed(1)}x ATR Stop</span>`;
-                    } else if (isGold) {
-                        riskHtml = `<span style="color:#fbc531; font-family:'JetBrains Mono'; font-size:11.5px; font-weight:700;">x${mScale.toFixed(1)} Marjin | ${atrMult.toFixed(1)}x ATR Stop</span>`;
-                    } else {
-                        riskHtml = `<span style="color:#94a3b8; font-family:'JetBrains Mono'; font-size:11.5px;">x${mScale.toFixed(1)} Marjin | ${atrMult.toFixed(1)}x ATR Stop</span>`;
-                    }
+                    let riskHtml = `
+                        <div style="display:flex; flex-direction:column; gap:2px;">
+                            <span style="font-family:'JetBrains Mono'; font-size:11.5px; font-weight:700; color:${isWhipsaw ? '#f43f5e' : (isGold ? '#fbc531' : '#cbd5e1')};">x${mScale.toFixed(1)} ${isWhipsaw ? '($8 taban)' : 'Marjin'}</span>
+                            <span style="font-family:'JetBrains Mono'; font-size:10px; color:#64748b;">${atrMult.toFixed(1)}x ATR Stop</span>
+                        </div>`;
 
                     html += `
-                    <tr>
-                        <td>
-                            <b style="color:#ffffff; font-size:14px; font-family:'JetBrains Mono';">${symClean}</b>
-                            <span style="color:#64748b; font-size:11px;">/USDT</span>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.04); transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                        <td style="vertical-align:middle; padding:10px 12px;">
+                            <b style="color:#ffffff; font-size:13.5px; font-family:'JetBrains Mono';">${symClean}</b>
+                            <span style="color:#64748b; font-size:10.5px; font-family:'JetBrains Mono';">/USDT</span>
                         </td>
-                        <td>${badgeHtml}</td>
-                        <td style="color:#cbd5e1; font-family:'JetBrains Mono'; font-size:12px;">${item.trades_count || 0} İşlem ${sourceBadge}</td>
-                        <td style="color:${wrColor}; font-weight:800; font-family:'JetBrains Mono';">
+                        <td style="vertical-align:middle; padding:10px 12px;">${badgeHtml}</td>
+                        <td style="vertical-align:middle; text-align:center; padding:10px 12px; color:#cbd5e1; font-family:'JetBrains Mono'; font-size:11.5px;">${item.trades_count || 0} İşlem ${sourceBadge}</td>
+                        <td style="vertical-align:middle; text-align:center; padding:10px 12px; color:${wrColor}; font-weight:800; font-family:'JetBrains Mono'; font-variant-numeric:tabular-nums; font-size:12px;">
                             %${item.win_rate.toFixed(1)}
                         </td>
-                        <td style="color:${fakeColor}; font-weight:800; font-family:'JetBrains Mono';">
+                        <td style="vertical-align:middle; text-align:center; padding:10px 12px; color:${fakeColor}; font-weight:800; font-family:'JetBrains Mono'; font-variant-numeric:tabular-nums; font-size:12px;">
                             %${item.fakeout_rate.toFixed(1)}
                         </td>
-                        <td style="color:${pnlColor}; font-weight:800; font-family:'JetBrains Mono';">
+                        <td style="vertical-align:middle; text-align:right; padding:10px 12px; color:${pnlColor}; font-weight:800; font-family:'JetBrains Mono'; font-variant-numeric:tabular-nums; font-size:12px;">
                             ${item.net_pnl >= 0 ? '+' : ''}$${item.net_pnl.toFixed(2)}
                         </td>
-                        <td>${stratHtml}</td>
-                        <td>${riskHtml}</td>
-                        <td style="white-space:nowrap;">
-                            <button onclick="openTradingViewModal('${symClean}')" style="background:rgba(0,242,254,0.12); border:1px solid rgba(0,242,254,0.35); color:var(--cyan); padding:4px 9px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;" title="${symClean} Grafiğini Aç">
-                                📈 Grafik
-                            </button>
-                            <button onclick="filterWatchlistDirect('${symClean}')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#cbd5e1; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; margin-left:4px;" title="Pusu Radarında Gör">
-                                🎯 Radar
-                            </button>
+                        <td style="vertical-align:middle; padding:10px 12px;">${stratHtml}</td>
+                        <td style="vertical-align:middle; padding:10px 12px;">${riskHtml}</td>
+                        <td style="vertical-align:middle; text-align:center; padding:10px 12px; white-space:nowrap;">
+                            <div style="display:flex; gap:5px; justify-content:center; align-items:center;">
+                                <button onclick="openTradingViewModal('${symClean}')" style="background:rgba(0,242,254,0.08); border:1px solid rgba(0,242,254,0.3); color:#38bdf8; padding:5px 9px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='rgba(0,242,254,0.2)'" onmouseout="this.style.background='rgba(0,242,254,0.08)'" title="${symClean} Canlı Grafiğini Aç">
+                                    📈 Grafik
+                                </button>
+                                <button onclick="filterWatchlistDirect('${symClean}')" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); color:#94a3b8; padding:5px 8px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'" title="Pusu Radarında Gör">
+                                    🎯 Radar
+                                </button>
+                            </div>
                         </td>
                     </tr>
                     `;
@@ -10286,6 +10308,15 @@ async function loadAdminMetrics() {
                             </div>
                         </div>
                         ${progressHtml}
+                        <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.06); padding-top:8px;">
+                            <button onclick="event.stopPropagation(); if (typeof selectSymbol === 'function') selectSymbol('${sym}'); if (typeof switchMainTab === 'function') switchMainTab('cockpit'); if (typeof switchChartTab === 'function') switchChartTab('native');" style="background:linear-gradient(135deg, rgba(56,189,248,0.14), rgba(0,242,254,0.06)); border:1px solid rgba(56,189,248,0.35); color:#38bdf8; padding:3px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; font-family:'JetBrains Mono', monospace; display:inline-flex; align-items:center; gap:5px; transition:all 0.15s ease;" onmouseover="this.style.background='rgba(56,189,248,0.25)'; this.style.borderColor='#38bdf8';" onmouseout="this.style.background='linear-gradient(135deg, rgba(56,189,248,0.14), rgba(0,242,254,0.06))'; this.style.borderColor='rgba(56,189,248,0.35)';" title="${cleanSym} Canlı Grafiğini Kokpitte Aç">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                                <span>📈 Canlı Grafik</span>
+                            </button>
+                            <button onclick="event.stopPropagation(); openTradingViewModal('${cleanSym}');" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); color:#94a3b8; padding:3px 8px; border-radius:6px; font-size:10.5px; font-weight:600; cursor:pointer; font-family:'JetBrains Mono', monospace; display:inline-flex; align-items:center; gap:4px; transition:all 0.15s ease;" onmouseover="this.style.color='#fff'; this.style.borderColor='rgba(255,255,255,0.25)';" onmouseout="this.style.color='#94a3b8'; this.style.borderColor='rgba(255,255,255,0.12)';" title="TradingView Modalini Aç">
+                                <span>TV ↗</span>
+                            </button>
+                        </div>
                     </div>
                 `;
             });
@@ -10432,20 +10463,38 @@ async function loadAdminMetrics() {
                     });
 
                     equityBaselineSeries = equityChartInstance.addLineSeries({
-                        color: 'rgba(245, 158, 11, 0.45)',
-                        lineWidth: 1.5,
-                        lineStyle: LightweightCharts.LineStyle.Dashed,
-                        title: 'Başlangıç ($10K)',
+                        color: 'rgba(255, 255, 255, 0.15)',
+                        lineWidth: 1,
+                        lineStyle: LightweightCharts.LineStyle.Dotted,
+                        priceLineVisible: false,
+                        lastValueVisible: false,
                         priceFormat: { type: 'price', precision: 2, minMove: 0.01 }
                     });
 
                     equityAreaSeries = equityChartInstance.addAreaSeries({
-                        topColor: 'rgba(0, 242, 254, 0.45)',
-                        bottomColor: 'rgba(0, 242, 254, 0.01)',
-                        lineColor: '#00f2fe',
-                        lineWidth: 2.5,
-                        title: 'Kasa Bakiyesi',
+                        topColor: 'rgba(56, 189, 248, 0.22)',
+                        bottomColor: 'rgba(15, 23, 42, 0.0)',
+                        lineColor: '#38bdf8',
+                        lineWidth: 2,
+                        priceLineVisible: true,
+                        priceLineWidth: 1,
+                        lastValueVisible: true,
                         priceFormat: { type: 'price', precision: 2, minMove: 0.01 }
+                    });
+
+                    equityChartInstance.subscribeCrosshairMove(param => {
+                        const elPnlDyn = document.getElementById('equity-chip-pnl');
+                        if (!elPnlDyn) return;
+                        if (!param || !param.time || !param.seriesData || !param.seriesData.get(equityAreaSeries)) {
+                            elPnlDyn.innerText = `${netPnl >= 0 ? '+' : ''}$${netPnl.toFixed(2)}`;
+                            elPnlDyn.style.color = netPnl >= 0 ? 'var(--green)' : '#fb7185';
+                            return;
+                        }
+                        const pVal = param.seriesData.get(equityAreaSeries).value;
+                        const diffVal = pVal - initBal;
+                        const diffPct = (diffVal / initBal) * 100.0;
+                        elPnlDyn.innerText = `${diffVal >= 0 ? '+' : ''}$${diffVal.toFixed(2)} (${diffVal >= 0 ? '+' : ''}%${diffPct.toFixed(2)})`;
+                        elPnlDyn.style.color = diffVal >= 0 ? 'var(--green)' : '#fb7185';
                     });
 
                     window.addEventListener('resize', () => {
@@ -10462,8 +10511,10 @@ async function loadAdminMetrics() {
                 if (equityAreaSeries) {
                     const isProfit = runningBal >= initBal;
                     equityAreaSeries.applyOptions({
-                        topColor: isProfit ? 'rgba(16, 185, 129, 0.45)' : 'rgba(244, 63, 94, 0.45)',
-                        lineColor: isProfit ? '#10b981' : '#f43f5e',
+                        topColor: isProfit ? 'rgba(16, 185, 129, 0.25)' : 'rgba(244, 63, 94, 0.18)',
+                        bottomColor: 'rgba(15, 23, 42, 0.0)',
+                        lineColor: isProfit ? '#10b981' : '#fb7185',
+                        priceLineColor: isProfit ? '#10b981' : '#fb7185'
                     });
                     equityAreaSeries.setData(points);
                     equityChartInstance.timeScale().fitContent();
