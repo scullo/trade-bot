@@ -1637,36 +1637,52 @@ class StrategyEngine:
                     confluence_list.append("Kurumsal_OI_Short_Baskısı_Teyitli")
 
         # ── 1c-2b. ÇAPRAZ BORSA KURUMSAL SPOT ÖNCÜSÜ (COINBASE PRO SPOT LEAD-LAG ENGINE) ──
-        cb_lead = getattr(self.market_data, 'coinbase_lead_lag', {}) if self.market_data else {}
+        if self.market_data and hasattr(self.market_data, 'get_coinbase_lead_lag'):
+            cb_lead = self.market_data.get_coinbase_lead_lag(symbol)
+        else:
+            cb_lead = getattr(self.market_data, 'coinbase_lead_lag', {}) if self.market_data else {}
+
+        cb_is_listed = bool(cb_lead.get('is_listed', False))
         cb_spread_bps = float(cb_lead.get('spread_bps', 0.0))
-        cb_dir = cb_lead.get('direction', 'NEUTRAL')
-        cb_status = cb_lead.get('status', '')
+        cb_macro_btc_spread = float(cb_lead.get('macro_btc_spread_bps', getattr(self.market_data, 'coinbase_lead_lag', {}).get('spread_bps', 0.0)))
         cb_last_upd = float(cb_lead.get('last_update', 0.0))
-        cb_age_s = (time.time() - cb_last_upd) if cb_last_upd > 0 else 999.0
+        cb_age_s = float(cb_lead.get('age_seconds', (time.time() - cb_last_upd) if cb_last_upd > 0 else 999.0))
         cb_is_stale = cb_age_s > 60.0  # VDA-08: 60 saniyeden eski Coinbase verisinde bypass devreye girer
 
-        # Veto 1: Coinbase Spot Satış Baskısı (Kurumsal Ayı Öncüsü) varken Altcoin Boğa Tuzağı (Exit Liquidity Shield)
-        if ENABLE_COINBASE_LEAD_LAG and not cb_is_stale and side == "LONG" and is_breakout and cb_spread_bps <= -COINBASE_LEAD_SPREAD_BPS:
-            rej_msg = f"🛡️ Coinbase Spot Çapraz Borsa Kalkanı: Coinbase Spot BTC Binance'e kıyasla {cb_spread_bps:+.1f} bps negatif iskontolu (Kurumsal Satıcı Baskısı). Sahte boğa kırılımı riski sebebiyle LONG engellendi."
-            print(f">> [RED - COINBASE SPOT DUMP] {symbol}: {rej_msg}")
-            self.log_rejection(symbol, reason, rej_msg)
-            return {"error": "COINBASE_SPOT_DUMP_GATE"}
-
-        # Veto 2: Coinbase Spot Alıcı Rallisi varken Altcoin Ayı Tuzağı (Short Squeeze Shield)
-        if ENABLE_COINBASE_LEAD_LAG and not cb_is_stale and side == "SHORT" and is_breakout and cb_spread_bps >= COINBASE_LEAD_SPREAD_BPS:
-            rej_msg = f"🛡️ Coinbase Spot Çapraz Borsa Kalkanı: Coinbase Spot BTC Binance'e kıyasla {cb_spread_bps:+.1f} bps primli (Kurumsal Alıcı Baskısı). Ayı tuzağı riski sebebiyle SHORT breakdown engellendi."
-            print(f">> [RED - COINBASE SPOT PUMP] {symbol}: {rej_msg}")
-            self.log_rejection(symbol, reason, rej_msg)
-            return {"error": "COINBASE_SPOT_PUMP_GATE"}
-
-        # Coinbase Confluence Teyitleri:
         if ENABLE_COINBASE_LEAD_LAG and not cb_is_stale:
-            if side == "LONG" and cb_spread_bps >= COINBASE_LEAD_SPREAD_BPS:
-                if confluence_list is not None and isinstance(confluence_list, list):
-                    confluence_list.append("Coinbase_Spot_Boğa_Öncüsü_Teyitli")
-            elif side == "SHORT" and cb_spread_bps <= -COINBASE_LEAD_SPREAD_BPS:
-                if confluence_list is not None and isinstance(confluence_list, list):
-                    confluence_list.append("Coinbase_Spot_Ayı_Öncüsü_Teyitli")
+            if cb_is_listed:
+                # 1. Parite Coinbase'de Listeli İse: Kendi gerçek spot farkı ile doğrudan denetle
+                if side == "LONG" and is_breakout and cb_spread_bps <= -COINBASE_LEAD_SPREAD_BPS:
+                    rej_msg = f"🛡️ Coinbase Spot Çapraz Borsa Kalkanı: {symbol} Coinbase Spot'ta {cb_spread_bps:+.1f} bps negatif iskontolu (Kurumsal Satıcı Baskısı). Sahte boğa kırılımı engellendi."
+                    print(f">> [RED - COINBASE SPOT DUMP] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg)
+                    return {"error": "COINBASE_SPOT_DUMP_GATE"}
+                elif side == "SHORT" and is_breakout and cb_spread_bps >= COINBASE_LEAD_SPREAD_BPS:
+                    rej_msg = f"🛡️ Coinbase Spot Çapraz Borsa Kalkanı: {symbol} Coinbase Spot'ta {cb_spread_bps:+.1f} bps primli (Kurumsal Alıcı Baskısı). Ayı tuzağı breakdown engellendi."
+                    print(f">> [RED - COINBASE SPOT PUMP] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg)
+                    return {"error": "COINBASE_SPOT_PUMP_GATE"}
+
+                # Coinbase Confluence Teyitleri (Yalnızca Listeli Coinlere Verilir):
+                if side == "LONG" and cb_spread_bps >= COINBASE_LEAD_SPREAD_BPS:
+                    if confluence_list is not None and isinstance(confluence_list, list):
+                        confluence_list.append("Coinbase_Spot_Boğa_Öncüsü_Teyitli")
+                elif side == "SHORT" and cb_spread_bps <= -COINBASE_LEAD_SPREAD_BPS:
+                    if confluence_list is not None and isinstance(confluence_list, list):
+                        confluence_list.append("Coinbase_Spot_Ayı_Öncüsü_Teyitli")
+            else:
+                # 2. Parite Coinbase'de Listeli Değilse (NOT_LISTED): Asla sahte 0 bps teyit verilmez!
+                # Yalnızca makro BTC'de ekstrem kurumsal çöküş (<= -15 bps) veya ralli (>= +15 bps) varsa kalkan çalışır:
+                if side == "LONG" and is_breakout and cb_macro_btc_spread <= -15.0:
+                    rej_msg = f"🛡️ Coinbase Makro Şemsiye Kalkanı: BTC Coinbase'de {cb_macro_btc_spread:+.1f} bps kurumsal satış baskısında. Altcoin sahte kırılımı engellendi."
+                    print(f">> [RED - COINBASE MACRO BTC DUMP] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg)
+                    return {"error": "COINBASE_MACRO_DUMP_GATE"}
+                elif side == "SHORT" and is_breakout and cb_macro_btc_spread >= 15.0:
+                    rej_msg = f"🛡️ Coinbase Makro Şemsiye Kalkanı: BTC Coinbase'de {cb_macro_btc_spread:+.1f} bps kurumsal alım rallisinde. Altcoin ayı tuzağı engellendi."
+                    print(f">> [RED - COINBASE MACRO BTC PUMP] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg)
+                    return {"error": "COINBASE_MACRO_PUMP_GATE"}
 
         # ── 1c-3. KURUMSAL SEANS ÇAPALARI & JUDAS SWING LİKİDİTE KALKANI (PDH / PDL / ASYA) ──
         snaps_early = snapshot_levels or {}
@@ -2207,19 +2223,26 @@ class StrategyEngine:
         # karşı-trend bıçak tutma (SCALP) işlemleri engellenir!
         is_gex_exploding = bool(sym_met.get('is_gex_exploding', False)) if sym_met else False
         is_avalanche_active = bool(sym_met.get('is_avalanche_active', False)) if sym_met else False
+        is_macro_avalanche = bool(sym_met.get('is_macro_avalanche', False)) if sym_met else False
         avalanche_side = str(sym_met.get('avalanche_side', 'NONE')) if sym_met else 'NONE'
         hawkes_eta = float(sym_met.get('hawkes_eta', 0.15)) if sym_met else 0.15
+        local_hawkes_eta = float(sym_met.get('local_hawkes_eta', 0.0)) if sym_met else 0.0
+        macro_hawkes_eta = float(sym_met.get('macro_hawkes_eta', 0.15)) if sym_met else 0.15
 
-        if trade_type == "SCALP" and (is_gex_exploding or is_avalanche_active):
-            if side == "LONG" and ("DUMP" in avalanche_side or is_gex_exploding):
-                rej_msg = f"⚡ Hawkes & GEX Çığ Kalkanı: Piyasada negatif gamma patlaması ve tasfiye çığı aktif ({avalanche_side}, eta={hawkes_eta:.2f}). Düşen bıçağa karşı LONG sekmesi engellendi."
+        # Yerel çığ veya aşırı makro çöküş/fırtına (macro_eta >= 0.85) durumunda SCALP engeli:
+        is_storm = is_avalanche_active or (is_macro_avalanche and macro_hawkes_eta >= 0.85)
+        if trade_type == "SCALP" and (is_gex_exploding or is_storm):
+            active_eta = local_hawkes_eta if is_avalanche_active else macro_hawkes_eta
+            shield_name = "Yerel Parite Çığı" if is_avalanche_active else "Makro Tasfiye Kalkanı (BTC)"
+            if side == "LONG" and ("DUMP" in avalanche_side or is_gex_exploding or is_storm):
+                rej_msg = f"⚡ Hawkes & GEX Çığ Kalkanı ({shield_name}): Negatif gamma ve tasfiye çığı aktif ({avalanche_side}, eta={active_eta:.2f}). Düşen bıçağa karşı LONG sekmesi engellendi."
                 print(f">> [RED - HAWKES DUMP AVALANCHE] {symbol}: {rej_msg}")
-                self.log_rejection(symbol, reason, rej_msg, hawkesEta=hawkes_eta)
+                self.log_rejection(symbol, reason, rej_msg, hawkesEta=active_eta)
                 return {"error": "HAWKES_AVALANCHE_LONG_SCALP_BLOCKED"}
-            elif side == "SHORT" and ("PUMP" in avalanche_side or "SQUEEZE" in avalanche_side or is_gex_exploding):
-                rej_msg = f"⚡ Hawkes & GEX Squeeze Kalkanı: Piyasada negatif gamma patlaması ve short squeeze çığı aktif ({avalanche_side}, eta={hawkes_eta:.2f}). Rokete karşı tepe SHORT sekmesi engellendi."
+            elif side == "SHORT" and ("PUMP" in avalanche_side or "SQUEEZE" in avalanche_side or is_gex_exploding or is_storm):
+                rej_msg = f"⚡ Hawkes & GEX Squeeze Kalkanı ({shield_name}): Negatif gamma ve short squeeze çığı aktif ({avalanche_side}, eta={active_eta:.2f}). Rokete karşı tepe SHORT sekmesi engellendi."
                 print(f">> [RED - HAWKES PUMP AVALANCHE] {symbol}: {rej_msg}")
-                self.log_rejection(symbol, reason, rej_msg, hawkesEta=hawkes_eta)
+                self.log_rejection(symbol, reason, rej_msg, hawkesEta=active_eta)
                 return {"error": "HAWKES_AVALANCHE_SHORT_SCALP_BLOCKED"}
 
         # ── 2h. CVD 2. TÜREVİ & SIFIR GEÇİŞİ TEPE DÖNÜŞ KALKANI (ZERO-CROSSING EXHAUSTION SHIELD) ──
@@ -3328,8 +3351,14 @@ class StrategyEngine:
             kyles_lambda_ratio=float(l2_info.get('kyles_lambda_ratio', 1.0)) if 'l2_info' in locals() and l2_info else 1.0,
             deribit_gex_regime=str(l2_info.get('deribit_gex_regime', 'NEUTRAL')) if 'l2_info' in locals() and l2_info else 'NEUTRAL',
             deribit_net_gex=float(l2_info.get('deribit_net_gex', 0.0)) if 'l2_info' in locals() and l2_info else 0.0,
+            macro_btc_net_gex=float(l2_info.get('macro_btc_net_gex', 0.0)) if 'l2_info' in locals() and l2_info else 0.0,
+            is_gex_proxy=bool(l2_info.get('is_gex_proxy', False)) if 'l2_info' in locals() and l2_info else False,
             hawkes_eta=float(l2_info.get('hawkes_eta', 0.15)) if 'l2_info' in locals() and l2_info else 0.15,
+            local_hawkes_eta=float(l2_info.get('local_hawkes_eta', 0.0)) if 'l2_info' in locals() and l2_info else 0.0,
+            macro_hawkes_eta=float(l2_info.get('macro_hawkes_eta', 0.15)) if 'l2_info' in locals() and l2_info else 0.15,
+            hawkes_source=str(l2_info.get('hawkes_source', 'GLOBAL_MACRO')) if 'l2_info' in locals() and l2_info else 'GLOBAL_MACRO',
             is_avalanche_active=bool(l2_info.get('is_avalanche_active', False)) if 'l2_info' in locals() and l2_info else False,
+            is_macro_avalanche=bool(l2_info.get('is_macro_avalanche', False)) if 'l2_info' in locals() and l2_info else False,
             cvd_accel_60s=float(l2_info.get('cvd_acceleration', 0.0)) if 'l2_info' in locals() and l2_info else float((locals().get('cvd_data') or {}).get('acceleration', 0.0)),
             tri_modal_regime=str(getattr(self, 'current_market_regime', 'RANGING_PINGPONG')),
             cvd_divergence=cvd_div_tag,

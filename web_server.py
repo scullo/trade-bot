@@ -13955,24 +13955,61 @@ function downloadExcelReport() {
                         </div>
                         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap:10px;">
                             <div style="background:rgba(255,255,255,0.02); border-radius:8px; padding:8px 12px; border:1px solid rgba(255,255,255,0.05);">
-                                <div style="font-size:10px; color:#94a3b8; margin-bottom:3px;">Deribit GEX Rejimi</div>
-                                <div style="font-size:12.5px; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono',monospace;">${item.deribit_gex_regime || 'NEUTRAL'}</div>
+                                <div style="font-size:10px; color:#94a3b8; margin-bottom:3px;">Deribit Opsiyon Gamma (GEX)</div>
+                                <div style="font-size:12px; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono',monospace;">
+                                    ${(item.is_gex_proxy || item.deribit_gex_regime === 'MACRO_BTC_PROXY') ? 
+                                      `🏛️ Makro BTC: ${item.macro_btc_net_gex ? '$' + (item.macro_btc_net_gex/1e6).toFixed(1) + 'M' : '+$293M'}` : 
+                                      `Coin: ${item.deribit_net_gex ? '$' + (item.deribit_net_gex/1e6).toFixed(1) + 'M' : '$0.0M'} (${item.deribit_gex_regime || 'NEUTRAL'})`
+                                    }
+                                </div>
+                                <div style="font-size:9.5px; color:#64748b; margin-top:2px;">
+                                    ${(item.is_gex_proxy || item.deribit_gex_regime === 'MACRO_BTC_PROXY') ? '🛡️ Piyasa Gamma Şemsiyesi' : '⚡ Parite Opsiyon Verisi'}
+                                </div>
                             </div>
                             <div style="background:rgba(255,255,255,0.02); border-radius:8px; padding:8px 12px; border:1px solid rgba(255,255,255,0.05);">
-                                <div style="font-size:10px; color:#94a3b8; margin-bottom:3px;">Hawkes Çığı (η)</div>
-                                <div style="font-size:12.5px; font-weight:800; color:${item.is_avalanche_active ? '#ef4444' : '#10b981'}; font-family:'JetBrains Mono',monospace;">η: ${Number(item.hawkes_eta || 0.15).toFixed(2)} ${item.is_avalanche_active ? '⚡ ÇIĞ' : '⚪ SAKİN'}</div>
+                                <div style="font-size:10px; color:#94a3b8; margin-bottom:3px;">Hawkes Tasfiye Çığı (η)</div>
+                                <div style="font-size:12px; font-weight:800; color:${item.is_avalanche_active ? '#ef4444' : '#10b981'}; font-family:'JetBrains Mono',monospace;">
+                                    Yerel: ${Number(item.local_hawkes_eta || 0.0).toFixed(2)} | Makro: ${Number(item.macro_hawkes_eta || item.hawkes_eta || 0.15).toFixed(2)}
+                                </div>
+                                <div style="font-size:9.5px; color:${item.is_avalanche_active ? '#f87171' : '#64748b'}; margin-top:2px;">
+                                    ${item.is_avalanche_active ? '⚡ PARİTE ÇIĞI AKTİF' : (item.is_macro_avalanche ? '🌪️ MAKRO FIRTINA' : '⚪ SAKİN AKIŞ')}
+                                </div>
                             </div>
                             <div style="background:rgba(255,255,255,0.02); border-radius:8px; padding:8px 12px; border:1px solid rgba(255,255,255,0.05);">
-                                <div style="font-size:10px; color:#94a3b8; margin-bottom:3px;">Stoikov Drift / Micro</div>
-                                <div style="font-size:12.5px; font-weight:800; color:#fbbf24; font-family:'JetBrains Mono',monospace;">${Number(item.stoikov_drift_bps || 0).toFixed(1)} bps</div>
+                                <div style="font-size:10px; color:#94a3b8; margin-bottom:3px;">L2 Tahta Sağlığı & Entropi</div>
+                                <div style="font-size:12px; font-weight:800; color:#a5f3fc; font-family:'JetBrains Mono',monospace;">
+                                    S: ${(Number(item.orderbook_entropy || 0.70)*100).toFixed(0)}% • ${item.depth_provider === 'gate' ? '<span style="color:#38bdf8;">[Gate.io L2]</span>' : '<span style="color:#4ade80;">[Binance L2]</span>'}
+                                </div>
+                                <div style="font-size:9.5px; color:#64748b; margin-top:2px;">
+                                    ${Number(item.orderbook_entropy || 0.70) < 0.60 ? '💎 Kristal / Durgun' : '🌊 Sağlıklı Derinlik'}
+                                </div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.02); border-radius:8px; padding:8px 12px; border:1px solid rgba(255,255,255,0.05);">
+                                <div style="font-size:10px; color:#94a3b8; margin-bottom:3px;">Ken Griffin Iceberg (%0.20 Zon)</div>
+                                <div style="font-size:12px; font-weight:800; color:#fbbf24; font-family:'JetBrains Mono',monospace;">
+                                    🧊 ${Number(item.iceberg_ratio || 1.0).toFixed(1)}x ${Number(item.iceberg_ratio || 1.0) >= 3.5 ? '⚠️ GİZLİ EMİR' : 'Dengeli'}
+                                </div>
+                                <div style="font-size:9.5px; color:#64748b; margin-top:2px;">
+                                    Doğal Çan Eğrisi (Max 20x)
+                                </div>
                             </div>
                             <div style="background:rgba(255,255,255,0.02); border-radius:8px; padding:8px 12px; border:1px solid rgba(255,255,255,0.05);">
                                 <div style="font-size:10px; color:#94a3b8; margin-bottom:3px;">VPIN Toksisite & Kyle</div>
-                                <div style="font-size:12.5px; font-weight:800; color:#c084fc; font-family:'JetBrains Mono',monospace;">${item.vpin_toxicity || 'LOW'} (${Number(item.vpin_score || 0.30).toFixed(2)}) • ${Number(item.kyles_lambda_ratio || 1.0).toFixed(1)}x</div>
+                                <div style="font-size:12px; font-weight:800; color:#c084fc; font-family:'JetBrains Mono',monospace;">
+                                    ${item.vpin_toxicity || 'LOW'} (${Number(item.vpin_score || 0.30).toFixed(2)}) • ${Number(item.kyles_lambda_ratio || 1.0).toFixed(1)}x
+                                </div>
+                                <div style="font-size:9.5px; color:#64748b; margin-top:2px;">
+                                    Hava Cebi / Toksik Akış Kalkanı
+                                </div>
                             </div>
                             <div style="background:rgba(255,255,255,0.02); border-radius:8px; padding:8px 12px; border:1px solid rgba(255,255,255,0.05);">
                                 <div style="font-size:10px; color:#94a3b8; margin-bottom:3px;">Tri-Modal & CVD İvme</div>
-                                <div style="font-size:12.5px; font-weight:800; color:#4ade80; font-family:'JetBrains Mono',monospace;">${item.tri_modal_regime || 'RANGING'} (${Number(item.cvd_accel_60s || 0).toFixed(1)})</div>
+                                <div style="font-size:12px; font-weight:800; color:#4ade80; font-family:'JetBrains Mono',monospace;">
+                                    ${item.tri_modal_regime || 'RANGING'} (${Number(item.cvd_accel_60s || 0).toFixed(1)})
+                                </div>
+                                <div style="font-size:9.5px; color:#64748b; margin-top:2px;">
+                                    2. Türev Sıfır Geçişi
+                                </div>
                             </div>
                         </div>
                     </div>

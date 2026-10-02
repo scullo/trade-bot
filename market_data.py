@@ -102,14 +102,13 @@ class MarketDataManager:
             'last_update': 0.0
         }
 
-        # 🇺🇸 Çapraz Borsa Spot Öncüsü (Coinbase Pro Lead-Lag) Veri Yapıları
-        self.coinbase_prices = {
-            'BTC': 0.0,
-            'ETH': 0.0,
-            'SOL': 0.0,
-            'last_update': 0.0,
-            'is_connected': False
-        }
+        # 🇺🇸 Çapraz Borsa Spot Öncüsü (Coinbase Pro Lead-Lag) Veri Yapıları (15 Likit Majör/Altcoin)
+        self.coinbase_supported_assets = [
+            "BTC", "ETH", "SOL", "LINK", "AVAX", "NEAR", "SUI", "DOGE", "ADA", "LTC", "BCH", "DOT", "UNI", "XRP", "APT"
+        ]
+        self.coinbase_prices = {asset: 0.0 for asset in self.coinbase_supported_assets}
+        self.coinbase_prices['last_update'] = 0.0
+        self.coinbase_prices['is_connected'] = False
         self.coinbase_lead_lag = {
             'lead_symbol': 'NONE',
             'spread_bps': 0.0,
@@ -1456,6 +1455,25 @@ class MarketDataManager:
         # 9. Hawkes Kendi Kendini Besleyen Tasfiye Çığı Modeli
         hawkes_info = self.get_hawkes_avalanche(symbol)
 
+        # Deribit Kurumsal Opsiyon GEX & Makro Şemsiye Ayrımı
+        sym_clean = symbol.upper().replace('/', '').replace(':USDT', '').replace('USDT', '')
+        btc_net_gex = float(self.deribit_gex_data.get('BTC', {}).get('net_gex', 0.0)) if hasattr(self, 'deribit_gex_data') else 0.0
+        eth_net_gex = float(self.deribit_gex_data.get('ETH', {}).get('net_gex', 0.0)) if hasattr(self, 'deribit_gex_data') else 0.0
+
+        if sym_clean == 'BTC':
+            coin_gex = btc_net_gex
+            coin_gex_regime = str(self.get_deribit_gex_regime())
+            is_proxy = False
+        elif sym_clean == 'ETH':
+            coin_gex = eth_net_gex
+            eth_data = self.get_deribit_gex('ETH')
+            coin_gex_regime = str(eth_data.get('gex_regime', 'NEUTRAL'))
+            is_proxy = False
+        else:
+            coin_gex = 0.0
+            coin_gex_regime = 'MACRO_BTC_PROXY'
+            is_proxy = True
+
         # JIT L2 önbelleği varsa oradaki derin entropiyi al, yoksa varsayılan
         cached_l2 = getattr(self, 'jit_l2_cache', {}).get(symbol, {})
         entropy_norm = float(cached_l2.get('entropy_norm', 0.65))
@@ -1516,12 +1534,18 @@ class MarketDataManager:
             "is_vacuum_trap": bool(lambda_info.get('is_vacuum_trap', False)),
             "is_liquid_expansion": bool(lambda_info.get('is_liquid_expansion', False)),
             "lambda_desc": str(lambda_info.get('desc', '')),
-            "deribit_gex_regime": str(self.get_deribit_gex_regime()),
-            "deribit_net_gex": float(self.deribit_gex_data.get('BTC', {}).get('net_gex', 0.0)),
+            "deribit_gex_regime": coin_gex_regime,
+            "deribit_net_gex": coin_gex,
+            "macro_btc_net_gex": btc_net_gex,
+            "is_gex_proxy": is_proxy,
             "is_gex_pinning": bool(self.is_gex_pinning()),
             "is_gex_exploding": bool(self.is_gex_exploding()),
             "hawkes_eta": float(hawkes_info.get('branching_ratio_eta', 0.15)),
+            "local_hawkes_eta": float(hawkes_info.get('local_hawkes_eta', 0.0)),
+            "macro_hawkes_eta": float(hawkes_info.get('macro_hawkes_eta', 0.15)),
+            "hawkes_source": str(hawkes_info.get('hawkes_source', 'GLOBAL_MACRO')),
             "is_avalanche_active": bool(hawkes_info.get('is_avalanche_active', False)),
+            "is_macro_avalanche": bool(hawkes_info.get('is_macro_avalanche', False)),
             "is_avalanche_exhausted": bool(hawkes_info.get('is_avalanche_exhausted', False)),
             "avalanche_side": str(hawkes_info.get('avalanche_side', 'NONE')),
             "avalanche_desc": str(hawkes_info.get('desc', ''))
@@ -1547,6 +1571,66 @@ class MarketDataManager:
         """-GEX rejiminde kurumsal delta hedge'in volatiliteyi patlattığı rejim (Breakout/Breakdown teşvik)."""
         btc_gex = self.get_deribit_gex('BTC')
         return bool(btc_gex.get('is_explosion_regime', False))
+
+    def get_coinbase_lead_lag(self, symbol: str = "BTC/USDT") -> dict:
+        """
+        Coinbase Spot USD ile Binance Vadeli arasındaki kurumsal lider-takipçi (Lead-Lag) fiyat farkını hesaplar.
+        15 likit parite için pariteye özel spread, desteklenmeyenler için NOT_LISTED döner.
+        """
+        base_asset = symbol.upper().replace('/', '').replace(':USDT', '').replace('USDT', '')
+        now_ts = time.time()
+        cb_last_upd = getattr(self, 'coinbase_prices', {}).get('last_update', 0.0)
+        macro_btc_lead = getattr(self, 'coinbase_lead_lag', {})
+        macro_btc_spread = float(macro_btc_lead.get('spread_bps', 0.0))
+
+        if hasattr(self, 'coinbase_supported_assets') and base_asset in self.coinbase_supported_assets:
+            cb_price = float(self.coinbase_prices.get(base_asset, 0.0))
+            if cb_price > 0:
+                binance_price = float(self.current_prices.get(symbol, self.current_prices.get(f"{base_asset}/USDT", 0.0)))
+                if binance_price > 0:
+                    usdt_peg = self.current_prices.get("USDT/USD", self.current_prices.get("USDC/USDT", 1.0))
+                    adj_binance_price = binance_price * usdt_peg if (0.95 <= usdt_peg <= 1.05) else binance_price
+                    spread_bps = round(((cb_price - adj_binance_price) / adj_binance_price) * 10000.0, 1)
+
+                    direction = "NEUTRAL"
+                    status_str = "⚪ DENGELİ NAKİT AKIŞI"
+                    desc_str = f"Coinbase (${cb_price:,.2f}) ile Binance (${binance_price:,.2f}) dengede ({spread_bps:+.1f} bps)."
+
+                    from config import COINBASE_LEAD_SPREAD_BPS
+                    if spread_bps >= COINBASE_LEAD_SPREAD_BPS:
+                        direction = "BULLISH_LEAD"
+                        status_str = f"🇺🇸 COINBASE SPOT BOĞA ÖNCÜSÜ (+{spread_bps:.0f} bps)"
+                        desc_str = f"Coinbase Spot alıcı baskısıyla önde (+{spread_bps:+.1f} bps). Kurumsal yukarı itki."
+                    elif spread_bps <= -COINBASE_LEAD_SPREAD_BPS:
+                        direction = "BEARISH_LEAD"
+                        status_str = f"🇺🇸 COINBASE SPOT AYI BASKISI ({spread_bps:.0f} bps)"
+                        desc_str = f"Coinbase Spot satıcı baskısıyla geride ({spread_bps:+.1f} bps). Kurumsal aşağı baskı."
+
+                    item_age = (now_ts - getattr(self, 'coinbase_prices', {}).get(f"{base_asset}_time", cb_last_upd))
+                    return {
+                        'lead_symbol': base_asset,
+                        'spread_bps': spread_bps,
+                        'direction': direction,
+                        'status': status_str,
+                        'desc': desc_str,
+                        'is_listed': True,
+                        'macro_btc_spread_bps': macro_btc_spread,
+                        'last_update': cb_last_upd,
+                        'age_seconds': item_age if cb_last_upd > 0 else 999.0
+                    }
+
+        # Listeli Değil (NOT_LISTED)
+        return {
+            'lead_symbol': base_asset,
+            'spread_bps': 0.0,
+            'direction': 'NEUTRAL',
+            'status': 'NOT_LISTED',
+            'desc': f'{symbol} Coinbase Spot tahtasında listeli değil.',
+            'is_listed': False,
+            'macro_btc_spread_bps': macro_btc_spread,
+            'last_update': cb_last_upd,
+            'age_seconds': (now_ts - cb_last_upd) if cb_last_upd > 0 else 999.0
+        }
 
     async def fetch_deribit_gex_immediate(self):
         """Aegis Sentinel veya manuel tetikleyici tarafından çağrılan anlık ve crash-proof Deribit GEX tazeleyicisi."""
@@ -1586,31 +1670,49 @@ class MarketDataManager:
     def get_hawkes_avalanche(self, symbol: str = None) -> dict:
         """
         Kaldıraç tasfiye akışından (!forceOrder) Hawkes kendi kendini besleyen çığ analizi.
-        Pariteye özel tasfiye azsa global borsa tasfiyelerine bakar.
+        Yerel parite tasfiyesi ile küresel BTC/ETH makro çığını birbirinden ayırır.
         """
         from indicators import calculate_hawkes_avalanche
-        if not hasattr(self, 'recent_liquidations') or not self.recent_liquidations:
-            return {
-                'branching_ratio_eta': 0.15,
-                'intensity': 0.05,
-                'regime': 'QUIET_FLOW',
-                'is_avalanche_active': False,
-                'is_avalanche_exhausted': False,
-                'avalanche_side': 'NONE',
-                'long_liq_usd': 0.0,
-                'short_liq_usd': 0.0,
-                'desc': '⚪ Durgun Tasfiye Akışı'
-            }
 
-        # Eğer parite belirtilmişse, o paritenin tasfiyelerini filtrele
-        if symbol:
+        macro_res = {}
+        if hasattr(self, 'recent_liquidations') and self.recent_liquidations:
+            try:
+                macro_res = calculate_hawkes_avalanche(list(self.recent_liquidations))
+            except Exception:
+                macro_res = {}
+
+        local_res = {}
+        if symbol and hasattr(self, 'recent_liquidations') and self.recent_liquidations:
             clean_s = symbol.upper().replace('/', '').replace(':USDT', '').replace('USDT', '')
             sym_liqs = [liq for liq in self.recent_liquidations if clean_s in liq.get('symbol', '').upper() or clean_s in liq.get('raw_symbol', '').upper()]
             if len(sym_liqs) >= 2:
-                return calculate_hawkes_avalanche(sym_liqs)
+                try:
+                    local_res = calculate_hawkes_avalanche(sym_liqs)
+                    local_res['source'] = 'LOCAL'
+                except Exception:
+                    local_res = {}
 
-        # Global tasfiye çığı analizi
-        return calculate_hawkes_avalanche(list(self.recent_liquidations))
+        local_eta = float(local_res.get('branching_ratio_eta', 0.0))
+        macro_eta = float(macro_res.get('branching_ratio_eta', 0.15))
+        has_local_data = bool(local_res and 'branching_ratio_eta' in local_res)
+
+        return {
+            'branching_ratio_eta': local_eta if has_local_data else (macro_eta if not symbol else 0.0),
+            'local_hawkes_eta': local_eta if has_local_data else 0.0,
+            'macro_hawkes_eta': macro_eta,
+            'intensity': float(local_res.get('intensity', macro_res.get('intensity', 0.0) if not symbol else 0.0)),
+            'regime': str(local_res.get('regime', macro_res.get('regime', 'QUIET_FLOW'))),
+            'is_avalanche_active': bool(local_res.get('is_avalanche_active', False)),
+            'is_macro_avalanche': bool(macro_res.get('is_avalanche_active', False)),
+            'hawkes_source': 'LOCAL' if has_local_data else 'GLOBAL_MACRO',
+            'is_avalanche_exhausted': bool(local_res.get('is_avalanche_exhausted', False)),
+            'avalanche_side': str(local_res.get('avalanche_side', macro_res.get('avalanche_side', 'NONE') if not symbol else 'NONE')),
+            'long_liq_usd': float(local_res.get('long_liq_usd', 0.0)),
+            'short_liq_usd': float(local_res.get('short_liq_usd', 0.0)),
+            'macro_long_liq_usd': float(macro_res.get('long_liq_usd', 0.0)),
+            'macro_short_liq_usd': float(macro_res.get('short_liq_usd', 0.0)),
+            'desc': str(local_res.get('desc', '⚪ Paritede Tasfiye Sakin' if symbol else '⚪ Durgun Tasfiye Akışı'))
+        }
 
     def get_symbol_metrics(self, symbol: str) -> dict:
         if not hasattr(self, 'symbol_metrics'):
@@ -2003,6 +2105,24 @@ class MarketDataManager:
                 avg_exec_s = accum_usd_s / total_qty_sell
                 sim_slip_short = round(max(0.0, (best_bid - avg_exec_s) / best_bid * 100.0), 6)
 
+        sym_clean = symbol.upper().replace('/', '').replace(':USDT', '').replace('USDT', '')
+        btc_net_gex = float(self.deribit_gex_data.get('BTC', {}).get('net_gex', 0.0)) if hasattr(self, 'deribit_gex_data') else 0.0
+        eth_net_gex = float(self.deribit_gex_data.get('ETH', {}).get('net_gex', 0.0)) if hasattr(self, 'deribit_gex_data') else 0.0
+
+        if sym_clean == 'BTC':
+            coin_gex = btc_net_gex
+            coin_gex_regime = str(self.get_deribit_gex_regime())
+            is_proxy = False
+        elif sym_clean == 'ETH':
+            coin_gex = eth_net_gex
+            eth_data = self.get_deribit_gex('ETH')
+            coin_gex_regime = str(eth_data.get('gex_regime', 'NEUTRAL'))
+            is_proxy = False
+        else:
+            coin_gex = 0.0
+            coin_gex_regime = 'MACRO_BTC_PROXY'
+            is_proxy = True
+
         res_depth = {
             'symbol': symbol,
             'mid_price': mid_price,
@@ -2070,12 +2190,18 @@ class MarketDataManager:
             'is_vacuum_trap': bool(lambda_info.get('is_vacuum_trap', False)),
             'is_liquid_expansion': bool(lambda_info.get('is_liquid_expansion', False)),
             'lambda_desc': str(lambda_info.get('desc', '')),
-            'deribit_gex_regime': str(self.get_deribit_gex_regime()),
-            'deribit_net_gex': float(self.deribit_gex_data.get('BTC', {}).get('net_gex', 0.0)),
+            'deribit_gex_regime': coin_gex_regime,
+            'deribit_net_gex': coin_gex,
+            'macro_btc_net_gex': btc_net_gex,
+            'is_gex_proxy': is_proxy,
             'is_gex_pinning': bool(self.is_gex_pinning()),
             'is_gex_exploding': bool(self.is_gex_exploding()),
             'hawkes_eta': float(hawkes_info.get('branching_ratio_eta', 0.15)),
+            'local_hawkes_eta': float(hawkes_info.get('local_hawkes_eta', 0.0)),
+            'macro_hawkes_eta': float(hawkes_info.get('macro_hawkes_eta', 0.15)),
+            'hawkes_source': str(hawkes_info.get('hawkes_source', 'GLOBAL_MACRO')),
             'is_avalanche_active': bool(hawkes_info.get('is_avalanche_active', False)),
+            'is_macro_avalanche': bool(hawkes_info.get('is_macro_avalanche', False)),
             'is_avalanche_exhausted': bool(hawkes_info.get('is_avalanche_exhausted', False)),
             'avalanche_side': str(hawkes_info.get('avalanche_side', 'NONE')),
             'avalanche_desc': str(hawkes_info.get('desc', '')),
@@ -2138,10 +2264,16 @@ class MarketDataManager:
                 'lambda_desc': res_depth['lambda_desc'],
                 'deribit_gex_regime': res_depth['deribit_gex_regime'],
                 'deribit_net_gex': res_depth['deribit_net_gex'],
+                'macro_btc_net_gex': res_depth['macro_btc_net_gex'],
+                'is_gex_proxy': res_depth['is_gex_proxy'],
                 'is_gex_pinning': res_depth['is_gex_pinning'],
                 'is_gex_exploding': res_depth['is_gex_exploding'],
                 'hawkes_eta': res_depth['hawkes_eta'],
+                'local_hawkes_eta': res_depth['local_hawkes_eta'],
+                'macro_hawkes_eta': res_depth['macro_hawkes_eta'],
+                'hawkes_source': res_depth['hawkes_source'],
                 'is_avalanche_active': res_depth['is_avalanche_active'],
+                'is_macro_avalanche': res_depth['is_macro_avalanche'],
                 'is_avalanche_exhausted': res_depth['is_avalanche_exhausted'],
                 'avalanche_side': res_depth['avalanche_side'],
                 'avalanche_desc': res_depth['avalanche_desc']
@@ -2712,9 +2844,10 @@ class MarketDataManager:
             if not ENABLE_COINBASE_LEAD_LAG:
                 return
             url = "wss://ws-feed.exchange.coinbase.com"
+            cb_pairs = [f"{a}-USD" for a in getattr(self, 'coinbase_supported_assets', ["BTC", "ETH", "SOL"])]
             sub_msg = {
                 "type": "subscribe",
-                "product_ids": ["BTC-USD", "ETH-USD", "SOL-USD"],
+                "product_ids": cb_pairs,
                 "channels": ["ticker"]
             }
             while True:
@@ -2722,7 +2855,7 @@ class MarketDataManager:
                     async with aiohttp.ClientSession() as session:
                         async with session.ws_connect(url, heartbeat=10) as ws:
                             await ws.send_str(json.dumps(sub_msg))
-                            print(">> [COINBASE SPOT WS] wss://ws-feed.exchange.coinbase.com bağlandı (BTC, ETH, SOL).")
+                            print(f">> [COINBASE SPOT WS] wss://ws-feed.exchange.coinbase.com bağlandı ({len(cb_pairs)} Parite: {', '.join(cb_pairs[:5])}...).")
                             self.coinbase_prices['is_connected'] = True
                             async for msg in ws:
                                 if msg.type == aiohttp.WSMsgType.TEXT:
@@ -2734,36 +2867,38 @@ class MarketDataManager:
                                             now_t = time.time()
                                             base_asset = prod.split("-")[0]
                                             self.coinbase_prices[base_asset] = p
+                                            self.coinbase_prices[f"{base_asset}_time"] = now_t
                                             self.coinbase_prices['last_update'] = now_t
 
                                             # Binance BTC/USDT ile Lead-Lag Karşılaştırması (VDA-09: USDT/USD peg sapmasından arındırılmış)
-                                            binance_btc = self.current_prices.get("BTC/USDT", 0.0)
-                                            cb_btc = self.coinbase_prices.get("BTC", 0.0)
-                                            if binance_btc > 0 and cb_btc > 0:
-                                                usdt_peg = self.current_prices.get("USDT/USD", self.current_prices.get("USDC/USDT", 1.0))
-                                                adj_binance_btc = binance_btc * usdt_peg if (0.95 <= usdt_peg <= 1.05) else binance_btc
-                                                spread_bps = round(((cb_btc - adj_binance_btc) / adj_binance_btc) * 10000.0, 1)
-                                                direction = "NEUTRAL"
-                                                status_str = "⚪ DENGELİ NAKİT AKIŞI"
-                                                desc_str = f"Coinbase (${cb_btc:,.1f}) ile Binance (${binance_btc:,.1f}) dengede ({spread_bps:+.1f} bps)."
+                                            if base_asset == "BTC":
+                                                binance_btc = self.current_prices.get("BTC/USDT", 0.0)
+                                                cb_btc = self.coinbase_prices.get("BTC", 0.0)
+                                                if binance_btc > 0 and cb_btc > 0:
+                                                    usdt_peg = self.current_prices.get("USDT/USD", self.current_prices.get("USDC/USDT", 1.0))
+                                                    adj_binance_btc = binance_btc * usdt_peg if (0.95 <= usdt_peg <= 1.05) else binance_btc
+                                                    spread_bps = round(((cb_btc - adj_binance_btc) / adj_binance_btc) * 10000.0, 1)
+                                                    direction = "NEUTRAL"
+                                                    status_str = "⚪ DENGELİ NAKİT AKIŞI"
+                                                    desc_str = f"Coinbase (${cb_btc:,.1f}) ile Binance (${binance_btc:,.1f}) dengede ({spread_bps:+.1f} bps)."
 
-                                                if spread_bps >= COINBASE_LEAD_SPREAD_BPS:
-                                                    direction = "BULLISH_LEAD"
-                                                    status_str = f"🇺🇸 COINBASE SPOT BOĞA ÖNCÜSÜ (+{spread_bps:.0f} bps)"
-                                                    desc_str = f"Coinbase Spot alıcı baskısıyla önde (+{spread_bps:+.1f} bps). Kurumsal yukarı itki."
-                                                elif spread_bps <= -COINBASE_LEAD_SPREAD_BPS:
-                                                    direction = "BEARISH_LEAD"
-                                                    status_str = f"🇺🇸 COINBASE SPOT AYI BASKISI ({spread_bps:.0f} bps)"
-                                                    desc_str = f"Coinbase Spot satıcı baskısıyla geride ({spread_bps:+.1f} bps). Kurumsal aşağı baskı."
+                                                    if spread_bps >= COINBASE_LEAD_SPREAD_BPS:
+                                                        direction = "BULLISH_LEAD"
+                                                        status_str = f"🇺🇸 COINBASE SPOT BOĞA ÖNCÜSÜ (+{spread_bps:.0f} bps)"
+                                                        desc_str = f"Coinbase Spot alıcı baskısıyla önde (+{spread_bps:+.1f} bps). Kurumsal yukarı itki."
+                                                    elif spread_bps <= -COINBASE_LEAD_SPREAD_BPS:
+                                                        direction = "BEARISH_LEAD"
+                                                        status_str = f"🇺🇸 COINBASE SPOT AYI BASKISI ({spread_bps:.0f} bps)"
+                                                        desc_str = f"Coinbase Spot satıcı baskısıyla geride ({spread_bps:+.1f} bps). Kurumsal aşağı baskı."
 
-                                                self.coinbase_lead_lag = {
-                                                    'lead_symbol': 'BTC',
-                                                    'spread_bps': spread_bps,
-                                                    'direction': direction,
-                                                    'status': status_str,
-                                                    'desc': desc_str,
-                                                    'last_update': now_t
-                                                }
+                                                    self.coinbase_lead_lag = {
+                                                        'lead_symbol': 'BTC',
+                                                        'spread_bps': spread_bps,
+                                                        'direction': direction,
+                                                        'status': status_str,
+                                                        'desc': desc_str,
+                                                        'last_update': now_t
+                                                    }
                                 elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
                                     break
                 except Exception as e:

@@ -629,15 +629,33 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         vpin_sc = _safe_float(h.get('vpin_score', 0.30))
         vpin_tox = str(h.get('vpin_toxicity', 'LOW'))
         kyles_l = _safe_float(h.get('kyles_lambda_ratio', 1.0))
+        # Deribit GEX (Parite vs Makro Şemsiye)
         gex_reg = str(h.get('deribit_gex_regime', 'NEUTRAL'))
+        is_proxy = bool(h.get('is_gex_proxy', False)) or (gex_reg == 'MACRO_BTC_PROXY')
+        btc_gex_val = _safe_float(h.get('macro_btc_net_gex', 0.0))
+        coin_gex_val = _safe_float(h.get('deribit_net_gex', 0.0))
+        if is_proxy:
+            gex_display = f"Şemsiye: Makro BTC (${btc_gex_val/1e6:+.1f}M)" if btc_gex_val != 0 else "Makro BTC Şemsiyesi"
+        else:
+            gex_display = f"{gex_reg} (${coin_gex_val/1e6:+.1f}M)" if coin_gex_val != 0 else gex_reg
+
+        # Hawkes Tasfiye Çığı (Yerel vs Makro)
         hwk_eta = _safe_float(h.get('hawkes_eta', 0.15))
         hwk_act = bool(h.get('is_avalanche_active', False))
+        loc_eta = _safe_float(h.get('local_hawkes_eta', 0.0))
+        mac_eta = _safe_float(h.get('macro_hawkes_eta', hwk_eta))
+        is_macro_storm = bool(h.get('is_macro_avalanche', False))
+        hwk_display = f"Yerel: {loc_eta:.2f} | Makro: {mac_eta:.2f}"
+        if hwk_act:
+            hwk_display += " (⚡YEREL ÇIĞ)"
+        elif is_macro_storm:
+            hwk_display += " (🌪️MAKRO FIRTINA)"
 
         ws.write(r_idx, 81, f"{stoikov_drift:+.1f} bps", cell_roe_green if stoikov_drift > 0 else (cell_roe_red if stoikov_drift < 0 else cell_center))
         ws.write(r_idx, 82, f"{vpin_sc:.2f} ({vpin_tox})", cell_center)
         ws.write(r_idx, 83, f"{kyles_l:.2f}x", cell_center)
-        ws.write(r_idx, 84, gex_reg, cell_center)
-        ws.write(r_idx, 85, f"η={hwk_eta:.2f}" + (" (ÇIĞ)" if hwk_act else ""), cell_roe_red if hwk_act else cell_center)
+        ws.write(r_idx, 84, gex_display, cell_center)
+        ws.write(r_idx, 85, hwk_display, cell_roe_red if (hwk_act or is_macro_storm) else cell_center)
 
         # 4 Gizli Kuant Silahı Sütunları (86, 87, 88, 89)
         cvd_div = str(h.get('cvd_divergence', '⚪ UYUMLU_AKIS (Normal)'))
