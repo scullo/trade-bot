@@ -1842,13 +1842,19 @@ class MarketDataManager:
         mid_price = (bids[0][0] + asks[0][0]) / 2.0 if bids and asks else 0.0
         bid_usd_05 = 0.0
         ask_usd_05 = 0.0
+        bid_usd_02 = 0.0
+        ask_usd_02 = 0.0
         if mid_price > 0:
             for p, q in bids:
                 if p >= mid_price * 0.995:
                     bid_usd_05 += (p * q)
+                if p >= mid_price * 0.998:
+                    bid_usd_02 += (p * q)
             for p, q in asks:
                 if p <= mid_price * 1.005:
                     ask_usd_05 += (p * q)
+                if p <= mid_price * 1.002:
+                    ask_usd_02 += (p * q)
 
         l2_ratio = round(bid_usd_05 / max(1.0, ask_usd_05), 2)
         top_bid_q = (bids[0][1] * bids[0][0]) if bids else 0.0
@@ -1874,7 +1880,9 @@ class MarketDataManager:
             diff_buy = max(0.0, float(h_deque[-1][1] - h_deque[0][1]))
             diff_sell = max(0.0, float(h_deque[-1][2] - h_deque[0][2]))
 
-        iceberg_data = detect_iceberg_orders(diff_buy, diff_sell, top_bid_q, top_ask_q)
+        zone_bid = bid_usd_02 if bid_usd_02 > 0 else (top_bid_q * 3.5)
+        zone_ask = ask_usd_02 if ask_usd_02 > 0 else (top_ask_q * 3.5)
+        iceberg_data = detect_iceberg_orders(diff_buy, diff_sell, zone_bid, zone_ask, is_zone_depth=True)
 
         # Bookmap 60s Mikro Fiyat Değişimi ve Çapa Duvarı Tespiti
         price_chg_60s = 0.0

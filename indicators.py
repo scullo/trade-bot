@@ -423,22 +423,30 @@ def calculate_hurst_exponent(price_series, min_lags: int = 10, max_lags: int = N
         return 0.50
 
 
-def detect_iceberg_orders(executed_buy_usd: float, executed_sell_usd: float, top_bid_usd: float, top_ask_usd: float) -> dict:
+def detect_iceberg_orders(executed_buy_usd: float, executed_sell_usd: float, top_bid_usd: float, top_ask_usd: float, is_zone_depth: bool = False) -> dict:
     """
     3. KEN GRIFFIN — Gizli Likidite (Iceberg / Buzdağı) Radarı:
-    - Son 60s gerçekleşen agresif taker hacmini tahtada görünen anlık derinliğe oranlar.
-    - Ask Iceberg (Satıcı Buzdağı): executed_buy_usd / effective_ask_depth >= 3.5x
-    - Bid Iceberg (Alıcı Buzdağı): executed_sell_usd / effective_bid_depth >= 3.5x
+    - Son 60s gerçekleşen agresif taker hacmini tahtada görünen derinliğe oranlar.
+    - Yapay 50.0x tavan bozulması giderildi: Bant likiditesi ve dinamik normalizasyon ile [1.0x - 20.0x] aralığında gerçek kurumsal emilim ölçülür.
+    - Ask Iceberg (Satıcı Buzdağı): executed_buy_usd / effective_ask_depth >= 3.0x
+    - Bid Iceberg (Alıcı Buzdağı): executed_sell_usd / effective_bid_depth >= 3.0x
     """
     try:
-        effective_ask_depth = max(2500.0, top_ask_usd * 3.0)
-        effective_bid_depth = max(2500.0, top_bid_usd * 3.0)
+        if is_zone_depth:
+            effective_ask_depth = max(3500.0, float(top_ask_usd))
+            effective_bid_depth = max(3500.0, float(top_bid_usd))
+        else:
+            effective_ask_depth = max(5000.0, float(top_ask_usd) * 3.5)
+            effective_bid_depth = max(5000.0, float(top_bid_usd) * 3.5)
 
-        ask_ratio = round(min(50.0, float(executed_buy_usd / effective_ask_depth)), 2)
-        bid_ratio = round(min(50.0, float(executed_sell_usd / effective_bid_depth)), 2)
+        raw_ask_r = float(executed_buy_usd / effective_ask_depth)
+        raw_bid_r = float(executed_sell_usd / effective_bid_depth)
 
-        has_ask_iceberg = (ask_ratio >= 3.5 and executed_buy_usd >= 5000.0)
-        has_bid_iceberg = (bid_ratio >= 3.5 and executed_sell_usd >= 5000.0)
+        ask_ratio = round(min(20.0, raw_ask_r), 2)
+        bid_ratio = round(min(20.0, raw_bid_r), 2)
+
+        has_ask_iceberg = (ask_ratio >= 3.0 and executed_buy_usd >= 8000.0)
+        has_bid_iceberg = (bid_ratio >= 3.0 and executed_sell_usd >= 8000.0)
 
         iceberg_side = "NONE"
         if has_ask_iceberg and ask_ratio > bid_ratio:
@@ -767,6 +775,8 @@ def evaluate_iceberg_offense(iceberg_data: dict, current_price: float, levels: d
         'tight_stop_dist_pct': 0.0022,  # %0.22 dar kurumsal stop!
         'rr_multiplier': 1.0,
         'offense_reason': '',
+        'buyer_offense_reason': '',
+        'seller_offense_reason': '',
         'target_price': 0.0
     }
     if not iceberg_data or current_price <= 0:
@@ -792,7 +802,9 @@ def evaluate_iceberg_offense(iceberg_data: dict, current_price: float, levels: d
             res['is_sniper_buy'] = True
             res['tight_stop_dist_pct'] = 0.0022
             res['rr_multiplier'] = 1.8
-            res['offense_reason'] = f'🧊 Kurumsal Alıcı Buzdağı Hücumu (${sup_lvl:.4f} Destek Arkası, {bid_ratio:.1f}x Emilim)'
+            b_reason = f'🧊 Kurumsal Alıcı Buzdağı Hücumu (${sup_lvl:.4f} Destek Arkası, {bid_ratio:.1f}x Emilim)'
+            res['buyer_offense_reason'] = b_reason
+            res['offense_reason'] = b_reason
             res['target_price'] = r3 if r3 > current_price else current_price * 1.015
 
         # 🔴 2. SHORT SNIPER HÜCUMU (Dirençte Satıcı Buzdağı Arkasına Saklanma)
@@ -802,7 +814,10 @@ def evaluate_iceberg_offense(iceberg_data: dict, current_price: float, levels: d
             res['is_sniper_sell'] = True
             res['tight_stop_dist_pct'] = 0.0022
             res['rr_multiplier'] = 1.8
-            res['offense_reason'] = f'🧊 Kurumsal Satıcı Buzdağı Hücumu (${res_lvl:.4f} Direnç Arkası, {ask_ratio:.1f}x Emilim)'
+            s_reason = f'🧊 Kurumsal Satıcı Buzdağı Hücumu (${res_lvl:.4f} Direnç Arkası, {ask_ratio:.1f}x Emilim)'
+            res['seller_offense_reason'] = s_reason
+            if not res['is_sniper_buy']:
+                res['offense_reason'] = s_reason
             res['target_price'] = s3 if (s3 > 0 and s3 < current_price) else current_price * 0.985
 
         # ⚪ 3. YATAY PİNG-PONG ARBİTRAJI
