@@ -4243,23 +4243,30 @@ class StrategyEngine:
             p_lower_wick = (min(p_open, p_close) - p_low) if p_range > 0 else 0
             p_lower_wick_ratio = (p_lower_wick / p_range) if p_range > 0 else 0
 
-            min_wick = 0.06 if self.is_gevset_coin(symbol) else 0.10
+            # 🛡️ REFORM: Gerçek Alıcı Emilim Şartı (S3'e vuran fitil veya güçlü yeşil tepki)
             is_absorption = (
-                (lower_wick_ratio >= min_wick)
-                or (close_price >= c_open)
-                or (p_lower_wick_ratio >= min_wick)
-                or (p_close > p_open and close_price >= s3)
-                or (self.is_gevset_coin(symbol) and close_price >= s3)
+                (lower_wick_ratio >= 0.12)
+                or (close_price > c_open and lower_wick_ratio >= 0.08 and close_price >= s3)
+                or (p_close > p_open and close_price > p_close and close_price >= s3)
+                or (p_lower_wick_ratio >= 0.15 and close_price >= s3)
             )
             if not is_absorption:
-                self.log_rejection(symbol, "SETUP 3 S3 Destek", f"S3 desteğinde alıcı emilimi (min %{min_wick*100:.0f} alt fitil veya yeşil kapanış) yok (Fitil: %{lower_wick_ratio*100:.1f})")
+                self.log_rejection(symbol, "SETUP 3 S3 Destek", f"S3 desteğinde alıcı emilimi yetersiz (Fitil: %{lower_wick_ratio*100:.1f}, Min %12 alt fitil veya fitilli yeşil gövde şart)")
                 return
 
             # 🛡️ CVD DELTA EMİLİMİ ŞARTI (Taker Satıcı Tükeniş Teyidi)
             cvd_data_s3_abs = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
             cvd_ratio_s3_abs = float(cvd_data_s3_abs.get('ratio_60s', 50.0))
-            if cvd_ratio_s3_abs < 22.0:
-                self.log_rejection(symbol, "SETUP 3 S3 Destek", f"CVD Emilim Kalkanı: S3 desteğinde taker satıcı baskısı (%{100-cvd_ratio_s3_abs:.1f} satıcı) aşırı agresif. Akıllı para emilimi görülmedi.")
+            cvd_delta_s3 = float(cvd_data_s3_abs.get('delta_60s', 0.0))
+            if cvd_ratio_s3_abs < 48.0 and cvd_delta_s3 <= 0:
+                self.log_rejection(symbol, "SETUP 3 S3 Destek", f"CVD Emilim Kalkanı: S3 desteğinde taker satıcı baskısı (CVD: %{cvd_ratio_s3_abs:.1f} < %48, Delta: {cvd_delta_s3:+,.0f}) aşırı agresif. Düşen bıçak engellendi.")
+                return
+
+            # 🛡️ OBI TAHTA DUVARI TEYİDİ
+            obi_data_s3 = self.market_data.get_orderbook_depth(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_orderbook_depth')) else {}
+            obi_ratio_s3 = float(obi_data_s3.get('ratio', 1.0))
+            if obi_ratio_s3 < 1.25 and coin_rs_score < 0.20:
+                self.log_rejection(symbol, "SETUP 3 S3 Destek", f"Tahta Desteği Kalkanı: S3 desteğinde yeterli alış derinliği (OBI: {obi_ratio_s3:.2f}x < 1.25x) yok.")
                 return
 
             coin_atr = self.get_symbol_atr_pct(symbol)
@@ -4281,11 +4288,14 @@ class StrategyEngine:
             is_ice_sniper = sym_met.get("is_iceberg_sniper_buy", False)
             if is_ice_sniper:
                 ice_reason = sym_met.get("iceberg_offense_reason", "")
-                c_list.append("Iceberg_Offense_Sniper_Long")
-                # Kurumsal alıcı buzdağı arkasına güvenli stop (en az %0.60 nefes payı - VDA-16)
-                soft_stop = min(s3 - buffer * 0.5, close_price * (1.0 - max(0.0060, dyn_stop_pct * 0.85)))
-                hard_stop = min(s3 - buffer * 0.6, close_price * (1.0 - dyn_stop_pct))
-                reason_label = f"S3 Destek Sekmesi + {ice_reason} (İlk Hedef {target_name}: ${tp1:.4f})"
+                if "Alıcı" in ice_reason or "Buyer" in ice_reason:
+                    c_list.append("Iceberg_Offense_Sniper_Long")
+                    # Kurumsal alıcı buzdağı arkasına güvenli stop (en az %0.60 nefes payı - VDA-16)
+                    soft_stop = min(s3 - buffer * 0.5, close_price * (1.0 - max(0.0060, dyn_stop_pct * 0.85)))
+                    hard_stop = min(s3 - buffer * 0.6, close_price * (1.0 - dyn_stop_pct))
+                    reason_label = f"S3 Destek Sekmesi + {ice_reason} (İlk Hedef {target_name}: ${tp1:.4f})"
+                else:
+                    reason_label = f"S3 Destek Sekmesi (İlk Hedef {target_name}: ${tp1:.4f})"
             else:
                 reason_label = f"S3 Destek Sekmesi (İlk Hedef {target_name}: ${tp1:.4f})"
 
@@ -5168,27 +5178,34 @@ class StrategyEngine:
                     p_lower_wick = (min(p_open, p_close) - p_low) if p_range > 0 else 0
                     p_lower_wick_ratio = (p_lower_wick / p_range) if p_range > 0 else 0
 
-                    min_wick_14 = 0.06 if self.is_gevset_coin(symbol) else 0.10
+                    # 🛡️ REFORM: Candlestick Rejection (Min %12 fitil veya fitilli yeşil gövde emilimi)
                     is_buyer_rejection = (
-                        (lower_wick_ratio >= min_wick_14)
-                        or (close_price > c_open)
-                        or (p_lower_wick_ratio >= min_wick_14)
-                        or (p_close > p_open and close_price >= support_lvl)
-                        or (self.is_gevset_coin(symbol) and close_price >= support_lvl)
+                        (lower_wick_ratio >= 0.12)
+                        or (p_lower_wick_ratio >= 0.12 and close_price >= support_lvl)
+                        or (close_price > c_open and lower_wick_ratio >= 0.08 and close_price >= support_lvl)
+                        or (p_close > p_open and close_price > p_close and close_price >= support_lvl)
                     )
 
                     cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
                     cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
+                    cvd_delta = float(cvd_data.get('delta_60s', 0.0))
 
                     obi_data = self.market_data.get_orderbook_depth(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_orderbook_depth')) else {}
                     obi_imbalance = float(obi_data.get('imbalance', 0.0))
                     obi_ratio = float(obi_data.get('ratio', 1.0))
-                    has_buyer_flow = (cvd_ratio >= 46.0) or (obi_imbalance >= 0.04) or (obi_ratio >= 1.08) or self.is_gevset_coin(symbol)
+
+                    # 🛡️ REFORM: Net Alıcı Teyidi (CVD >= 51.0% veya pozitif CVD Delta) ve Tahta Desteği (OBI >= 1.25x)
+                    has_real_buyer_flow = (cvd_ratio >= 51.0 or cvd_delta > 0)
+                    has_real_obi_wall = (obi_ratio >= 1.25 or obi_imbalance >= 0.12)
 
                     if not is_buyer_rejection:
-                        self.log_rejection(symbol, f"SETUP 14 {support_tag} Retest Reddi", f"Destek retestinde alıcı tepkisi (alt fitil) yetersiz (Fitil: %{lower_wick_ratio*100:.1f})")
-                    elif not has_buyer_flow and coin_rs_score < 0.2:
-                        self.log_rejection(symbol, f"SETUP 14 {support_tag} Retest Reddi", f"Destek retestinde alıcı akışı yetersiz (CVD: %{cvd_ratio:.1f}, OBI: %{obi_imbalance*100:.1f})")
+                        self.log_rejection(symbol, f"SETUP 14 {support_tag} Retest Reddi", f"Destek retestinde alıcı tepkisi (alt fitil) yetersiz (Fitil: %{lower_wick_ratio*100:.1f}, Min %12 veya fitilli yeşil gövde şart)")
+                    elif not has_real_buyer_flow:
+                        self.log_rejection(symbol, f"SETUP 14 {support_tag} Retest Reddi", f"Destek retestinde satıcı piyasası hakim (CVD: %{cvd_ratio:.1f} < %51.0, Delta: {cvd_delta:+,.0f}). Satıcı akışında LONG açılamaz.")
+                    elif not has_real_obi_wall and coin_rs_score < 0.20:
+                        self.log_rejection(symbol, f"SETUP 14 {support_tag} Retest Reddi", f"Destek seviyesinde yeterli alıcı tahta desteği yok (OBI: {obi_ratio:.2f}x < 1.25x, İmb: %{obi_imbalance*100:.1f})")
+                    elif coin_rs_score < -0.15:
+                        self.log_rejection(symbol, f"SETUP 14 {support_tag} Retest Reddi", f"Parite BTC'ye karşı aşırı zayıf ve düşüş trendinde (RS: {coin_rs_score:+.2f} < -0.15). Destek tutunamayabilir.")
                     else:
                         up_targets = [
                             lvl for lvl in [r3, mvah, r4, above_npoc, above_nvah, r5]
@@ -5302,24 +5319,34 @@ class StrategyEngine:
                 p_lower_wick = (min(p_open, p_close) - p_low) if p_range > 0 else 0
                 p_lower_wick_ratio = (p_lower_wick / p_range) if p_range > 0 else 0
 
-                min_wick_16 = 0.06 if self.is_gevset_coin(symbol) else 0.10
+                # 🛡️ REFORM: Candlestick Rejection (Min %12 fitil veya fitilli yeşil gövde emilimi)
                 is_buyer_rej = (
-                    (lower_wick_ratio >= min_wick_16)
-                    or (close_price > c_open)
-                    or (p_lower_wick_ratio >= min_wick_16)
-                    or (p_close > p_open and close_price >= r3)
-                    or (self.is_gevset_coin(symbol) and close_price >= r3)
+                    (lower_wick_ratio >= 0.12)
+                    or (close_price > c_open and lower_wick_ratio >= 0.08 and close_price >= r3)
+                    or (p_close > p_open and close_price > p_close and close_price >= r3)
+                    or (p_lower_wick_ratio >= 0.15 and close_price >= r3)
                 )
 
                 cvd_data_16 = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
                 cvd_ratio_16 = float(cvd_data_16.get('ratio_60s', 50.0))
+                cvd_delta_16 = float(cvd_data_16.get('delta_60s', 0.0))
+
+                obi_data_16 = self.market_data.get_orderbook_depth(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_orderbook_depth')) else {}
+                obi_ratio_16 = float(obi_data_16.get('ratio', 1.0))
+
                 is_strong_bear_mkt = ("GÜÇLÜ AYI" in trend_regime) or (macro.get("btc_chg_1h", 0.0) < -0.80 and "BOĞA" not in trend_regime)
-                is_strong_outlier = (coin_rs_score >= 0.40 or cvd_ratio_16 >= 54.0 or self.is_gevset_coin(symbol))
+                has_real_buyer_flow = (cvd_ratio_16 >= 51.0 or cvd_delta_16 > 0)
 
                 if not is_buyer_rej:
-                    self.log_rejection(symbol, "SETUP 16 R3 Retest Reddi", f"R3 retestinde alıcı tepkisi yetersiz (Fitil: %{lower_wick_ratio*100:.1f})")
-                elif is_strong_bear_mkt and not is_strong_outlier:
-                    self.log_rejection(symbol, "SETUP 16 R3 Retest Reddi", f"Piyasa {trend_regime} rejimindeyken R3 retest longu açılmadı.")
+                    self.log_rejection(symbol, "SETUP 16 R3 Retest Reddi", f"R3 retestinde alıcı tepkisi yetersiz (Fitil: %{lower_wick_ratio*100:.1f}, Min %12 veya fitilli yeşil gövde şart)")
+                elif not has_real_buyer_flow:
+                    self.log_rejection(symbol, "SETUP 16 R3 Retest Reddi", f"R3 retestinde satıcı akışı hakim (CVD: %{cvd_ratio_16:.1f} < %51.0). Alıcı akışı görülmedi.")
+                elif obi_ratio_16 < 1.25 and coin_rs_score < 0.20:
+                    self.log_rejection(symbol, "SETUP 16 R3 Retest Reddi", f"R3 desteğinde yeterli tahta alış duvarı (OBI: {obi_ratio_16:.2f}x < 1.25x) yok.")
+                elif is_strong_bear_mkt and coin_rs_score < 0.35:
+                    self.log_rejection(symbol, "SETUP 16 R3 Retest Reddi", f"Piyasa {trend_regime} rejimindeyken zayıf paritede R3 retest longu engellendi.")
+                elif coin_rs_score < -0.15:
+                    self.log_rejection(symbol, "SETUP 16 R3 Retest Reddi", f"Parite negatif göreceli güçte (RS: {coin_rs_score:+.2f} < -0.15). Destek tutunamayabilir.")
                 else:
                     up_targets = [lvl for lvl in [r4, r5, above_npoc, above_nvah] if lvl and lvl >= close_price * 1.009]
                     up_targets.sort()
