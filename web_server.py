@@ -14560,6 +14560,10 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                     "dynamic_coin_audit": True,
                     "chandelier_early_be_lock": True,
                     "asia_selective_shield": True,
+                    "opposing_taker_guard": getattr(config, 'ENABLE_OPPOSING_TAKER_GUARD', True),
+                    "hawkes_avalanche_brake": getattr(config, 'ENABLE_HAWKES_AVALANCHE_BRAKE', True),
+                    "dynamic_runner_profit_lock": getattr(config, 'ENABLE_DYNAMIC_RUNNER_PROFIT_LOCK', True),
+                    "max_leverage_cap": getattr(config, 'MAX_LEVERAGE', 5),
                     "circuit_breaker_active": getattr(strategy.vault, '_circuit_breaker_active', False) if (strategy and hasattr(strategy, 'vault')) else False,
                     "be_locked_count": sum(1 for p in getattr(trader_manager, 'open_positions', {}).values() if p.get("early_be_locked", False)),
                     "emergency_alert": getattr(trader_manager, 'emergency_alert', None)

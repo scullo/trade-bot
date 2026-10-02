@@ -446,6 +446,10 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
             lock_type = "⏳ 90dk Zaman Kalkanı"
         elif 'TP1' in c_reason or h.get('id', '').endswith('-TP1'):
             lock_type = "🏁 Klasik TP1 Hedefi"
+        elif 'Dinamik Runner' in c_reason or 'Runner Kâr' in c_reason:
+            lock_type = "🛡️ Dinamik Runner Kilidi"
+        elif 'Breakeven' in c_reason:
+            lock_type = "🛡️ Breakeven Koruması"
         elif is_win:
             lock_type = "🚀 TP2 / Trend Kapanışı"
         else:

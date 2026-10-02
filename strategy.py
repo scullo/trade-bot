@@ -39,7 +39,10 @@ from config import (
     ENABLE_ASIA_SELECTIVE_SHIELD, ENABLE_COOLDOWN_THROTTLE, SYMBOL_MIN_COOLDOWN_MINUTES,
     ENABLE_CHANDELIER_BE_NOTIFY, ENABLE_DAILY_CIRCUIT_BREAKER, MAX_DAILY_LOSS_PCT,
     LEVERAGE_EXTREME_ATR_THRESHOLD, LEVERAGE_HIGH_ATR_THRESHOLD, LEVERAGE_LOW_ATR_THRESHOLD,
-    SECTOR_CLUSTERS, TOP_LIQUIDITY_SYMBOLS
+    SECTOR_CLUSTERS, TOP_LIQUIDITY_SYMBOLS,
+    ENABLE_OPPOSING_TAKER_GUARD, TAKER_BUY_RATIO_MIN_LONG, TAKER_BUY_RATIO_MAX_SHORT,
+    ENABLE_HAWKES_AVALANCHE_BRAKE, HAWKES_AVALANCHE_THRESHOLD_ETA,
+    ENABLE_DYNAMIC_RUNNER_PROFIT_LOCK, RUNNER_LOCK_TIER1_MFE, RUNNER_LOCK_TIER2_MFE, RUNNER_LOCK_TIER3_MFE
 )
 
 
@@ -917,8 +920,57 @@ class StrategyEngine:
                         except Exception:
                             pass
 
-        if pos.get("is_half_closed", False) or pos.get("early_be_locked", False):
-            # TP1 sonrası veya Erken Chandelier Kilidi: Breakeven / Kâr Koruma Stopu tick düzeyinde anında korunur
+        if pos.get("is_half_closed", False):
+            # 🎯 MİKROYAPI REFORMU: ANTİ-KMNO DİNAMİK RUNNER KÂR KİLİDİ
+            # TP1 sonrası pozisyon kâra gittikçe stop basamaklanır; asla kârı verip eksiye düşemez!
+            entry_p_pos = float(pos.get("entry_price", entry_p))
+            runner_gain_pct = ((current_price - entry_p_pos) / entry_p_pos * 100.0) if side == "LONG" else ((entry_p_pos - current_price) / entry_p_pos * 100.0)
+            peak_gain = max(float(pos.get("peak_runner_gain_pct", 0.0)), runner_gain_pct)
+            pos["peak_runner_gain_pct"] = peak_gain
+            
+            # Dinamik kâr kilidi seviyesini belirle
+            if ENABLE_DYNAMIC_RUNNER_PROFIT_LOCK:
+                if peak_gain >= float(RUNNER_LOCK_TIER3_MFE):      # >= %5.0 MFE -> En az +%3.0 net kâr kilit
+                    target_lock_pct = 0.030
+                elif peak_gain >= float(RUNNER_LOCK_TIER2_MFE):    # >= %3.5 MFE -> En az +%2.0 net kâr kilit
+                    target_lock_pct = 0.020
+                elif peak_gain >= float(RUNNER_LOCK_TIER1_MFE):    # >= %2.0 MFE -> En az +%1.0 net kâr kilit
+                    target_lock_pct = 0.010
+                else:
+                    target_lock_pct = 0.003                        # Fee-Armor Breakeven tabanı (+%0.30)
+                
+                locked_stop = entry_p_pos * (1.0 + target_lock_pct) if side == "LONG" else entry_p_pos * (1.0 - target_lock_pct)
+                cur_hard = float(pos.get("hard_stop") or 0.0)
+                
+                # Stopu yalnızca lehte yöne basamakla (ratchet)
+                if side == "LONG" and locked_stop > cur_hard:
+                    pos["hard_stop"] = locked_stop
+                    pos["soft_stop"] = locked_stop
+                    pos["trail_status"] = f"🛡️ Runner Kilitlendi (+%{target_lock_pct*100:.1f} Kâr)"
+                elif side == "SHORT" and (cur_hard == 0.0 or locked_stop < cur_hard):
+                    pos["hard_stop"] = locked_stop
+                    pos["soft_stop"] = locked_stop
+                    pos["trail_status"] = f"🛡️ Runner Kilitlendi (+%{target_lock_pct*100:.1f} Kâr)"
+
+            be_stop = float(pos.get("hard_stop") or pos.get("soft_stop") or entry_p)
+            if side == "LONG" and current_price <= be_stop:
+                is_profit_lock = (be_stop > entry_p_pos * 1.005)
+                lbl = f"🛡️ Dinamik Runner Kâr Kilidi Tetiklendi (${be_stop:.4f}, Zirve: +%{peak_gain:.1f})" if is_profit_lock else f"🛡️ Breakeven Koruması Tetiklendi (${be_stop:.4f})"
+                record = await self._safe_close_position(symbol, current_price, lbl)
+                if record:
+                    await self._notify_close(record, levels=levels)
+                    self._cleanup_tracking(symbol)
+                return
+            elif side == "SHORT" and current_price >= be_stop:
+                is_profit_lock = (be_stop < entry_p_pos * 0.995)
+                lbl = f"🛡️ Dinamik Runner Kâr Kilidi Tetiklendi (${be_stop:.4f}, Zirve: +%{peak_gain:.1f})" if is_profit_lock else f"🛡️ Breakeven Koruması Tetiklendi (${be_stop:.4f})"
+                record = await self._safe_close_position(symbol, current_price, lbl)
+                if record:
+                    await self._notify_close(record, levels=levels)
+                    self._cleanup_tracking(symbol)
+                return
+        elif pos.get("early_be_locked", False):
+            # Erken Chandelier Kilidi: Breakeven tick düzeyinde korunur
             be_stop = float(pos.get("hard_stop") or pos.get("soft_stop") or entry_p)
             if side == "LONG" and current_price <= be_stop:
                 record = await self._safe_close_position(symbol, current_price, f"🛡️ Breakeven Koruması Tetiklendi (${be_stop:.4f})")
@@ -1100,16 +1152,13 @@ class StrategyEngine:
         is_elite_setup = (confluence_count >= 4 or (has_whale_flow and (has_cb_lead or has_oi_surge)))
         is_strong_setup = (confluence_count >= 3 or has_whale_flow)
 
-        target_lev = base_lev
+        target_lev = min(base_lev, 5)
         if is_elite_setup:
-            if is_major:
-                target_lev = 8 if atr_pct <= LEVERAGE_LOW_ATR_THRESHOLD else 7
-            else:
-                target_lev = 5  # Altcoinlerde elit dahi olsa tavan 5x (Sermaye koruma kalkani)
+            target_lev = 5  # Mikroyapı Reformu: Majör ve altcoin tüm elit işlemlerde kurumsal tavan 5x (8x ve 7x kaldırıldı)
         elif is_strong_setup:
-            target_lev = 6 if is_major else 5
-        else:
             target_lev = 5 if is_major else 4
+        else:
+            target_lev = 4
 
         # 2. Volatilite (ATR) Kalkani:
         if atr_pct >= LEVERAGE_EXTREME_ATR_THRESHOLD:
@@ -1238,6 +1287,33 @@ class StrategyEngine:
 
         sym_met = self.market_data.get_symbol_metrics(symbol) if (self.market_data and hasattr(self.market_data, 'get_symbol_metrics')) else {}
         coin_rs_score = float(sym_met.get("dynamic_rs_score", 0.0))
+
+        # ── 0c. MİKROYAPI REFORMU: ZIT TAKER AKIŞ VE ORAN KALKANI ──
+        if ENABLE_OPPOSING_TAKER_GUARD and self.market_data and hasattr(self.market_data, 'get_symbol_cvd'):
+            cvd_data = self.market_data.get_symbol_cvd(symbol)
+            if cvd_data:
+                ratio_60s = float(cvd_data.get('ratio_60s', 50.0))
+                # Long için: Taker Alıcı oranı %42'nin altındaysa (yani %58'den fazla agresif satıcı varsa)
+                if side == "LONG" and ratio_60s < float(TAKER_BUY_RATIO_MIN_LONG):
+                    rej_msg = f"🛡️ Zıt Taker Akış Kalkanı: Son 60s Taker Alıcı oranı %{ratio_60s:.1f} (< %{TAKER_BUY_RATIO_MIN_LONG:.1f}). Pasif tahta desteğine rağmen agresif market satıcıları piyasayı süpürüyor. LONG engellendi."
+                    print(f">> [RED - ZIT TAKER LONG] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg, taker_buy_ratio=ratio_60s)
+                    return {"error": "OPPOSING_TAKER_FLOW_LONG_BLOCKED"}
+                # Short için: Taker Alıcı oranı %58'in üstündeyse (yani %58'den fazla agresif alıcı varsa)
+                elif side == "SHORT" and ratio_60s > float(TAKER_BUY_RATIO_MAX_SHORT):
+                    rej_msg = f"🛡️ Zıt Taker Akış Kalkanı: Son 60s Taker Alıcı oranı %{ratio_60s:.1f} (> %{TAKER_BUY_RATIO_MAX_SHORT:.1f}). Agresif market alıcıları yükseliş baskısı uygularken SHORT engellendi."
+                    print(f">> [RED - ZIT TAKER SHORT] {symbol}: {rej_msg}")
+                    self.log_rejection(symbol, reason, rej_msg, taker_buy_ratio=ratio_60s)
+                    return {"error": "OPPOSING_TAKER_FLOW_SHORT_BLOCKED"}
+
+        # ── 0d. MİKROYAPI REFORMU: HAWKES TASFİYE ÇIĞI FRENİ (η >= 0.50) ──
+        if ENABLE_HAWKES_AVALANCHE_BRAKE:
+            hawkes_val = float(sym_met.get('hawkes_eta', 0.15)) if sym_met else 0.15
+            if hawkes_val >= float(HAWKES_AVALANCHE_THRESHOLD_ETA):
+                rej_msg = f"⚡ Hawkes Tasfiye Çığı Freni: Piyasada kendi kendini besleyen tasfiye çığı aktif (η={hawkes_val:.2f} >= {HAWKES_AVALANCHE_THRESHOLD_ETA:.2f}). Seviyeler çığ altında ezileceği için işlem engellendi."
+                print(f">> [RED - HAWKES ÇIĞ FRENİ] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, reason, rej_msg, hawkes_eta=hawkes_val)
+                return {"error": "HAWKES_AVALANCHE_BRAKE_ACTIVE"}
 
         # ── 1. ATR / VOLATILITE HESABI & KATMANLI LİKİDİTE EŞİĞİ ──
         atr_pct = 1.2

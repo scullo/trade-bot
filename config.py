@@ -124,10 +124,10 @@ SYMBOLS = DEFAULT_ACTIVE_SYMBOLS
 INITIAL_BALANCE = 10000.0        # Demo baslangic bakiyesi (USDT)
 LEVERAGE = 5                     # Varsayilan temel kaldirac (5x)
 DEFAULT_LEVERAGE = LEVERAGE
-ENABLE_DYNAMIC_LEVERAGE = True   # Akilli 3-Kademeli Dinamik Kaldirac Motoru (2x - 8x)
+ENABLE_DYNAMIC_LEVERAGE = True   # Akilli Dinamik Kaldirac Motoru (2x - 5x)
 MIN_LEVERAGE = 2                 # Azami defansif kaldirac tabani (Asiri dalgalanma / Dead Zone kalkani)
-MAX_LEVERAGE = 8                 # Azami kurumsal hucum kaldiraci tavani (A+ Elit Sniper teyitli)
-LEVERAGE_LOW_ATR_THRESHOLD = 0.65   # Dusuk dalgalanma (BTC/ETH gibi agirbasli majorler): 7x-8x'e izin verilir
+MAX_LEVERAGE = 5                 # Azami kurumsal kaldirac tavani (Tum paritelerde azami 5x - Asiri risk onleyici)
+LEVERAGE_LOW_ATR_THRESHOLD = 0.65   # Dusuk dalgalanma (BTC/ETH gibi agirbasli majorler): 5x
 LEVERAGE_HIGH_ATR_THRESHOLD = 1.80  # Yuksek dalgalanma (Meme/Beta): 3x-4x'e dusurulur
 LEVERAGE_EXTREME_ATR_THRESHOLD = 2.80 # Asiri dalgalanma: 2x'e sabitlenir (Sermaye zirhi)
 POSITION_SIZE_USDT = 300.0       # Kurumsal dengeli baz marjin (300 USDT - 10k kasa standardi)
@@ -170,7 +170,7 @@ ENABLE_LONDON_SWEEP_SHIELD = True# Londra seansı sabah dip/tepe süpürme kalka
 LONDON_SWEEP_SHIELD_MULT = 1.25  # Londra seansı süpürme çarpanı (1.25x)
 ENABLE_MAX_STOP_DIST_GATE = True  # Stop mesafesi > %0.80 olan tüm geniş stoplu işlemleri eleyen Sniper Kapısı
 MAX_ENTRY_STOP_DIST_PCT = 0.80    # Azami giriş stop mesafesi tavanı (%0.80 - Sniper Seviye Dibi Filtresi)
-MAX_ABSOLUTE_STOP_PCT = 0.95      # Mutlak acil felaket stop tavanı (%0.95 - Kayma ve Ani Düşüş Sermaye Zırhı)
+MAX_ABSOLUTE_STOP_PCT = 1.60      # Mutlak acil felaket stop tavanı (%1.60 - Kayma ve Ani Çöküş Sermaye Zırhı)
 ENABLE_FAKEOUT_RECLAIM = True   # Sahte Kırılım / Ayı-Boğa Tuzağı İntikam Modülü (Reclaim Sniper)
 FAKEOUT_RECLAIM_MAX_CANDLES = 4  # İntikam takip penceresi: 4 mum (20 dakika)
 
@@ -268,4 +268,15 @@ TOP_LIQUIDITY_SYMBOLS = [
     "WIF/USDT", "FET/USDT"
 ]
 
+# 13. Kuantum Emir Akışı, Çığ Freni & Runner Koruma Zırhı (Mikroyapı Reformu)
+ENABLE_OPPOSING_TAKER_GUARD = True      # Zıt yönlü agresif piyasa emri akışını (Taker Imbalance) engelleyen zırh
+TAKER_BUY_RATIO_MIN_LONG = 42.0         # Long açılışı için asgari Taker Alıcı oranı (%42 altındaysa market satıcıları süpürüyor demektir)
+TAKER_BUY_RATIO_MAX_SHORT = 58.0        # Short açılışı için azami Taker Alıcı oranı (%58 üstündeyse market alıcıları pompalıyor demektir)
 
+ENABLE_HAWKES_AVALANCHE_BRAKE = True    # Kendi kendini besleyen tasfiye çığı freni (Hawkes branching ratio)
+HAWKES_AVALANCHE_THRESHOLD_ETA = 0.50   # eta >= 0.50 olduğunda tasfiye çığı rejimine geçilir (Retest ve tuzaklara giriş engellenir)
+
+ENABLE_DYNAMIC_RUNNER_PROFIT_LOCK = True# Anti-KMNO: TP1 sonrası koşan runner kârını garantileyen dinamik stop kilidi
+RUNNER_LOCK_TIER1_MFE = 2.0             # %2.0 MFE'de stop en az +%1.0 net kâra kilitlenir
+RUNNER_LOCK_TIER2_MFE = 3.5             # %3.5 MFE'de stop en az +%2.0 net kâra kilitlenir
+RUNNER_LOCK_TIER3_MFE = 5.0             # %5.0 MFE'de stop en az +%3.0 net kâra kilitlenir
