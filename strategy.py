@@ -3307,6 +3307,7 @@ class StrategyEngine:
             orderbook_ask_qty=obi_ask_qty,
             orderbook_wall_side=obi_wall_side,
             orderbook_entropy=float(l2_info.get('entropy_norm', 0.70)) if 'l2_info' in locals() and l2_info else 0.70,
+            depth_provider=str(l2_info.get('depth_provider', 'none')) if 'l2_info' in locals() and l2_info else 'none',
             hurst_exponent=hurst_val if 'hurst_val' in locals() else 0.50,
             iceberg_ratio=max(float(l2_info.get('ask_iceberg_ratio', 1.0)), float(l2_info.get('bid_iceberg_ratio', 1.0))) if 'l2_info' in locals() and l2_info else 1.0,
             hmm_market_phase=hmm_phase if 'hmm_phase' in locals() else 'ACCUMULATION',

@@ -187,6 +187,39 @@ class MarketDataManager:
             return 1000000.0
         return 1.0
 
+    def get_gate_contract_name(self, symbol: str) -> str:
+        """Gate.io Vadeli Kontrat Adini Standartlastirir (Gate'de 1000 veya 1M on eki yoktur)."""
+        clean = symbol.replace('/USDT', '_USDT').replace(':USDT', '')
+        if not clean.endswith('_USDT'):
+            clean += '_USDT'
+        for prefix in ['1000000', '100000', '10000', '1000']:
+            if clean.startswith(prefix):
+                clean = clean[len(prefix):]
+                break
+        return clean
+
+    def get_gate_contract_multiplier(self, contract: str) -> float:
+        """Gate.io Vadeli Kontratlarinin Kesin Quanto Carpanlari (Birim kontrat basina coin adedi)."""
+        c = self.get_gate_contract_name(contract).upper()
+        GATE_QUANTO = {
+            'BTC_USDT': 0.0001,
+            'ETH_USDT': 0.01,
+            'PEPE_USDT': 10000000.0,
+            'BONK_USDT': 1000000.0,
+            'SHIB_USDT': 10000.0,
+            'FLOKI_USDT': 10000.0,
+            'DOGE_USDT': 10.0,
+            'MOG_USDT': 1000000.0,
+            'SATS_USDT': 1000.0,
+            'RATS_USDT': 1000.0,
+            'LUNC_USDT': 10000.0,
+            'XEC_USDT': 10000.0,
+            'CHEEMS_USDT': 1000000.0,
+            'WHY_USDT': 1000000.0,
+            'CAT_USDT': 1000.0
+        }
+        return GATE_QUANTO.get(c, 1.0)
+
     def get_system_health(self, paper_trader=None, strategy=None) -> dict:
         try:
             total_syms = len(self.all_symbols)
@@ -1676,8 +1709,8 @@ class MarketDataManager:
                     pass
 
                 if oi_val_usd == 0.0:
-                    raw = symbol.replace('/USDT', '_USDT')
-                    url_gate = f"https://api.gateio.ws/api/v4/futures/usdt/tickers?contract={raw}"
+                    raw_gate = self.get_gate_contract_name(symbol)
+                    url_gate = f"https://api.gateio.ws/api/v4/futures/usdt/tickers?contract={raw_gate}"
                     try:
                         async with session.get(url_gate, timeout=aiohttp.ClientTimeout(total=2.5)) as resp:
                             if resp.status == 200:
@@ -1686,16 +1719,7 @@ class MarketDataManager:
                                     provider = "gate"
                                     raw_size = float(d[0].get('total_size', 0.0))
                                     last_p = float(d[0].get('last', 0.0) or c_price or 1.0)
-                                    gate_mult = 1.0
-                                    c_name = raw.replace('_', '')
-                                    if 'BTC' in c_name:
-                                        gate_mult = 0.0001
-                                    elif 'ETH' in c_name:
-                                        gate_mult = 0.01
-                                    elif any(m in c_name for m in ['PEPE', 'SHIB', 'BONK', 'FLOKI', 'SATS', 'RATS', 'LUNC', 'XEC', 'CHEEMS', 'WHY', 'CAT']):
-                                        gate_mult = 1000.0
-                                    elif 'MOG' in c_name:
-                                        gate_mult = 1000000.0
+                                    gate_mult = self.get_gate_contract_multiplier(raw_gate)
                                     oi_val_usd = raw_size * gate_mult * last_p
                     except Exception:
                         pass
@@ -1783,6 +1807,7 @@ class MarketDataManager:
         asks = []
         now_ts = time.time()
 
+        l2_provider = "none"
         try:
             async with aiohttp.ClientSession(headers=headers) as session:
                 url_depth = f"https://fapi.binance.com/fapi/v1/depth?symbol={clean}&limit=20"
@@ -1792,27 +1817,23 @@ class MarketDataManager:
                             d = await resp.json()
                             bids = [(float(p), float(q)) for p, q in d.get('bids', [])]
                             asks = [(float(p), float(q)) for p, q in d.get('asks', [])]
+                            if bids and asks:
+                                l2_provider = "binance"
                 except Exception:
                     pass
 
                 if not bids:
-                    raw = symbol.replace('/USDT', '_USDT')
-                    url_gate_ob = f"https://api.gateio.ws/api/v4/futures/usdt/order_book?contract={raw}&limit=20"
+                    raw_gate = self.get_gate_contract_name(symbol)
+                    url_gate_ob = f"https://api.gateio.ws/api/v4/futures/usdt/order_book?contract={raw_gate}&limit=20"
                     try:
                         async with session.get(url_gate_ob, timeout=aiohttp.ClientTimeout(total=2.5)) as resp:
                             if resp.status == 200:
                                 d_gate = await resp.json()
-                                gate_mult = 1.0
-                                if 'BTC' in symbol:
-                                    gate_mult = 0.0001
-                                elif 'ETH' in symbol:
-                                    gate_mult = 0.01
-                                elif any(m in symbol for m in ['PEPE', 'SHIB', 'BONK', 'FLOKI', 'SATS', 'RATS', 'LUNC', 'XEC', 'CHEEMS', 'WHY', 'CAT']):
-                                    gate_mult = 1000.0
-                                elif 'MOG' in symbol:
-                                    gate_mult = 1000000.0
+                                gate_mult = self.get_gate_contract_multiplier(raw_gate)
                                 bids = [(float(item['p']), float(item['s']) * gate_mult) for item in d_gate.get('bids', [])]
                                 asks = [(float(item['p']), float(item['s']) * gate_mult) for item in d_gate.get('asks', [])]
+                                if bids and asks:
+                                    l2_provider = "gate"
                     except Exception:
                         pass
         except Exception:
@@ -1985,6 +2006,7 @@ class MarketDataManager:
             'vacuum_detected': vacuum_detected,
             'vacuum_side': vacuum_side,
             'depth_available': len(bids) > 0,
+            'depth_provider': l2_provider,
             'entropy_norm': entropy_data.get('entropy_norm', 0.70),
             'entropy_bid': entropy_data.get('entropy_bid', 0.70),
             'entropy_ask': entropy_data.get('entropy_ask', 0.70),
@@ -2780,15 +2802,7 @@ class MarketDataManager:
                                                 raw_size = float(item.get('total_size', 0.0))
                                                 last_p = float(item.get('last', 0.0) or 0.0)
                                                 if raw_size > 0 and last_p > 0:
-                                                    gate_mult = 1.0
-                                                    if 'BTC' in c_name:
-                                                        gate_mult = 0.0001
-                                                    elif 'ETH' in c_name:
-                                                        gate_mult = 0.01
-                                                    elif any(m in c_name for m in ['PEPE', 'SHIB', 'BONK', 'FLOKI', 'SATS', 'RATS', 'LUNC', 'XEC', 'CHEEMS', 'WHY', 'CAT']):
-                                                        gate_mult = 1000.0
-                                                    elif 'MOG' in c_name:
-                                                        gate_mult = 1000000.0
+                                                    gate_mult = self.get_gate_contract_multiplier(c_name)
                                                     val_usd = raw_size * gate_mult * last_p
                                                     oi_batch[c_name] = val_usd
                             except Exception:
