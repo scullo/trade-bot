@@ -3366,7 +3366,11 @@ class StrategyEngine:
             rvol_z_score=rvol_z_v,
             rvol_tag=rvol_tag_v,
             macro_dominance_bias=macro_dom_tag,
-            planned_r=float(q_metrics.get("planned_r", 2.0)) if 'q_metrics' in locals() else 2.0
+            planned_r=float(q_metrics.get("planned_r", 2.0)) if 'q_metrics' in locals() else 2.0,
+            coinbase_lead_lag_status=str(cb_lead.get('status', 'NOT_LISTED')) if ('cb_lead' in locals() and cb_lead) else 'NOT_LISTED',
+            coinbase_spread_bps=float(cb_spread_bps if 'cb_spread_bps' in locals() else 0.0),
+            coinbase_is_listed=bool(cb_is_listed if 'cb_is_listed' in locals() else False),
+            coinbase_macro_btc_spread=float(cb_macro_btc_spread if 'cb_macro_btc_spread' in locals() else 0.0)
         )
 
         if isinstance(res, dict) and res.get("error") == "INSUFFICIENT_BALANCE":
@@ -4316,7 +4320,7 @@ class StrategyEngine:
             # 🧊 ICEBERG HÜCUM SNIPER & PİNG-PONG TEYİDİ
             is_ice_sniper = sym_met.get("is_iceberg_sniper_buy", False)
             if is_ice_sniper:
-                ice_reason = sym_met.get("iceberg_offense_reason", "")
+                ice_reason = sym_met.get("buyer_offense_reason") or sym_met.get("iceberg_offense_reason", "")
                 if "Alıcı" in ice_reason or "Buyer" in ice_reason:
                     c_list.append("Iceberg_Offense_Sniper_Long")
                     # Kurumsal alıcı buzdağı arkasına güvenli stop (en az %0.60 nefes payı - VDA-16)
@@ -4401,7 +4405,7 @@ class StrategyEngine:
             # 🧊 ICEBERG HÜCUM SNIPER & PİNG-PONG TEYİDİ
             is_ice_sniper = sym_met.get("is_iceberg_sniper_sell", False)
             if is_ice_sniper:
-                ice_reason = sym_met.get("iceberg_offense_reason", "")
+                ice_reason = sym_met.get("seller_offense_reason") or sym_met.get("iceberg_offense_reason", "")
                 c_list.append("Iceberg_Offense_Sniper_Short")
                 # Kurumsal satıcı buzdağı arkasına güvenli stop (en az %0.60 nefes payı - VDA-16)
                 soft_stop = max(r3 + buffer * 0.5, close_price * (1.0 + max(0.0060, dyn_stop_pct * 0.85)))

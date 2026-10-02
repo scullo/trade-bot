@@ -14011,6 +14011,15 @@ function downloadExcelReport() {
                                     2. Türev Sıfır Geçişi
                                 </div>
                             </div>
+                            <div style="background:rgba(255,255,255,0.02); border-radius:8px; padding:8px 12px; border:1px solid rgba(255,255,255,0.05);">
+                                <div style="font-size:10px; color:#94a3b8; margin-bottom:3px;">Coinbase Spot Öncüsü (LLI)</div>
+                                <div style="font-size:12px; font-weight:800; color:${(item.coinbase_spread_bps || 0) >= 8 ? '#10b981' : ((item.coinbase_spread_bps || 0) <= -8 ? '#ef4444' : '#38bdf8')}; font-family:'JetBrains Mono',monospace;">
+                                    ${item.coinbase_is_listed ? `${Number(item.coinbase_spread_bps || 0).toFixed(1)} bps` : 'NOT_LISTED'}
+                                </div>
+                                <div style="font-size:9.5px; color:#64748b; margin-top:2px;">
+                                    ${item.coinbase_is_listed ? (item.coinbase_lead_lag_status || 'Spot Öncü') : '🛡️ Makro BTC Şemsiyesi'}
+                                </div>
+                            </div>
                         </div>
                     </div>
 

@@ -106,7 +106,9 @@ HEADERS_GRANULAR = [
     ('Geometrik R-Oranı', 18),
     ('Makro Rejim (BTC Trend)', 24),
     ('Kurulum Tipi (Arketip)', 24),
-    ('Rejim Uyumu & Filtre', 26)
+    ('Rejim Uyumu & Filtre', 26),
+    ('Coinbase Spot LLI (bps)', 24),
+    ('L2 Derinlik Kaynağı', 20)
 ]
 headers_granular = HEADERS_GRANULAR
 
@@ -677,6 +679,18 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ws.write(r_idx, 90, macro_reg, cell_center)
         ws.write(r_idx, 91, setup_arch, cell_center)
         ws.write(r_idx, 92, reg_align, cell_center)
+
+        # 2 Yeni Kuant Derinlik Sütunu (93, 94)
+        cb_bps = _safe_float(h.get('coinbase_spread_bps', 0.0))
+        cb_listed = bool(h.get('coinbase_is_listed', False))
+        cb_stat = str(h.get('coinbase_lead_lag_status', 'NOT_LISTED'))
+        cb_display = f"{cb_bps:+.1f} bps ({cb_stat})" if cb_listed else "NOT_LISTED (Makro BTC)"
+
+        d_provider = str(h.get('depth_provider', 'binance')).lower()
+        provider_display = "Gate.io L2" if d_provider == 'gate' else "Binance L2"
+
+        ws.write(r_idx, 93, cb_display, cell_center)
+        ws.write(r_idx, 94, provider_display, cell_center)
 
     def render_table_sheet(ws_obj, t_list):
 

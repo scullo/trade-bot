@@ -772,6 +772,9 @@ class PaperTrader:
                 "is_macro_avalanche": pos.get("is_macro_avalanche", False),
                 "cvd_accel_60s": pos.get("cvd_accel_60s", 0.0),
                 "tri_modal_regime": pos.get("tri_modal_regime", "RANGING_PINGPONG"),
+                "coinbase_lead_lag_status": pos.get("coinbase_lead_lag_status", "NOT_LISTED"),
+                "coinbase_spread_bps": pos.get("coinbase_spread_bps", 0.0),
+                "coinbase_is_listed": pos.get("coinbase_is_listed", False),
                 "exit_slippage_pct": round(slippage_pct * 100.0, 3),
                 "is_liquidated": False
             }
@@ -908,6 +911,9 @@ class PaperTrader:
                 "is_macro_avalanche": pos.get("is_macro_avalanche", False),
                 "cvd_accel_60s": pos.get("cvd_accel_60s", 0.0),
                 "tri_modal_regime": pos.get("tri_modal_regime", "RANGING_PINGPONG"),
+                "coinbase_lead_lag_status": pos.get("coinbase_lead_lag_status", "NOT_LISTED"),
+                "coinbase_spread_bps": pos.get("coinbase_spread_bps", 0.0),
+                "coinbase_is_listed": pos.get("coinbase_is_listed", False),
                 "exit_slippage_pct": round(slippage_pct * 100.0, 3),
                 "is_liquidated": is_liquidated
             }

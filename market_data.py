@@ -188,14 +188,20 @@ class MarketDataManager:
 
     def get_gate_contract_name(self, symbol: str) -> str:
         """Gate.io Vadeli Kontrat Adini Standartlastirir (Gate'de 1000 veya 1M on eki yoktur)."""
-        clean = symbol.replace('/USDT', '_USDT').replace(':USDT', '')
-        if not clean.endswith('_USDT'):
-            clean += '_USDT'
+        clean = symbol.strip().upper()
+        if clean.endswith(':USDT'):
+            clean = clean[:-5]
+        elif clean.endswith('/USDT'):
+            clean = clean[:-5]
+        elif clean.endswith('_USDT'):
+            clean = clean[:-5]
+        elif clean.endswith('USDT'):
+            clean = clean[:-4]
         for prefix in ['1000000', '100000', '10000', '1000']:
             if clean.startswith(prefix):
                 clean = clean[len(prefix):]
                 break
-        return clean
+        return f"{clean}_USDT"
 
     def get_gate_contract_multiplier(self, contract: str) -> float:
         """Gate.io Vadeli Kontratlarinin Kesin Quanto Carpanlari (Birim kontrat basina coin adedi)."""
@@ -1525,6 +1531,8 @@ class MarketDataManager:
             "is_iceberg_ping_pong": bool(ice_offense.get('is_ping_pong', False)),
             "iceberg_tight_stop_pct": float(ice_offense.get('tight_stop_dist_pct', 0.0022)),
             "iceberg_offense_reason": str(ice_offense.get('offense_reason', '')),
+            "buyer_offense_reason": str(ice_offense.get('buyer_offense_reason', '')),
+            "seller_offense_reason": str(ice_offense.get('seller_offense_reason', '')),
             "vpin_score": float(vpin_info.get('vpin_score', 0.30)),
             "vpin_toxicity": str(vpin_info.get('toxicity_level', 'LOW')),
             "is_vpin_toxic": bool(vpin_info.get('is_toxic_flow', False)),
@@ -1577,7 +1585,14 @@ class MarketDataManager:
         Coinbase Spot USD ile Binance Vadeli arasındaki kurumsal lider-takipçi (Lead-Lag) fiyat farkını hesaplar.
         15 likit parite için pariteye özel spread, desteklenmeyenler için NOT_LISTED döner.
         """
-        base_asset = symbol.upper().replace('/', '').replace(':USDT', '').replace('USDT', '')
+        base_asset = symbol.upper().replace('/', '').replace(':USDT', '')
+        if base_asset.endswith('USDT'):
+            base_asset = base_asset[:-4]
+        for prefix in ['1000000', '100000', '10000', '1000']:
+            if base_asset.startswith(prefix):
+                base_asset = base_asset[len(prefix):]
+                break
+
         now_ts = time.time()
         cb_last_upd = getattr(self, 'coinbase_prices', {}).get('last_update', 0.0)
         macro_btc_lead = getattr(self, 'coinbase_lead_lag', {})
@@ -1618,6 +1633,19 @@ class MarketDataManager:
                         'last_update': cb_last_upd,
                         'age_seconds': item_age if cb_last_upd > 0 else 999.0
                     }
+
+            # Listeli ama henüz fiyat akışı bağlanmadı veya 0 (Başlangıç/Isınma)
+            return {
+                'lead_symbol': base_asset,
+                'spread_bps': 0.0,
+                'direction': 'NEUTRAL',
+                'status': '⚪ DENGELİ (Veri Bekleniyor)',
+                'desc': f'{symbol} Coinbase Spot tahtasında listeli, fiyat akışı bekleniyor.',
+                'is_listed': True,
+                'macro_btc_spread_bps': macro_btc_spread,
+                'last_update': cb_last_upd,
+                'age_seconds': (now_ts - cb_last_upd) if cb_last_upd > 0 else 999.0
+            }
 
         # Listeli Değil (NOT_LISTED)
         return {
@@ -2173,6 +2201,8 @@ class MarketDataManager:
             'is_iceberg_ping_pong': bool(ice_offense.get('is_ping_pong', False)),
             'iceberg_tight_stop_pct': float(ice_offense.get('tight_stop_dist_pct', 0.0022)),
             'iceberg_offense_reason': str(ice_offense.get('offense_reason', '')),
+            'buyer_offense_reason': str(ice_offense.get('buyer_offense_reason', '')),
+            'seller_offense_reason': str(ice_offense.get('seller_offense_reason', '')),
             'stoikov_micro_price': float(stoikov_info.get('micro_price', mid_price)),
             'stoikov_mid_price': float(stoikov_info.get('mid_price', mid_price)),
             'stoikov_drift_bps': float(stoikov_info.get('micro_drift_bps', 0.0)),
@@ -2245,6 +2275,8 @@ class MarketDataManager:
                 'is_iceberg_ping_pong': res_depth['is_iceberg_ping_pong'],
                 'iceberg_tight_stop_pct': res_depth['iceberg_tight_stop_pct'],
                 'iceberg_offense_reason': res_depth['iceberg_offense_reason'],
+                'buyer_offense_reason': res_depth['buyer_offense_reason'],
+                'seller_offense_reason': res_depth['seller_offense_reason'],
                 'stoikov_micro_price': res_depth['stoikov_micro_price'],
                 'stoikov_mid_price': res_depth['stoikov_mid_price'],
                 'stoikov_drift_bps': res_depth['stoikov_drift_bps'],
