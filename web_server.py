@@ -2156,22 +2156,15 @@ HTML_PAGE = """
 
         /* 📈 VALKYRIE KURUMSAL KASA PERFORMANSI (EQUITY CURVE) */
         .equity-curve-card {
-            background: linear-gradient(180deg, rgba(14, 20, 34, 0.92) 0%, rgba(10, 14, 25, 0.98) 100%);
-            border: 1px solid rgba(0, 242, 254, 0.25);
-            border-radius: 18px;
+            background: linear-gradient(180deg, rgba(14, 20, 34, 0.95) 0%, rgba(10, 14, 25, 0.98) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
             padding: 18px 22px;
             margin-bottom: 22px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 0 20px rgba(0, 242, 254, 0.08);
+            box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45);
             position: relative;
             overflow: hidden;
             backdrop-filter: blur(14px);
-        }
-        .equity-curve-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 2.5px;
-            background: linear-gradient(90deg, #00f2fe, #38bdf8, #10b981);
         }
         .equity-top-bar {
             display: flex;
@@ -2205,10 +2198,10 @@ HTML_PAGE = """
             flex-wrap: wrap;
         }
         .equity-chip {
-            background: rgba(15, 23, 42, 0.7);
+            background: rgba(255, 255, 255, 0.035);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 8px;
-            padding: 4px 10px;
+            border-radius: 6px;
+            padding: 5px 12px;
             font-size: 11px;
             font-family: 'JetBrains Mono', monospace;
             display: inline-flex;
@@ -2216,17 +2209,20 @@ HTML_PAGE = """
             gap: 6px;
         }
         .equity-chip-label {
-            color: #94a3b8;
+            color: #64748b;
             font-size: 10px;
+            font-weight: 600;
             text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
         .equity-chip-val {
-            color: #ffffff;
+            color: #f8fafc;
             font-weight: 800;
+            font-variant-numeric: tabular-nums;
         }
         .equity-canvas-container {
             width: 100%;
-            height: 260px;
+            height: 270px;
             position: relative;
             border-radius: 12px;
             overflow: hidden;
@@ -4576,47 +4572,47 @@ HTML_PAGE = """
 
         <!-- 4 HERO KPI STAT KARTLARI -->
         <div class="cockpit-kpi-grid" style="margin-bottom:20px;">
-            <div class="cockpit-kpi-card" style="border-top:3px solid #10b981;">
-                <div class="kpi-card-head">
-                    <span class="kpi-card-title">48h Otonom Döngü Durumu</span>
-                    <span class="kpi-card-badge" style="background:rgba(16,185,129,0.15); color:#10b981;">Geri Sayım</span>
+            <div class="cockpit-kpi-card" style="border-top:3px solid #10b981; display:flex; flex-direction:column; justify-content:space-between; padding:16px 18px;">
+                <div class="kpi-card-head" style="margin-bottom:12px;">
+                    <span class="kpi-card-title">48H Otonom Döngü Durumu</span>
+                    <span class="kpi-card-badge" style="background:rgba(16,185,129,0.15); color:#10b981; font-weight:700;">Geri Sayım</span>
                 </div>
-                <div class="kpi-card-body">
-                    <span class="kpi-main-val" id="quant-kpi-countdown" style="color:#10b981;">48s 00d 00sn Kaldı</span>
-                    <span class="kpi-sub-text" id="quant-kpi-last-run">Son Çalışma: Bekleniyor</span>
+                <div>
+                    <div id="quant-kpi-countdown" style="color:#10b981; font-family:'JetBrains Mono', monospace; font-size:20px; font-weight:900; letter-spacing:0.5px; line-height:1.2; margin-bottom:6px;">48s 00d 00sn Kaldı</div>
+                    <div id="quant-kpi-last-run" style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace;">Son Çalışma: Bekleniyor</div>
                 </div>
             </div>
 
-            <div class="cockpit-kpi-card" style="border-top:3px solid #06b6d4;">
-                <div class="kpi-card-head">
+            <div class="cockpit-kpi-card" style="border-top:3px solid #06b6d4; display:flex; flex-direction:column; justify-content:space-between; padding:16px 18px;">
+                <div class="kpi-card-head" style="margin-bottom:12px;">
                     <span class="kpi-card-title">Parite Kalibrasyon Dağılımı</span>
-                    <span class="kpi-card-badge" style="background:rgba(6,182,212,0.15); color:#06b6d4;">100 Parite</span>
+                    <span class="kpi-card-badge" style="background:rgba(6,182,212,0.15); color:#06b6d4; font-weight:700;">100 Parite</span>
                 </div>
-                <div class="kpi-card-body">
-                    <span class="kpi-main-val" id="quant-kpi-distribution" style="color:#06b6d4; font-size:18px;">17 Gevşet | 19 Koru</span>
-                    <span class="kpi-sub-text" id="quant-kpi-be-distribution">4 Erken BE Nefes Payı | 60 Dengeli</span>
+                <div>
+                    <div id="quant-kpi-distribution" style="color:#06b6d4; font-family:'JetBrains Mono', monospace; font-size:18px; font-weight:800; line-height:1.2; margin-bottom:6px;">17 Fırsat • 19 Koruma</div>
+                    <div id="quant-kpi-be-distribution" style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace;">4 Erken BE Nefes Payı • 60 Dengeli</div>
                 </div>
             </div>
 
-            <div class="cockpit-kpi-card" style="border-top:3px solid #a855f7;">
-                <div class="kpi-card-head">
+            <div class="cockpit-kpi-card" style="border-top:3px solid #a855f7; display:flex; flex-direction:column; justify-content:space-between; padding:16px 18px;">
+                <div class="kpi-card-head" style="margin-bottom:12px;">
                     <span class="kpi-card-title">İçsel Matematiksel Doğrulama</span>
-                    <span class="kpi-card-badge" style="background:rgba(168,85,247,0.15); color:#a855f7;">Simülasyon</span>
+                    <span class="kpi-card-badge" style="background:rgba(168,85,247,0.15); color:#a855f7; font-weight:700;">Simülasyon</span>
                 </div>
-                <div class="kpi-card-body">
-                    <span class="kpi-main-val" id="quant-kpi-proof-rate" style="color:#a855f7;">%100 KANITLANMIŞ</span>
-                    <span class="kpi-sub-text" id="quant-kpi-proof-sub">Kâr sağlamayan adaylar derhal elenir</span>
+                <div>
+                    <div id="quant-kpi-proof-rate" style="color:#c084fc; font-family:'JetBrains Mono', monospace; font-size:20px; font-weight:900; line-height:1.2; margin-bottom:6px;">%100 KANITLANMIŞ</div>
+                    <div id="quant-kpi-proof-sub" style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace;">Kâr sağlamayan adaylar derhal elenir</div>
                 </div>
             </div>
 
-            <div class="cockpit-kpi-card" style="border-top:3px solid #3b82f6;">
-                <div class="kpi-card-head">
+            <div class="cockpit-kpi-card" style="border-top:3px solid #3b82f6; display:flex; flex-direction:column; justify-content:space-between; padding:16px 18px;">
+                <div class="kpi-card-head" style="margin-bottom:12px;">
                     <span class="kpi-card-title">Net Kalkan Kuant Alfa ($)</span>
-                    <span class="kpi-card-badge" style="background:rgba(59,130,246,0.15); color:#3b82f6;">Alfa</span>
+                    <span class="kpi-card-badge" style="background:rgba(59,130,246,0.15); color:#3b82f6; font-weight:700;">Alfa</span>
                 </div>
-                <div class="kpi-card-body">
-                    <span class="kpi-main-val" id="quant-kpi-net-alpha" style="color:#38bdf8;">+$3,388.96</span>
-                    <span class="kpi-sub-text" id="quant-kpi-alpha-sub">Kurtarılan: +$7.8K | Kaçan: -$4.4K</span>
+                <div>
+                    <div id="quant-kpi-net-alpha" style="color:#38bdf8; font-family:'JetBrains Mono', monospace; font-size:20px; font-weight:900; line-height:1.2; margin-bottom:6px;">+$3,388.96</div>
+                    <div id="quant-kpi-alpha-sub" style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace;">Kurtarılan: +$7.8K • Kaçan: -$4.4K</div>
                 </div>
             </div>
         </div>
@@ -4701,44 +4697,60 @@ HTML_PAGE = """
     <div id="main-tab-content-funding" class="main-tab-content" style="display:none;">
         <!-- 4 KPI FONLAMA ÖZET KARTLARI -->
         <div class="cockpit-kpi-grid">
-            <div class="cockpit-kpi-card" style="border-top:3px solid #38bdf8;">
-                <div class="kpi-card-head">
-                    <span class="kpi-card-title">Piyasa Medyan Fonlama Oranı</span>
-                    <span class="kpi-card-icon">⚡</span>
+            <div class="cockpit-kpi-card" style="border-top:3px solid #38bdf8; display:flex; flex-direction:column; justify-content:space-between; padding:16px 18px;">
+                <div>
+                    <div class="kpi-card-head">
+                        <span class="kpi-card-title">Piyasa Medyan Fonlama Oranı</span>
+                        <span class="kpi-card-icon">⚡</span>
+                    </div>
+                    <div class="kpi-card-val" id="funding-median-val" style="color:#38bdf8; font-size:24px;">+0.0100%</div>
                 </div>
-                <div class="kpi-card-val" id="funding-median-val" style="color:#38bdf8;">+0.0100%</div>
-                <div class="kpi-card-sub">100 Paritenin Ortanca Ağırlığı (8h)</div>
-                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono'; margin-top:3px;">Dengeli Piyasa Bandı: -%0.02 ile +%0.05</div>
+                <div>
+                    <div class="kpi-card-sub">100 Paritenin Ortanca Ağırlığı (8h)</div>
+                    <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono'; margin-top:3px;">Dengeli Piyasa Bandı: -%0.02 ile +%0.05</div>
+                </div>
             </div>
 
-            <div class="cockpit-kpi-card" style="border-top:3px solid var(--red);">
-                <div class="kpi-card-head">
-                    <span class="kpi-card-title">Short Squeeze Riski (Short Kilitli 🔒)</span>
-                    <span class="kpi-card-icon">⚠️</span>
+            <div class="cockpit-kpi-card" style="border-top:3px solid var(--red); display:flex; flex-direction:column; justify-content:space-between; padding:16px 18px;">
+                <div>
+                    <div class="kpi-card-head">
+                        <span class="kpi-card-title">Short Squeeze Riski (Short Kilitli 🔒)</span>
+                        <span class="kpi-card-icon">⚠️</span>
+                    </div>
+                    <div class="kpi-card-val" id="funding-squeeze-count" style="color:var(--red); font-size:24px;">0 Parite</div>
                 </div>
-                <div class="kpi-card-val" id="funding-squeeze-count" style="color:var(--red);">0 Parite</div>
-                <div class="kpi-card-sub">Aşırı Negatif Fonlama (&lt; -%0.0300)</div>
-                <div style="font-size:11px; color:#f87171; font-family:'JetBrains Mono'; margin-top:3px;">Piyasa yapıcı avına karşı Short açılışları kilitlendi</div>
+                <div>
+                    <div class="kpi-card-sub">Aşırı Negatif Fonlama (&lt; -%0.0300)</div>
+                    <div style="font-size:11px; color:#f87171; font-family:'JetBrains Mono'; margin-top:3px;">Piyasa yapıcı avına karşı Short açılışları kilitlendi</div>
+                </div>
             </div>
 
-            <div class="cockpit-kpi-card" style="border-top:3px solid #fbc531;">
-                <div class="kpi-card-head">
-                    <span class="kpi-card-title">Aşırı Şişkin Long (Long Kilitli 🔒)</span>
-                    <span class="kpi-card-icon">🔥</span>
+            <div class="cockpit-kpi-card" style="border-top:3px solid #fbc531; display:flex; flex-direction:column; justify-content:space-between; padding:16px 18px;">
+                <div>
+                    <div class="kpi-card-head">
+                        <span class="kpi-card-title">Aşırı Şişkin Long (Long Kilitli 🔒)</span>
+                        <span class="kpi-card-icon">🔥</span>
+                    </div>
+                    <div class="kpi-card-val" id="funding-overheat-count" style="color:#fbc531; font-size:24px;">0 Parite</div>
                 </div>
-                <div class="kpi-card-val" id="funding-overheat-count" style="color:#fbc531;">0 Parite</div>
-                <div class="kpi-card-sub">Aşırı Pozitif Fonlama (&gt; +%0.0600)</div>
-                <div style="font-size:11px; color:#fde047; font-family:'JetBrains Mono'; margin-top:3px;">Tepe tuzağına karşı Long Breakout engellenir</div>
+                <div>
+                    <div class="kpi-card-sub">Aşırı Pozitif Fonlama (&gt; +%0.0600)</div>
+                    <div style="font-size:11px; color:#fde047; font-family:'JetBrains Mono'; margin-top:3px;">Tepe tuzağına karşı Long Breakout engellenir</div>
+                </div>
             </div>
 
-            <div class="cockpit-kpi-card" style="border-top:3px solid var(--green);">
-                <div class="kpi-card-head">
-                    <span class="kpi-card-title">Squeeze Koruma Kalkanı</span>
-                    <span class="kpi-card-icon">🛡️</span>
+            <div class="cockpit-kpi-card" style="border-top:3px solid var(--green); display:flex; flex-direction:column; justify-content:space-between; padding:16px 18px;">
+                <div>
+                    <div class="kpi-card-head">
+                        <span class="kpi-card-title">Squeeze Koruma Kalkanı</span>
+                        <span class="kpi-card-icon">🛡️</span>
+                    </div>
+                    <div class="kpi-card-val" id="funding-shield-status" style="color:var(--green); font-size:21px;">Otomatik Veto Aktif</div>
                 </div>
-                <div class="kpi-card-val" id="funding-shield-status" style="color:var(--green); font-size:20px;">Otomatik Veto Aktif</div>
-                <div class="kpi-card-sub" id="funding-source-sub">Canlı Çoklu-Borsa Vadeli Senkronizasyonu</div>
-                <div style="font-size:11px; color:#4ade80; font-family:'JetBrains Mono'; margin-top:3px;">Ters yönlü tasfiye tuzakları sıfırlandı</div>
+                <div>
+                    <div class="kpi-card-sub" id="funding-source-sub">Canlı Çoklu-Borsa Vadeli Senkronizasyonu</div>
+                    <div style="font-size:11px; color:#4ade80; font-family:'JetBrains Mono'; margin-top:3px;">Ters yönlü tasfiye tuzakları sıfırlandı</div>
+                </div>
             </div>
         </div>
 
@@ -4772,15 +4784,15 @@ HTML_PAGE = """
             <div class="history-table-wrap" style="max-height: 600px; overflow-y:auto;">
                 <table class="history-table">
                     <thead>
-                        <tr>
-                            <th>Parite</th>
-                            <th>Anlık Fonlama Oranı (%)</th>
-                            <th>Squeeze Teşhisi / Durum</th>
-                            <th>Mark Fiyatı ($)</th>
-                            <th>Geri Sayım (Sonraki Ödeme)</th>
-                            <th>🎯 İzin Verilen Yönler</th>
-                            <th>🛡️ Kalkan Emniyet Kuralı</th>
-                            <th>Aksiyon</th>
+                        <tr style="background:rgba(255,255,255,0.03); color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.08);">
+                            <th style="padding:10px 14px; text-align:left; width:95px;">Parite</th>
+                            <th style="padding:10px 12px; text-align:center; width:135px;">Anlık Fonlama (%)</th>
+                            <th style="padding:10px 12px; text-align:center; width:150px;">Squeeze Teşhisi</th>
+                            <th style="padding:10px 12px; text-align:right; width:105px;">Mark Fiyatı</th>
+                            <th style="padding:10px 12px; text-align:center; width:135px;">Sonraki Ödeme</th>
+                            <th style="padding:10px 12px; text-align:left; width:220px;">🎯 İzin Verilen Yönler</th>
+                            <th style="padding:10px 12px; text-align:left; min-width:240px;">🛡️ Kalkan Emniyet Kuralı</th>
+                            <th style="padding:10px 14px; text-align:center; width:125px;">Aksiyon</th>
                         </tr>
                     </thead>
                     <tbody id="funding-table-body">
@@ -6743,12 +6755,26 @@ async function loadAdminMetrics() {
             const dist = summary.status_distribution || {};
             const distEl = document.getElementById('quant-kpi-distribution');
             if (distEl) {
-                distEl.innerText = `${dist['GEVŞET'] || 0} Fırsat | ${dist['KORU'] || 0} Koruma`;
+                distEl.innerText = `${dist['GEVŞET'] || 0} Fırsat • ${dist['KORU'] || 0} Koruma`;
             }
 
             const beDistEl = document.getElementById('quant-kpi-be-distribution');
             if (beDistEl) {
-                beDistEl.innerText = `${dist['ERKEN BE'] || 0} Erken BE Nefes Payı | ${dist['DENGELİ'] || 0} Dengeli`;
+                beDistEl.innerText = `${dist['ERKEN BE'] || 0} Erken BE Nefes Payı • ${dist['DENGELİ'] || 0} Dengeli`;
+            }
+
+            const netAlphaEl = document.getElementById('quant-kpi-net-alpha');
+            const netAlphaSub = document.getElementById('quant-kpi-alpha-sub');
+            const shadowSumm = (appState && appState.shadow_summary) || {};
+            if (netAlphaEl && shadowSumm.net_shield_alpha_usd != null) {
+                const aVal = shadowSumm.net_shield_alpha_usd;
+                netAlphaEl.innerText = `${aVal >= 0 ? '+' : '-'}$${Math.abs(aVal).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+                netAlphaEl.style.color = aVal >= 0 ? '#38bdf8' : '#f43f5e';
+            }
+            if (netAlphaSub && shadowSumm.total_saved_loss_usd != null) {
+                const sSaved = (shadowSumm.total_saved_loss_usd / 1000).toFixed(1);
+                const sMissed = (shadowSumm.total_missed_profit_usd / 1000).toFixed(1);
+                netAlphaSub.innerText = `Kurtarılan: +$${sSaved}K • Kaçan: -$${sMissed}K`;
             }
 
             // 2. 100 Coin Tablosu
@@ -7366,28 +7392,45 @@ async function loadAdminMetrics() {
                     const markPriceStr = item.mark_price ? '$' + (typeof formatSmartPrice === 'function' ? formatSmartPrice(item.mark_price) : Number(item.mark_price).toFixed(item.mark_price < 1 ? 4 : 2)) : '-';
 
                     html += `
-                    <tr>
-                        <td style="font-weight:900; font-family:'JetBrains Mono'; color:#fff; font-size:13.5px;">
-                            ${symClean} <span style="color:#64748b; font-size:11px;">/USDT</span>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.04); transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                        <td style="padding:10px 14px; vertical-align:middle; text-align:left;">
+                            <div style="display:flex; align-items:baseline; gap:3px;">
+                                <span style="color:#ffffff; font-weight:800; font-size:13.5px; font-family:'JetBrains Mono';">${symClean}</span>
+                                <span style="font-size:10.5px; color:#64748b; font-weight:600; font-family:'JetBrains Mono';">/USDT</span>
+                            </div>
                         </td>
-                        <td style="color:${rateColor}; font-weight:900; font-family:'JetBrains Mono'; font-size:13.5px;">
-                            ${item.rate_pct >= 0 ? '+' : ''}${item.rate_pct.toFixed(4)}%
-                            <div style="font-size:10px; color:#94a3b8; font-weight:600; margin-top:2px;">
+                        <td style="padding:10px 12px; vertical-align:middle; text-align:center;">
+                            <div style="color:${rateColor}; font-weight:900; font-family:'JetBrains Mono'; font-size:13px; font-variant-numeric:tabular-nums;">
+                                ${item.rate_pct >= 0 ? '+' : ''}${item.rate_pct.toFixed(4)}%
+                            </div>
+                            <div style="font-size:10px; color:#94a3b8; font-weight:600; margin-top:2px; font-family:'JetBrains Mono'; font-variant-numeric:tabular-nums;">
                                 Yıllık: <b style="color:${(item.rate_pct * 3 * 365) >= 0 ? 'var(--cyan)' : 'var(--red)'};">${((item.rate_pct * 3 * 365) >= 0 ? '+' : '') + (item.rate_pct * 3 * 365).toFixed(1)}% APR</b>
                             </div>
                         </td>
-                        <td>${statusBadge}</td>
-                        <td style="font-family:'JetBrains Mono'; color:#cbd5e1;">${markPriceStr}</td>
-                        <td style="font-family:'JetBrains Mono'; color:#94a3b8; font-size:12px;">⏳ ${item.next_funding_countdown || '--:--'}</td>
-                        <td>${dirBadge}</td>
-                        <td>${ruleDesc}</td>
-                        <td style="white-space:nowrap;">
-                            <button onclick="openTradingViewModal('${symClean}')" style="background:rgba(0,242,254,0.12); border:1px solid rgba(0,242,254,0.35); color:var(--cyan); padding:4px 9px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;" title="${symClean} Grafiğini Aç">
-                                📈 Grafik
-                            </button>
-                            <button onclick="filterWatchlistDirect('${symClean}')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#cbd5e1; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; margin-left:4px;" title="Pusu Radarında Gör">
-                                🎯 Radar
-                            </button>
+                        <td style="padding:10px 12px; vertical-align:middle; text-align:center;">
+                            ${statusBadge}
+                        </td>
+                        <td style="padding:10px 12px; vertical-align:middle; text-align:right; font-family:'JetBrains Mono'; color:#cbd5e1; font-weight:700; font-variant-numeric:tabular-nums; font-size:12.5px;">
+                            ${markPriceStr}
+                        </td>
+                        <td style="padding:10px 12px; vertical-align:middle; text-align:center; font-family:'JetBrains Mono'; color:#94a3b8; font-size:11.5px; font-variant-numeric:tabular-nums;">
+                            ⏳ ${item.next_funding_countdown || '--:--'}
+                        </td>
+                        <td style="padding:10px 12px; vertical-align:middle; text-align:left;">
+                            ${dirBadge}
+                        </td>
+                        <td style="padding:10px 12px; vertical-align:middle; text-align:left; font-size:11.5px; line-height:1.4;">
+                            ${ruleDesc}
+                        </td>
+                        <td style="padding:10px 14px; vertical-align:middle; text-align:center; white-space:nowrap;">
+                            <div style="display:flex; gap:6px; justify-content:center; align-items:center;">
+                                <button onclick="openTradingViewModal('${symClean}')" style="background:rgba(0,242,254,0.08); border:1px solid rgba(0,242,254,0.3); color:#38bdf8; padding:5px 9px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='rgba(0,242,254,0.2)'" onmouseout="this.style.background='rgba(0,242,254,0.08)'" title="${symClean} Canlı Grafik">
+                                    📈 Grafik
+                                </button>
+                                <button onclick="filterWatchlistDirect('${symClean}')" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); color:#94a3b8; padding:5px 8px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'" title="Pusu Radarında Gör">
+                                    🎯 Radar
+                                </button>
+                            </div>
                         </td>
                     </tr>
                     `;
@@ -10308,13 +10351,14 @@ async function loadAdminMetrics() {
                             </div>
                         </div>
                         ${progressHtml}
-                        <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.06); padding-top:8px;">
-                            <button onclick="event.stopPropagation(); if (typeof selectSymbol === 'function') selectSymbol('${sym}'); if (typeof switchMainTab === 'function') switchMainTab('cockpit'); if (typeof switchChartTab === 'function') switchChartTab('native');" style="background:linear-gradient(135deg, rgba(56,189,248,0.14), rgba(0,242,254,0.06)); border:1px solid rgba(56,189,248,0.35); color:#38bdf8; padding:3px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; font-family:'JetBrains Mono', monospace; display:inline-flex; align-items:center; gap:5px; transition:all 0.15s ease;" onmouseover="this.style.background='rgba(56,189,248,0.25)'; this.style.borderColor='#38bdf8';" onmouseout="this.style.background='linear-gradient(135deg, rgba(56,189,248,0.14), rgba(0,242,254,0.06))'; this.style.borderColor='rgba(56,189,248,0.35)';" title="${cleanSym} Canlı Grafiğini Kokpitte Aç">
+                        <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px; gap:8px;">
+                            <button onclick="event.stopPropagation(); openTradingViewModal('${cleanSym}');" style="background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.35); color:#38bdf8; padding:5px 12px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; font-family:'JetBrains Mono', monospace; display:inline-flex; align-items:center; gap:5px; transition:all 0.15s ease;" onmouseover="this.style.background='rgba(56,189,248,0.22)';" onmouseout="this.style.background='rgba(56,189,248,0.1)';" title="${cleanSym} Canlı Grafiğini Aç">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-                                <span>📈 Canlı Grafik</span>
+                                <span>📈 Grafik</span>
                             </button>
-                            <button onclick="event.stopPropagation(); openTradingViewModal('${cleanSym}');" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); color:#94a3b8; padding:3px 8px; border-radius:6px; font-size:10.5px; font-weight:600; cursor:pointer; font-family:'JetBrains Mono', monospace; display:inline-flex; align-items:center; gap:4px; transition:all 0.15s ease;" onmouseover="this.style.color='#fff'; this.style.borderColor='rgba(255,255,255,0.25)';" onmouseout="this.style.color='#94a3b8'; this.style.borderColor='rgba(255,255,255,0.12)';" title="TradingView Modalini Aç">
-                                <span>TV ↗</span>
+                            <button onclick="event.stopPropagation(); openConfirmModal('${pos.symbol || sym}');" style="background:rgba(244,63,94,0.12); border:1px solid rgba(244,63,94,0.35); color:#f43f5e; padding:5px 12px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; font-family:'JetBrains Mono', monospace; display:inline-flex; align-items:center; gap:5px; transition:all 0.15s ease;" onmouseover="this.style.background='rgba(244,63,94,0.25)';" onmouseout="this.style.background='rgba(244,63,94,0.12)';" title="${cleanSym} Pozisyonunu Kapat">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                <span>🛑 Pozisyonu Kapat</span>
                             </button>
                         </div>
                     </div>
@@ -10463,21 +10507,21 @@ async function loadAdminMetrics() {
                     });
 
                     equityBaselineSeries = equityChartInstance.addLineSeries({
-                        color: 'rgba(255, 255, 255, 0.15)',
-                        lineWidth: 1,
-                        lineStyle: LightweightCharts.LineStyle.Dotted,
+                        color: 'rgba(255, 255, 255, 0.22)',
+                        lineWidth: 1.5,
+                        lineStyle: LightweightCharts.LineStyle.Dashed,
                         priceLineVisible: false,
                         lastValueVisible: false,
                         priceFormat: { type: 'price', precision: 2, minMove: 0.01 }
                     });
 
                     equityAreaSeries = equityChartInstance.addAreaSeries({
-                        topColor: 'rgba(56, 189, 248, 0.22)',
-                        bottomColor: 'rgba(15, 23, 42, 0.0)',
+                        topColor: 'rgba(56, 189, 248, 0.35)',
+                        bottomColor: 'rgba(56, 189, 248, 0.02)',
                         lineColor: '#38bdf8',
-                        lineWidth: 2,
-                        priceLineVisible: true,
-                        priceLineWidth: 1,
+                        lineWidth: 3,
+                        lineType: 2, // Curved spline
+                        priceLineVisible: false,
                         lastValueVisible: true,
                         priceFormat: { type: 'price', precision: 2, minMove: 0.01 }
                     });
@@ -10487,21 +10531,21 @@ async function loadAdminMetrics() {
                         if (!elPnlDyn) return;
                         if (!param || !param.time || !param.seriesData || !param.seriesData.get(equityAreaSeries)) {
                             elPnlDyn.innerText = `${netPnl >= 0 ? '+' : ''}$${netPnl.toFixed(2)}`;
-                            elPnlDyn.style.color = netPnl >= 0 ? 'var(--green)' : '#fb7185';
+                            elPnlDyn.style.color = netPnl >= 0 ? 'var(--green)' : '#f43f5e';
                             return;
                         }
                         const pVal = param.seriesData.get(equityAreaSeries).value;
                         const diffVal = pVal - initBal;
                         const diffPct = (diffVal / initBal) * 100.0;
                         elPnlDyn.innerText = `${diffVal >= 0 ? '+' : ''}$${diffVal.toFixed(2)} (${diffVal >= 0 ? '+' : ''}%${diffPct.toFixed(2)})`;
-                        elPnlDyn.style.color = diffVal >= 0 ? 'var(--green)' : '#fb7185';
+                        elPnlDyn.style.color = diffVal >= 0 ? 'var(--green)' : '#f43f5e';
                     });
 
                     window.addEventListener('resize', () => {
                         if (equityChartInstance && container) {
                             equityChartInstance.applyOptions({
                                 width: container.clientWidth,
-                                height: container.clientHeight || 260
+                                height: container.clientHeight || 270
                             });
                         }
                     });
@@ -10511,10 +10555,12 @@ async function loadAdminMetrics() {
                 if (equityAreaSeries) {
                     const isProfit = runningBal >= initBal;
                     equityAreaSeries.applyOptions({
-                        topColor: isProfit ? 'rgba(16, 185, 129, 0.25)' : 'rgba(244, 63, 94, 0.18)',
-                        bottomColor: 'rgba(15, 23, 42, 0.0)',
-                        lineColor: isProfit ? '#10b981' : '#fb7185',
-                        priceLineColor: isProfit ? '#10b981' : '#fb7185'
+                        topColor: isProfit ? 'rgba(16, 185, 129, 0.40)' : 'rgba(244, 63, 94, 0.36)',
+                        bottomColor: isProfit ? 'rgba(16, 185, 129, 0.02)' : 'rgba(244, 63, 94, 0.02)',
+                        lineColor: isProfit ? '#10b981' : '#f43f5e',
+                        priceLineColor: isProfit ? '#10b981' : '#f43f5e',
+                        lineWidth: 3,
+                        lineType: 2
                     });
                     equityAreaSeries.setData(points);
                     equityChartInstance.timeScale().fitContent();
