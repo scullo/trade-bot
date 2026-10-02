@@ -1801,6 +1801,7 @@ class MarketDataManager:
                     try:
                         async with session.get(url_gate_ob, timeout=aiohttp.ClientTimeout(total=2.5)) as resp:
                             if resp.status == 200:
+                                d_gate = await resp.json()
                                 gate_mult = 1.0
                                 if 'BTC' in symbol:
                                     gate_mult = 0.0001
@@ -1810,8 +1811,8 @@ class MarketDataManager:
                                     gate_mult = 1000.0
                                 elif 'MOG' in symbol:
                                     gate_mult = 1000000.0
-                                bids = [(float(item['p']), float(item['s']) * gate_mult) for item in d.get('bids', [])]
-                                asks = [(float(item['p']), float(item['s']) * gate_mult) for item in d.get('asks', [])]
+                                bids = [(float(item['p']), float(item['s']) * gate_mult) for item in d_gate.get('bids', [])]
+                                asks = [(float(item['p']), float(item['s']) * gate_mult) for item in d_gate.get('asks', [])]
                     except Exception:
                         pass
         except Exception:
