@@ -888,7 +888,7 @@ class StrategyEngine:
         # ── 0b. CHANDELIER ANLIK TICK ERKEN BREAKEVEN KİLİDİ ──
         if ENABLE_CHANDELIER_EARLY_BE_LOCK and not pos.get("is_half_closed", False):
             coin_p = self.get_coin_persona(symbol)
-            be_threshold_pct = float(coin_p.get("chandelier_be_threshold_pct", CHANDELIER_EARLY_BE_THRESHOLD_PCT))
+            be_threshold_pct = float(pos.get("chandelier_be_threshold_pct") or coin_p.get("chandelier_be_threshold_pct", CHANDELIER_EARLY_BE_THRESHOLD_PCT))
             be_threshold = be_threshold_pct / 100.0
             cur_price_pct = (current_price - entry_p) / entry_p if side == "LONG" else (entry_p - current_price) / entry_p
             if cur_price_pct >= be_threshold:
@@ -1075,7 +1075,7 @@ class StrategyEngine:
             cooldown_sec = float(SYMBOL_MIN_COOLDOWN_MINUTES) * 60.0
             self.symbol_trade_cooldown[symbol] = time.time() + cooldown_sec
 
-    def calculate_dynamic_leverage(self, symbol: str, atr_pct: float, confluence_count: int, has_whale_flow: bool = False, is_dead_zone: bool = False, is_major: bool = False, confluence_list: list = None) -> int:
+    def calculate_dynamic_leverage(self, symbol: str, atr_pct: float, confluence_count: int, has_whale_flow: bool = False, is_dead_zone: bool = False, is_major: bool = False, confluence_list: list = None, side: str = None, macro_regime: str = None) -> int:
         """
         Volatiliteye (ATR), Confluence Teyitlerine ve Kurumsal Sinyal Kalitesine Uyarli
         3-Kademeli Akilli Dinamik Kaldirac Motoru (2x - 8x):
@@ -1123,6 +1123,12 @@ class StrategyEngine:
         if is_dead_zone:
             # Olu bolge veya deger alani sikismasinda azami 3x tavani (Sermaye koruma)
             target_lev = min(target_lev, 3)
+
+        # 3b. 🛡️ MAKRO REJİM KARŞI-TREND KALDIRAÇ TAVANI (AYI'DE LONG & BOĞA'DA SHORT 5x TAVAN)
+        if macro_regime in ("BEAR_DUMP", "BEAR_TREND") and side == "LONG":
+            target_lev = min(target_lev, 5)
+        elif macro_regime in ("BULL_TREND", "BULL_PUMP", "EXTREME_BULL") and side == "SHORT":
+            target_lev = min(target_lev, 5)
 
         # Altcoin Mutlak Tavan Zirhi: Major (BTC/ETH/SOL) harici hicbir altcoin 5x'i asamaz
         if not is_major:
@@ -2407,6 +2413,16 @@ class StrategyEngine:
                 if confluence_list is not None and isinstance(confluence_list, list):
                     if "Makro_Ayı_Trendi_Uyumu" not in confluence_list:
                         confluence_list.append("Makro_Ayı_Trendi_Uyumu")
+            elif setup_archetype == "TREND_FOLLOWING_BULL":
+                # 🛡️ YENİ: Breakout LONG ayı makroda → korumalı marjin
+                regime_alignment = "⚠️ KARŞI_TREND_BREAKOUT_LONG"
+                dyn_regime_margin_scale = 0.60
+                reason += f" [🛡️ Ayı Rejimi Breakout LONG Koruması (x0.60, 4S: %{btc_chg_4h:+.2f})]"
+                cvd_r_chk = float(cvd_data.get('ratio_60s', 50.0)) if ('cvd_data' in locals() and cvd_data) else 50.0
+                if dynamic_rs_score >= 0.30 and cvd_r_chk >= 58.0:
+                    dyn_regime_margin_scale = 0.75
+                    regime_alignment = "🚀 BREAKOUT_LONG_BAĞIMSIZ_ALFA"
+                    reason += f" [🚀 Direnen Breakout (RS: {dynamic_rs_score:+.2f}, CVD: %{cvd_r_chk:.0f})]"
             elif setup_archetype == "COUNTER_TREND_DIP":
                 cvd_r_chk = float(cvd_data.get('ratio_60s', 50.0)) if ('cvd_data' in locals() and cvd_data) else 50.0
                 has_independent_alpha = (dynamic_rs_score >= 0.25 and cvd_r_chk >= 55.0) or ("ALFA" in decoupling_status and cvd_r_chk >= 52.0)
@@ -2448,6 +2464,16 @@ class StrategyEngine:
                 if confluence_list is not None and isinstance(confluence_list, list):
                     if "Makro_Boğa_Trendi_Uyumu" not in confluence_list:
                         confluence_list.append("Makro_Boğa_Trendi_Uyumu")
+            elif setup_archetype == "TREND_FOLLOWING_BEAR":
+                # 🛡️ YENİ: Breakdown SHORT boğa makroda → korumalı marjin
+                regime_alignment = "⚠️ KARŞI_TREND_BREAKDOWN_SHORT"
+                dyn_regime_margin_scale = 0.60
+                reason += f" [🛡️ Boğa Rejimi Breakdown SHORT Koruması (x0.60, 4S: %{btc_chg_4h:+.2f})]"
+                cvd_r_chk = float(cvd_data.get('ratio_60s', 50.0)) if ('cvd_data' in locals() and cvd_data) else 50.0
+                if dynamic_rs_score <= -0.30 and cvd_r_chk <= 42.0:
+                    dyn_regime_margin_scale = 0.75
+                    regime_alignment = "🩸 BREAKDOWN_SHORT_BAĞIMSIZ_ALFA"
+                    reason += f" [🩸 Direnen Breakdown (RS: {dynamic_rs_score:+.2f}, CVD: %{cvd_r_chk:.0f})]"
             elif setup_archetype == "COUNTER_TREND_CEILING":
                 cvd_r_chk = float(cvd_data.get('ratio_60s', 50.0)) if ('cvd_data' in locals() and cvd_data) else 50.0
                 has_independent_bear_alpha = (dynamic_rs_score <= -0.25 and cvd_r_chk <= 45.0) or ("AŞIRI_ZAYIF" in decoupling_status and cvd_r_chk <= 48.0)
@@ -2580,7 +2606,9 @@ class StrategyEngine:
             has_whale_flow=has_whale_flow,
             is_dead_zone=is_dz,
             is_major=is_major_coin,
-            confluence_list=confluence_list
+            confluence_list=confluence_list,
+            side=side,
+            macro_regime=regime_clim if 'regime_clim' in locals() else macro_clim_early.get('regime', 'NEUTRAL')
         )
 
         # Dinamik kaldıraç bazında gereken taban marjin:
@@ -3515,7 +3543,7 @@ class StrategyEngine:
                 # Eğer pozisyon lehimize >= +%0.80 (+%4 ROE) kâr görmüşse, stop seviyesi derhal 'Giriş + Komisyon Tamponu'na kilitlenir!
                 if ENABLE_CHANDELIER_EARLY_BE_LOCK and not is_half:
                     coin_p = self.get_coin_persona(symbol)
-                    be_threshold_pct = float(coin_p.get("chandelier_be_threshold_pct", CHANDELIER_EARLY_BE_THRESHOLD_PCT))
+                    be_threshold_pct = float(pos.get("chandelier_be_threshold_pct") or coin_p.get("chandelier_be_threshold_pct", CHANDELIER_EARLY_BE_THRESHOLD_PCT))
                     be_threshold = be_threshold_pct / 100.0
                     if price_pct >= be_threshold:
                         fee_buffer = (float(COMMISSION_RATE) * 2.0) + 0.0002  # Dinamik giriş-çıkış komisyon tamponu + slipaj koruması
@@ -3565,6 +3593,69 @@ class StrategyEngine:
                 closed = await self._refresh_position_levels(symbol, pos, close_price, levels)
                 if closed:
                     return
+
+                # 1d-2. 🛡️ MAKRO REJİM ROTA DEĞİŞİKLİĞİ DEDEKTÖRÜ (POST-ENTRY MACRO SHIFT)
+                # Pozisyon açıldığında makro rejim NEUTRAL/BULL idi ama şimdi BEAR'a döndüyse
+                # (veya SHORT pozisyon için tersi), stop sıkılaştırılır ve Chandelier BE eşiği düşürülür.
+                entry_macro = str(pos.get("macro_regime", "NEUTRAL"))
+                current_macro_clim = self.get_macro_climate()
+                current_macro_reg = str(current_macro_clim.get("regime", "NEUTRAL"))
+
+                is_macro_shifted_against = False
+                if side == "LONG" and current_macro_reg in ("BEAR_DUMP", "BEAR_TREND"):
+                    if entry_macro not in ("BEAR_DUMP", "BEAR_TREND"):
+                        is_macro_shifted_against = True
+                elif side == "SHORT" and current_macro_reg in ("BULL_TREND", "BULL_PUMP", "EXTREME_BULL"):
+                    if entry_macro not in ("BULL_TREND", "BULL_PUMP", "EXTREME_BULL"):
+                        is_macro_shifted_against = True
+
+                if is_macro_shifted_against and not pos.get("macro_shift_applied", False):
+                    pos["macro_shift_applied"] = True
+                    pos["macro_shift_time"] = time.time()
+                    pos["macro_shift_to"] = current_macro_reg
+
+                    # A. Chandelier BE eşiğini düşür (%0.80 -> %0.50)
+                    pos["chandelier_be_threshold_pct"] = 0.50
+
+                    # B. Zaten kârda değilse ve MFE düşükse stop sıkılaştır
+                    max_mfe_seen = float(pos.get("max_mfe_roe", 0.0))
+                    if max_mfe_seen < 3.0:
+                        cur_hard = float(pos.get("hard_stop") or 0.0)
+                        if side == "LONG" and cur_hard > 0:
+                            tightened = entry_p * (1.0 - 0.007)  # %0.70 mesafe
+                            new_stop = max(cur_hard, tightened)   # Sadece yukarı çekebilir
+                            if new_stop > cur_hard:
+                                pos["hard_stop"] = new_stop
+                                pos["soft_stop"] = new_stop
+                        elif side == "SHORT" and cur_hard > 0:
+                            tightened = entry_p * (1.0 + 0.007)  # %0.70 mesafe
+                            new_stop = min(cur_hard, tightened)   # Sadece aşağı çekebilir
+                            if new_stop < cur_hard:
+                                pos["hard_stop"] = new_stop
+                                pos["soft_stop"] = new_stop
+
+                    shift_dir = "AYI" if side == "LONG" else "BOĞA"
+                    print(f">> [🛡️ MAKRO ROTA DEĞİŞİKLİĞİ] {symbol} {side}: "
+                          f"Makro {entry_macro} → {current_macro_reg} ({shift_dir} rüzgarı). "
+                          f"BE eşiği %0.50'ye düşürüldü, stop sıkılaştırıldı.")
+
+                    if hasattr(self.paper_trader, 'save_local_history'):
+                        self.paper_trader.save_local_history()
+
+                # C. Rota değişikliğinden 2 mum (10dk / 600s) sonra hala zarardaysa -> erken çıkış
+                if pos.get("macro_shift_applied", False):
+                    shift_elapsed = time.time() - float(pos.get("macro_shift_time", time.time()))
+                    if shift_elapsed >= 600 and price_pct < 0 and not pos.get("macro_shift_exited", False):
+                        if current_roe <= -1.5:
+                            pos["macro_shift_exited"] = True
+                            record = await self._safe_close_position(
+                                symbol, close_price,
+                                f"🛡️ Makro Rota Değişikliği Çıkışı ({entry_macro}→{pos.get('macro_shift_to', current_macro_reg)}, "
+                                f"10dk zararda, ROE: %{current_roe:+.1f})")
+                            if record:
+                                await self._notify_close(record, levels=levels)
+                                self._cleanup_tracking(symbol)
+                            return
 
                 # 1e. COIN DNA VE HIZINA UYARLI ZAMAN STOPU (ADAPTIVE STAGNATION EXIT & ERKEN CVD ÇÜRÜMESİ)
                 hold_seconds = time.time() - pos.get("entry_timestamp", 0)
