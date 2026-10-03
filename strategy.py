@@ -7,6 +7,7 @@ except Exception:
 import asyncio
 import os
 import json
+import math
 import time
 from datetime import datetime, timezone, timedelta
 import pandas as pd
@@ -1798,8 +1799,17 @@ class StrategyEngine:
         if self.market_data and hasattr(self.market_data, 'get_symbol_cvd'):
             cvd_data = self.market_data.get_symbol_cvd(symbol) or {}
 
-        cvd_ratio_60s = float(cvd_data.get('ratio_60s', 50.0))
-        cvd_delta_60s = float(cvd_data.get('delta_60s', 0.0))
+        try:
+            val_r = cvd_data.get('ratio_60s', 50.0)
+            cvd_ratio_60s = 50.0 if (val_r is None or math.isnan(float(val_r)) or math.isinf(float(val_r))) else float(val_r)
+        except Exception:
+            cvd_ratio_60s = 50.0
+
+        try:
+            val_d = cvd_data.get('delta_60s', 0.0)
+            cvd_delta_60s = 0.0 if (val_d is None or math.isnan(float(val_d)) or math.isinf(float(val_d))) else float(val_d)
+        except Exception:
+            cvd_delta_60s = 0.0
         cvd_confirmed = False
         cvd_status = "DENGELİ"
         cvd_tag = ""
@@ -3321,9 +3331,9 @@ class StrategyEngine:
             funding_status=squeeze_status,
             entry_liq_volume_usd=liq_volume_usd,
             liq_confirmed=liq_confirmed,
-            entry_cvd_pct=cvd_ratio_60s,
+            entry_cvd_pct=float(np.nan_to_num(cvd_ratio_60s, nan=50.0)) if 'cvd_ratio_60s' in locals() else 50.0,
             cvd_status=cvd_status,
-            entry_cvd_delta=cvd_delta_60s,
+            entry_cvd_delta=float(np.nan_to_num(cvd_delta_60s, nan=0.0)) if 'cvd_delta_60s' in locals() else 0.0,
             orderbook_imbalance=obi_imbalance,
             orderbook_ratio=obi_ratio,
             orderbook_bid_qty=obi_bid_qty,

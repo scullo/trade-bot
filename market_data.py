@@ -775,10 +775,16 @@ class MarketDataManager:
                     elif ratio >= 53.0: bias = "MODERATE_BUY"
                     elif ratio <= 47.0: bias = "MODERATE_SELL"
 
+                    import math
+                    if math.isnan(ratio) or math.isinf(ratio):
+                        ratio = 50.0
+                    if math.isnan(delta) or math.isinf(delta):
+                        delta = 0.0
+
                     res = {
                         'symbol': symbol,
-                        'taker_buy_usd': round(t_buy, 2),
-                        'taker_sell_usd': round(t_sell, 2),
+                        'taker_buy_usd': round(t_buy, 2) if not math.isnan(t_buy) else 0.0,
+                        'taker_sell_usd': round(t_sell, 2) if not math.isnan(t_sell) else 0.0,
                         'delta_usd': round(delta, 2),
                         'cvd_pct': ratio,
                         'delta_60s': round(delta, 2),

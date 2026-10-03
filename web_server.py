@@ -4,6 +4,7 @@ from db_manager import DatabaseManager
 import asyncio
 import gzip
 import json
+import math
 import numpy as np
 import pandas as pd
 import time
@@ -11,6 +12,28 @@ from datetime import datetime, timezone, timedelta
 from aiohttp import web
 import config
 from config import SYMBOLS
+
+def safe_json_dumps(obj, **kwargs):
+    def sanitize(o):
+        if o is None:
+            return None
+        if isinstance(o, (float, np.floating)):
+            if math.isnan(o) or math.isinf(o):
+                return 0.0
+            return float(o)
+        elif isinstance(o, dict):
+            return {k: sanitize(v) for k, v in o.items()}
+        elif isinstance(o, list):
+            return [sanitize(x) for x in o]
+        elif isinstance(o, tuple):
+            return tuple(sanitize(x) for x in o)
+        return o
+
+    try:
+        clean_obj = sanitize(obj)
+        return json.dumps(clean_obj, default=str, allow_nan=False, **kwargs)
+    except Exception:
+        return json.dumps(sanitize(obj), default=str)
 
 SERVER_START_TS = time.time()
 sse_clients = set()
@@ -13499,7 +13522,12 @@ function downloadExcelReport() {
         async function syncBackendState() {
             try {
                 const res = await fetch('/api/data');
-                const data = await res.json();
+                const rawText = await res.text();
+                const cleanText = rawText
+                    .replace(/:\s*NaN\b/g, ': 0.0')
+                    .replace(/:\s*Infinity\b/g, ': 0.0')
+                    .replace(/:\s*-Infinity\b/g, ': 0.0');
+                const data = JSON.parse(cleanText);
                 appState = data;
 
                 // 1. Sync prices in memory
@@ -14615,7 +14643,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                     "be_locked_count": sum(1 for p in getattr(trader_manager, 'open_positions', {}).values() if p.get("early_be_locked", False)),
                     "emergency_alert": getattr(trader_manager, 'emergency_alert', None)
                 }
-            }, dumps=lambda obj: json.dumps(obj, default=str))
+            }, dumps=safe_json_dumps)
         except Exception as e:
             hist_full = trader_manager.history
             return web.json_response({
@@ -14645,7 +14673,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "symbol_oi": {},
                 "system_health": {"is_perfect": False, "status_text": f"Hata: {e}"},
                 "macro_climate": {}
-            }, dumps=lambda obj: json.dumps(obj, default=str))
+            }, dumps=safe_json_dumps)
 
     async def api_toggle_symbol(request):
         try:
@@ -14722,7 +14750,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 if record:
                     if notifier:
                         await notifier.notify_position_closed(record, is_manual=True)
-                    return web.json_response({"status": "ok", "record": record})
+                    return web.json_response({"status": "ok", "record": record}, dumps=safe_json_dumps)
             return web.json_response({"status": "error", "message": "Açık pozisyon bulunamadı"}, status=400)
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=500)
@@ -14745,7 +14773,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
         try:
             while True:
                 data = await queue.get()
-                msg = f"data: {json.dumps(data)}\n\n"
+                msg = f"data: {safe_json_dumps(data)}\n\n"
                 await response.write(msg.encode('utf-8'))
         except Exception:
             pass
@@ -14819,7 +14847,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "recent_history": strategy.shadow_engine.get_recent_history(50),
                 "coin_dna": strategy.shadow_engine.get_coin_dna_matrix(),
                 "shield_leaderboard": strategy.shadow_engine.get_shield_leaderboard()
-            })
+            }, dumps=safe_json_dumps)
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
@@ -14834,7 +14862,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             return web.json_response({
                 "status": "ok",
                 "detail": detail
-            })
+            }, dumps=safe_json_dumps)
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
@@ -14852,7 +14880,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "summary": summary,
                 "calibrated_dna": calibrated_dna,
                 "recent_audit_history": calib.audit_history[-15:]
-            })
+            }, dumps=safe_json_dumps)
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
@@ -14872,7 +14900,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             return web.json_response({
                 "status": "ok",
                 "result": res
-            })
+            }, dumps=safe_json_dumps)
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
@@ -14964,7 +14992,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "avwap_low": avwap_low_filtered,
                 "levels": levels,
                 "current_price": market_data.current_prices.get(clean_sym, 0.0)
-            })
+            }, dumps=safe_json_dumps)
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 

@@ -3,12 +3,33 @@ import os
 import time
 import base64
 import threading
+import math
+try:
+    import numpy as np
+except ImportError:
+    np = None
 from datetime import datetime, timezone, timedelta
 from config import (
     INITIAL_BALANCE, LEVERAGE, POSITION_SIZE_USDT, COMMISSION_RATE,
     FIXED_DOLLAR_RISK, RISK_EQUITY_PCT, MIN_POSITION_MARGIN, MAX_POSITION_MARGIN,
     ENABLE_CHANDELIER_BREATHING
 )
+
+def _sanitize_floats(obj):
+    """Recursively replaces NaN, Infinity, -Infinity with 0.0 or safe defaults."""
+    if obj is None:
+        return None
+    if isinstance(obj, float) or (np is not None and isinstance(obj, np.floating)):
+        if math.isnan(obj) or math.isinf(obj):
+            return 0.0
+        return float(obj)
+    elif isinstance(obj, dict):
+        return {k: _sanitize_floats(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_sanitize_floats(x) for x in obj]
+    elif isinstance(obj, tuple):
+        return tuple(_sanitize_floats(x) for x in obj)
+    return obj
 
 HISTORY_FILE = "trade_history.json"
 
@@ -93,9 +114,14 @@ class PaperTrader:
                 content_b64 = gh_data.get("content", "")
                 content_str = base64.b64decode(content_b64).decode("utf-8")
                 data = json.loads(content_str)
-                gh_history = data.get("history", [])
-                gh_balance = float(data.get("balance", self.initial_balance))
-                gh_positions = data.get("open_positions", {})
+                gh_history = _sanitize_floats(data.get("history", []))
+                try:
+                    gh_balance = float(data.get("balance", self.initial_balance))
+                    if math.isnan(gh_balance) or math.isinf(gh_balance):
+                        gh_balance = float(self.initial_balance)
+                except Exception:
+                    gh_balance = float(self.initial_balance)
+                gh_positions = _sanitize_floats(data.get("open_positions", {}))
 
                 # Yerel dosya kontrolü: Yerel dosyada daha fazla işlem varsa (GitHub eski kalmışsa) yereli koru
                 local_has_more = False
@@ -105,9 +131,13 @@ class PaperTrader:
                             local_data = json.load(lf)
                             if len(local_data.get("history", [])) > len(gh_history):
                                 local_has_more = True
-                                self.balance = float(local_data.get("balance", self.initial_balance))
-                                self.open_positions = local_data.get("open_positions", {})
-                                self.history = local_data.get("history", [])
+                                try:
+                                    lb = float(local_data.get("balance", self.initial_balance))
+                                    self.balance = float(self.initial_balance) if (math.isnan(lb) or math.isinf(lb)) else lb
+                                except Exception:
+                                    self.balance = float(self.initial_balance)
+                                self.open_positions = _sanitize_floats(local_data.get("open_positions", {}))
+                                self.history = _sanitize_floats(local_data.get("history", []))
                                 print(f">> [PERSISTENCE GUARD] Yerel dosyada daha fazla işlem var ({len(self.history)} vs GitHub {len(gh_history)}). Yerel korundu!")
                     except Exception:
                         pass
@@ -126,9 +156,13 @@ class PaperTrader:
             try:
                 with open(HISTORY_FILE, "r", encoding="utf-8-sig") as f:
                     data = json.load(f)
-                    self.balance = float(data.get("balance", self.initial_balance))
-                    self.open_positions = data.get("open_positions", {})
-                    self.history = data.get("history", [])
+                    try:
+                        lb = float(data.get("balance", self.initial_balance))
+                        self.balance = float(self.initial_balance) if (math.isnan(lb) or math.isinf(lb)) else lb
+                    except Exception:
+                        self.balance = float(self.initial_balance)
+                    self.open_positions = _sanitize_floats(data.get("open_positions", {}))
+                    self.history = _sanitize_floats(data.get("history", []))
                     loaded = True
                     print(f">> [LOCAL] trade_history.json lokal dosyadan yuklendi ({len(self.history)} islem). Bakiye: {self.balance}")
             except Exception as e:
@@ -139,10 +173,11 @@ class PaperTrader:
 
     def save_local_history(self):
         """Yalnızca lokal dosyaya atomik kaydeder (API kotası harcamaz)."""
+        clean_bal = float(self.initial_balance) if (math.isnan(self.balance) or math.isinf(self.balance)) else round(self.balance, 4)
         state = {
-            "balance": round(self.balance, 4),
-            "open_positions": self.open_positions,
-            "history": self.history
+            "balance": clean_bal,
+            "open_positions": _sanitize_floats(self.open_positions),
+            "history": _sanitize_floats(self.history)
         }
         try:
             tmp_file = HISTORY_FILE + ".tmp"
@@ -154,10 +189,11 @@ class PaperTrader:
 
     def save_history(self, critical=False):
         """Hem lokale hem GitHub'a kaydet. critical=True ise GitHub push senkron yapılır (veri kaybı önleme)."""
+        clean_bal = float(self.initial_balance) if (math.isnan(self.balance) or math.isinf(self.balance)) else round(self.balance, 4)
         state = {
-            "balance": round(self.balance, 4),
-            "open_positions": self.open_positions,
-            "history": self.history
+            "balance": clean_bal,
+            "open_positions": _sanitize_floats(self.open_positions),
+            "history": _sanitize_floats(self.history)
         }
 
         # 1. Lokal dosyaya atomik kaydet
@@ -181,6 +217,7 @@ class PaperTrader:
         if not self._push_lock.acquire(blocking=False):
             return  # Zaten başka bir push devam ediyor, çakışma önleme
         try:
+            state = _sanitize_floats(state)
             import urllib.request
             for attempt in range(1, 6):
                 try:
@@ -612,7 +649,7 @@ class PaperTrader:
         }
         pos.update(kwargs)
 
-        self.open_positions[symbol] = pos
+        self.open_positions[symbol] = _sanitize_floats(pos)
         self.save_history()
         print(f">> [POZISYON ACILDI] {symbol} {side} @ {entry_price} | Marjin: {margin}$ ({active_leverage}x) | Setup: {pos['setup_id']}")
         return pos
@@ -778,7 +815,7 @@ class PaperTrader:
                 "exit_slippage_pct": round(slippage_pct * 100.0, 3),
                 "is_liquidated": False
             }
-            self.history.append(record)
+            self.history.append(_sanitize_floats(record))
 
             self.save_history(critical=True)
             print(f">> [TP1 %50 KAPATILDI] {symbol} Net: {net_pnl:+.2f}$ ({roe_pct:+.1f}%) | Kasa: {self.balance:.2f}$")
@@ -917,7 +954,7 @@ class PaperTrader:
                 "exit_slippage_pct": round(slippage_pct * 100.0, 3),
                 "is_liquidated": is_liquidated
             }
-            self.history.append(record)
+            self.history.append(_sanitize_floats(record))
 
             del self.open_positions[symbol]
             self.save_history(critical=True)
