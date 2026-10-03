@@ -7042,6 +7042,14 @@ async function loadAdminMetrics() {
         }
 
         async function triggerManualQuantCycle() {
+            const confirmed = confirm(
+                "⚙️ MANUEL KUANT DÖNGÜSÜ ONAYI\\n\\n" +
+                "Gölge işlem geçmişi ve canlı piyasa verileri taranarak otonom Coin DNA kalibrasyon döngüsü başlatılacaktır.\\n\\n" +
+                "Her bir değişiklik, matematiksel içsel simülasyon testinden (backtest) geçirilecek ve yalnızca kârı artırdığı kanıtlanan parametreler güncellenecektir.\\n\\n" +
+                "Bu döngüyü şimdi başlatmak istiyor musunuz?"
+            );
+            if (!confirmed) return;
+
             const btn = document.getElementById('btn-trigger-quant-cycle');
             if (btn) {
                 btn.disabled = true;
