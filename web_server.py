@@ -13220,14 +13220,23 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 const setupFilter = setupFilterEl ? setupFilterEl.value : 'ALL';
                 const statusFilter = statusFilterEl ? statusFilterEl.value : 'ALL';
 
-                if (symFilterEl && symFilterEl.options.length <= 1) {
+                if (symFilterEl) {
+                    const curSelected = symFilterEl.value || 'ALL';
                     const uniqueSyms = [...new Set(hList.map(item => item.symbol || ''))].filter(Boolean).sort();
-                    uniqueSyms.forEach(sym => {
-                        const opt = document.createElement('option');
-                        opt.value = sym;
-                        opt.innerText = sym;
-                        symFilterEl.appendChild(opt);
-                    });
+                    const existingOptions = Array.from(symFilterEl.options).map(o => o.value);
+                    const isMissing = uniqueSyms.some(s => !existingOptions.includes(s));
+                    if (isMissing || symFilterEl.options.length <= 1) {
+                        symFilterEl.innerHTML = '<option value="ALL">Tüm Pariteler</option>';
+                        uniqueSyms.forEach(sym => {
+                            const opt = document.createElement('option');
+                            opt.value = sym;
+                            opt.innerText = sym;
+                            symFilterEl.appendChild(opt);
+                        });
+                        if (existingOptions.includes(curSelected)) {
+                            symFilterEl.value = curSelected;
+                        }
+                    }
                 }
 
                 let filtered = hList.slice().reverse().filter(item => {
@@ -14613,7 +14622,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "initial_balance": 10000.0,
                 "free_balance": trader_manager.get_free_balance(),
                 "open_positions": trader_manager.open_positions,
-                "history": hist_full[-150:], # BELLEK DOSTU: Sadece son 150 işlem
+                "history": hist_full[-1000:], # Tüm işlem defteri (tüm pariteler ve CRV dahil)
                 "history_summary": history_summary,
                 "symbols": symbols_data,
                 "all_coins": all_coins,
@@ -14659,7 +14668,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "initial_balance": 10000.0,
                 "free_balance": trader_manager.get_free_balance(),
                 "open_positions": trader_manager.open_positions,
-                "history": hist_full[-150:],
+                "history": hist_full[-1000:],
                 "history_summary": {"total_realized_pnl": 0, "total_fees": 0, "total_trades": len(hist_full), "wins": 0, "losses": 0, "win_pnl_sum": 0, "loss_pnl_sum": 0},
                 "symbols": {},
                 "all_coins": [],
