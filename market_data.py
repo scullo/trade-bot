@@ -1183,12 +1183,18 @@ class MarketDataManager:
         else:
             camarilla = calculate_camarilla_pivots(df_5m['high'].max(), df_5m['low'].min(), df_5m['close'].iloc[-1])
 
-        # === ANCHORED VWAP (TradingView 24h-48h Swing High/Low Paritesi) ===
+        # === ANCHORED VWAP (TradingView 24h-48h Teyitli Majör Swing Paritesi) ===
         if len(df_5m) >= 20:
             lookback_bars = min(len(df_5m), 288)
-            sub_5m = df_5m.iloc[-lookback_bars:]
-            peak_idx = sub_5m['high'].idxmax()
-            trough_idx = sub_5m['low'].idxmin()
+            # Yerel 1-2 barlık fitillere yapışmayı önlemek için en az 6 bar (30dk) gerideki teyitli zirve/dip:
+            if len(df_5m) > 26:
+                eval_window = df_5m.iloc[-lookback_bars:-6]
+                peak_idx = eval_window['high'].idxmax()
+                trough_idx = eval_window['low'].idxmin()
+            else:
+                sub_5m = df_5m.iloc[-lookback_bars:]
+                peak_idx = sub_5m['high'].idxmax()
+                trough_idx = sub_5m['low'].idxmin()
             tepe_avwap = float(calculate_anchored_vwap(df_5m, peak_idx))
             dip_avwap = float(calculate_anchored_vwap(df_5m, trough_idx))
         else:

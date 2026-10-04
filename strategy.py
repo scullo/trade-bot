@@ -5297,10 +5297,13 @@ class StrategyEngine:
             if not struct_ok:
                 self.log_rejection(symbol, f"SETUP 15 {reclaim_tag} Reclaim Reddi", struct_reason)
             else:
-                # 476 işlem verisi kanıtı: Ayı rejiminde Reclaim dönüşleri %69.2 kazanma oranıyla en kârlı gruptur!
-                # Yalnızca makro piyasa çöküşünde (BEAR_DUMP) ve bağımsız güç yoksa engellenir
-                if is_bear_dump and not ("ALFA" in coin_decoupling or coin_rs_score >= 0.5):
+                # Proximity guard: Fiyat seviyeye yapışık ise (%0.30 altı) sahte yerel gürültüdür
+                if reclaim_lvl > 0 and abs(close_price - reclaim_lvl) / reclaim_lvl < 0.003:
+                    self.log_rejection(symbol, f"SETUP 15 {reclaim_tag} Reclaim Reddi", f"Fiyat seviyeye yapışık (%{(abs(close_price - reclaim_lvl) / reclaim_lvl)*100:.2f} fark). Teyitli geri çekilme mesafesi yetersiz.")
+                elif is_bear_dump and not ("ALFA" in coin_decoupling or coin_rs_score >= 0.5):
                     self.log_rejection(symbol, f"SETUP 15 {reclaim_tag} Reclaim Reddi", f"Makro piyasa çöküşündeyken ({macro_regime}) reclaim long açılmadı.")
+                elif ((macro_regime in ["RANGING", "CHOP", "DEAD_ZONE"]) or ("YATAY" in trend_regime)) and not ("ALFA" in coin_decoupling or coin_rs_score >= 0.40 or vol_surge >= 2.0):
+                    self.log_rejection(symbol, f"SETUP 15 {reclaim_tag} Reclaim Reddi", f"Yatay piyasa rejiminde ({macro_regime}) bağımsız alfa teyidi olmayan retest engellendi.")
                 else:
                     cvd_data = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
                     cvd_ratio = float(cvd_data.get('ratio_60s', 50.0))
@@ -5346,6 +5349,8 @@ class StrategyEngine:
             struct_ok, struct_reason = self.check_structural_invalidation(symbol, "LONG", close_price, levels)
             if not struct_ok:
                 self.log_rejection(symbol, "SETUP 16 R3 Retest Reddi", struct_reason)
+            elif ((macro_regime in ["RANGING", "CHOP", "DEAD_ZONE"]) or ("YATAY" in trend_regime)) and not ("ALFA" in coin_decoupling or coin_rs_score >= 0.40 or vol_surge >= 2.0):
+                self.log_rejection(symbol, "SETUP 16 R3 Retest Reddi", f"Yatay piyasa rejiminde ({macro_regime}) bağımsız alfa teyidi olmayan R3 retest engellendi.")
             else:
                 c_high = current_candle.get('high', close_price)
                 c_low = current_candle.get('low', close_price)
