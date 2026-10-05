@@ -12,7 +12,10 @@ import time
 from datetime import datetime, timezone, timedelta
 import pandas as pd
 import numpy as np
-from indicators import calculate_fractional_kelly, calculate_hurst_exponent, estimate_hmm_market_phase
+from indicators import (
+    calculate_fractional_kelly, calculate_hurst_exponent, estimate_hmm_market_phase,
+    calculate_kalman_state, calculate_pid_stop_level
+)
 from config import (
     BUFFER_RATIO, MAX_OPEN_POSITIONS,
     TRAILING_BREAKEVEN_ROE, TRAILING_LOCK_30_ROE, TRAILING_LOCK_50_ROE,
@@ -42,9 +45,14 @@ from config import (
     LEVERAGE_EXTREME_ATR_THRESHOLD, LEVERAGE_HIGH_ATR_THRESHOLD, LEVERAGE_LOW_ATR_THRESHOLD,
     SECTOR_CLUSTERS, TOP_LIQUIDITY_SYMBOLS,
     ENABLE_OPPOSING_TAKER_GUARD, TAKER_BUY_RATIO_MIN_LONG, TAKER_BUY_RATIO_MAX_SHORT,
+    ENABLE_REGIME_DIRECTIONAL_GATE, BULL_SHORT_MIN_CVD_PCT,
     ENABLE_HAWKES_AVALANCHE_BRAKE, HAWKES_AVALANCHE_THRESHOLD_ETA,
-    ENABLE_DYNAMIC_RUNNER_PROFIT_LOCK, RUNNER_LOCK_TIER1_MFE, RUNNER_LOCK_TIER2_MFE, RUNNER_LOCK_TIER3_MFE
+    ENABLE_DYNAMIC_RUNNER_PROFIT_LOCK, RUNNER_LOCK_TIER1_MFE, RUNNER_LOCK_TIER2_MFE, RUNNER_LOCK_TIER3_MFE,
+    ENABLE_KALMAN_PRICE_FILTER, KALMAN_PROCESS_NOISE_Q, KALMAN_MEASUREMENT_NOISE_R0, KALMAN_WICK_PENALTY_MULT,
+    ENABLE_PID_PROFIT_CONTROLLER, PID_KP, PID_KI, PID_KD, PID_MIN_MFE_TRIGGER, PID_ATR_NOISE_FLOOR_MULT,
+    PID_CAPTURE_TIER1, PID_CAPTURE_TIER2, PID_CAPTURE_TIER3
 )
+
 
 
 class StrategyEngine:
@@ -765,6 +773,21 @@ class StrategyEngine:
             print(f">> [TELEGRAM BİLDİRİM KAPANIŞ HATASI] {record.get('symbol')}: {e}")
 
     async def _safe_close_position(self, *args, **kwargs):
+        # Gerçekçi ATR tabanlı çıkış kayması (%0.04 - %0.08) enjeksiyonu
+        if "slippage_pct" not in kwargs or kwargs["slippage_pct"] is None or kwargs["slippage_pct"] <= 0.0:
+            symbol = kwargs.get("symbol") or (args[0] if len(args) > 0 else "")
+            coin_atr_pct = 0.005  # varsayılan %0.5 ATR
+            if symbol and hasattr(self, 'market_data') and self.market_data:
+                try:
+                    feat = self.market_data.symbol_features.get(symbol, {})
+                    if not feat:
+                        clean_s = self.market_data._clean_symbol(symbol)
+                        feat = self.market_data.symbol_features.get(clean_s, {})
+                    coin_atr_pct = float(feat.get("atr_14_pct", 0.50)) / 100.0
+                except Exception:
+                    coin_atr_pct = 0.005
+            kwargs["slippage_pct"] = max(0.0004, min(0.0008, coin_atr_pct * 0.05))
+
         res = self.paper_trader.close_position(*args, **kwargs)
         if hasattr(res, '__await__'):
             res = await res
@@ -787,6 +810,21 @@ class StrategyEngine:
         return res
 
     async def _safe_open_position(self, *args, **kwargs):
+        # Gerçekçi ATR tabanlı giriş kayması (%0.04 - %0.08) enjeksiyonu
+        if "entry_slippage_pct" not in kwargs or kwargs["entry_slippage_pct"] is None or kwargs["entry_slippage_pct"] <= 0.0:
+            symbol = kwargs.get("symbol") or (args[0] if len(args) > 0 else "")
+            coin_atr_pct = 0.005  # varsayılan %0.5 ATR
+            if symbol and hasattr(self, 'market_data') and self.market_data:
+                try:
+                    feat = self.market_data.symbol_features.get(symbol, {})
+                    if not feat:
+                        clean_s = self.market_data._clean_symbol(symbol)
+                        feat = self.market_data.symbol_features.get(clean_s, {})
+                    coin_atr_pct = float(feat.get("atr_14_pct", 0.50)) / 100.0
+                except Exception:
+                    coin_atr_pct = 0.005
+            kwargs["entry_slippage_pct"] = max(0.0004, min(0.0008, coin_atr_pct * 0.05))
+
         res = self.paper_trader.open_position(*args, **kwargs)
         if hasattr(res, '__await__'):
             res = await res
@@ -921,6 +959,51 @@ class StrategyEngine:
                         except Exception:
                             pass
 
+        # 🚀 ASTROQUANT REFORMU: SPACEX FALCON 9 PID DİNAMİK KÂR VE STOP KONTROLÖRÜ
+        if ENABLE_PID_PROFIT_CONTROLLER and cur_price_pct >= 0.0030:
+            mfe_series = pos.setdefault('pid_mfe_series', [])
+            cur_lev = int(pos.get('leverage', 5))
+            cur_roe = cur_price_pct * 100.0 * cur_lev
+            peak_mfe = max(float(pos.get("max_mfe_roe", 0.0)), cur_roe)
+            pos["max_mfe_roe"] = peak_mfe
+            
+            # MFE serisine ekle (son 20 okuma)
+            if not mfe_series or abs(mfe_series[-1] - cur_roe) >= 0.05:
+                mfe_series.append(round(cur_roe, 2))
+                if len(mfe_series) > 20:
+                    mfe_series.pop(0)
+            
+            pid_res = calculate_pid_stop_level(
+                entry_price=entry_p,
+                current_price=current_price,
+                side=side,
+                peak_mfe_roe=peak_mfe,
+                mfe_series=mfe_series,
+                atr_pct=float(pos.get("atr_pct", 0.50)),
+                leverage=cur_lev,
+                kp=float(PID_KP),
+                ki=float(PID_KI),
+                kd=float(PID_KD),
+                min_mfe_trigger=float(PID_MIN_MFE_TRIGGER),
+                noise_floor_atr_mult=float(PID_ATR_NOISE_FLOOR_MULT)
+            )
+            
+            if pid_res.get('is_engaged') and pid_res.get('proposed_stop', 0) > 0:
+                pid_stop = pid_res['proposed_stop']
+                cur_hard = float(pos.get("hard_stop") or 0.0)
+                
+                # Stopu sadece lehte yöne basamakla (ratchet)
+                should_tighten = (side == "LONG" and pid_stop > cur_hard) or (side == "SHORT" and (cur_hard == 0.0 or pid_stop < cur_hard))
+                if should_tighten:
+                    pos['hard_stop'] = pid_stop
+                    pos['soft_stop'] = pid_stop
+                    pos['early_be_locked'] = True
+                    pos['pid_engaged'] = True
+                    pos['pid_telemetry'] = pid_res
+                    pos['trail_status'] = f"🚀 SpaceX PID Kilit (Zirve: %{pid_res['peak_mfe']:.1f}, Taban: %{pid_res['locked_roe']:.1f})"
+                    if hasattr(self.paper_trader, 'save_local_history'):
+                        self.paper_trader.save_local_history()
+
         if pos.get("is_half_closed", False):
             # 🎯 MİKROYAPI REFORMU: ANTİ-KMNO DİNAMİK RUNNER KÂR KİLİDİ
             # TP1 sonrası pozisyon kâra gittikçe stop basamaklanır; asla kârı verip eksiye düşemez!
@@ -955,21 +1038,40 @@ class StrategyEngine:
 
             be_stop = float(pos.get("hard_stop") or pos.get("soft_stop") or entry_p)
             if side == "LONG" and current_price <= be_stop:
+                is_pid = pos.get("pid_engaged", False)
                 is_profit_lock = (be_stop > entry_p_pos * 1.005)
-                lbl = f"🛡️ Dinamik Runner Kâr Kilidi Tetiklendi (${be_stop:.4f}, Zirve: +%{peak_gain:.1f})" if is_profit_lock else f"🛡️ Breakeven Koruması Tetiklendi (${be_stop:.4f})"
+                if is_pid:
+                    lbl = f"🚀 SpaceX PID Kâr Kilidi Tetiklendi (${be_stop:.4f}, Zirve: +%{peak_gain:.1f}, Taban ROE: +%{pos.get('pid_telemetry',{}).get('locked_roe', 0.0):.1f})"
+                elif is_profit_lock:
+                    lbl = f"🛡️ Dinamik Runner Kâr Kilidi Tetiklendi (${be_stop:.4f}, Zirve: +%{peak_gain:.1f})"
+                else:
+                    lbl = f"🛡️ Breakeven Koruması Tetiklendi (${be_stop:.4f})"
                 record = await self._safe_close_position(symbol, current_price, lbl)
                 if record:
+                    if is_pid:
+                        record['pid_engaged'] = True
+                        record['pid_efficiency'] = round(pos.get('pid_telemetry', {}).get('capture_ratio', 0.78) * 100.0, 1)
                     await self._notify_close(record, levels=levels)
                     self._cleanup_tracking(symbol)
                 return
             elif side == "SHORT" and current_price >= be_stop:
+                is_pid = pos.get("pid_engaged", False)
                 is_profit_lock = (be_stop < entry_p_pos * 0.995)
-                lbl = f"🛡️ Dinamik Runner Kâr Kilidi Tetiklendi (${be_stop:.4f}, Zirve: +%{peak_gain:.1f})" if is_profit_lock else f"🛡️ Breakeven Koruması Tetiklendi (${be_stop:.4f})"
+                if is_pid:
+                    lbl = f"🚀 SpaceX PID Kâr Kilidi Tetiklendi (${be_stop:.4f}, Zirve: +%{peak_gain:.1f}, Taban ROE: +%{pos.get('pid_telemetry',{}).get('locked_roe', 0.0):.1f})"
+                elif is_profit_lock:
+                    lbl = f"🛡️ Dinamik Runner Kâr Kilidi Tetiklendi (${be_stop:.4f}, Zirve: +%{peak_gain:.1f})"
+                else:
+                    lbl = f"🛡️ Breakeven Koruması Tetiklendi (${be_stop:.4f})"
                 record = await self._safe_close_position(symbol, current_price, lbl)
                 if record:
+                    if is_pid:
+                        record['pid_engaged'] = True
+                        record['pid_efficiency'] = round(pos.get('pid_telemetry', {}).get('capture_ratio', 0.78) * 100.0, 1)
                     await self._notify_close(record, levels=levels)
                     self._cleanup_tracking(symbol)
                 return
+
         elif pos.get("early_be_locked", False):
             # Erken Chandelier Kilidi: Breakeven tick düzeyinde korunur
             be_stop = float(pos.get("hard_stop") or pos.get("soft_stop") or entry_p)
@@ -2365,13 +2467,15 @@ class StrategyEngine:
                 return {"error": "BEAR_REGIME_LONG_BLOCKED"}
 
         # 🐂 MODÜL 1b: BOĞA REJİMİNDE SHORT KALİTE FİLTRESİ (DİRENÇ SHORTU YASAĞI)
-        if side == "SHORT" and ("BOĞA" in trend_regime):
-            # Boğa piyasasında ("ILIMLI BOĞA" veya "GÜÇLÜ BOĞA") altcoin direnç sekmesi aramak trende karşı intihardır!
+        if ENABLE_REGIME_DIRECTIONAL_GATE and side == "SHORT" and ("BOĞA" in trend_regime):
+            # Boğa piyasasında altcoin direnç sekmesi aramak trende karşı intihardır!
             # Yalnızca aşırı teyitli (4/4) VE (gerçek bir breakdown kırılımı VEYA Kurumsal Buzdağı / dPOC Tuzak Sniper) varsa izin verilir
             cvd_r_chk = float(cvd_data.get('ratio_60s', 50.0)) if cvd_data else 50.0
+            min_short_cvd = float(BULL_SHORT_MIN_CVD_PCT)
+            max_allowed_buyer_cvd = 100.0 - min_short_cvd  # Örn: %52 satıcı üstünlüğü gerekiyorsa alıcı azami %48 olabilir
             has_inst_short_edge = is_ice_sniper_order or any(k in str(confluence_list or []) for k in ["Iceberg_Offense_Sniper_Short", "dPOC_Trapped_Longs"])
-            if (not is_breakout and not has_inst_short_edge) or c_count < 4 or cvd_r_chk > 48.0:
-                rej_msg = f"🐂 Boğa Rejimi SHORT Kalkanı: Piyasa {trend_regime} rejimindeyken altcoinlerde karşı-trend SHORT açmak engellendi (Mevcut: {conf_score_str}, CVD: %{cvd_r_chk:.1f})."
+            if (not is_breakout and not has_inst_short_edge) or c_count < 4 or cvd_r_chk > max_allowed_buyer_cvd:
+                rej_msg = f"🐂 Boğa Rejimi SHORT Kalkanı: Piyasa {trend_regime} rejimindeyken altcoinlerde karşı-trend SHORT açmak engellendi (Mevcut: {conf_score_str}, Alıcı CVD: %{cvd_r_chk:.1f} > %{max_allowed_buyer_cvd:.1f})."
                 print(f">> [RED - BOĞA REJİMİ SHORT KALKANI] {symbol}: {rej_msg}")
                 self.log_rejection(symbol, reason, rej_msg)
                 return {"error": "BULL_REGIME_SHORT_BLOCKED"}
@@ -2727,7 +2831,7 @@ class StrategyEngine:
         # Paritenin gerçek rolling geçmişi varsa onu kullan, yoksa teyit tabanlı beklentiyi baz al
         persona_wr = persona.get("win_rate") if isinstance(persona, dict) else None
         persona_trades = persona.get("total_trades", 0) if isinstance(persona, dict) else 0
-        if persona_wr is not None and persona_trades >= 3:
+        if persona_wr is not None and persona_trades >= 15:
             est_win_rate = max(40.0, min(85.0, float(persona_wr)))
         else:
             est_win_rate = 72.0 if (has_whale_flow or c_count >= 4) else (60.0 if c_count >= 3 else 52.0)
@@ -2764,15 +2868,11 @@ class StrategyEngine:
             dyn_margin = round(max(dyn_min_margin_bound, min(max_margin_cap, capped_pos_val / float(dyn_leverage))), 2)
             calculated_dollar_risk = round(dyn_margin * float(dyn_leverage) * effective_stop_pct, 2)
 
-        # Kaldıraç Rozeti ve Confluence Etiketi
+        # Kaldıraç Rozeti ve Metin Kaydı (Confluence listesine teyit puanı gibi eklenmez, döngüsel teyit önlenir)
         if dyn_leverage >= 7:
             reason += f" [💎 {dyn_leverage}x Elit Hücum]"
-            if confluence_list is not None and isinstance(confluence_list, list):
-                confluence_list.append(f"⚡_Dinamik_Kaldıraç_{dyn_leverage}x_Elit")
         elif dyn_leverage <= 3:
             reason += f" [🛡️ {dyn_leverage}x Defans Kalkanı]"
-            if confluence_list is not None and isinstance(confluence_list, list):
-                confluence_list.append(f"🛡️_Dinamik_Kaldıraç_{dyn_leverage}x_Defans")
         else:
             reason += f" [⚖️ {dyn_leverage}x Standart]"
 
@@ -3127,12 +3227,12 @@ class StrategyEngine:
                     bid_ice_r = float(l2_info.get('bid_iceberg_ratio', 1.0))
 
                     if side == "LONG" and has_seller_iceberg:
-                        rej_msg = f"🧊 Ken Griffin Buzdağı Kalkanı [{archetype_label}]: Fiyat dirençte gizli satıcı buzdağına çarptı (Taker Alım / Tahta: {ask_ice_r:.1f}x >= 3.5x). Satıcı emilimi var, LONG engellendi."
+                        rej_msg = f"🧊 Ken Griffin Buzdağı Kalkanı [{archetype_label}]: Fiyat dirençte gizli satıcı buzdağına çarptı (Taker Alım / Tahta: {ask_ice_r:.1f}x >= 3.0x). Satıcı emilimi var, LONG engellendi."
                         print(f">> [RED - SATICI ICEBERG ENGELİ] {symbol}: {rej_msg}")
                         self.log_rejection(symbol, reason, rej_msg, icebergRatio=ask_ice_r, askIcebergRatio=ask_ice_r, icebergSide="ICEBERG_ASK_RESISTANCE", hasIceberg=True)
                         return {"error": "GRIFFIN_SELLER_ICEBERG_BLOCKED"}
                     elif side == "SHORT" and has_buyer_iceberg:
-                        rej_msg = f"🧊 Ken Griffin Buzdağı Kalkanı [{archetype_label}]: Fiyat destekte gizli alıcı buzdağına çarptı (Taker Satım / Tahta: {bid_ice_r:.1f}x >= 3.5x). Alıcı emilimi var, SHORT engellendi."
+                        rej_msg = f"🧊 Ken Griffin Buzdağı Kalkanı [{archetype_label}]: Fiyat destekte gizli alıcı buzdağına çarptı (Taker Satım / Tahta: {bid_ice_r:.1f}x >= 3.0x). Alıcı emilimi var, SHORT engellendi."
                         print(f">> [RED - ALICI ICEBERG ENGELİ] {symbol}: {rej_msg}")
                         self.log_rejection(symbol, reason, rej_msg, icebergRatio=bid_ice_r, bidIcebergRatio=bid_ice_r, icebergSide="ICEBERG_BID_SUPPORT", hasIceberg=True)
                         return {"error": "GRIFFIN_BUYER_ICEBERG_BLOCKED"}
@@ -3245,7 +3345,7 @@ class StrategyEngine:
                 tp1_p=tp1,
                 tp2_p=tp2,
                 levels=snapshot_levels,
-                cvd_taker_pct=cvd_ratio_60s if 'cvd_ratio_60s' in locals() else 50.0,
+                cvd_taker_pct=ratio_60s if 'ratio_60s' in locals() else (float(cvd_data.get('ratio_60s', 50.0)) if ('cvd_data' in locals() and cvd_data) else 50.0),
                 market_regime=trend_regime if 'trend_regime' in locals() else None,
                 hurst_h=hurst_val if 'hurst_val' in locals() else None
             )
@@ -3518,11 +3618,38 @@ class StrategyEngine:
                 except Exception:
                     vol_surge = 1.0
 
+        # 🛡️ APOLLO KALMAN DURUM-UZAY FİLTRESİ (Fitil Gürültüsünden Arındırılmış Temiz Fiyat)
+        kalman_res = {}
+        if ENABLE_KALMAN_PRICE_FILTER and self.market_data and hasattr(self.market_data, 'candles_5m') and symbol in self.market_data.candles_5m:
+            df_k = self.market_data.candles_5m[symbol]
+            if isinstance(df_k, pd.DataFrame) and len(df_k) >= 15:
+                try:
+                    p_series = df_k['close'].values[-30:]
+                    w_series = []
+                    for _, c_row in df_k.iloc[-30:].iterrows():
+                        c_h = float(c_row.get('high', 0.0))
+                        c_l = float(c_row.get('low', 0.0))
+                        c_o = float(c_row.get('open', 0.0))
+                        c_c = float(c_row.get('close', 0.0))
+                        body = abs(c_c - c_o)
+                        wick = (c_h - max(c_o, c_c)) + (min(c_o, c_c) - c_l)
+                        w_series.append(float(wick / max(body, 1e-6)))
+                    kalman_res = calculate_kalman_state(
+                        prices=p_series,
+                        wick_ratios=w_series,
+                        q=float(KALMAN_PROCESS_NOISE_Q),
+                        r0=float(KALMAN_MEASUREMENT_NOISE_R0),
+                        wick_penalty_mult=float(KALMAN_WICK_PENALTY_MULT)
+                    )
+                except Exception:
+                    kalman_res = {}
+
         cam = levels.get("camarilla", {})
         p = cam.get("P", 0.0)
         r3 = cam.get("R3", 0.0)
         r4 = cam.get("R4", 0.0)
         r5 = cam.get("R5", 0.0)
+
         s3 = cam.get("S3", 0.0)
         s4 = cam.get("S4", 0.0)
         s5 = cam.get("S5", 0.0)
@@ -4000,15 +4127,19 @@ class StrategyEngine:
             is_range_regime = True
         elif is_gex_exp:
             # -GEX Rejiminde kurumsal gamma patlaması -> Trend Breakout / Breakdown
-            if "AYI" in regime_desc or macro_regime in ["BEAR_DUMP", "BEAR_TREND", "EXTREME_BEAR"]:
+            if "GÜÇLÜ AYI" in regime_desc or macro_regime in ["BEAR_DUMP", "BEAR_TREND", "EXTREME_BEAR"]:
                 tri_modal_regime = "REGIME_BEAR_TREND"
-            else:
+            elif "GÜÇLÜ BOĞA" in regime_desc or macro_regime in ["BULL_TREND", "BULL_PUMP", "EXTREME_BULL"]:
                 tri_modal_regime = "REGIME_BULL_TREND"
-        elif "BOĞA" in regime_desc or macro_regime in ["BULL_TREND", "BULL_PUMP", "EXTREME_BULL", "BOĞA"]:
+            else:
+                tri_modal_regime = "REGIME_RANGING_PINGPONG"
+                is_range_regime = True
+        elif "GÜÇLÜ BOĞA" in regime_desc or macro_regime in ["BULL_TREND", "BULL_PUMP", "EXTREME_BULL"]:
             tri_modal_regime = "REGIME_BULL_TREND"
-        elif "AYI" in regime_desc or macro_regime in ["BEAR_DUMP", "BEAR_TREND", "EXTREME_BEAR"]:
+        elif "GÜÇLÜ AYI" in regime_desc or macro_regime in ["BEAR_DUMP", "BEAR_TREND", "EXTREME_BEAR"]:
             tri_modal_regime = "REGIME_BEAR_TREND"
         else:
+            # "ILIMLI BOĞA" veya "ILIMLI AYI" doğrudan tam trend sayılmaz; geçiş / ping-pong rejiminde tutulur
             tri_modal_regime = "REGIME_RANGING_PINGPONG"
             is_range_regime = True
 
@@ -4061,6 +4192,16 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 1 R4 Breakout", f"Boğa Tuzağı Kalkanı: Fiyat R4'ü aştı fakat mikro-CVD satıcı ağırlıklı (%{cvd_ratio:.1f} alıcı). Sahte kırılım elendi.")
                 return
 
+            # 🛡️ APOLLO KALMAN SAHTE FİTİL SÜZGECİ (Apollo False Wick Breakout Filter)
+            if ENABLE_KALMAN_PRICE_FILTER and kalman_res and kalman_res.get('clean_price', 0) > 0:
+                clean_p = kalman_res['clean_price']
+                if clean_p <= r4 and not is_oi_bull_expansion:
+                    self.log_rejection(
+                        symbol, "SETUP 1 R4 Breakout",
+                        f"🛡️ Apollo Kalman Süzgeci: Fiyat fitille taştı (${close_price:.4f}) fakat gürültüsüz Kalman dengesi (${clean_p:.4f}) R4 (${r4:.4f}) altında. Sahte fitil tuzağı elendi."
+                    )
+                    return
+
             if tepe_avwap > 0 and close_price <= tepe_avwap:
                 self.log_rejection(symbol, "SETUP 1 R4 Breakout", f"Fiyat (${close_price:.4f}) Tepe AVWAP (${tepe_avwap:.4f}) altında kaldığı için boğa onayı verilmedi")
                 return
@@ -4078,8 +4219,12 @@ class StrategyEngine:
                 setup_label = "SETUP_1_OI_LONG_EXPANSION" if is_oi_bull_expansion else "SETUP_1_R4_BREAKOUT"
                 reason_label = "Kurumsal OI Boğa Taarruzu (Taze Long Akışı + R4 Üstü)" if is_oi_bull_expansion else "Taze R4 Breakout + Tepe AVWAP Ustu Onay"
                 c_list = ["R4_Breakout", "OI_Long_Expansion" if is_oi_bull_expansion else "Tepe_AVWAP_Ustu"]
+                if ENABLE_KALMAN_PRICE_FILTER and kalman_res and kalman_res.get('clean_price', 0) > 0:
+                    c_list.append("Apollo_Kalman_Clean_Breakout")
+                    reason_label += f" [🔭 Kalman: ${kalman_res['clean_price']:.4f}]"
                 if daily_avwap > 0 and close_price > daily_avwap:
                     c_list.append("Daily_AVWAP_Bull")
+
 
                 # 🎯 Stoikov Mikro-Fiyat Önden Koşu Teyidi
                 if sym_met.get("is_stoikov_bull", False):
@@ -4135,6 +4280,16 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 2 S4 Breakdown", f"Ayı Tuzağı Kalkanı: Fiyat S4'ü aşağı kırdı fakat mikro-CVD alıcı ağırlıklı (%{cvd_ratio:.1f} alıcı). Sahte çöküş elendi.")
                 return
 
+            # 🛡️ APOLLO KALMAN SAHTE FİTİL SÜZGECİ (Apollo False Wick Breakdown Filter)
+            if ENABLE_KALMAN_PRICE_FILTER and kalman_res and kalman_res.get('clean_price', 0) > 0:
+                clean_p = kalman_res['clean_price']
+                if clean_p >= s4 and not is_oi_bear_expansion:
+                    self.log_rejection(
+                        symbol, "SETUP 2 S4 Breakdown",
+                        f"🛡️ Apollo Kalman Süzgeci: Fiyat fitille taştı (${close_price:.4f}) fakat gürültüsüz Kalman dengesi (${clean_p:.4f}) S4 (${s4:.4f}) üstünde. Sahte ayı tuzağı elendi."
+                    )
+                    return
+
             # 🛡️ MAKRO BOĞA TAARRUZU KALKANI: Piyasa roket yükselişindeyken S4 breakdown short açılmaz!
             if is_bull_pump and not is_decoupled_bear:
                 self.log_rejection(
@@ -4155,10 +4310,13 @@ class StrategyEngine:
             if vol_surge < min_breakout_vol:
                 self.log_rejection(symbol, "SETUP 2 S4 Breakdown", f"{'Yatay piyasada sahte kırılım kalkanı: ' if is_range_regime else ''}Hacim patlaması {vol_surge:.2f}x yetersiz (en az {min_breakout_vol:.2f}x patlama aranıyor)")
                 return
+            if dip_avwap > 0 and close_price >= dip_avwap:
+                self.log_rejection(symbol, "SETUP 2 S4 Breakdown", f"Fiyat (${close_price:.4f}) Dip AVWAP (${dip_avwap:.4f}) üstünde kaldığı için ayı onayı verilmedi (Destek tabanı kırılmadı)")
+                return
             if tepe_avwap > 0 and close_price >= tepe_avwap:
                 self.log_rejection(symbol, "SETUP 2 S4 Breakdown", f"Fiyat (${close_price:.4f}) Tepe AVWAP (${tepe_avwap:.4f}) üstünde kaldığı için ayı onayı verilmedi")
                 return
-            if tepe_avwap == 0 or close_price < tepe_avwap:
+            if (dip_avwap == 0 or close_price < dip_avwap) and (tepe_avwap == 0 or close_price < tepe_avwap):
                 tp1 = s5 if (s5 > 0 and s5 <= close_price * 0.992) else (mval if (mval > 0 and mval <= close_price * 0.992) else close_price * 0.985)
                 candidates = [c for c in [below_npoc, below_nval, dip_avwap] if c and c <= tp1 * 0.992]
                 tp2 = max(candidates) if candidates else (mval if (mval > 0 and mval <= tp1 * 0.992) else None)
@@ -4171,9 +4329,13 @@ class StrategyEngine:
 
                 setup_label = "SETUP_2_OI_SHORT_EXPANSION" if is_oi_bear_expansion else "SETUP_2_S4_BREAKDOWN"
                 reason_label = "Kurumsal OI Ayı Taarruzu (Taze Short Akışı + S4 Altı)" if is_oi_bear_expansion else "Taze S4 Breakdown + Ayı İvmesi Onayı"
-                c_list = ["S4_Breakdown", "OI_Short_Expansion" if is_oi_bear_expansion else "Tepe_AVWAP_Alti"]
+                c_list = ["S4_Breakdown", "OI_Short_Expansion" if is_oi_bear_expansion else ("Dip_AVWAP_Alti" if dip_avwap > 0 else "Tepe_AVWAP_Alti")]
+                if ENABLE_KALMAN_PRICE_FILTER and kalman_res and kalman_res.get('clean_price', 0) > 0:
+                    c_list.append("Apollo_Kalman_Clean_Breakdown")
+                    reason_label += f" [🔭 Kalman: ${kalman_res['clean_price']:.4f}]"
                 if daily_avwap > 0 and close_price < daily_avwap:
                     c_list.append("Daily_AVWAP_Bear")
+
 
                 # 🎯 Stoikov Mikro-Fiyat Önden Koşu Teyidi
                 if sym_met.get("is_stoikov_bear", False):

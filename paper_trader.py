@@ -81,6 +81,7 @@ class PaperTrader:
         self.emergency_alert = None  # Bakiye ve sistem anomalisi kritik uyarı bayrağı
         self.is_safety_stopped = False  # VDA-13: Kasa < $1,000 olduğunda otomatik güvenli durdurma modu
         self.trading_halted = False
+        self._last_checked_funding_epoch = int(time.time()) // 28800  # 8H UTC fonlama yerleşim takipçisi
         self.load_history()
 
     def reset_state(self):
@@ -91,6 +92,7 @@ class PaperTrader:
         self._pending_state = None
         self.is_safety_stopped = False
         self.trading_halted = False
+        self._last_checked_funding_epoch = int(time.time()) // 28800
         self.emergency_alert = None
         self.save_history(critical=True)
         print(f">> [RESET] Kasa ${self.balance:.2f} USDT olarak sıfırlandı. Tüm pozisyonlar ve geçmiş temizlendi.")
@@ -291,7 +293,65 @@ class PaperTrader:
         self.save_history()
         return True
 
-    def update_tick_telemetry(self, symbol: str, current_price: float):
+    def check_and_settle_funding_fees(self, market_data=None) -> list:
+        """
+        8-Saatlik UTC Fonlama Yerleşimi (00:00, 08:00, 16:00 UTC):
+        Açık pozisyonların seans dönümlerinde marjin ve kasasından fonlama kesintisi / tahsilatı yapar.
+        - Fonlama Oranı > 0: LONG öder, SHORT kazanır.
+        - Fonlama Oranı < 0: SHORT öder, LONG kazanır.
+        """
+        settled_events = []
+        now_ts = time.time()
+        current_epoch = int(now_ts) // 28800
+
+        for s_sym, pos in list(self.open_positions.items()):
+            last_epoch = int(pos.get("last_funding_epoch") if pos.get("last_funding_epoch") is not None else (int(pos.get("entry_timestamp", now_ts)) // 28800))
+            if current_epoch > last_epoch:
+                missed_epochs = current_epoch - last_epoch
+                rate = 0.0001
+                if market_data and hasattr(market_data, 'symbol_funding'):
+                    clean_s = market_data._clean_symbol(s_sym) if hasattr(market_data, '_clean_symbol') else s_sym
+                    fund_info = market_data.symbol_funding.get(s_sym) or market_data.symbol_funding.get(clean_s, {})
+                    rate = float(fund_info.get('funding_rate', pos.get('entry_funding_rate', 0.0001)))
+                else:
+                    rate = float(pos.get('entry_funding_rate', 0.0001))
+
+                pos_val = float(pos.get("position_value", pos.get("margin", 50.0) * pos.get("leverage", 5)))
+                side = pos.get("side", "LONG").upper()
+
+                if side == "LONG":
+                    payment_per_epoch = pos_val * rate
+                else:
+                    payment_per_epoch = -pos_val * rate
+
+                total_payment = payment_per_epoch * missed_epochs
+                self.balance -= total_payment
+                pos["accumulated_funding_fee"] = round(pos.get("accumulated_funding_fee", 0.0) + total_payment, 4)
+                pos["last_funding_epoch"] = current_epoch
+
+                evt = {
+                    "symbol": s_sym,
+                    "side": side,
+                    "epochs": missed_epochs,
+                    "funding_rate": rate,
+                    "total_payment": round(total_payment, 4),
+                    "balance_after": round(self.balance, 2)
+                }
+                settled_events.append(evt)
+                print(f">> [FONLAMA KESİNTİSİ 8H UTC] {s_sym} {side} ({missed_epochs}x 8H) | Oran: {rate*100:.4f}% | Tutar: ${total_payment:+.4f} | Kasa: ${self.balance:.2f}")
+
+        if settled_events:
+            self.save_history()
+
+        return settled_events
+
+    def update_tick_telemetry(self, symbol: str, current_price: float, market_data=None):
+        # 8-Saatlik Fonlama Yerleşimi Denetimi
+        now_epoch = int(time.time()) // 28800
+        if getattr(self, '_last_checked_funding_epoch', 0) != now_epoch:
+            self._last_checked_funding_epoch = now_epoch
+            self.check_and_settle_funding_fees(market_data=market_data)
+
         # Her fiyat hareketinde MFE (Max Kar) ve MAE (Max Zarar) derinligini anlik kaydeder ve Kademeli Izsuren Stopu yonetir
         if symbol not in self.open_positions:
             return
@@ -581,6 +641,17 @@ class PaperTrader:
                 "current_balance": free_bal
             }
 
+        # Gerçekçi Giriş Kayması (Entry Slippage %0.04 - %0.08) Modeli
+        entry_slip = kwargs.get("entry_slippage_pct", 0.0)
+        if entry_slip and float(entry_slip) > 0.0:
+            slip_f = float(entry_slip)
+            if side.upper() == "LONG":
+                entry_price = round(entry_price * (1.0 + slip_f), 8)
+            else:
+                entry_price = round(entry_price * (1.0 - slip_f), 8)
+        else:
+            slip_f = 0.0
+
         position_value = margin * active_leverage
         quantity = position_value / entry_price
         entry_fee = position_value * self.commission_rate
@@ -645,18 +716,27 @@ class PaperTrader:
             "max_mfe_roe": 0.0,
             "max_mae_roe": 0.0,
             "reason": reason,
-            "is_half_closed": False
+            "is_half_closed": False,
+            "entry_slippage_pct": round(slip_f * 100.0, 3),
+            "accumulated_funding_fee": 0.0,
+            "last_funding_epoch": int(entry_timestamp) // 28800
         }
-        pos.update(kwargs)
+        extra_args = dict(kwargs)
+        extra_args.pop("entry_slippage_pct", None)
+        pos.update(extra_args)
 
-        self.open_positions[symbol] = _sanitize_floats(pos)
+        clean_pos = _sanitize_floats(pos)
+        self.open_positions[symbol] = clean_pos
         self.save_history()
-        print(f">> [POZISYON ACILDI] {symbol} {side} @ {entry_price} | Marjin: {margin}$ ({active_leverage}x) | Setup: {pos['setup_id']}")
-        return pos
+        print(f">> [POZISYON ACILDI] {symbol} {side} @ {entry_price} | Marjin: {margin}$ ({active_leverage}x) | Setup: {clean_pos['setup_id']}")
+        return clean_pos
 
     def close_position(self, symbol: str, exit_price: float, close_reason: str, is_partial: bool = False, slippage_pct: float = 0.0):
         if symbol not in self.open_positions:
             return None
+
+        # VDA 8H UTC Fonlama Yerleşimi Denetimi
+        self.check_and_settle_funding_fees()
 
         pos = self.open_positions[symbol]
         side = pos["side"]
@@ -791,6 +871,7 @@ class PaperTrader:
                 "wall_age_sec": pos.get("wall_age_sec", 0.0),
                 "entry_spread_pct": pos.get("entry_spread_pct", 0.0),
                 "entry_slippage_pct": pos.get("entry_slippage_pct", 0.0),
+                "funding_fee": round(pos.get("accumulated_funding_fee", 0.0) * 0.5, 4),
                 "calculated_dollar_risk": pos.get("calculated_dollar_risk", 10.0),
                 "stoikov_micro_price": pos.get("stoikov_micro_price", entry_p),
                 "stoikov_drift_bps": pos.get("stoikov_drift_bps", 0.0),
@@ -826,7 +907,8 @@ class PaperTrader:
             qty = pos.get("quantity", pos.get("position_size", 1.0))
             pos_val = pos.get("position_value", margin * pos.get("leverage", 5))
             exit_fee = (qty * exit_price) * self.commission_rate
-            total_fees = entry_fee + exit_fee
+            accumulated_funding = float(pos.get("accumulated_funding_fee", 0.0))
+            total_fees = entry_fee + exit_fee + max(0.0, accumulated_funding)
 
             if side == "LONG":
                 gross_pnl = (exit_price - entry_p) * qty
@@ -930,6 +1012,7 @@ class PaperTrader:
                 "wall_age_sec": pos.get("wall_age_sec", 0.0),
                 "entry_spread_pct": pos.get("entry_spread_pct", 0.0),
                 "entry_slippage_pct": pos.get("entry_slippage_pct", 0.0),
+                "funding_fee": round(accumulated_funding, 4),
                 "calculated_dollar_risk": pos.get("calculated_dollar_risk", 10.0),
                 "stoikov_micro_price": pos.get("stoikov_micro_price", entry_p),
                 "stoikov_drift_bps": pos.get("stoikov_drift_bps", 0.0),

@@ -407,8 +407,38 @@ class ShadowExecutionEngine:
                 pos["early_be_locked"] = True
                 pos["be_price"] = entry_p * (1.0008 if side == "LONG" else 0.9992)
 
-            # 2. Breakeven Stop Kontrolü (Erken kilit veya TP1 sonrası)
-            if (pos["early_be_locked"] or pos["tp1_hit"]) and pos.get("be_price"):
+            # 2. SpaceX PID Kâr Kilidi Takibi (MFE >= %2.0 kârda zirve kilidi)
+            if mfe_pct >= 2.0:
+                mfe_series = pos.setdefault("pid_mfe_series", [])
+                mfe_series.append(mfe_pct)
+                if len(mfe_series) > 10:
+                    mfe_series.pop(0)
+                try:
+                    from indicators import calculate_pid_stop_level
+                    pid_res = calculate_pid_stop_level(
+                        entry_price=entry_p,
+                        current_price=cur_p,
+                        side=side,
+                        peak_mfe_roe=mfe_pct,
+                        mfe_series=mfe_series,
+                        atr_pct=0.50,
+                        leverage=5
+                    )
+                    if pid_res.get('is_engaged') and pid_res.get('proposed_stop', 0) > 0:
+                        pos["pid_engaged"] = True
+                        pos["pid_stop"] = pid_res['proposed_stop']
+                except Exception:
+                    pass
+
+            # PID Kâr Kilidi veya Breakeven Stop Kontrolü
+            if pos.get("pid_engaged") and pos.get("pid_stop"):
+                pid_p = pos["pid_stop"]
+                if (side == "LONG" and cur_p <= pid_p) or (side == "SHORT" and cur_p >= pid_p):
+                    rec = self._close_shadow_position(s_id, pid_p, "Sanal SpaceX PID Kâr Kilidi", "PID_PROFIT_LOCKED")
+                    if rec:
+                        closed_records.append(rec)
+                    continue
+            elif (pos["early_be_locked"] or pos["tp1_hit"]) and pos.get("be_price"):
                 be_p = pos["be_price"]
                 if (side == "LONG" and cur_p <= be_p) or (side == "SHORT" and cur_p >= be_p):
                     rec = self._close_shadow_position(s_id, be_p, "Sanal Başa-Baş Koruması (BE)", "BE_CLOSED")
@@ -421,6 +451,7 @@ class ShadowExecutionEngine:
                 if (side == "LONG" and cur_p >= pos["tp1_price"]) or (side == "SHORT" and cur_p <= pos["tp1_price"]):
                     pos["tp1_hit"] = True
                     pos["be_price"] = entry_p * (1.0008 if side == "LONG" else 0.9992)
+
 
             if pos["tp1_hit"]:
                 if (side == "LONG" and cur_p >= pos["tp2_price"]) or (side == "SHORT" and cur_p <= pos["tp2_price"]):

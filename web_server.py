@@ -5332,7 +5332,7 @@ HTML_PAGE = """
                     <div class="kpi-card-val" id="funding-squeeze-count" style="color:var(--red); font-size:24px;">0 Parite</div>
                 </div>
                 <div>
-                    <div class="kpi-card-sub">Aşırı Negatif Fonlama (&lt; -%0.0300)</div>
+                    <div class="kpi-card-sub">&lt; -%0.0300 veya (Medyan - %0.0250) Bağıl Squeeze</div>
                     <div style="font-size:11px; color:#f87171; font-family:'JetBrains Mono'; margin-top:3px;">Piyasa yapıcı avına karşı Short açılışları kilitlendi</div>
                 </div>
             </div>
@@ -5346,7 +5346,7 @@ HTML_PAGE = """
                     <div class="kpi-card-val" id="funding-overheat-count" style="color:#fbc531; font-size:24px;">0 Parite</div>
                 </div>
                 <div>
-                    <div class="kpi-card-sub">Aşırı Pozitif Fonlama (&gt; +%0.0600)</div>
+                    <div class="kpi-card-sub">&gt; +%0.0600 veya (Medyan + %0.0500) Bağıl Şişkinlik</div>
                     <div style="font-size:11px; color:#fde047; font-family:'JetBrains Mono'; margin-top:3px;">Tepe tuzağına karşı Long Breakout engellenir</div>
                 </div>
             </div>
@@ -5441,11 +5441,11 @@ HTML_PAGE = """
         <div class="cockpit-kpi-grid" style="margin-bottom:18px;">
             <div class="cockpit-kpi-card" style="border-top:3px solid #ef4444;">
                 <div class="kpi-card-head">
-                    <span class="kpi-card-title">Son 24h Toplam Tasfiye Hacmi</span>
+                    <span class="kpi-card-title">Canlı Oturum Tasfiye Hacmi</span>
                     <span class="kpi-card-icon">🌊</span>
                 </div>
                 <div class="kpi-card-val" id="liq-total-24h" style="color:#ef4444;">$0</div>
-                <div class="kpi-card-sub">Piyasa Genelinde Zorunlu Tasfiyeler</div>
+                <div class="kpi-card-sub">Bot Başlangıcından Bu Yana Canlı Tasfiyeler</div>
                 <div style="font-size:11px; color:#fca5a5; font-family:'JetBrains Mono'; margin-top:3px;">Balinaların yakıt olarak kullandığı stop hacmi</div>
             </div>
 
@@ -5555,7 +5555,7 @@ HTML_PAGE = """
                 <div class="kpi-card-val" id="cvd-top-buyer-sym" style="color:#22c55e; font-size:19px;">-</div>
                 <div class="kpi-card-sub" id="cvd-top-buyer-delta" style="font-weight:700;">Net Para Girişi: +$0</div>
                 <div style="font-size:11px; color:#86efac; font-family:'JetBrains Mono'; margin-top:5px;">
-                    🎯 <b>Strateji:</b> Direnç kırılımı (Breakout) için en güçlü aday. Mum beklemeden marjin 1.15x artırılır.
+                    🎯 <b>Strateji:</b> Direnç kırılımı (Breakout) için en güçlü aday. Kırılım anında kurumsal agresyon teyidiyle marjin 1.15x artırılır.
                 </div>
             </div>
 
@@ -5606,7 +5606,7 @@ HTML_PAGE = """
                                 <th>Alıcı Gücü</th>
                                 <th>60s Net Para Akışı ($)</th>
                                 <th>Anlık Fiyat</th>
-                                <th>Botun Stratejik Kararı & Aksiyonu</th>
+                                <th>CVD Akış Teşhisi & Şartlı Karar</th>
                             </tr>
                         </thead>
                         <tbody id="cvd-top-buyers-body">
@@ -5635,7 +5635,7 @@ HTML_PAGE = """
                                 <th>Satıcı Gücü</th>
                                 <th>60s Net Para Çıkışı ($)</th>
                                 <th>Anlık Fiyat</th>
-                                <th>Botun Stratejik Kararı & Aksiyonu</th>
+                                <th>CVD Akış Teşhisi & Şartlı Karar</th>
                             </tr>
                         </thead>
                         <tbody id="cvd-top-sellers-body">
@@ -5649,8 +5649,8 @@ HTML_PAGE = """
         <!-- 3 SÜTUNLU ÖĞRETİCİ STRATEJİ REHBERİ -->
         <div style="margin-top:22px; display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:14px;">
             <div style="padding:16px 18px; background:rgba(0,242,254,0.03); border:1px solid rgba(0,242,254,0.15); border-radius:10px; font-family:'JetBrains Mono';">
-                <div style="color:var(--cyan); font-weight:800; font-size:13px; margin-bottom:6px;">⚡ 1. Mum Kapanışı Beklemiyoruz (0ms Gecikme)</div>
-                <div style="color:#94a3b8; font-size:11.5px; line-height:1.5;">Geleneksel botlar 5 dakikalık mumun kapanmasını beklerken tren kaçar. Mikro-CVD motorumuz son 60 saniyedeki piyasa emirlerini milisaniyesinde sayar ve direnç kırıldığı an gecikmesiz işleme girer.</div>
+                <div style="color:var(--cyan); font-weight:800; font-size:13px; margin-bottom:6px;">⚡ 1. Milisaniyelik Mikro-CVD Akışı (Mum Kapanış Teyidi)</div>
+                <div style="color:#94a3b8; font-size:11.5px; line-height:1.5;">Mikro-CVD motorumuz son 60 saniyedeki piyasa emirlerini milisaniyesinde sayar. Mum kapandığı an kurumsal agresyon teyit edilir, tuzak ve sahte kırılımlar anında elenerek kusursuz giriş sağlanır.</div>
             </div>
 
             <div style="padding:16px 18px; background:rgba(239,68,68,0.03); border:1px solid rgba(239,68,68,0.15); border-radius:10px; font-family:'JetBrains Mono';">
@@ -8130,8 +8130,8 @@ async function loadAdminMetrics() {
                     const timeStr = item.time_str || (item.time ? (item.time.indexOf(' ') > -1 ? item.time.split(' ')[1] : item.time) : '--:--:--');
 
                     const interp = isLongLiq
-                        ? `<span style="color:#38bdf8;">🔻 Destekte Satış Emildi → Sekme (Bounce Long) Teyidi</span>`
-                        : `<span style="color:#fbbf24;">🔺 Dirençte Alış Emildi → Tepe Reddi (Reject Short) Teyidi</span>`;
+                        ? `<span style="color:#4ade80; font-weight:700;">🟢 ⬆️ Destekte Satış Emildi → Sekme (Bounce Long) Teyidi</span>`
+                        : `<span style="color:#f87171; font-weight:700;">🔴 ⬇️ Dirençte Alış Emildi → Tepe Reddi (Reject Short) Teyidi</span>`;
 
                     const priceFormatted = typeof formatSmartPrice === 'function' ? formatSmartPrice(price) : price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 6});
 
@@ -8212,7 +8212,7 @@ async function loadAdminMetrics() {
                     if (topB && topB !== '-') {
                         const cleanB = topB.replace('/USDT', '');
                         const deltaStr = (Math.abs(topBDelta) > 0 && Math.abs(topBDelta) < 100) ? topBDelta.toFixed(2) : Math.round(topBDelta).toLocaleString('en-US');
-                        topBuyerSymEl.innerHTML = `${cleanB} <span style="font-size:13px; color:#fff; font-weight:600;">(%${topBRatio})</span>`;
+                        topBuyerSymEl.innerHTML = `${cleanB} <span style="font-size:13px; color:#fff; font-weight:600;">(%${topBRatio} Alıcı)</span>`;
                         topBuyerDeltaEl.innerText = `Net Para Girişi: +$${deltaStr}`;
                     } else {
                         topBuyerSymEl.innerText = '-';
@@ -8229,7 +8229,7 @@ async function loadAdminMetrics() {
                     if (topS && topS !== '-') {
                         const cleanS = topS.replace('/USDT', '');
                         const deltaStr = (Math.abs(topSDelta) > 0 && Math.abs(topSDelta) < 100) ? Math.abs(topSDelta).toFixed(2) : Math.abs(Math.round(topSDelta)).toLocaleString('en-US');
-                        topSellerSymEl.innerHTML = `${cleanS} <span style="font-size:13px; color:#fff; font-weight:600;">(%${topSRatio})</span>`;
+                        topSellerSymEl.innerHTML = `${cleanS} <span style="font-size:13px; color:#fff; font-weight:600;">(%${topSRatio} Satıcı)</span>`;
                         topSellerDeltaEl.innerText = `Net Para Çıkışı: -$${deltaStr}`;
                     } else {
                         topSellerSymEl.innerText = '-';
@@ -8257,7 +8257,7 @@ async function loadAdminMetrics() {
                             
                             let stratBadge = `<span title="Alıcı/Satıcı dengede. Standart pusu kuralları bekleniyor." style="color:#94a3b8; font-size:11px;">⚪ Nötr Akış</span>`;
                             if (ratio >= 62) {
-                                stratBadge = `<span title="Son 60s alıcı agresyonu %${ratio}. Camarilla R4 direnci kırılırsa mum kapanışı beklenmeden 1.15x marjinle LONG açılır." style="background:rgba(34,197,94,0.18); border:1px solid rgba(34,197,94,0.4); color:#22c55e; padding:3px 8px; border-radius:6px; font-weight:800; font-size:11px; cursor:help;">🚀 Kırılım Teyitli (1.15x Marjin)</span>`;
+                                stratBadge = `<span title="Son 60s alıcı agresyonu %${ratio}. Camarilla R4 direnci kırıldığında mum kapanışında 1.15x marjinle LONG teyidi sağlanır." style="background:rgba(34,197,94,0.18); border:1px solid rgba(34,197,94,0.4); color:#22c55e; padding:3px 8px; border-radius:6px; font-weight:800; font-size:11px; cursor:help;">🚀 Kırılım Teyitli (1.15x Marjin)</span>`;
                             } else if (ratio >= 55) {
                                 stratBadge = `<span title="Destek seviyesinde alıcılar piyasa satışlarını emiyor (%${ratio}). Sekme halinde 1.10x marjinle fitilden yakalanır." style="background:rgba(56,189,248,0.18); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:3px 8px; border-radius:6px; font-weight:800; font-size:11px; cursor:help;">⚡ Dip Emilim (1.10x Marjin)</span>`;
                             } else if (ratio >= 50) {
@@ -14317,28 +14317,24 @@ function downloadExcelReport() {
             return null;
         }
 
-        // BİNANCE VADELİ (FUTURES) CANLI BOOKTICKER WEBSOCKET (TOP 50 PARİTE STREAM)
+        // BİNANCE VADELİ (FUTURES) CANLI BOOKTICKER WEBSOCKET
         let globalWs = null;
         function startBinanceGlobalFeed() {
             if (globalWs) {
                 try { globalWs.close(); } catch(e){}
             }
-            const allSymbols = (appState.all_coins && appState.all_coins.length > 0) 
-                ? appState.all_coins.map(c => c.symbol)
-                : Object.keys(rawSymbolMap).map(k => rawSymbolMap[k]);
-            
-            const streams = allSymbols.map(s => getCleanStreamName(s) + '@bookTicker').join('/');
-            const wsUrl = `wss://fstream.binance.com/stream?streams=${streams}`;
+            // Ultra hafif tekil Binance global !bookTicker soketi (1.800 karakterlik devasa URL yerine)
+            const wsUrl = "wss://fstream.binance.com/ws/!bookTicker";
             globalWs = new WebSocket(wsUrl);
 
             globalWs.onopen = () => {
-                const wsSt = document.getElementById('ws-status'); if (wsSt) wsSt.innerText = 'BİNANCE VADELİ CANLI YAYIN AKTİF (100 PARİTE)';
+                const wsSt = document.getElementById('ws-status'); if (wsSt) wsSt.innerText = 'BİNANCE VADELİ CANLI YAYIN AKTİF (GLOBAL !bookTicker)';
             };
 
             globalWs.onmessage = (evt) => {
                 try {
                     const msg = JSON.parse(evt.data);
-                    const data = msg.data || {};
+                    const data = msg.data || msg;
                     const rawSym = data.s;
                     const bid = parseFloat(data.b);
                     const ask = parseFloat(data.a);
@@ -15444,7 +15440,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                         recent_liqs = market_data.get_recent_liquidations(25)
                     except Exception:
                         pass
-                symbol_liqs = getattr(market_data, 'symbol_liquidations_15m', {})
+                symbol_liqs = dict(getattr(market_data, 'symbol_liquidations_15m', {}))
 
             cvd_summary = {}
             symbol_cvd = {}
@@ -15454,13 +15450,13 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                         cvd_summary = market_data.get_market_cvd_summary()
                     except Exception:
                         pass
-                symbol_cvd = getattr(market_data, 'symbol_cvd', {})
+                symbol_cvd = dict(getattr(market_data, 'symbol_cvd', {}))
 
             return web.json_response({
                 "balance": trader_manager.balance,
                 "initial_balance": 10000.0,
                 "free_balance": trader_manager.get_free_balance(),
-                "open_positions": trader_manager.open_positions,
+                "open_positions": dict(trader_manager.open_positions),
                 "history": hist_full[-1000:], # Tüm işlem defteri (tüm pariteler ve CRV dahil)
                 "history_summary": history_summary,
                 "symbols": symbols_data,
@@ -15472,13 +15468,13 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "symbol_liquidations": symbol_liqs,
                 "cvd_summary": cvd_summary,
                 "symbol_cvd": symbol_cvd,
-                "orderbook_depth": getattr(market_data, 'orderbook_depth', {}) if market_data else {},
-                "recent_rejections": getattr(strategy, "recent_rejections", [])[-50:] if strategy else [],
-                "setup_attempts": getattr(strategy, "setup_attempts", {}) if strategy else {},
+                "orderbook_depth": {k: dict(v) for k, v in list(getattr(market_data, 'orderbook_depth', {}).items())} if market_data else {},
+                "recent_rejections": list(getattr(strategy, "recent_rejections", []))[-50:] if strategy else [],
+                "setup_attempts": dict(getattr(strategy, "setup_attempts", {})) if strategy else {},
                 "system_health": sys_health,
-                "coinbase_lead_lag": getattr(market_data, 'coinbase_lead_lag', {}) if market_data else {},
-                "oi_summary": getattr(market_data, 'oi_summary', {}) if market_data else {},
-                "symbol_oi": getattr(market_data, 'symbol_oi', {}) if market_data else {},
+                "coinbase_lead_lag": dict(getattr(market_data, 'coinbase_lead_lag', {})) if market_data else {},
+                "oi_summary": dict(getattr(market_data, 'oi_summary', {})) if market_data else {},
+                "symbol_oi": dict(getattr(market_data, 'symbol_oi', {})) if market_data else {},
                 "server_start_ts": SERVER_START_TS,
                 "server_uptime_sec": int(time.time() - SERVER_START_TS),
                 "macro_climate": strategy.get_macro_climate() if strategy and hasattr(strategy, 'get_macro_climate') else {},

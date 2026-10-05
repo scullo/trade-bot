@@ -55,6 +55,7 @@ class MarketDataManager:
         }
         # Global Likidasyon Radarı (!forceOrder) Veri Yapıları
         self.recent_liquidations = deque(maxlen=60)
+        self.symbol_liquidations_deque = {}  # norm_s -> deque of (timestamp, usd_size, is_long_liq)
         self.symbol_liquidations_15m = {}
         self.global_liquidation_stats = {
             'total_usd_24h': 0.0,
@@ -154,6 +155,11 @@ class MarketDataManager:
         self.on_tick_callback = None
         self.on_candle_close_callback = None
         self.last_candle_callback_ts = {}  # norm_s -> int(candle timestamp) mükerrer mum tetikleme önleyici
+
+        # 🌐 WebSocket Canlılık Heartbeat & Anti-Zombi Watchdog (Aegis Sentinel Entegrasyonu)
+        self.last_stream_tick_time = 0.0
+        self.last_chunk_msg_ts = {}
+        self._active_stream_tasks = []
 
 
     def _clean_symbol(self, symbol: str) -> str:
@@ -677,9 +683,46 @@ class MarketDataManager:
         return list(getattr(self, 'recent_liquidations', []))[-limit:]
 
     def get_symbol_liquidation_stats(self, symbol: str) -> dict:
+        now_ts = time.time()
+        cutoff_ts = now_ts - 900.0
+
+        # Gerçek 900 saniyelik zaman damgalı budama (deque pruning)
+        deques = getattr(self, 'symbol_liquidations_deque', {})
+        if symbol in deques:
+            dq = deques[symbol]
+            while dq and dq[0][0] < cutoff_ts:
+                dq.popleft()
+            long_usd = sum(item[1] for item in dq if item[2])
+            short_usd = sum(item[1] for item in dq if not item[2])
+            last_update = dq[-1][0] if dq else 0.0
+            total = long_usd + short_usd
+            dom = 'NEUTRAL'
+            if long_usd > short_usd * 1.4 and long_usd >= 10000:
+                dom = 'LONG_SWEEP'
+            elif short_usd > long_usd * 1.4 and short_usd >= 1000:
+                dom = 'SHORT_SWEEP'
+            dom_side = 'LONG' if long_usd >= short_usd else 'SHORT'
+            if not dq:
+                dom_side = 'NEUTRAL'
+                dom = 'NEUTRAL'
+            res = {
+                'symbol': symbol,
+                'long_usd': round(long_usd, 2),
+                'short_usd': round(short_usd, 2),
+                'total_usd': round(total, 2),
+                'dominant_bias': dom,
+                'dominant_side': dom_side,
+                'is_hot': total >= 25000,
+                'last_update': last_update
+            }
+            if hasattr(self, 'symbol_liquidations_15m'):
+                self.symbol_liquidations_15m[symbol] = res
+            return res
+
+        # Deque henüz yoksa (örn. test senaryolarında doğrudan symbol_liquidations_15m atanmışsa)
         data = getattr(self, 'symbol_liquidations_15m', {}).get(symbol, {'long_usd': 0.0, 'short_usd': 0.0, 'last_update': 0})
         # VDA-07: 15 dakikadan (900s) eski tasfiyeleri 0.0 olarak döndür (bayat tasfiye vetosu kalkar)
-        if (time.time() - data.get('last_update', 0)) > 900.0:
+        if (now_ts - data.get('last_update', 0)) > 900.0:
             return {
                 'symbol': symbol,
                 'long_usd': 0.0,
@@ -704,10 +747,37 @@ class MarketDataManager:
             'total_usd': round(total, 2),
             'dominant_bias': dom,
             'dominant_side': 'LONG' if long_usd >= short_usd else 'SHORT',
-            'is_hot': total >= 25000
+            'is_hot': total >= 25000,
+            'last_update': data.get('last_update', 0)
         }
 
     def get_global_liquidation_summary(self) -> dict:
+        now_ts = time.time()
+        cutoff_ts = now_ts - 900.0
+
+        # Aktif 15dk deque'lerden en çok tasfiye olan sembolü dinamik hesapla ve buda
+        top_sym = '-'
+        top_val = 0.0
+        deques = getattr(self, 'symbol_liquidations_deque', {})
+        if deques:
+            for sym_k, dq_k in list(deques.items()):
+                while dq_k and dq_k[0][0] < cutoff_ts:
+                    dq_k.popleft()
+                tot_s = sum(item[1] for item in dq_k)
+                if tot_s > top_val:
+                    top_val = tot_s
+                    top_sym = sym_k
+                if hasattr(self, 'symbol_liquidations_15m') and sym_k in self.symbol_liquidations_15m:
+                    l_s = sum(item[1] for item in dq_k if item[2])
+                    s_s = sum(item[1] for item in dq_k if not item[2])
+                    self.symbol_liquidations_15m[sym_k]['long_usd'] = round(l_s, 2)
+                    self.symbol_liquidations_15m[sym_k]['short_usd'] = round(s_s, 2)
+                    self.symbol_liquidations_15m[sym_k]['total_usd'] = round(tot_s, 2)
+                    self.symbol_liquidations_15m[sym_k]['dominant_side'] = 'LONG' if l_s >= s_s else 'SHORT'
+            stats = getattr(self, 'global_liquidation_stats', {})
+            stats['top_symbol'] = top_sym
+            stats['top_symbol_usd'] = round(top_val, 2)
+
         stats = getattr(self, 'global_liquidation_stats', {})
         tot = stats.get('total_usd_24h', 0.0)
         l_usd = stats.get('long_usd_24h', 0.0)
@@ -950,7 +1020,7 @@ class MarketDataManager:
             'top_buy_ratio': top_buy.get('ratio_60s', 50.0),
             'top_buy_delta': top_buy.get('delta_60s', 0.0),
             'top_sell_sym': top_sell.get('symbol', '-'),
-            'top_sell_ratio': top_sell.get('ratio_60s', 50.0),
+            'top_sell_ratio': round(100.0 - float(top_sell.get('ratio_60s', 50.0)), 1) if top_sell else 50.0,
             'top_sell_delta': top_sell.get('delta_60s', 0.0),
             'top_buyers': top_buyers,
             'top_sellers': top_sellers,
@@ -1394,8 +1464,16 @@ class MarketDataManager:
         diff_buy = 0.0
         diff_sell = 0.0
         if h_deque and len(h_deque) >= 2:
-            diff_buy = max(0.0, float(h_deque[-1][1] - h_deque[0][1]))
-            diff_sell = max(0.0, float(h_deque[-1][2] - h_deque[0][2]))
+            now_ts = time.time()
+            t_cutoff = now_ts - 60.0
+            if h_deque[-1][0] >= t_cutoff:
+                old_sample = h_deque[0]
+                for s_item in h_deque:
+                    if s_item[0] >= t_cutoff:
+                        old_sample = s_item
+                        break
+                diff_buy = max(0.0, float(h_deque[-1][1] - old_sample[1]))
+                diff_sell = max(0.0, float(h_deque[-1][2] - old_sample[2]))
 
         top_bid_usd = float(depth.get('bid_price', 0.0)) * float(depth.get('bid_qty', 0.0))
         top_ask_usd = float(depth.get('ask_price', 0.0)) * float(depth.get('ask_qty', 0.0))
@@ -1410,7 +1488,7 @@ class MarketDataManager:
         ask_ice_r = float(ice_data.get('ask_iceberg_ratio', 1.0))
         bid_ice_r = float(ice_data.get('bid_iceberg_ratio', 1.0))
         iceberg_ratio = max(ask_ice_r, bid_ice_r)
-        has_iceberg = bool(ice_data.get('has_seller_iceberg') or ice_data.get('has_buyer_iceberg') or iceberg_ratio >= 3.5)
+        has_iceberg = bool(ice_data.get('has_seller_iceberg') or ice_data.get('has_buyer_iceberg') or iceberg_ratio >= 3.0)
         iceberg_side = str(ice_data.get('iceberg_side', 'NONE'))
 
         # 2b. Bookmap Mikro-Emilim Süngeri ve Kurumsal Çapa Duvarı Tespiti
@@ -1804,8 +1882,19 @@ class MarketDataManager:
             depth = self.orderbook_depth.get(norm_s) or self.orderbook_depth.get(clean_s, {})
             h_deque = self.symbol_cvd_history.get(clean_s) or self.symbol_cvd_history.get(norm_s)
             if h_deque and len(h_deque) >= 2 and depth:
-                diff_buy = max(0.0, float(h_deque[-1][1] - h_deque[0][1]))
-                diff_sell = max(0.0, float(h_deque[-1][2] - h_deque[0][2]))
+                now_ts = time.time()
+                t_cutoff = now_ts - 60.0
+                if h_deque[-1][0] >= t_cutoff:
+                    old_sample = h_deque[0]
+                    for s_item in h_deque:
+                        if s_item[0] >= t_cutoff:
+                            old_sample = s_item
+                            break
+                    diff_buy = max(0.0, float(h_deque[-1][1] - old_sample[1]))
+                    diff_sell = max(0.0, float(h_deque[-1][2] - old_sample[2]))
+                else:
+                    diff_buy = 0.0
+                    diff_sell = 0.0
                 top_bid_usd = float(depth.get('bid_price', 0.0)) * float(depth.get('bid_qty', 0.0))
                 top_ask_usd = float(depth.get('ask_price', 0.0)) * float(depth.get('ask_qty', 0.0))
                 default_top_depth_usd = 25000.0 if (symbol in ["BTC/USDT", "ETH/USDT", "SOL/USDT"]) else 8000.0
@@ -1823,7 +1912,7 @@ class MarketDataManager:
                 res_met['ask_iceberg_ratio'] = ask_r
                 res_met['bid_iceberg_ratio'] = bid_r
                 res_met['iceberg_side'] = str(ice_live.get('iceberg_side', 'NONE'))
-                res_met['has_iceberg'] = bool(ice_live.get('has_seller_iceberg') or ice_live.get('has_buyer_iceberg') or max_r >= 3.5)
+                res_met['has_iceberg'] = bool(ice_live.get('has_seller_iceberg') or ice_live.get('has_buyer_iceberg') or max_r >= 3.0)
                 return res_met
         except Exception:
             pass
@@ -2032,8 +2121,19 @@ class MarketDataManager:
         diff_buy = 0.0
         diff_sell = 0.0
         if h_deque and len(h_deque) >= 2:
-            diff_buy = max(0.0, float(h_deque[-1][1] - h_deque[0][1]))
-            diff_sell = max(0.0, float(h_deque[-1][2] - h_deque[0][2]))
+            now_t = time.time()
+            t_cutoff = now_t - 60.0
+            if h_deque[-1][0] >= t_cutoff:
+                old_sample = h_deque[0]
+                for s_item in h_deque:
+                    if s_item[0] >= t_cutoff:
+                        old_sample = s_item
+                        break
+                diff_buy = max(0.0, float(h_deque[-1][1] - old_sample[1]))
+                diff_sell = max(0.0, float(h_deque[-1][2] - old_sample[2]))
+            else:
+                diff_buy = 0.0
+                diff_sell = 0.0
 
         zone_bid = bid_usd_02 if bid_usd_02 > 0 else (top_bid_q * 3.5)
         zone_ask = ask_usd_02 if ask_usd_02 > 0 else (top_ask_q * 3.5)
@@ -2458,104 +2558,112 @@ class MarketDataManager:
                     async with aiohttp.ClientSession() as session:
                         async with session.ws_connect(url, heartbeat=10) as ws:
                             print(">> [CANLI] Global !bookTicker Fiyat Akisi AKTIF.")
-                            async for msg in ws:
+                            while True:
+                                try:
+                                    msg = await asyncio.wait_for(ws.receive(), timeout=35.0)
+                                except asyncio.TimeoutError:
+                                    print(">> [BOOKTICKER ZOMBİ UYARISI] 35s veri gelmedi, soket yenileniyor...")
+                                    break
+
                                 if msg.type == aiohttp.WSMsgType.TEXT:
+                                    self.last_stream_tick_time = time.time()
                                     data = json.loads(msg.data)
                                     raw_s = data.get('s', '').upper()
-                                    if raw_s in symbol_map:
-                                        norm_s = symbol_map[raw_s]
-                                        bid = float(data.get('b', 0.0))
-                                        ask = float(data.get('a', 0.0))
-                                        bid_qty = float(data.get('B', 0.0))
-                                        ask_qty = float(data.get('A', 0.0))
-                                        price = (bid + ask) / 2.0 if (bid and ask) else (bid or ask)
-                                        if price > 0:
-                                            self.current_prices[norm_s] = price
+                                    if raw_s not in symbol_map:
+                                        continue
+                                    norm_s = symbol_map[raw_s]
+                                    bid = float(data.get('b', 0.0))
+                                    ask = float(data.get('a', 0.0))
+                                    bid_qty = float(data.get('B', 0.0))
+                                    ask_qty = float(data.get('A', 0.0))
+                                    price = (bid + ask) / 2.0 if (bid and ask) else (bid or ask)
+                                    if price > 0:
+                                        self.current_prices[norm_s] = price
+                                        now_ts = time.time()
+                                        if norm_s not in self.symbol_price_history:
+                                            self.symbol_price_history[norm_s] = deque(maxlen=60)
+                                        p_dq = self.symbol_price_history[norm_s]
+                                        if not p_dq or (now_ts - p_dq[-1][0] >= 1.0):
+                                            p_dq.append((now_ts, price))
+
+                                        # Order Book Imbalance (OBI) & Likidite Duvarı Hesaplama (<0.001ms)
+                                        tot_q = bid_qty + ask_qty
+                                        if tot_q > 0:
+                                            imbalance = (bid_qty - ask_qty) / tot_q
+                                            ratio = bid_qty / max(0.0001, ask_qty)
+                                            wall_side = 'BALANCED'
+                                            if ratio >= 1.5:
+                                                wall_side = 'BID_WALL'
+                                            elif ratio <= 0.65:
+                                                wall_side = 'ASK_WALL'
+
                                             now_ts = time.time()
-                                            if norm_s not in self.symbol_price_history:
-                                                self.symbol_price_history[norm_s] = deque(maxlen=60)
-                                            p_dq = self.symbol_price_history[norm_s]
-                                            if not p_dq or (now_ts - p_dq[-1][0] >= 1.0):
-                                                p_dq.append((now_ts, price))
+                                            prev_depth = self.orderbook_depth.get(norm_s, {})
+                                            prev_wall = prev_depth.get('wall_side', 'BALANCED')
+                                            first_seen = prev_depth.get('wall_first_seen', 0.0)
+                                            prev_wall_p = prev_depth.get('wall_price', 0.0)
 
-                                            # Order Book Imbalance (OBI) & Likidite Duvarı Hesaplama (<0.001ms)
-                                            tot_q = bid_qty + ask_qty
-                                            if tot_q > 0:
-                                                imbalance = (bid_qty - ask_qty) / tot_q
-                                                ratio = bid_qty / max(0.0001, ask_qty)
-                                                wall_side = 'BALANCED'
-                                                if ratio >= 1.5:
-                                                    wall_side = 'BID_WALL'
-                                                elif ratio <= 0.65:
-                                                    wall_side = 'ASK_WALL'
+                                            current_wall_p = bid if wall_side == 'BID_WALL' else (ask if wall_side == 'ASK_WALL' else 0.0)
+                                            p_shift = abs(current_wall_p - prev_wall_p) / prev_wall_p if (prev_wall_p > 0 and current_wall_p > 0) else 0.0
 
-                                                now_ts = time.time()
-                                                prev_depth = self.orderbook_depth.get(norm_s, {})
-                                                prev_wall = prev_depth.get('wall_side', 'BALANCED')
-                                                first_seen = prev_depth.get('wall_first_seen', 0.0)
-                                                prev_wall_p = prev_depth.get('wall_price', 0.0)
+                                            # VDA-11: Fiyat toleransı paritenin ATR'sinin %10'u olarak dinamikleştirilecek
+                                            sym_atr_pct = float(getattr(self, 'symbol_metrics', {}).get(norm_s, {}).get('atr_pct', 1.2))
+                                            dyn_wall_tolerance = max(0.0008, (sym_atr_pct / 100.0) * 0.10)
 
-                                                current_wall_p = bid if wall_side == 'BID_WALL' else (ask if wall_side == 'ASK_WALL' else 0.0)
-                                                p_shift = abs(current_wall_p - prev_wall_p) / prev_wall_p if (prev_wall_p > 0 and current_wall_p > 0) else 0.0
+                                            # Fiyata Sabit (Price-Anchored) Duvar Yaşlanması: Duvar yönü aynı ve fiyat kayması <= dyn_wall_tolerance olmalı
+                                            if wall_side != 'BALANCED' and wall_side == prev_wall and p_shift <= dyn_wall_tolerance:
+                                                duration_sec = (now_ts - first_seen) if first_seen > 0 else 0.0
+                                            elif wall_side != 'BALANCED':
+                                                first_seen = now_ts
+                                                duration_sec = 0.0
+                                            else:
+                                                first_seen = 0.0
+                                                duration_sec = 0.0
 
-                                                # VDA-11: Fiyat toleransı paritenin ATR'sinin %10'u olarak dinamikleştirilecek
-                                                sym_atr_pct = float(getattr(self, 'symbol_metrics', {}).get(norm_s, {}).get('atr_pct', 1.2))
-                                                dyn_wall_tolerance = max(0.0008, (sym_atr_pct / 100.0) * 0.10)
+                                            # Makas (Spread %) Hesabı
+                                            mid_p = (bid + ask) / 2.0 if (bid and ask) else price
+                                            spread_p = round(((ask - bid) / mid_p * 100.0), 4) if mid_p > 0 and ask > bid else 0.0
 
-                                                # Fiyata Sabit (Price-Anchored) Duvar Yaşlanması: Duvar yönü aynı ve fiyat kayması <= dyn_wall_tolerance olmalı
-                                                if wall_side != 'BALANCED' and wall_side == prev_wall and p_shift <= dyn_wall_tolerance:
-                                                    duration_sec = (now_ts - first_seen) if first_seen > 0 else 0.0
-                                                elif wall_side != 'BALANCED':
-                                                    first_seen = now_ts
-                                                    duration_sec = 0.0
-                                                else:
-                                                    first_seen = 0.0
-                                                    duration_sec = 0.0
+                                            # Sahte Duvar (Spoofing) Hızlı Kaçış Tespiti:
+                                            is_spoof = False
+                                            if prev_wall != 'BALANCED' and wall_side == 'BALANCED' and prev_depth.get('wall_duration_sec', 0.0) < WALL_MIN_AGE_SEC:
+                                                is_spoof = True
 
-                                                # Makas (Spread %) Hesabı
-                                                mid_p = (bid + ask) / 2.0 if (bid and ask) else price
-                                                spread_p = round(((ask - bid) / mid_p * 100.0), 4) if mid_p > 0 and ask > bid else 0.0
+                                            self.orderbook_depth[norm_s] = {
+                                                'symbol': norm_s,
+                                                'bid_price': bid,
+                                                'bid_qty': bid_qty,
+                                                'ask_price': ask,
+                                                'ask_qty': ask_qty,
+                                                'imbalance': round(imbalance, 4),
+                                                'ratio': round(ratio, 4),
+                                                'wall_side': wall_side,
+                                                'wall_price': current_wall_p,
+                                                'wall_duration_sec': round(duration_sec, 2),
+                                                'wall_first_seen': first_seen,
+                                                'spread_pct': spread_p,
+                                                'is_spoof_risk': is_spoof,
+                                                'last_update': now_ts
+                                            }
 
-                                                # Sahte Duvar (Spoofing) Hızlı Kaçış Tespiti:
-                                                is_spoof = False
-                                                if prev_wall != 'BALANCED' and wall_side == 'BALANCED' and prev_depth.get('wall_duration_sec', 0.0) < WALL_MIN_AGE_SEC:
-                                                    is_spoof = True
+                                            # ⚡ BTC 60s Mikro-Şok Takibi (BTC 60s Velocity & Shock Gate)
+                                            if norm_s == "BTC/USDT":
+                                                self.btc_price_60s_deque.append((now_ts, price))
+                                                while self.btc_price_60s_deque and (now_ts - self.btc_price_60s_deque[0][0] > 60.0):
+                                                    self.btc_price_60s_deque.popleft()
+                                                if len(self.btc_price_60s_deque) >= 2:
+                                                    oldest_p = self.btc_price_60s_deque[0][1]
+                                                    if oldest_p > 0:
+                                                        self.btc_velocity_60s = round(((price - oldest_p) / oldest_p) * 100.0, 3)
+                                                        if abs(self.btc_velocity_60s) >= BTC_SHOCK_60S_PCT:
+                                                            if not self.btc_shock_gate_active:
+                                                                print(f">> [⚡ BTC MİKRO-ŞOK GEÇİDİ DEVREDE] BTC 60s Hız: %{self.btc_velocity_60s:+.2f} -> Altcoinler {BTC_SHOCK_COOLDOWN_SEC:.0f}s donduruldu!")
+                                                            self.btc_shock_gate_active = True
+                                                            self.btc_shock_gate_expiry = now_ts + BTC_SHOCK_COOLDOWN_SEC
+                                                            self.btc_shock_pct = self.btc_velocity_60s
 
-                                                self.orderbook_depth[norm_s] = {
-                                                    'symbol': norm_s,
-                                                    'bid_price': bid,
-                                                    'bid_qty': bid_qty,
-                                                    'ask_price': ask,
-                                                    'ask_qty': ask_qty,
-                                                    'imbalance': round(imbalance, 4),
-                                                    'ratio': round(ratio, 4),
-                                                    'wall_side': wall_side,
-                                                    'wall_price': current_wall_p,
-                                                    'wall_duration_sec': round(duration_sec, 2),
-                                                    'wall_first_seen': first_seen,
-                                                    'spread_pct': spread_p,
-                                                    'is_spoof_risk': is_spoof,
-                                                    'last_update': now_ts
-                                                }
-
-                                                # ⚡ BTC 60s Mikro-Şok Takibi (BTC 60s Velocity & Shock Gate)
-                                                if norm_s == "BTC/USDT":
-                                                    self.btc_price_60s_deque.append((now_ts, price))
-                                                    while self.btc_price_60s_deque and (now_ts - self.btc_price_60s_deque[0][0] > 60.0):
-                                                        self.btc_price_60s_deque.popleft()
-                                                    if len(self.btc_price_60s_deque) >= 2:
-                                                        oldest_p = self.btc_price_60s_deque[0][1]
-                                                        if oldest_p > 0:
-                                                            self.btc_velocity_60s = round(((price - oldest_p) / oldest_p) * 100.0, 3)
-                                                            if abs(self.btc_velocity_60s) >= BTC_SHOCK_60S_PCT:
-                                                                if not self.btc_shock_gate_active:
-                                                                    print(f">> [⚡ BTC MİKRO-ŞOK GEÇİDİ DEVREDE] BTC 60s Hız: %{self.btc_velocity_60s:+.2f} -> Altcoinler {BTC_SHOCK_COOLDOWN_SEC:.0f}s donduruldu!")
-                                                                self.btc_shock_gate_active = True
-                                                                self.btc_shock_gate_expiry = now_ts + BTC_SHOCK_COOLDOWN_SEC
-                                                                self.btc_shock_pct = self.btc_velocity_60s
-
-                                            if self.on_tick_callback:
-                                                await self.on_tick_callback(norm_s, price)
+                                        if self.on_tick_callback:
+                                            await self.on_tick_callback(norm_s, price)
 
                                 elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
                                     break
@@ -2572,15 +2680,25 @@ class MarketDataManager:
         chunk_size = 25
         kline_chunks = [kline_streams[i:i + chunk_size] for i in range(0, len(kline_streams), chunk_size)]
 
-        async def kline_worker(chunk):
+        async def kline_worker(chunk_id, chunk):
             url = f"wss://fstream.binance.com/market/stream?streams={'/'.join(chunk)}"
             while True:
                 try:
+                    self.last_chunk_msg_ts[chunk_id] = time.time()
                     async with aiohttp.ClientSession() as session:
                         async with session.ws_connect(url, heartbeat=10) as ws:
-                            print(f">> [CANLI] K-Line & Mikro-CVD Stream chunk baglandi ({len(chunk)} parite).")
-                            async for msg in ws:
+                            print(f">> [CANLI] K-Line & Mikro-CVD Stream chunk-{chunk_id} bağlandı ({len(chunk)} parite).")
+                            while True:
+                                try:
+                                    msg = await asyncio.wait_for(ws.receive(), timeout=45.0)
+                                except asyncio.TimeoutError:
+                                    print(f">> [K-LINE CHUNK-{chunk_id} ZOMBİ TESPİTİ] 45s veri gelmedi, soket yenileniyor...")
+                                    break
+
                                 if msg.type == aiohttp.WSMsgType.TEXT:
+                                    now_t = time.time()
+                                    self.last_stream_tick_time = now_t
+                                    self.last_chunk_msg_ts[chunk_id] = now_t
                                     data = json.loads(msg.data)
                                     payload = data.get('data', data) if isinstance(data, dict) else {}
                                     kline = payload.get('k', {})
@@ -2803,16 +2921,32 @@ class MarketDataManager:
                                         }
                                         self.recent_liquidations.append(event)
 
-                                        # 15 Dakikalık Parite Bazlı Kümülatif Takip (900s üzeri bayat tasfiyeler sıfırlanır)
-                                        if norm_s not in self.symbol_liquidations_15m or (now_ts - self.symbol_liquidations_15m[norm_s].get('last_update', 0) > 900.0):
-                                            self.symbol_liquidations_15m[norm_s] = {'long_usd': 0.0, 'short_usd': 0.0, 'last_update': now_ts}
-                                        if is_long_liq:
-                                            self.symbol_liquidations_15m[norm_s]['long_usd'] += usd_size
-                                        else:
-                                            self.symbol_liquidations_15m[norm_s]['short_usd'] += usd_size
-                                        self.symbol_liquidations_15m[norm_s]['last_update'] = now_ts
+                                        # 15 Dakikalık Parite Bazlı Kayan Pencere (Gerçek 900s deque pruning)
+                                        if not hasattr(self, 'symbol_liquidations_deque'):
+                                            self.symbol_liquidations_deque = {}
+                                        if norm_s not in self.symbol_liquidations_deque:
+                                            self.symbol_liquidations_deque[norm_s] = deque()
+                                        dq = self.symbol_liquidations_deque[norm_s]
+                                        dq.append((now_ts, usd_size, is_long_liq))
 
-                                        # Global İstatistik Güncelleme
+                                        cutoff_ts = now_ts - 900.0
+                                        while dq and dq[0][0] < cutoff_ts:
+                                            dq.popleft()
+
+                                        l_usd_15m = sum(item[1] for item in dq if item[2])
+                                        s_usd_15m = sum(item[1] for item in dq if not item[2])
+                                        tot_15m = l_usd_15m + s_usd_15m
+
+                                        self.symbol_liquidations_15m[norm_s] = {
+                                            'symbol': norm_s,
+                                            'long_usd': round(l_usd_15m, 2),
+                                            'short_usd': round(s_usd_15m, 2),
+                                            'total_usd': round(tot_15m, 2),
+                                            'dominant_side': 'LONG' if l_usd_15m >= s_usd_15m else 'SHORT',
+                                            'last_update': now_ts
+                                        }
+
+                                        # Global İstatistik Güncelleme (Canlı Oturum Toplamı)
                                         self.global_liquidation_stats['total_usd_24h'] += usd_size
                                         if is_long_liq:
                                             self.global_liquidation_stats['long_usd_24h'] += usd_size
@@ -2820,16 +2954,18 @@ class MarketDataManager:
                                             self.global_liquidation_stats['short_usd_24h'] += usd_size
                                         self.global_liquidation_stats['last_event_time'] = time_str
 
-                                        # En çok tasfiye olan coini güncelle
+                                        # En çok tasfiye olan coini aktif 15dk penceresine göre güncelle
                                         top_sym = '-'
                                         top_val = 0.0
-                                        for sym_k, v_data in self.symbol_liquidations_15m.items():
-                                            tot_s = v_data['long_usd'] + v_data['short_usd']
+                                        for sym_k, dq_k in self.symbol_liquidations_deque.items():
+                                            while dq_k and dq_k[0][0] < cutoff_ts:
+                                                dq_k.popleft()
+                                            tot_s = sum(item[1] for item in dq_k)
                                             if tot_s > top_val:
                                                 top_val = tot_s
                                                 top_sym = sym_k
                                         self.global_liquidation_stats['top_symbol'] = top_sym
-                                        self.global_liquidation_stats['top_symbol_usd'] = top_val
+                                        self.global_liquidation_stats['top_symbol_usd'] = round(top_val, 2)
                                     except Exception:
                                         pass
                                 elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
@@ -3135,9 +3271,32 @@ class MarketDataManager:
             resilient_worker("DeribitGexRadar", deribit_gex_worker),
             resilient_worker("CoinbaseLeadLag", coinbase_lead_lag_worker),
             resilient_worker("OpenInterestRadar", open_interest_worker),
-        ] + [resilient_worker(f"KLine-Chunk-{i}", kline_worker, c) for i, c in enumerate(kline_chunks)]
-        await asyncio.gather(*tasks)
+        ] + [resilient_worker(f"KLine-Chunk-{i}", kline_worker, i, c) for i, c in enumerate(kline_chunks)]
 
+        self._active_stream_tasks = [asyncio.create_task(t) for t in tasks]
+        try:
+            await asyncio.gather(*self._active_stream_tasks)
+        except asyncio.CancelledError:
+            print(">> [WEBSOCKET] Canlı akış görevleri iptal edildi (reconnect / oturum yenileme).")
+
+    async def reconnect(self):
+        """
+        Aegis Sentinel ve Anti-Zombie Watchdog tarafından tetiklenen otonom yeniden bağlanma:
+        35s+ veri gecikmesi olduğunda tüm WebSocket görevlerini iptal eder ve temiz bir oturumla yeniden başlatır.
+        """
+        print(">> [WEBSOCKET RECONNECT] 35s+ veri gecikmesi tespit edildi: Canlı akışlar sonlandırılıp temiz oturum başlatılıyor...")
+        self.last_stream_tick_time = time.time()
+        if hasattr(self, '_active_stream_tasks') and self._active_stream_tasks:
+            for t in self._active_stream_tasks:
+                if not t.done():
+                    t.cancel()
+            self._active_stream_tasks = []
+        await asyncio.sleep(1)
 
     async def close(self):
+        if hasattr(self, '_active_stream_tasks') and self._active_stream_tasks:
+            for t in self._active_stream_tasks:
+                if not t.done():
+                    t.cancel()
+            self._active_stream_tasks = []
         await self.exchange.close()

@@ -280,3 +280,20 @@ ENABLE_DYNAMIC_RUNNER_PROFIT_LOCK = True# Anti-KMNO: TP1 sonrası koşan runner 
 RUNNER_LOCK_TIER1_MFE = 2.0             # %2.0 MFE'de stop en az +%1.0 net kâra kilitlenir
 RUNNER_LOCK_TIER2_MFE = 3.5             # %3.5 MFE'de stop en az +%2.0 net kâra kilitlenir
 RUNNER_LOCK_TIER3_MFE = 5.0             # %5.0 MFE'de stop en az +%3.0 net kâra kilitlenir
+
+# 14. Apollo Kalman Durum-Uzay Filtresi & SpaceX PID Kâr Kontrolörü (AstroQuant Reformu)
+ENABLE_KALMAN_PRICE_FILTER = True       # Sahte fitil kırılımlarını süzen Apollo Kalman Filtresi
+KALMAN_PROCESS_NOISE_Q = 1e-4           # Süreç gürültüsü kovaryansı (Q)
+KALMAN_MEASUREMENT_NOISE_R0 = 1e-2      # Baz ölçüm gürültüsü kovaryansı (R0)
+KALMAN_WICK_PENALTY_MULT = 5.0          # Fitil/gövde karesi ceza çarpanı (alpha)
+
+ENABLE_PID_PROFIT_CONTROLLER = True     # SpaceX Falcon 9 Dinamik Kâr Sürüşü & Zirve Kilidi
+PID_KP = 0.50                           # Oransal kazanç (P - Kâr mesafesi)
+PID_KI = 0.05                           # İntegral kazanç (I - Kârda kalma süresi enerjisi)
+PID_KD = 0.35                           # Türev kazancı (D - Momentum hız değişimi)
+PID_MIN_MFE_TRIGGER = 2.0               # PID'nin devreye girdiği asgari MFE eşiği (%2.0 ROE)
+PID_ATR_NOISE_FLOOR_MULT = 1.5          # Gürültüde erken infazı önleyen zorunlu nefes tamponu (1.5x ATR)
+PID_CAPTURE_TIER1 = 0.60                # Erken kârda (%2 - %4 ROE) yakalama oranı (%40 geniş nefes payı)
+PID_CAPTURE_TIER2 = 0.70                # Orta kârda (%4 - %8 ROE) yakalama oranı (%30 nefes payı)
+PID_CAPTURE_TIER3 = 0.80                # Zirve kârda (%8+ ROE) yakalama oranı (%20 nefes payı)
+

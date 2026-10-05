@@ -206,8 +206,9 @@ def validate_pre_trade_clearance(
 
     # ── 3. MAKRO BOĞA REJİMİ COUNTER-TREND SHORT KALKANI ─────────────────────
     if ENABLE_REGIME_DIRECTIONAL_GATE and side == "SHORT" and market_regime:
+        # Sadece "GÜÇLÜ BOĞA" veya net "BULL_TREND" tam boğa trendi sayılır; Ilımlı durumlar geçiş / ping-pong rejimindedir
         regime_upper = str(market_regime).upper()
-        is_bull_regime = ("GÜÇLÜ BOĞA" in regime_upper) or ("ILIMLI BOĞA" in regime_upper) or ("BULL" in regime_upper)
+        is_bull_regime = ("GÜÇLÜ BOĞA" in regime_upper) or ("BULL_TREND" in regime_upper) or ("EXTREME_BULL" in regime_upper) or (regime_upper == "BULL")
         
         if is_bull_regime:
             cvd_val = float(cvd_taker_pct or 50.0)

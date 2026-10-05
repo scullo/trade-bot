@@ -108,9 +108,12 @@ HEADERS_GRANULAR = [
     ('Kurulum Tipi (Arketip)', 24),
     ('Rejim Uyumu & Filtre', 26),
     ('Coinbase Spot LLI (bps)', 24),
-    ('L2 Derinlik Kaynağı', 20)
+    ('L2 Derinlik Kaynağı', 20),
+    ('Apollo Kalman Teyidi', 24),
+    ('SpaceX PID Kâr Kilidi', 24)
 ]
 headers_granular = HEADERS_GRANULAR
+
 
 def create_styled_excel_report(history_data: list, current_balance: float = 10000.0, initial_balance: float = 10000.0, funding_data: dict = None) -> io.BytesIO:
     with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp:
@@ -442,7 +445,9 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         trap_tag = "🚨 Likidite Tuzağı (Fakeout)" if is_fakeout else ("🎯 Başarılı İşlem" if is_win else "🛡️ Normal Trend Stopu")
 
         # Kâr Kilit Tipi
-        if 'Dinamik ROE' in c_reason:
+        if 'SpaceX PID' in c_reason or 'PID' in c_reason or h.get('pid_engaged'):
+            lock_type = "🚀 SpaceX PID Zirve Kilidi"
+        elif 'Dinamik ROE' in c_reason:
             lock_type = "🎯 Dinamik ROE (+%7.0)"
         elif 'Zaman Kalkanı' in c_reason:
             lock_type = "⏳ 90dk Zaman Kalkanı"
@@ -456,6 +461,7 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
             lock_type = "🚀 TP2 / Trend Kapanışı"
         else:
             lock_type = "-"
+
 
         sym = h.get('symbol', 'Bilinmeyen')
         sym_st = pair_stats.get(sym, {'wins': 0, 'trades': 1, 'net_pnl': 0, 'fakeouts': 0, 'mfe_sum': 0})
@@ -691,6 +697,14 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
 
         ws.write(r_idx, 93, cb_display, cell_center)
         ws.write(r_idx, 94, provider_display, cell_center)
+
+        # 2 AstroQuant Sütunu: Kalman & SpaceX PID (95, 96)
+        kalman_txt = "🛡️ Kalman Onaylı" if ("Apollo_Kalman" in str(h.get('confluence_list', [])) or "Kalman" in str(h.get('reason', ''))) else "⚪ Standart"
+        pid_eff = _safe_float(h.get('pid_efficiency', 0.0))
+        pid_txt = f"🚀 PID Kilit (%{pid_eff:.0f})" if (h.get('pid_engaged') or 'PID' in c_reason) else "⚪ Standart Stop"
+        ws.write(r_idx, 95, kalman_txt, cell_center)
+        ws.write(r_idx, 96, pid_txt, cell_roe_green if 'PID' in pid_txt else cell_center)
+
 
     def render_table_sheet(ws_obj, t_list):
 

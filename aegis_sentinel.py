@@ -258,6 +258,8 @@ class ValkyrieAegisSentinel:
                 item = market_data.symbol_liquidations_15m[sym]
                 if now_t - item.get('last_update', 0) > 3600:
                     del market_data.symbol_liquidations_15m[sym]
+                    if hasattr(market_data, 'symbol_liquidations_deque') and sym in market_data.symbol_liquidations_deque:
+                        del market_data.symbol_liquidations_deque[sym]
                     pruned_liqs += 1
         if pruned_liqs > 0:
             actions_taken.append(f"🧹 {pruned_liqs} bayat tasfiye kaydı bellekten tahliye edildi.")

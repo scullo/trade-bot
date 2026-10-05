@@ -1,6 +1,8 @@
 import time
+import math
 import numpy as np
 import pandas as pd
+
 
 def calculate_camarilla_pivots(high: float, low: float, close: float) -> dict:
     high, low, close = float(high), float(low), float(close)
@@ -1541,6 +1543,212 @@ def calculate_hawkes_avalanche(
     except Exception as e:
         res['desc'] = f'⚪ Hawkes Hesaplama İstisnası: {e}'
         return res
+
+
+# =====================================================================
+# 14. ASTROQUANT: APOLLO KALMAN DURUM-UZAY FİLTRESİ (STATE-SPACE FILTER)
+# =====================================================================
+def calculate_kalman_state(
+    prices,
+    wick_ratios=None,
+    q: float = 1e-4,
+    r0: float = 1e-2,
+    wick_penalty_mult: float = 5.0
+) -> dict:
+    """
+    NASA Apollo Durum-Uzay (State-Space) Filtresi.
+    Ham piyasa fiyatindaki fitil ve likidasyon avi gurultusunu (measurement noise)
+    dinamik olarak ayiklar ve gercek piyasa durumunu (equilibrium state) hesaplar.
+    
+    Ölçüm Kovaryansı: R_t = R0 * (1.0 + wick_penalty_mult * wick_ratio^2)
+    Gürültülü fitillerde R_t büyür -> Kalman fiyata inanmaz, çizgisi bükülmez.
+    Hacimli gerçek kırılımlarda R_t küçülür -> Kalman tam gaz fiyata yapışır.
+    """
+    if prices is None or len(prices) == 0:
+        return {
+            'clean_price': 0.0,
+            'state_variance': 0.0,
+            'z_score': 0.0,
+            'noise_dampening_pct': 0.0,
+            'raw_price': 0.0
+        }
+        
+    prices = np.asarray(prices, dtype=float)
+    n = len(prices)
+    if n == 1:
+        return {
+            'clean_price': float(prices[0]),
+            'state_variance': 1.0,
+            'z_score': 0.0,
+            'noise_dampening_pct': 0.0,
+            'raw_price': float(prices[0])
+        }
+        
+    if wick_ratios is None or len(wick_ratios) != n:
+        wick_ratios = np.zeros(n, dtype=float)
+    else:
+        wick_ratios = np.asarray(wick_ratios, dtype=float)
+        
+    x = float(prices[0])
+    p = 1.0
+    
+    for t in range(n):
+        # Tahmin (Predict)
+        x_pred = x
+        p_pred = p + q
+        
+        # Dinamik Ölçüm Gürültüsü (Update with Dynamic Wick Noise)
+        w_rat = max(0.0, min(5.0, float(wick_ratios[t])))
+        r_t = r0 * (1.0 + wick_penalty_mult * (w_rat ** 2))
+        
+        # Kalman Kazancı (Kalman Gain)
+        k_t = p_pred / (p_pred + r_t) if (p_pred + r_t) > 0 else 0.5
+        
+        # Durum Güncellemesi (State Update)
+        x = x_pred + k_t * (float(prices[t]) - x_pred)
+        p = (1.0 - k_t) * p_pred
+        
+    raw_cur = float(prices[-1])
+    clean_p = float(x)
+    std_p = math.sqrt(max(1e-8, p))
+    z_score = float((raw_cur - clean_p) / std_p) if std_p > 0 else 0.0
+    
+    # Gürültü Sönümleme Oranı (%)
+    diff_raw = abs(raw_cur - prices[-2]) if n >= 2 else 0.0
+    diff_clean = abs(clean_p - prices[-2]) if n >= 2 else 0.0
+    damp_pct = round(max(0.0, (1.0 - (diff_clean / diff_raw)) * 100.0), 1) if diff_raw > 1e-8 else 0.0
+    
+    return {
+        'clean_price': round(clean_p, 6),
+        'state_variance': round(float(p), 6),
+        'z_score': round(z_score, 2),
+        'noise_dampening_pct': damp_pct,
+        'raw_price': raw_cur
+    }
+
+
+# =====================================================================
+# 15. ASTROQUANT: SPACEX FALCON 9 PID KÂR VE STOP KONTROLÖRÜ
+# =====================================================================
+def calculate_pid_stop_level(
+    entry_price: float,
+    current_price: float,
+    side: str,
+    peak_mfe_roe: float,
+    mfe_series: list = None,
+    atr_pct: float = 0.50,
+    leverage: int = 5,
+    kp: float = 0.50,
+    ki: float = 0.05,
+    kd: float = 0.35,
+    min_mfe_trigger: float = 2.0,
+    noise_floor_atr_mult: float = 1.5
+) -> dict:
+    """
+    SpaceX Falcon 9 Uçuş Kontrol Dinamik Kâr Sürücüsü (PID Controller).
+    Açık pozisyon kârdayken (MFE >= 2.0% ROE) stopu roket hassasiyetinde arkasından çeker.
+    
+    3 KATMANLI GÜVENLİK KALKANI:
+    1. D > 0 (Momentum canlı): Roket koşarken stop gevşek tutulur (büyük trend kaçmaz).
+    2. D <= 0 (Momentum tükendi): Tepe fitilinde stop anında zirvenin %60 - %80'ine basamaklanır.
+    3. Noise Floor (1.5x ATR): Stop fiyata asla 1.5x ATR'den daha yakın yapılamaz (gürültüde erken infaz önlenir).
+    """
+    side = str(side).upper()
+    entry_p = float(entry_price)
+    cur_p = float(current_price)
+    peak_mfe = float(max(0.0, peak_mfe_roe))
+    lev = int(leverage) if leverage > 0 else 5
+    
+    if entry_p <= 0 or cur_p <= 0:
+        return {'is_engaged': False, 'proposed_stop': 0.0, 'reason': 'Geçersiz fiyat'}
+        
+    # Anlık ROE (%)
+    cur_roe = ((cur_p - entry_p) / entry_p * 100.0 * lev) if side == 'LONG' else ((entry_p - cur_p) / entry_p * 100.0 * lev)
+    
+    # PID Henüz Devreye Girmedi (Kâr eşiği < %2.0 ROE)
+    if peak_mfe < min_mfe_trigger:
+        return {
+            'is_engaged': False,
+            'proposed_stop': 0.0,
+            'cur_roe': round(cur_roe, 2),
+            'peak_mfe': round(peak_mfe, 2),
+            'reason': f'MFE (%{peak_mfe:.1f}) eşiğin (<%{min_mfe_trigger:.1f}) altında'
+        }
+        
+    # MFE Geçmişi ve Türev Hesabı
+    series = [float(x) for x in (mfe_series or []) if x is not None]
+    if not series or series[-1] != peak_mfe:
+        series.append(peak_mfe)
+        
+    # P: Anlık Hata (Zirveye olan mesafe)
+    err = peak_mfe - cur_roe
+    
+    # I: Kârda Biriken Enerji (Kümülatif toplam)
+    integral = sum(series[-10:]) * 0.1
+    
+    # D: Momentum İvmesi (Son 2-3 okuma arasındaki değişim)
+    if len(series) >= 2:
+        deriv = series[-1] - series[-2]
+    else:
+        deriv = 0.0
+        
+    # PID Kontrol Çıktısı (Uçuş Stabilizasyonu)
+    u_control = (kp * err) + (ki * integral) + (kd * deriv)
+    
+    # Kademeli Asimetrik Kilit Oranı
+    if peak_mfe >= 8.0:
+        base_capture = 0.80  # Zirve koşusu: %80 kilit
+    elif peak_mfe >= 4.0:
+        base_capture = 0.70  # Orta koşu: %70 kilit
+    else:
+        base_capture = 0.60  # Erken kâr: %60 kilit (geniş nefes alanı)
+        
+    # Türev Kalkanı: Eğer ivme halen pozitifse (D > 0), nefes payı aç (%10 gevşet)
+    # Eğer ivme durduysa (D <= 0), kârı sıkı kilitle (+%5 sıkılaştır)
+    if deriv > 0.05:
+        target_capture = max(0.50, base_capture - 0.10)
+        mode = "🚀 İvme Canlı (Pozisyon Koşuyor - Geniş Nefes)"
+    else:
+        target_capture = min(0.85, base_capture + 0.05)
+        mode = "🛑 İvme Tükendi (Zirve Kilidi Aktif)"
+        
+    # Hedef Kilit ROE
+    target_locked_roe = peak_mfe * target_capture
+    
+    # Fiyat karşılığı
+    price_pct_gain = (target_locked_roe / lev) / 100.0
+    if side == 'LONG':
+        raw_stop = entry_p * (1.0 + price_pct_gain)
+    else:
+        raw_stop = entry_p * (1.0 - price_pct_gain)
+        
+    # ── GÜRÜLTÜ TABANI (NOISE FLOOR) KALKANI ──
+    # Stop mesafesi anlık fiyata 1.5x ATR'den daha yakın olamaz!
+    atr_val = (atr_pct / 100.0) if atr_pct > 0 else 0.0050
+    noise_buffer = entry_p * atr_val * noise_floor_atr_mult
+    
+    if side == 'LONG':
+        # Long için stop, anlık fiyatın (cur_p - noise_buffer) üstüne geçemez (fiyata yapışamaz)
+        safe_stop = min(raw_stop, cur_p - noise_buffer)
+        # Ama girişin üstünde kalmalı
+        final_stop = max(entry_p * 1.0010, safe_stop)
+    else:
+        # Short için stop, anlık fiyatın (cur_p + noise_buffer) altına inemez
+        safe_stop = max(raw_stop, cur_p + noise_buffer)
+        final_stop = min(entry_p * 0.9990, safe_stop)
+        
+    return {
+        'is_engaged': True,
+        'proposed_stop': round(final_stop, 6),
+        'locked_roe': round(target_locked_roe, 2),
+        'peak_mfe': round(peak_mfe, 2),
+        'cur_roe': round(cur_roe, 2),
+        'capture_ratio': round(target_capture, 2),
+        'derivative': round(deriv, 3),
+        'mode': mode,
+        'noise_floor_applied': bool(safe_stop != raw_stop)
+    }
+
 
 
 
