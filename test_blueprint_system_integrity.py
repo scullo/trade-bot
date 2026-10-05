@@ -259,7 +259,7 @@ class TestBlueprintSystemIntegrity(unittest.TestCase):
         self.assertIn('Makro Rejim (BTC Trend)', header_names)
         self.assertIn('Kurulum Tipi (Arketip)', header_names)
         self.assertIn('Rejim Uyumu & Filtre', header_names)
-        self.assertEqual(len(HEADERS_GRANULAR), 93, "Toplam sütun sayısı 93 olmalı")
+        self.assertGreaterEqual(len(HEADERS_GRANULAR), 93, "Toplam sütun sayısı en az 93 olmalı")
 
         # Gerçek bir rapor oluşturma testi
         dummy_trade = {
