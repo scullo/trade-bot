@@ -362,6 +362,110 @@ def calculate_orderbook_entropy(bids: list, asks: list, top_n: int = 20) -> dict
         }
 
 
+def calculate_shannon_market_entropy(df: pd.DataFrame, depth_info: dict = None, iceberg_ratio: float = 1.0, window: int = 24) -> dict:
+    """
+    CLAUDE SHANNON & LUDWIG BOLTZMANN — Dinamik Piyasa & Mikro-Yapı Bilgi Entropisi:
+    - 5M mum akışı (Hacim Konsantrasyonu & Getiri Durum Dağılımı)
+    - Tahta derinlik dengesizliği (Top-of-Book Micro-Entropy)
+    - Iceberg / Emilim konsantrasyonu (Crystallization Drag)
+    - Çıktı: [0.15, 0.98] aralığında dinamik normalize entropi (S_norm)
+    """
+    try:
+        if df is None or len(df) < 10:
+            return {
+                "entropy_norm": 0.65,
+                "entropy_vol": 0.65,
+                "entropy_ret": 0.65,
+                "entropy_ob": 0.65,
+                "iceberg_drag": 0.0,
+                "is_healthy_deep": False,
+                "is_chaotic": False,
+                "is_crystalline": False
+            }
+
+        sub_df = df.tail(window)
+        w_len = len(sub_df)
+
+        # 1. Hacim Konsantrasyon Entropisi (Volume Shannon Entropy)
+        vol_col = 'quote_volume' if 'quote_volume' in sub_df.columns else ('volume' if 'volume' in sub_df.columns else None)
+        if vol_col and vol_col in sub_df.columns:
+            vols = sub_df[vol_col].astype(float).values
+            tot_vol = np.sum(vols)
+            if tot_vol > 1e-6 and w_len > 1:
+                p_v = vols / tot_vol
+                p_v = p_v[p_v > 1e-12]
+                s_vol = -np.sum(p_v * np.log(p_v)) / np.log(w_len)
+                s_vol = float(np.clip(s_vol, 0.0, 1.0))
+            else:
+                s_vol = 0.70
+        else:
+            s_vol = 0.70
+
+        # 2. Getiri Durum Dağılım Entropisi (Return State Shannon Entropy)
+        if 'close' in sub_df.columns and len(sub_df) >= 6:
+            closes = sub_df['close'].astype(float).values
+            rets = np.diff(np.log(np.maximum(closes, 1e-12)))
+            std_r = np.std(rets)
+            if std_r > 1e-8:
+                z = (rets - np.mean(rets)) / std_r
+                bins = np.histogram(z, bins=[-np.inf, -1.0, -0.3, 0.3, 1.0, np.inf])[0]
+                p_r = bins / float(len(rets))
+                p_r = p_r[p_r > 1e-12]
+                s_ret = -np.sum(p_r * np.log(p_r)) / np.log(5.0)
+                s_ret = float(np.clip(s_ret, 0.0, 1.0))
+            else:
+                s_ret = 0.70
+        else:
+            s_ret = 0.70
+
+        # 3. Tahta Kademe Dengesizlik Entropisi (Top-of-Book Micro-Entropy)
+        s_ob = 0.75
+        if depth_info:
+            bid_p = float(depth_info.get('bid_price', 0.0))
+            bid_q = float(depth_info.get('bid_qty', 0.0))
+            ask_p = float(depth_info.get('ask_price', 0.0))
+            ask_q = float(depth_info.get('ask_qty', 0.0))
+            b_usd = bid_p * bid_q
+            a_usd = ask_p * ask_q
+            tot_usd = b_usd + a_usd
+            if tot_usd > 0:
+                p_b = max(1e-4, min(1.0 - 1e-4, b_usd / tot_usd))
+                p_a = 1.0 - p_b
+                ent_binary = -(p_b * np.log(p_b) + p_a * np.log(p_a)) / np.log(2.0)
+                s_ob = float(np.clip(ent_binary, 0.0, 1.0))
+
+        # 4. Iceberg / Emilim Kristalleşme Düzeltmesi (Whale Wall Concentration)
+        c_ice = 0.0
+        if iceberg_ratio and iceberg_ratio > 1.0:
+            c_ice = float(np.clip((iceberg_ratio - 1.0) * 0.012, 0.0, 0.18))
+
+        # Bileşik Ağırlıklandırma: Hacim + Getiri + Tahta - Iceberg Kristalleşmesi
+        composite_s = (0.45 * s_vol) + (0.35 * s_ret) + (0.20 * s_ob) - c_ice
+        ent_norm = round(float(np.clip(composite_s, 0.15, 0.98)), 3)
+
+        return {
+            "entropy_norm": ent_norm,
+            "entropy_vol": round(s_vol, 3),
+            "entropy_ret": round(s_ret, 3),
+            "entropy_ob": round(s_ob, 3),
+            "iceberg_drag": round(c_ice, 3),
+            "is_healthy_deep": ent_norm >= 0.80,
+            "is_chaotic": ent_norm < 0.40,
+            "is_crystalline": ent_norm < 0.48
+        }
+    except Exception:
+        return {
+            "entropy_norm": 0.65,
+            "entropy_vol": 0.65,
+            "entropy_ret": 0.65,
+            "entropy_ob": 0.65,
+            "iceberg_drag": 0.0,
+            "is_healthy_deep": False,
+            "is_chaotic": False,
+            "is_crystalline": False
+        }
+
+
 def calculate_hurst_exponent(price_series, min_lags: int = 10, max_lags: int = None) -> float:
     """
     2. BENOIT MANDELBROT — Hurst Üssü (H) ve Fraktal Rejim Dedektörü:

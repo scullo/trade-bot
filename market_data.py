@@ -1371,9 +1371,9 @@ class MarketDataManager:
 
         # 🧠 6-SÜTUNLU KUANT TELEMETRİSİ (HURST, BOLTZMANN ENTROPİ, ICEBERG, BOOKMAP EMİLİM, SIMONS HMM, CVD İVME, dPOC, STOIKOV, VPIN, KYLE'S LAMBDA)
         from indicators import (
-            calculate_hurst_exponent, calculate_orderbook_entropy, detect_iceberg_orders,
-            estimate_hmm_market_phase, detect_bookmap_absorption, calculate_cvd_acceleration,
-            calculate_delta_poc, evaluate_iceberg_offense,
+            calculate_hurst_exponent, calculate_orderbook_entropy, calculate_shannon_market_entropy,
+            detect_iceberg_orders, estimate_hmm_market_phase, detect_bookmap_absorption,
+            calculate_cvd_acceleration, calculate_delta_poc, evaluate_iceberg_offense,
             calculate_stoikov_micro_price, calculate_vpin_toxicity, calculate_kyles_lambda
         )
         
@@ -1492,11 +1492,23 @@ class MarketDataManager:
             coin_gex_regime = 'MACRO_BTC_PROXY'
             is_proxy = True
 
-        # JIT L2 önbelleği varsa oradaki derin entropiyi al, yoksa varsayılan
+        # JIT L2 önbelleği varsa oradaki derin L2 entropisini al, yoksa dinamik Shannon piyasa entropisini hesapla
         cached_l2 = getattr(self, 'jit_l2_cache', {}).get(symbol, {})
-        entropy_norm = float(cached_l2.get('entropy_norm', 0.65))
-        is_chaotic = bool(cached_l2.get('is_chaotic', False))
-        is_crystalline = bool(cached_l2.get('is_crystalline', False))
+        if cached_l2 and 'entropy_norm' in cached_l2:
+            entropy_norm = float(cached_l2.get('entropy_norm', 0.70))
+            is_chaotic = bool(cached_l2.get('is_chaotic', False))
+            is_crystalline = bool(cached_l2.get('is_crystalline', False))
+        else:
+            # 5M Mum Hacim/Getiri Akışı + Tahta Dengesizliği + Iceberg Kristalleşmesi ile dinamik Shannon piyasa entropisi
+            ent_dyn = calculate_shannon_market_entropy(
+                df=df_5m,
+                depth_info=depth,
+                iceberg_ratio=iceberg_ratio,
+                window=24
+            )
+            entropy_norm = float(ent_dyn.get('entropy_norm', 0.70))
+            is_chaotic = bool(ent_dyn.get('is_chaotic', False))
+            is_crystalline = bool(ent_dyn.get('is_crystalline', False))
 
         if not hasattr(self, 'symbol_metrics'):
             self.symbol_metrics = {}

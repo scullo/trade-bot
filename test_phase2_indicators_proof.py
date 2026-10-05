@@ -336,6 +336,33 @@ class TestPhase2IndicatorsProof(unittest.TestCase):
         self.assertTrue(audit_res['is_healthy'])
         print("  [BAŞARILI] VDA-38: Aegis Sentinel nPOC kontrolü çözüldü.")
 
+    def test_13_shannon_market_entropy(self):
+        """
+        [KANIT]: Dinamik Shannon Piyasa Entropisinin Mum Akışından Hatasız Hesaplanması.
+        """
+        from indicators import calculate_shannon_market_entropy
+
+        # Senaryo A: Homojen, dengeli tahta ve düzenli hacim akışı (Yüksek Entropi)
+        df_uniform = pd.DataFrame({
+            'close': [100.0 + (i % 2) * 0.1 for i in range(30)],
+            'volume': [1000.0 for _ in range(30)],
+            'quote_volume': [100000.0 for _ in range(30)]
+        })
+        res_uniform = calculate_shannon_market_entropy(df_uniform, {'bid_price': 100, 'bid_qty': 10, 'ask_price': 100.1, 'ask_qty': 10})
+        print(f"  > Homojen Akış Entropisi: {res_uniform['entropy_norm']:.3f} (is_healthy_deep: {res_uniform['is_healthy_deep']})")
+        self.assertGreaterEqual(res_uniform['entropy_norm'], 0.70)
+
+        # Senaryo B: Tek bir mumda devasa hacim şoku ve tek duvar yoğunlaşması (Düşük Entropi / Kristalleşme)
+        df_shock = pd.DataFrame({
+            'close': [100.0 for _ in range(29)] + [108.0],
+            'volume': [10.0 for _ in range(29)] + [10000.0],
+            'quote_volume': [1000.0 for _ in range(29)] + [1080000.0]
+        })
+        res_shock = calculate_shannon_market_entropy(df_shock, {'bid_price': 100, 'bid_qty': 500, 'ask_price': 100.1, 'ask_qty': 5}, iceberg_ratio=15.0)
+        print(f"  > Şok / Kristal Entropisi: {res_shock['entropy_norm']:.3f} (is_crystalline: {res_shock['is_crystalline']})")
+        self.assertLess(res_shock['entropy_norm'], 0.60)
+        print("  [BAŞARILI] Dinamik Shannon Piyasa Entropisi mum ve derinlik akışından organik hesaplanıyor.")
+
 
 if __name__ == '__main__':
     unittest.main()
