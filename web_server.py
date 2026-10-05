@@ -1044,6 +1044,31 @@ HTML_PAGE = """
             align-items: center;
             gap: 6px;
         }
+        .badge-pid {
+            background: linear-gradient(135deg, rgba(234, 179, 8, 0.25), rgba(245, 158, 11, 0.45));
+            border: 1px solid #eab308;
+            color: #fef08a;
+            font-size: 11.5px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 0 10px rgba(234, 179, 8, 0.25);
+        }
+        .badge-kalman {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(14, 165, 233, 0.35));
+            border: 1px solid #38bdf8;
+            color: #bae6fd;
+            font-size: 11.5px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
 
     
         /* =========================================================================
@@ -6853,6 +6878,8 @@ async function loadAdminMetrics() {
                         ${itemRow('🎯', '16-Kurulum Taksonomi & Otonom Muting', '16 kanonik setup biyektif eşleşmesi (strategy, shadow, calibrator) ve negatif alfa üreten kurulumları otonom susturma radarı', (setupTax.total_setups || 16) + ' Kanonik Setup (' + (setupTax.muted_count || 0) + ' Uyutuldu)', pill('16/16 BİYEKTİF AKTİF', 'var(--green)'))}
                         ${itemRow('🧬', '100 Parite Kuant DNA Profilleri', 'Pariteye özel volatilite sınıflaması, hacim eşikleri ve karakter profilleme', (dna.count || 100) + ' Parite Hafızada', pill('YÜKLENDİ', 'var(--green)'))}
                         ${itemRow('🌀', 'Shannon Confluence & Entropi Kalkanı', '3-Eksen bağımsız confluence doğrulaması ve Boltzmann L2 gürültü filtresi', 'JIT Anlık Doğrulama', pill('AKTİF', 'var(--cyan)'))}
+                        ${itemRow('🔭', 'Apollo Kalman Durum-Uzay Filtresi', 'NASA Apollo durum-uzay modeli: Fiyat fitil gürültüsünü filtreleyerek gerçek kurumsal omurgayı ve seviye kırılımlarını doğrular', 'Gürültüsüz State-Space', pill('0 GECİKME • AKTİF', 'var(--cyan)'))}
+                        ${itemRow('🚀', 'SpaceX Falcon 9 PID Kâr Kontrolörü', 'Oransal-İntegral-Türev kapalı devre kontrolör: Kâr koşusunda dinamik trailing ratchet ve 1.5x ATR gürültü tamponu', 'PID Gaz/Fren Kontrolü', pill('KÂR KİLİDİ AKTİF', 'var(--green)'))}
                     </div>
 
                     <!-- KOLON 3: BULUT ALTYAPISI, RAM & SÜREKLİLİK -->
@@ -10970,6 +10997,8 @@ async function loadAdminMetrics() {
                                 <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono', monospace; margin-top:4px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                                     <span style="background:rgba(0,242,254,0.08); color:var(--cyan); border:1px solid rgba(0,242,254,0.25); padding:1px 6px; border-radius:4px; font-weight:700; font-size:10px;" title="${pos.setup_id || ''}">${displaySetup}</span>
                                     <span style="color:#38bdf8; font-size:11px;">$${sCurPrice}</span>
+                                    ${pos.pid_engaged ? `<span class="badge-pid" style="font-size:9.5px; padding:1px 5px;" title="SpaceX Falcon 9 PID Kâr Kontrolörü Devrede">🚀 PID KİLİT</span>` : ''}
+                                    ${pos.kalman_state ? `<span class="badge-kalman" style="font-size:9.5px; padding:1px 5px;" title="Apollo Kalman Filtresi Onaylı">🛡️ KALMAN</span>` : ''}
                                 </div>
                             </div>
                             <div style="text-align:right; flex-shrink:0; min-width:85px;">
@@ -13469,6 +13498,8 @@ async function loadAdminMetrics() {
                         </span>
                         ${pos.tp2 ? '<span style="font-size:12px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; padding:3px 8px; border-radius:6px;">🚀 TP2: <b>$' + tp2Val + '</b></span>' : ''}
                         ${pos.trail_status ? '<span class="badge-trailing-lock">' + pos.trail_status + '</span>' : ''}
+                        ${pos.pid_engaged ? '<span class="badge-pid" title="' + (pos.pid_telemetry ? ('PID Taban Stop: $' + formatSmartPrice(pos.pid_telemetry.pid_stop) + ' | Mod: ' + (pos.pid_telemetry.thrust_mode || '')) : 'SpaceX Falcon 9 Kâr Kontrolörü Aktif') + '">🚀 SpaceX PID Kilit (+' + Number(pos.peak_mfe_pct || 0).toFixed(2) + '% MFE)</span>' : ''}
+                        ${pos.kalman_state ? '<span class="badge-kalman" title="Apollo Kalman Gürültüsüz Fiyat: $' + formatSmartPrice(pos.kalman_state.clean_price) + ' (Z: ' + Number(pos.kalman_state.z_score || 0).toFixed(2) + ')">🛡️ Apollo Kalman Onaylı</span>' : ''}
                     </div>
 
                     <!-- 4. SETUP REASON -->
@@ -14136,7 +14167,8 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
 
                     // Exit badge style
                     let exitBadgeClass = 'badge-time';
-                    if (cr.includes('TP') || cr.includes('Kâr')) exitBadgeClass = 'badge-tp';
+                    if (cr.includes('PID') || (h.pid_telemetry && h.pid_telemetry.engaged) || h.pid_engaged) exitBadgeClass = 'badge-pid';
+                    else if (cr.includes('TP') || cr.includes('Kâr')) exitBadgeClass = 'badge-tp';
                     else if (cr.includes('Yumuşak') || cr.includes('Mum')) exitBadgeClass = 'badge-soft';
                     else if (cr.includes('Sert') || cr.includes('Stop')) exitBadgeClass = 'badge-hard';
 
@@ -14900,6 +14932,26 @@ function downloadExcelReport() {
                                     ${item.coinbase_is_listed ? (item.coinbase_lead_lag_status || 'Spot Öncü') : '🛡️ Makro BTC Şemsiyesi'}
                                 </div>
                             </div>
+                            <div style="background:rgba(255,255,255,0.02); border-radius:8px; padding:8px 12px; border:1px solid rgba(255,255,255,0.05);">
+                                <div style="font-size:10px; color:#94a3b8; margin-bottom:3px;">Apollo Kalman Durum-Uzay</div>
+                                <div style="font-size:12px; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono',monospace;">
+                                    ${item.kalman_state ? `$${formatSmartPrice(item.kalman_state.clean_price)} (Z: ${Number(item.kalman_state.z_score || 0).toFixed(2)})` : '🛡️ Onaylı (0 Sapma)'}
+                                </div>
+                                <div style="font-size:9.5px; color:#64748b; margin-top:2px;">
+                                    ${item.kalman_state ? (item.kalman_state.noise_ratio ? `Gürültü Oranı: %${(item.kalman_state.noise_ratio * 100).toFixed(1)}` : 'Gürültüsüz Gerçek Fiyat') : 'Fitil Kırılımı Teyitli'}
+                                </div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.02); border-radius:8px; padding:8px 12px; border:1px solid rgba(255,255,255,0.05);">
+                                <div style="font-size:10px; color:#94a3b8; margin-bottom:3px;">SpaceX Falcon 9 PID Kâr Kilidi</div>
+                                <div style="font-size:12px; font-weight:800; color:${(item.pid_engaged || (item.pid_telemetry && item.pid_telemetry.engaged)) ? '#facc15' : '#10b981'}; font-family:'JetBrains Mono',monospace;">
+                                    ${(item.pid_engaged || (item.pid_telemetry && item.pid_telemetry.engaged)) ? 
+                                        `🚀 KİLİTLİ ($${formatSmartPrice(item.pid_stop || (item.pid_telemetry && item.pid_telemetry.pid_stop) || item.exit_price)})` : 
+                                        '🎯 Hazır (1.5x ATR Kalkan)'}
+                                </div>
+                                <div style="font-size:9.5px; color:#64748b; margin-top:2px;">
+                                    ${(item.pid_telemetry && item.pid_telemetry.thrust_mode) ? `İtiş Modu: ${item.pid_telemetry.thrust_mode}` : 'Dinamik Zirve Ratchet'}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -15490,9 +15542,12 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                     "opposing_taker_guard": getattr(config, 'ENABLE_OPPOSING_TAKER_GUARD', True),
                     "hawkes_avalanche_brake": getattr(config, 'ENABLE_HAWKES_AVALANCHE_BRAKE', True),
                     "dynamic_runner_profit_lock": getattr(config, 'ENABLE_DYNAMIC_RUNNER_PROFIT_LOCK', True),
+                    "kalman_price_filter": getattr(config, 'ENABLE_KALMAN_PRICE_FILTER', True),
+                    "spacex_pid_controller": getattr(config, 'ENABLE_PID_PROFIT_CONTROLLER', True),
                     "max_leverage_cap": getattr(config, 'MAX_LEVERAGE', 5),
                     "circuit_breaker_active": getattr(strategy.vault, '_circuit_breaker_active', False) if (strategy and hasattr(strategy, 'vault')) else False,
                     "be_locked_count": sum(1 for p in getattr(trader_manager, 'open_positions', {}).values() if p.get("early_be_locked", False)),
+                    "pid_locked_count": sum(1 for p in getattr(trader_manager, 'open_positions', {}).values() if p.get("pid_engaged", False)),
                     "emergency_alert": getattr(trader_manager, 'emergency_alert', None)
                 }
             }, dumps=safe_json_dumps)
@@ -15516,8 +15571,11 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                     "dynamic_coin_audit": True,
                     "chandelier_early_be_lock": True,
                     "asia_selective_shield": True,
+                    "kalman_price_filter": True,
+                    "spacex_pid_controller": True,
                     "circuit_breaker_active": False,
                     "be_locked_count": 0,
+                    "pid_locked_count": 0,
                     "emergency_alert": None
                 },
                 "coinbase_lead_lag": {},
