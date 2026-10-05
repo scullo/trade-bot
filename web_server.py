@@ -2267,10 +2267,10 @@ HTML_PAGE = """
             background: radial-gradient(circle at 50% 50%, rgba(0, 242, 254, 0.04) 0%, transparent 70%);
         }
 
-        /* 🛡️ KUANT KALKANLARI & REDDEDİLEN SİNYAL İSTİHBARATI */
+        /* 🛡️ KUANT KALKANLARI & REDDEDİLEN SİNYAL İSTİHBARATI (MODERN DARK GLASS) */
         .rejection-panel-card {
-            background: linear-gradient(180deg, rgba(14, 20, 34, 0.92) 0%, rgba(10, 14, 25, 0.98) 100%);
-            border: 1px solid rgba(255, 71, 87, 0.25);
+            background: linear-gradient(180deg, rgba(14, 20, 34, 0.94) 0%, rgba(10, 14, 25, 0.98) 100%);
+            border: 1px solid rgba(255, 71, 87, 0.28);
             border-radius: 18px;
             padding: 18px 22px;
             margin: 20px 0;
@@ -2284,63 +2284,568 @@ HTML_PAGE = """
             position: absolute;
             top: 0; left: 0; right: 0;
             height: 2.5px;
-            background: linear-gradient(90deg, #ff4757, #fb923c, #f59e0b);
+            background: linear-gradient(90deg, #ff4757, #fb923c, #f59e0b, #00f2fe);
         }
         .shield-stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-            gap: 10px;
-            margin-bottom: 14px;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
         }
         .shield-stat-card {
-            background: rgba(0, 0, 0, 0.35);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 10px;
-            padding: 9px 12px;
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 12px;
+            padding: 12px 14px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
+            gap: 6px;
             transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
         }
+        .shield-stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2.5px;
+        }
+        .shield-card-flow::before { background: #00f2fe; box-shadow: 0 0 8px #00f2fe; }
+        .shield-card-judas::before { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+        .shield-card-beta::before { background: #a855f7; box-shadow: 0 0 8px #a855f7; }
+        .shield-card-entropy::before { background: #38bdf8; box-shadow: 0 0 8px #38bdf8; }
+        .shield-card-cooldown::before { background: #ff4757; box-shadow: 0 0 8px #ff4757; }
+        .shield-card-iceberg::before { background: #10b981; box-shadow: 0 0 8px #10b981; }
         .shield-stat-card:hover {
-            border-color: rgba(255, 71, 87, 0.35);
-            background: rgba(255, 71, 87, 0.05);
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.18);
+            background: rgba(30, 41, 59, 0.8);
+        }
+        .shield-card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .shield-card-name {
+            font-size: 11px;
+            font-weight: 700;
+            color: #94a3b8;
+            font-family: 'JetBrains Mono', monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .shield-card-val {
+            font-size: 22px;
+            font-weight: 900;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .shield-card-sub {
+            font-size: 9.5px;
+            color: #64748b;
+            text-transform: uppercase;
+            font-family: 'JetBrains Mono', monospace;
         }
         .rejection-feed-list {
             display: flex;
             flex-direction: column;
             gap: 6px;
-            max-height: 260px;
+            max-height: 280px;
             overflow-y: auto;
-            padding-right: 4px;
+            padding-right: 6px;
+        }
+        .rejection-feed-list::-webkit-scrollbar {
+            width: 5px;
+        }
+        .rejection-feed-list::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+        .rejection-feed-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 71, 87, 0.35);
+            border-radius: 4px;
         }
         .rejection-feed-item {
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.05);
             border-left: 3px solid #ff4757;
             border-radius: 8px;
-            padding: 8px 12px;
+            padding: 9px 14px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-family: 'JetBrains Mono', monospace;
             font-size: 11.5px;
             transition: all 0.15s ease;
-            gap: 10px;
+            gap: 12px;
         }
         .rejection-feed-item:hover {
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(30, 41, 59, 0.6);
             border-color: rgba(255, 255, 255, 0.12);
         }
         .rejection-shield-tag {
             font-size: 10px;
             font-weight: 800;
-            padding: 2px 7px;
+            padding: 2.5px 8px;
             border-radius: 6px;
             background: rgba(255, 71, 87, 0.15);
             color: #ff4757;
             border: 1px solid rgba(255, 71, 87, 0.35);
             white-space: nowrap;
+        }
+
+        /* 📡 VALKYRIE RADAR & RİSK İSTİHBARATI KOKPİT YÖNETİCİ KÖPRÜSÜ */
+        .cockpit-radar-bridge-card {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(13, 20, 38, 0.98) 100%);
+            border: 1px solid rgba(0, 242, 254, 0.25);
+            border-radius: 16px;
+            padding: 18px 22px;
+            margin: 20px 0;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 15px rgba(0, 242, 254, 0.06);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(14px);
+            transition: all 0.25s ease;
+        }
+        .cockpit-radar-bridge-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2.5px;
+            background: linear-gradient(90deg, #00f2fe, #3b82f6, #10b981);
+        }
+        .cockpit-radar-bridge-card:hover {
+            border-color: rgba(0, 242, 254, 0.45);
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5), 0 0 25px rgba(0, 242, 254, 0.12);
+        }
+        .bridge-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            margin-bottom: 14px;
+        }
+        .bridge-radar-pulse {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #00f2fe;
+            box-shadow: 0 0 12px #00f2fe;
+            display: inline-block;
+        }
+        .bridge-live-tag {
+            font-size: 10px;
+            background: rgba(0, 242, 254, 0.12);
+            color: var(--cyan);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            padding: 2px 7px;
+            border-radius: 6px;
+            font-weight: 800;
+        }
+        .btn-goto-radar {
+            background: linear-gradient(135deg, rgba(0, 242, 254, 0.15), rgba(59, 130, 246, 0.2));
+            color: #00f2fe;
+            border: 1.5px solid rgba(0, 242, 254, 0.4);
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            font-weight: 800;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(0, 242, 254, 0.15);
+        }
+        .btn-goto-radar:hover {
+            background: linear-gradient(135deg, #00f2fe, #3b82f6);
+            color: #000;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 22px rgba(0, 242, 254, 0.35);
+        }
+        .bridge-kpi-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 12px;
+        }
+        .bridge-kpi-item {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            transition: all 0.2s ease;
+        }
+        .bridge-kpi-item:hover {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+        .bridge-kpi-lbl {
+            font-size: 10.5px;
+            font-weight: 800;
+            color: #94a3b8;
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .bridge-kpi-val {
+            font-size: 14.5px;
+            font-weight: 900;
+            font-family: 'JetBrains Mono', monospace;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .bridge-kpi-sub {
+            font-size: 11px;
+            color: #64748b;
+            font-family: 'JetBrains Mono', monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 📡 RADAR MASTER HEADER (DEDICATED TAB) */
+        .radar-master-header {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 30, 0.98) 100%);
+            border: 1px solid rgba(0, 242, 254, 0.25);
+            border-radius: 16px;
+            padding: 16px 22px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 14px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        .radar-master-header::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2.5px;
+            background: linear-gradient(90deg, #00f2fe, #38bdf8, #818cf8);
+        }
+        .radar-master-title-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .radar-master-title {
+            font-size: 15px;
+            font-weight: 900;
+            font-family: 'JetBrains Mono', monospace;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+        }
+        .radar-master-subtitle {
+            font-size: 11.5px;
+            color: #94a3b8;
+            margin-top: 3px;
+        }
+        .radar-master-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .btn-radar-ctrl {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #e2e8f0;
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+        .btn-radar-ctrl:hover {
+            background: rgba(0, 242, 254, 0.12);
+            border-color: rgba(0, 242, 254, 0.35);
+            color: #00f2fe;
+        }
+        .btn-radar-ctrl.is-paused {
+            background: rgba(245, 158, 11, 0.15);
+            border-color: rgba(245, 158, 11, 0.4);
+            color: #f59e0b;
+        }
+        .radar-refresh-badge {
+            font-size: 11px;
+            color: #64748b;
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* 🎯 OPPORTUNITY CANDIDATE CARDS (UPGRADED HIGH-TECH) */
+        .opportunity-card {
+            background: linear-gradient(145deg, rgba(15, 23, 42, 0.9) 0%, rgba(10, 16, 31, 0.95) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 16px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+            position: relative;
+            overflow: hidden;
+            min-width: 0;
+            box-sizing: border-box;
+        }
+        .opportunity-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+            border-color: rgba(0, 242, 254, 0.35);
+        }
+        .opportunity-card.state-contact-vol-ok {
+            border-left: 4px solid #10b981;
+            box-shadow: 0 4px 18px rgba(16, 185, 129, 0.12);
+        }
+        .opportunity-card.state-contact-waiting {
+            border-left: 4px solid #f59e0b;
+            box-shadow: 0 4px 18px rgba(245, 158, 11, 0.1);
+        }
+        .opportunity-card.state-approaching {
+            border-left: 4px solid #38bdf8;
+        }
+        .opportunity-card.state-vetoed {
+            border-left: 4px solid #f43f5e;
+            opacity: 0.92;
+        }
+        .opp-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .opp-sym-box {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .opp-sym-ticker {
+            font-size: 16px;
+            font-weight: 900;
+            font-family: 'JetBrains Mono', monospace;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+        }
+        .opp-sym-pair {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 700;
+        }
+        .opp-target-badge {
+            font-size: 11px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(0, 242, 254, 0.12);
+            color: var(--cyan);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            white-space: nowrap;
+        }
+        .opp-header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .opp-status-pill {
+            font-size: 10.5px;
+            font-weight: 800;
+            padding: 3px 9px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        .opp-status-pill.status-green {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+        }
+        .opp-status-pill.status-amber {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.35);
+        }
+        .opp-status-pill.status-blue {
+            background: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.35);
+        }
+        .opp-status-pill.status-red {
+            background: rgba(244, 63, 94, 0.15);
+            color: #f43f5e;
+            border: 1px solid rgba(244, 63, 94, 0.35);
+        }
+        .opp-price-bar {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        .opp-price-col {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .opp-price-col.align-right {
+            text-align: right;
+            align-items: flex-end;
+        }
+        .opp-price-lbl {
+            font-size: 9.5px;
+            color: #64748b;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .opp-price-val {
+            font-size: 14.5px;
+            font-weight: 900;
+            font-family: 'JetBrains Mono', monospace;
+            color: #ffffff;
+        }
+        .opp-target-val {
+            font-size: 14.5px;
+            font-weight: 900;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--cyan);
+        }
+        .opp-proximity-indicator {
+            flex: 1;
+            max-width: 140px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .opp-prox-text {
+            font-size: 10.5px;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            color: #cbd5e1;
+        }
+        .opp-prox-track {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .opp-prox-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #38bdf8, #10b981);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        .opp-metrics-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .opp-metric-chip {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            display: inline-flex;
+            flex-direction: column;
+            gap: 2px;
+            flex: 1;
+            min-width: 110px;
+        }
+        .opp-metric-chip.chip-ok {
+            border-color: rgba(16, 185, 129, 0.3);
+            background: rgba(16, 185, 129, 0.06);
+        }
+        .opp-metric-chip.chip-wait {
+            border-color: rgba(245, 158, 11, 0.3);
+            background: rgba(245, 158, 11, 0.06);
+        }
+        .opp-chip-label {
+            font-size: 9px;
+            font-weight: 800;
+            color: #64748b;
+            text-transform: uppercase;
+        }
+        .opp-chip-val {
+            font-size: 12px;
+            font-weight: 800;
+            color: #f1f5f9;
+        }
+        .opp-chip-sub, .opp-chip-target {
+            font-size: 10px;
+            color: #94a3b8;
+        }
+        .opp-action-box {
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 8px;
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 12px;
+            line-height: 1.5;
+            border-left: 3px solid rgba(0, 242, 254, 0.3);
+        }
+        .opp-action-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .opp-action-icon {
+            font-size: 14px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .opp-action-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .opp-action-title {
+            font-weight: 800;
+            color: #cbd5e1;
+            margin-right: 4px;
+        }
+        .opp-action-desc {
+            color: #94a3b8;
+        }
+        .opp-trigger-row {
+            border-top: 1px dashed rgba(255, 255, 255, 0.06);
+            padding-top: 6px;
+        }
+        .opp-trigger-row .opp-action-title {
+            color: #10b981;
+        }
+        .opp-trigger-row .opp-action-desc {
+            color: #e2e8f0;
         }
 
         /* 🌡️ PORTFÖY RİSK & EXPOSURE HUD */
@@ -3490,10 +3995,10 @@ HTML_PAGE = """
                     <span class="tab-badge zero-idle" id="nav-pos-count-badge">0</span>
                 </button>
 
-                <button class="nav-tab-btn" id="tab-btn-radar" onclick="switchMainTab('radar')" title="3. Pusu Radarı (100 Parite)">
+                <button class="nav-tab-btn" id="tab-btn-radar" onclick="switchMainTab('radar')" title="3. Radar & İstihbarat Masası (Pusu, Kalkanlar, Makro Şef)">
                     <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg></span>
-                    <span class="tab-btn-text">3. Pusu Radarı</span>
-                    <span class="tab-badge-sub" id="nav-active-coins-badge">100/100</span>
+                    <span class="tab-btn-text">3. Radar &amp; İstihbarat</span>
+                    <span class="tab-badge-sub" id="nav-active-coins-badge" style="background:rgba(0,242,254,0.12); color:var(--cyan); border:1px solid rgba(0,242,254,0.3);">Canlı Radar</span>
                 </button>
 
                 <button class="nav-tab-btn" id="tab-btn-ledger" onclick="switchMainTab('ledger')" title="4. İşlem Geçmişi (Adli Defter)">
@@ -3709,44 +4214,182 @@ HTML_PAGE = """
             </div>
         </div>
 
+        <!-- 📡 VALKYRIE RADAR & RİSK İSTİHBARATI KOKPİT YÖNETİCİ KÖPRÜSÜ -->
+        <div class="cockpit-radar-bridge-card" id="cockpit-radar-bridge-card">
+            <div class="bridge-card-header">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span class="bridge-radar-pulse"></span>
+                    <div>
+                        <div style="font-size:13.5px; font-weight:800; font-family:'JetBrains Mono'; color:#ffffff; letter-spacing:0.4px; display:flex; align-items:center; gap:8px;">
+                            <span>📡 SİNYAL RADARI &amp; RİSK İSTİHBARAT MASASI</span>
+                            <span class="bridge-live-tag">CANLI İSTİHBARAT</span>
+                        </div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:2px;">100 Paritede Kurumsal Likidite, Kuant Kalkanları ve Seviye Pususu Taranıyor</div>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button onclick="switchMainTab('radar')" class="btn-goto-radar" title="Radar ve İstihbarat Masasını Aç">
+                        <span>Radar Masasını Aç ➔</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="bridge-kpi-row">
+                <div class="bridge-kpi-item">
+                    <span class="bridge-kpi-lbl">🌐 MAKRO REJİM &amp; İKLİM</span>
+                    <span class="bridge-kpi-val" id="bridge-macro-regime">⚪ DENGELİ PİYASA</span>
+                    <span class="bridge-kpi-sub" id="bridge-macro-sub">BTC &amp; ETH Ortak Motoru</span>
+                </div>
+                <div class="bridge-kpi-item">
+                    <span class="bridge-kpi-lbl">🎯 PUSU &amp; SEVİYE TEMASI</span>
+                    <span class="bridge-kpi-val" id="bridge-contact-count" style="color:var(--cyan);">0 Parite</span>
+                    <span class="bridge-kpi-sub" id="bridge-contact-names">Kilit Seviyeler Taranıyor</span>
+                </div>
+                <div class="bridge-kpi-item">
+                    <span class="bridge-kpi-lbl">🛡️ ENGELLENEN RİSKLER (VETO)</span>
+                    <span class="bridge-kpi-val" id="bridge-veto-count" style="color:#ff4757;">0 Sinyal</span>
+                    <span class="bridge-kpi-sub" id="bridge-veto-sub">35+ Kuant Kalkanı Devrede</span>
+                </div>
+                <div class="bridge-kpi-item">
+                    <span class="bridge-kpi-lbl">⚔️ LİKİDİTE DENGESİ</span>
+                    <span class="bridge-kpi-val" id="bridge-liquidity-balance" style="color:#10b981;">%0 Boğa / %0 Ayı</span>
+                    <span class="bridge-kpi-sub" id="bridge-liquidity-sub">100 Parite 1H Makro</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================================
+         2. SEKME: AÇIK POZİSYONLAR
+         ========================================================================= -->
+    <div id="main-tab-content-positions" class="main-tab-content">
+        <div class="section-header">
+            <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                <div class="section-title">⚡ CANLI AÇIK POZİSYONLAR</div>
+                <span class="active-badge-pill" id="positions-active-count-badge">0 Açık Pozisyon</span>
+            </div>
+        </div>
+
+        <!-- 🌡️ PORTFÖY RİSK & EXPOSURE HUD -->
+        <div class="portfolio-risk-hud" id="positions-risk-hud">
+            <div class="risk-hud-card">
+                <div class="risk-hud-title">
+                    <span>🟢 LONG MARUZİYET</span>
+                </div>
+                <div class="risk-hud-val" id="risk-hud-long-val" style="color:var(--green);">$0.00</div>
+                <div class="risk-hud-sub" id="risk-hud-long-sub">0 Long Pozisyon</div>
+            </div>
+            <div class="risk-hud-card">
+                <div class="risk-hud-title">
+                    <span>🔴 SHORT MARUZİYET</span>
+                </div>
+                <div class="risk-hud-val" id="risk-hud-short-val" style="color:var(--red);">$0.00</div>
+                <div class="risk-hud-sub" id="risk-hud-short-sub">0 Short Pozisyon</div>
+            </div>
+            <div class="risk-hud-card">
+                <div class="risk-hud-title">
+                    <span>⚖️ NET DELTA EĞİLİMİ</span>
+                </div>
+                <div class="risk-hud-val" id="risk-hud-delta-val" style="color:var(--cyan);">$0.00 Net</div>
+                <div class="risk-hud-sub" id="risk-hud-delta-sub">Piyasa-Nötr / Dengeli</div>
+            </div>
+            <div class="risk-hud-card">
+                <div class="risk-hud-title">
+                    <span>🛡️ MARJİN KULLANIMI</span>
+                </div>
+                <div class="risk-hud-val" id="risk-hud-margin-val">%0.0</div>
+                <div class="risk-hud-sub" id="risk-hud-margin-sub">Tam Güvenlik Tamponu</div>
+            </div>
+        </div>
+
+        <div id="positions-container" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(360px, 1fr)); gap:18px; margin-bottom:30px;">
+            <div style="grid-column:1/-1; color: #94a3b8; text-align:center; padding: 100px 20px; font-size:15px; line-height:1.6;">
+                Şu an açık pozisyon bulunmuyor.<br><span style="color:var(--yellow)">● 5M Mum kapanışları, taze kırılımlar ve destek dönüşleri taranıyor...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================================
+         3. SEKME: VALKYRIE RADAR & RİSK İSTİHBARATI
+         ========================================================================= -->
+    <div id="main-tab-content-radar" class="main-tab-content">
+        <!-- 📡 VALKYRIE CANLI RADAR & RİSK İSTİHBARATI HERO BAŞLIK -->
+        <div class="radar-master-header">
+            <div class="radar-master-title-box">
+                <div class="radar-master-title-row">
+                    <span class="radar-live-blip"></span>
+                    <span class="radar-master-title">📡 VALKYRIE CANLI RADAR &amp; RİSK İSTİHBARATI</span>
+                    <span class="radar-scope-badge" id="radar-live-indicator">🟢 CANLI AKIŞ</span>
+                </div>
+                <div class="radar-master-subtitle">100 Paritede Kurumsal nPOC / AVWAP / Camarilla Seviye Teyitleri, 35+ Kalkan Koruması &amp; Makro Likidite Akışı</div>
+            </div>
+            <div class="radar-master-actions">
+                <button id="btn-radar-pause" class="btn-radar-ctrl" onclick="toggleRadarPause()" title="Canlı Veri Akışını Dondur / Başlat">
+                    <span id="radar-pause-icon">⏸️</span> <span id="radar-pause-text">Akışı Dondur</span>
+                </button>
+                <div class="radar-refresh-badge" id="radar-last-sync">⏱️ Son Güncelleme: --:--:-- (Stabil Akış)</div>
+            </div>
+        </div>
+
         <!-- 🛡️ KUANT KALKANLARI & REDDEDİLEN SİNYAL İSTİHBARATI (SHIELD INTELLIGENCE) -->
         <div class="rejection-panel-card" id="cockpit-rejection-card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.06); flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06); flex-wrap:wrap; gap:10px;">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <span style="font-size:16px;">🛡️</span>
-                    <span style="font-size:13.5px; font-weight:800; font-family:'JetBrains Mono'; color:#ffffff; letter-spacing:0.4px;">KUANT KALKANLARI & REDDEDİLEN SİNYAL İSTİHBARATI</span>
+                    <span style="font-size:13.5px; font-weight:800; font-family:'JetBrains Mono'; color:#ffffff; letter-spacing:0.4px;">KUANT KALKANLARI &amp; REDDEDİLEN SİNYAL İSTİHBARATI</span>
                     <span style="font-size:10px; background:rgba(255,71,87,0.15); color:#ff4757; border:1px solid rgba(255,71,87,0.35); padding:2px 7px; border-radius:6px; font-weight:800; font-family:'JetBrains Mono';" id="rejection-total-badge">0 VETO</span>
                 </div>
-                <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">
-                    <span>Otomatik Risk Filtresi: <b>35+ Kalkan Devrede</b></span>
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <input type="text" id="rejection-search-input" placeholder="🔍 Veto paritesi veya kalkan ara..." oninput="if(typeof filterRejections==='function')filterRejections(this.value);" style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:5px 12px; font-size:11px; color:#fff; font-family:'JetBrains Mono'; outline:none; width:220px;" autocomplete="off" />
+                    <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">
+                        <span>Risk Filtresi: <b>35+ Kalkan Devrede</b></span>
+                    </div>
                 </div>
             </div>
 
             <!-- Top Shield Blocker Counters -->
             <div class="shield-stats-grid" id="shield-stats-container">
-                <div class="shield-stat-card">
-                    <span style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">🌊 Harmonic Flow Gate</span>
-                    <b style="color:var(--cyan); font-family:'JetBrains Mono';" id="shield-cnt-flow">0</b>
+                <div class="shield-stat-card shield-card-flow">
+                    <div class="shield-card-head">
+                        <span class="shield-card-name">🌊 Harmonic Flow Gate</span>
+                    </div>
+                    <b class="shield-card-val" style="color:var(--cyan);" id="shield-cnt-flow">0</b>
+                    <span class="shield-card-sub">CVD / Emir Akışı</span>
                 </div>
-                <div class="shield-stat-card">
-                    <span style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">⚡ Judas Swing Tuzağı</span>
-                    <b style="color:#f59e0b; font-family:'JetBrains Mono';" id="shield-cnt-judas">0</b>
+                <div class="shield-stat-card shield-card-judas">
+                    <div class="shield-card-head">
+                        <span class="shield-card-name">⚡ Judas Swing Tuzağı</span>
+                    </div>
+                    <b class="shield-card-val" style="color:#f59e0b;" id="shield-cnt-judas">0</b>
+                    <span class="shield-card-sub">Sahte Likidite Avı</span>
                 </div>
-                <div class="shield-stat-card">
-                    <span style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">🪙 Beta / BTC Korelasyonu</span>
-                    <b style="color:#a78bfa; font-family:'JetBrains Mono';" id="shield-cnt-beta">0</b>
+                <div class="shield-stat-card shield-card-beta">
+                    <div class="shield-card-head">
+                        <span class="shield-card-name">🪙 Beta / BTC Korelasyonu</span>
+                    </div>
+                    <b class="shield-card-val" style="color:#a78bfa;" id="shield-cnt-beta">0</b>
+                    <span class="shield-card-sub">BTC Zıt Yön Filtresi</span>
                 </div>
-                <div class="shield-stat-card">
-                    <span style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">🌀 Shannon / Entropi Kalkanı</span>
-                    <b style="color:#38bdf8; font-family:'JetBrains Mono';" id="shield-cnt-entropy">0</b>
+                <div class="shield-stat-card shield-card-entropy">
+                    <div class="shield-card-head">
+                        <span class="shield-card-name">🌀 Shannon / Entropi Kalkanı</span>
+                    </div>
+                    <b class="shield-card-val" style="color:#38bdf8;" id="shield-cnt-entropy">0</b>
+                    <span class="shield-card-sub">Kaotik Gürültü Filtresi</span>
                 </div>
-                <div class="shield-stat-card">
-                    <span style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">🛑 Cooldown / Zarar Limiti</span>
-                    <b style="color:#ff4757; font-family:'JetBrains Mono';" id="shield-cnt-cooldown">0</b>
+                <div class="shield-stat-card shield-card-cooldown">
+                    <div class="shield-card-head">
+                        <span class="shield-card-name">🛑 Cooldown / Zarar Limiti</span>
+                    </div>
+                    <b class="shield-card-val" style="color:#ff4757;" id="shield-cnt-cooldown">0</b>
+                    <span class="shield-card-sub">Art Arda Stop Freni</span>
                 </div>
-                <div class="shield-stat-card">
-                    <span style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">🧊 Tri-Modal Iceberg Filtresi</span>
-                    <b style="color:#34d399; font-family:'JetBrains Mono';" id="shield-cnt-iceberg">0</b>
+                <div class="shield-stat-card shield-card-iceberg">
+                    <div class="shield-card-head">
+                        <span class="shield-card-name">🧊 Tri-Modal Iceberg Filtresi</span>
+                    </div>
+                    <b class="shield-card-val" style="color:#34d399;" id="shield-cnt-iceberg">0</b>
+                    <span class="shield-card-sub">Gizli Balina Emilimi</span>
                 </div>
             </div>
 
@@ -3763,7 +4406,7 @@ HTML_PAGE = """
             <div class="ai-room-head">
                 <div class="ai-room-title">
                     <div class="ai-pulse-dot"></div>
-                    <span>AI PİYASA & PUSU AKIŞI</span>
+                    <span>AI PİYASA &amp; PUSU AKIŞI</span>
                 </div>
                 <div style="font-size:12px; color:#cbd5e1; font-family:'JetBrains Mono', monospace;" id="ai-market-time-badge">
                     <span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:#00f2fe; box-shadow:0 0 6px #00f2fe; margin-right:5px;"></span>Canlı 5M Senkronizasyon
@@ -3849,7 +4492,7 @@ HTML_PAGE = """
                 <div class="tactical-radar-topbar">
                     <div class="tactical-radar-title">
                         <span class="radar-live-blip"></span>
-                        <span style="font-weight:800; letter-spacing:0.5px;">VALKYRIE TAKTİK LİKİDİTE RADARI & SAVUNMA KALKANI</span>
+                        <span style="font-weight:800; letter-spacing:0.5px;">VALKYRIE TAKTİK LİKİDİTE RADARI &amp; SAVUNMA KALKANI</span>
                         <span class="radar-scope-badge" id="radar-active-count-badge">0 HEDEF TARANIYOR</span>
                     </div>
                     <div class="radar-top-controls">
@@ -3929,10 +4572,10 @@ HTML_PAGE = """
                             <!-- Kutu 6: 🌡️ Boltzmann Entropi & Mandelbrot Hurst -->
                             <div class="telemetry-stat-box telemetry-quant-entropy" style="border-color: rgba(168, 85, 247, 0.25); background: linear-gradient(135deg, rgba(168, 85, 247, 0.05) 0%, rgba(0, 0, 0, 0.35) 100%);">
                                 <div class="stat-label" style="color: #c084fc; display: flex; align-items: center; gap: 4px;">
-                                    <span>🌡️ ENTROPİ & FRAKTAL</span>
+                                    <span>🌡️ ENTROPİ &amp; FRAKTAL</span>
                                 </div>
                                 <div class="stat-val" id="radar-stat-entropy-hurst" style="font-size: 13px;">S: %50 | H: 0.50</div>
-                                <div class="stat-sub" id="radar-stat-entropy-sub">Boltzmann & Mandelbrot</div>
+                                <div class="stat-sub" id="radar-stat-entropy-sub">Boltzmann &amp; Mandelbrot</div>
                             </div>
                         </div>
 
@@ -3955,7 +4598,7 @@ HTML_PAGE = """
                 <div class="ai-thought-filters" style="margin-bottom:0;">
                     <button class="ai-filter-btn active" id="btn-filter-all" onclick="setAiThoughtFilter('all')">TÜMÜ (<span id="ai-cnt-all">0</span>)</button>
                     <button class="ai-filter-btn" id="btn-filter-macro" onclick="setAiThoughtFilter('macro')">Makro (<span id="ai-cnt-macro">1</span>)</button>
-                    <button class="ai-filter-btn" id="btn-filter-near" onclick="setAiThoughtFilter('near')">Pusu & Seviye (<span id="ai-cnt-near">0</span>)</button>
+                    <button class="ai-filter-btn" id="btn-filter-near" onclick="setAiThoughtFilter('near')">Pusu &amp; Seviye (<span id="ai-cnt-near">0</span>)</button>
                     <button class="ai-filter-btn" id="btn-filter-rejected" onclick="setAiThoughtFilter('rejected')">Elenenler (<span id="ai-cnt-rej">0</span>)</button>
                     <button class="ai-filter-btn" id="btn-filter-positions" onclick="setAiThoughtFilter('positions')">Pozisyonlar (<span id="ai-cnt-pos">0</span>)</button>
                     <button class="ai-filter-btn" id="btn-filter-autopsy" onclick="setAiThoughtFilter('autopsy')">Otopi (<span id="ai-cnt-autopsy">0</span>)</button>
@@ -3979,62 +4622,7 @@ HTML_PAGE = """
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- =========================================================================
-         2. SEKME: AÇIK POZİSYONLAR
-         ========================================================================= -->
-    <div id="main-tab-content-positions" class="main-tab-content">
-        <div class="section-header">
-            <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
-                <div class="section-title">⚡ CANLI AÇIK POZİSYONLAR</div>
-                <span class="active-badge-pill" id="positions-active-count-badge">0 Açık Pozisyon</span>
-            </div>
-        </div>
-
-        <!-- 🌡️ PORTFÖY RİSK & EXPOSURE HUD -->
-        <div class="portfolio-risk-hud" id="positions-risk-hud">
-            <div class="risk-hud-card">
-                <div class="risk-hud-title">
-                    <span>🟢 LONG MARUZİYET</span>
-                </div>
-                <div class="risk-hud-val" id="risk-hud-long-val" style="color:var(--green);">$0.00</div>
-                <div class="risk-hud-sub" id="risk-hud-long-sub">0 Long Pozisyon</div>
-            </div>
-            <div class="risk-hud-card">
-                <div class="risk-hud-title">
-                    <span>🔴 SHORT MARUZİYET</span>
-                </div>
-                <div class="risk-hud-val" id="risk-hud-short-val" style="color:var(--red);">$0.00</div>
-                <div class="risk-hud-sub" id="risk-hud-short-sub">0 Short Pozisyon</div>
-            </div>
-            <div class="risk-hud-card">
-                <div class="risk-hud-title">
-                    <span>⚖️ NET DELTA EĞİLİMİ</span>
-                </div>
-                <div class="risk-hud-val" id="risk-hud-delta-val" style="color:var(--cyan);">$0.00 Net</div>
-                <div class="risk-hud-sub" id="risk-hud-delta-sub">Piyasa-Nötr / Dengeli</div>
-            </div>
-            <div class="risk-hud-card">
-                <div class="risk-hud-title">
-                    <span>🛡️ MARJİN KULLANIMI</span>
-                </div>
-                <div class="risk-hud-val" id="risk-hud-margin-val">%0.0</div>
-                <div class="risk-hud-sub" id="risk-hud-margin-sub">Tam Güvenlik Tamponu</div>
-            </div>
-        </div>
-
-        <div id="positions-container" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(360px, 1fr)); gap:18px; margin-bottom:30px;">
-            <div style="grid-column:1/-1; color: #94a3b8; text-align:center; padding: 100px 20px; font-size:15px; line-height:1.6;">
-                Şu an açık pozisyon bulunmuyor.<br><span style="color:var(--yellow)">● 5M Mum kapanışları, taze kırılımlar ve destek dönüşleri taranıyor...</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- =========================================================================
-         3. SEKME: PUSU RADARI
-         ========================================================================= -->
-    <div id="main-tab-content-radar" class="main-tab-content">
         <!-- PARITE YONETIM HAVUZU -->
         <div class="manager-card">
             <div class="manager-head">
@@ -7853,7 +8441,15 @@ async function loadAdminMetrics() {
                     renderPortfolioRiskHUD();
                     renderPositions();
                 } else if (tabName === 'radar') {
+                    if (window.ValkyrieBattleEngine) ValkyrieBattleEngine.resize();
+                    if (window.ValkyrieTacticalRadarEngine) window.ValkyrieTacticalRadarEngine.resize();
+                    if (typeof renderRejectionIntelligence === 'function') renderRejectionIntelligence();
+                    if (typeof window.renderAiThoughts === 'function') window.renderAiThoughts();
                     renderCards();
+                    setTimeout(() => {
+                        if (window.ValkyrieBattleEngine) ValkyrieBattleEngine.resize();
+                        if (window.ValkyrieTacticalRadarEngine) window.ValkyrieTacticalRadarEngine.resize();
+                    }, 60);
                 } else if (tabName === 'ledger') {
                     renderHistoryTable();
                 } else if (tabName === 'persona') {
@@ -10605,7 +11201,49 @@ async function loadAdminMetrics() {
         // =========================================================================
         // 🛡️ KUANT KALKANLARI & REDDEDİLEN SİNYAL İSTİHBARATI
         // =========================================================================
+        window.radarIsPaused = false;
+        window.toggleRadarPause = function() {
+            window.radarIsPaused = !window.radarIsPaused;
+            const btn = document.getElementById('btn-radar-pause');
+            const icon = document.getElementById('radar-pause-icon');
+            const txt = document.getElementById('radar-pause-text');
+            const ind = document.getElementById('radar-live-indicator');
+            if (window.radarIsPaused) {
+                if (btn) btn.classList.add('is-paused');
+                if (icon) icon.innerText = '▶️';
+                if (txt) txt.innerText = 'Akışı Sürdür';
+                if (ind) {
+                    ind.innerText = '⏸️ DURAKLATILDI';
+                    ind.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+                    ind.style.color = '#f59e0b';
+                }
+            } else {
+                if (btn) btn.classList.remove('is-paused');
+                if (icon) icon.innerText = '⏸️';
+                if (txt) txt.innerText = 'Akışı Dondur';
+                if (ind) {
+                    ind.innerText = '🟢 CANLI AKIŞ';
+                    ind.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                    ind.style.color = '#10b981';
+                }
+                window._lastThoughtFeedSig = null;
+                window._lastRejectionListSig = null;
+                if (typeof window.renderAiThoughts === 'function') window.renderAiThoughts();
+                if (typeof renderRejectionIntelligence === 'function') renderRejectionIntelligence();
+            }
+        };
+
+        window.rejectionSearchQuery = '';
+        window.filterRejections = function(query) {
+            window.rejectionSearchQuery = (query || '').trim().toLowerCase();
+            window._lastRejectionListSig = null;
+            renderRejectionIntelligence();
+        };
+
         function renderRejectionIntelligence() {
+            if (window.radarIsPaused) {
+                return;
+            }
             try {
                 const rejections = (appState && appState.recent_rejections) || [];
                 const totalBadge = document.getElementById('rejection-total-badge');
@@ -10642,17 +11280,39 @@ async function loadAdminMetrics() {
                 const feed = document.getElementById('rejection-feed-container');
                 if (!feed) return;
 
-                if (rejections.length === 0) {
+                // Anti-flicker: if paused, freeze the list DOM updates so user can read calmly
+                if (window.radarIsPaused) return;
+
+                const sQuery = window.rejectionSearchQuery || '';
+                let displayItems = rejections.slice();
+                if (sQuery) {
+                    displayItems = displayItems.filter(item => {
+                        const sym = (item.symbol || '').toLowerCase();
+                        const reas = (item.reason || '').toLowerCase();
+                        const setp = (item.setup || '').toLowerCase();
+                        return sym.includes(sQuery) || reas.includes(sQuery) || setp.includes(sQuery);
+                    });
+                }
+
+                // Signature check: do NOT rewrite innerHTML if items haven't changed!
+                const lastItemSig = displayItems.length > 0 ? (displayItems[displayItems.length - 1].time + '_' + displayItems[displayItems.length - 1].symbol) : 'empty';
+                const currentSig = `${displayItems.length}_${lastItemSig}_${sQuery}`;
+                if (window._lastRejectionListSig === currentSig) {
+                    return; // Zero DOM wipeout, zero jump!
+                }
+                window._lastRejectionListSig = currentSig;
+
+                if (displayItems.length === 0) {
                     feed.innerHTML = `
                         <div style="text-align:center; padding:20px; color:#64748b; font-size:12px; font-family:'JetBrains Mono';">
-                            🛡️ Henüz kalkanlara çarpan riskli sinyal bulunmuyor. Piyasa 100 paritede temiz akıyor.
+                            🛡️ ${sQuery ? `"${sQuery}" ile eşleşen kalkan vetosu bulunamadı.` : 'Henüz kalkanlara çarpan riskli sinyal bulunmuyor. Piyasa 100 paritede temiz akıyor.'}
                         </div>
                     `;
                     return;
                 }
 
                 let html = '';
-                rejections.slice().reverse().forEach(item => {
+                displayItems.slice().reverse().forEach(item => {
                     const sym = item.symbol || '-';
                     const time = item.time || '-';
                     const setup = item.setup || 'Kuant Setup';
@@ -10661,7 +11321,7 @@ async function loadAdminMetrics() {
                     let shieldName = 'Risk Kalkanı';
                     let tagColor = '#ff4757';
                     const rLower = reason.toLowerCase();
-                    if (rLower.includes('flow') || rLower.includes('cvd')) { shieldName = 'Harmonic Flow Gate'; tagColor = 'var(--cyan)'; }
+                    if (rLower.includes('flow') || rLower.includes('cvd') || rLower.includes('harmonic')) { shieldName = 'Harmonic Flow Gate'; tagColor = 'var(--cyan)'; }
                     else if (rLower.includes('judas') || rLower.includes('sweep')) { shieldName = 'Judas Swing Tuzağı'; tagColor = '#f59e0b'; }
                     else if (rLower.includes('beta')) { shieldName = 'Beta Follower Veto'; tagColor = '#a78bfa'; }
                     else if (rLower.includes('shannon') || rLower.includes('entropy')) { shieldName = 'Shannon Confluence'; tagColor = '#38bdf8'; }
@@ -10670,9 +11330,9 @@ async function loadAdminMetrics() {
 
                     html += `
                         <div class="rejection-feed-item">
-                            <div style="display:flex; align-items:center; gap:8px; min-width:0;">
-                                <span style="color:#94a3b8; font-size:11px;">${time}</span>
-                                <b style="color:#ffffff; font-size:12.5px;">${sym}</b>
+                            <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                                <span style="color:#64748b; font-size:11px; font-weight:700;">${time}</span>
+                                <b style="color:#ffffff; font-size:13px; letter-spacing:0.3px;">${sym}</b>
                                 <span style="color:#cbd5e1; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${setup}</span>
                             </div>
                             <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
@@ -11378,10 +12038,81 @@ async function loadAdminMetrics() {
                     window.ValkyrieTacticalRadarEngine.setRadarData(nearCandidates, appState.recent_rejections || []);
                 }
 
+                // 📡 VALKYRIE KOKPİT YÖNETİCİ KÖPRÜSÜNÜ GÜNCELLE
+                try {
+                    const elBridgeMacro = document.getElementById('bridge-macro-regime');
+                    const elBridgeMacroSub = document.getElementById('bridge-macro-sub');
+                    const elBridgeContactCnt = document.getElementById('bridge-contact-count');
+                    const elBridgeContactNames = document.getElementById('bridge-contact-names');
+                    const elBridgeVetoCnt = document.getElementById('bridge-veto-count');
+                    const elBridgeVetoSub = document.getElementById('bridge-veto-sub');
+                    const elBridgeLiq = document.getElementById('bridge-liquidity-balance');
+                    const elBridgeLiqSub = document.getElementById('bridge-liquidity-sub');
+
+                    if (elBridgeMacro) {
+                        elBridgeMacro.innerText = mStatus;
+                        elBridgeMacro.style.color = mColor;
+                    }
+                    if (elBridgeMacroSub) {
+                        elBridgeMacroSub.innerText = `BTC: %${btcR.toFixed(2)} | ETH: %${ethR.toFixed(2)} (${ethLeading ? 'ETH Sürüklüyor' : 'Dengeli'})`;
+                    }
+
+                    const contactCoins = (nearCandidates || []).filter(c => c.distPct < 0.25);
+                    const ambushCoins = (nearCandidates || []).filter(c => c.distPct >= 0.25 && c.distPct <= 0.60);
+                    const totalRadarTracking = (nearCandidates || []).length;
+                    
+                    if (elBridgeContactCnt) {
+                        if (contactCoins.length > 0) {
+                            elBridgeContactCnt.innerText = `${contactCoins.length} Parite Tam Temas!`;
+                            elBridgeContactCnt.style.color = '#10b981';
+                        } else if (ambushCoins.length > 0) {
+                            elBridgeContactCnt.innerText = `${ambushCoins.length} Parite Yakın Pusu`;
+                            elBridgeContactCnt.style.color = '#38bdf8';
+                        } else {
+                            elBridgeContactCnt.innerText = `${totalRadarTracking} Parite Pusu`;
+                            elBridgeContactCnt.style.color = '#94a3b8';
+                        }
+                    }
+                    if (elBridgeContactNames) {
+                        const topSymbols = (contactCoins.length > 0 ? contactCoins : ambushCoins).slice(0, 4).map(c => c.symbol.replace('/USDT','').replace('USDT','')).join(', ');
+                        elBridgeContactNames.innerText = topSymbols ? `Öne Çıkan: ${topSymbols}` : 'Kilit Seviyeler Taranıyor';
+                    }
+
+                    const rejs = appState.recent_rejections || [];
+                    if (elBridgeVetoCnt) {
+                        elBridgeVetoCnt.innerText = `${rejs.length} Sinyal Veto Edildi`;
+                    }
+                    if (elBridgeVetoSub) {
+                        const lastRej = rejs.length > 0 ? rejs[rejs.length - 1] : null;
+                        elBridgeVetoSub.innerText = lastRej ? `Son: ${lastRej.symbol.replace('/USDT','').replace('USDT','')} (${lastRej.setup})` : '35+ Kuant Kalkanı Devrede';
+                    }
+
+                    if (elBridgeLiq) {
+                        elBridgeLiq.innerHTML = `<span style="color:#10b981;">%${bullPct} Boğa</span> / <span style="color:#f43f5e;">%${bearPct} Ayı</span>`;
+                    }
+                    if (elBridgeLiqSub) {
+                        elBridgeLiqSub.innerText = `100 Parite 1H Makro (%${rangePct} Yatay)`;
+                    }
+                } catch (eBridge) {
+                    console.warn("Cockpit bridge card update error:", eBridge);
+                }
+
                 // 1. TEMASTA OLAN VE YAKLAŞAN COİNLERİN DERİN ANALİZİ (Pusu / Neden Girmedi / Ne Bekliyor?)
                 if (nearCandidates && nearCandidates.length > 0) {
-                    nearCandidates.sort((a,b) => a.distPct - b.distPct);
-                    const topNear = nearCandidates.slice(0, 6);
+                    // 🛡️ STABİL KADEMELİ SIRALAMA (Flicker & Hızlı Sıra Atlama Önleyici):
+                    // Tier 1: Tam Temas (distPct < 0.25%)
+                    // Tier 2: Yakın Pusu (0.25% <= distPct <= 0.60%)
+                    // Tier 3: Yaklaşma (distPct > 0.60%)
+                    // Tier içi sıralama: Sembol adı (alfabetik), minik fiyat oynamalarında kartlar zıplamaz!
+                    nearCandidates.sort((a, b) => {
+                        const tierA = a.distPct < 0.25 ? 1 : (a.distPct <= 0.60 ? 2 : 3);
+                        const tierB = b.distPct < 0.25 ? 1 : (b.distPct <= 0.60 ? 2 : 3);
+                        if (tierA !== tierB) {
+                            return tierA - tierB;
+                        }
+                        return a.symbol.localeCompare(b.symbol);
+                    });
+                    const topNear = nearCandidates.slice(0, 8);
                     
                     topNear.forEach(c => {
                         const cleanS = c.symbol.replace('/USDT', '').replace('USDT', '').trim();
@@ -11396,76 +12127,149 @@ async function loadAdminMetrics() {
                         const decouplingStatus = c.decouplingStatus || '⚪ Nötr';
                         const rsColor = rsScore >= 1.0 ? '#10b981' : (rsScore <= -1.0 ? '#f43f5e' : '#38bdf8');
                         const curVolStr = c.curVol >= 1e6 ? `$${(c.curVol/1e6).toFixed(1)}M` : (c.curVol >= 1e3 ? `$${(c.curVol/1e3).toFixed(0)}K` : '');
-                        const volExtra = curVolStr ? ` (${curVolStr})` : '';
                         const pPrice = typeof formatSmartPrice === 'function' ? formatSmartPrice(c.price) : Number(c.price).toFixed(4);
                         const tPrice = typeof formatSmartPrice === 'function' ? formatSmartPrice(c.targetPrice) : Number(c.targetPrice).toFixed(4);
 
                         const iRatio = c.icebergRatio || 1.0;
                         const hasIce = c.hasIceberg || (iRatio >= 3.5);
-                        const iceBadge = hasIce 
-                            ? `<span style="background:rgba(0,242,254,0.18); padding:2px 7px; border-radius:4px; border:1px solid rgba(0,242,254,0.45); color:#00f2fe; font-weight:800; text-shadow:0 0 8px rgba(0,242,254,0.5);">🧊 Iceberg: ${iRatio.toFixed(1)}x (${c.icebergSide === 'ICEBERG_ASK_RESISTANCE' ? 'Satıcı' : 'Alıcı'})</span>`
-                            : (iRatio >= 2.0 ? `<span style="background:rgba(0,0,0,0.3); padding:2px 7px; border-radius:4px; border:1px solid rgba(0,242,254,0.25); color:#38bdf8;">🧊 Iceberg: ${iRatio.toFixed(1)}x</span>` : '');
-                        
                         const entVal = c.entropyNorm !== undefined ? c.entropyNorm : 0.65;
                         const hurstVal = c.hurstVal !== undefined ? c.hurstVal : 0.50;
-                        const quantBadge = `<span style="background:rgba(168,85,247,0.12); padding:2px 7px; border-radius:4px; border:1px solid rgba(168,85,247,0.3); color:#c084fc;">🌡️ S:%${Math.round(entVal*100)} | H:${hurstVal.toFixed(2)}</span>`;
 
-                        const telemetryBar = `
-                            <div style="display:flex; gap:6px; margin:6px 0; flex-wrap:wrap; font-size:11px; font-family:'JetBrains Mono',monospace;">
-                                <span style="background:rgba(0,0,0,0.3); padding:2px 7px; border-radius:4px; border:1px solid ${isVolOk ? 'rgba(16,185,129,0.35)' : 'rgba(245,158,11,0.35)'}; color:${isVolOk ? '#10b981' : '#f59e0b'}; font-weight:700;">
-                                    ⚡ 5M Hacim: ${volSurge.toFixed(2)}x${volExtra} / Min ${minSurge.toFixed(1)}x [${isVolOk ? '✓ Onaylı' : '⏳ Eksik'}]
-                                </span>
-                                <span style="background:rgba(0,0,0,0.3); padding:2px 7px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:${rsColor}; font-weight:700;">
-                                    ⚡ RS vs BTC: ${rsScore >= 0 ? '+' : ''}${rsScore.toFixed(2)} [${decouplingStatus.split(' ')[0]}]
-                                </span>
-                                ${iceBadge}
-                                ${quantBadge}
-                                <span style="background:rgba(0,0,0,0.3); padding:2px 7px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:${isTop80 ? '#38bdf8' : '#94a3b8'};">
-                                    📊 ${isTop80 ? '✓ Top %80 Hacim' : '⚠️ Top %20 Altı (Sığ)'}
-                                </span>
-                                <span style="background:rgba(0,0,0,0.3); padding:2px 7px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:#c084fc;">
-                                    🌊 ATR: %${atrPct.toFixed(2)}
-                                </span>
-                            </div>
-                        `;
+                        // Modern kart durum stilleri & rozetleri
+                        let cardStateClass = 'state-approaching';
+                        let statusPillClass = 'status-blue';
+                        let statusPillText = `🎯 PUSUDAYDI (%${dist.toFixed(2)})`;
+                        let statusIcon = '🎯';
 
                         if (isContact) {
-                            const commText = isVolOk 
+                            if (isVolOk) {
+                                cardStateClass = 'state-contact-vol-ok';
+                                statusPillClass = 'status-green';
+                                statusPillText = '🟢 TEMASTA (HACİM ONAYLI)';
+                                statusIcon = '🚀';
+                            } else {
+                                cardStateClass = 'state-contact-waiting';
+                                statusPillClass = 'status-amber';
+                                statusPillText = '🟡 TEMASTA (HACİM BEKLENİYOR)';
+                                statusIcon = '🔥';
+                            }
+                        }
+
+                        // Mesafe dolum barı: temas bandında %100, %1.0 mesafede %5
+                        const proxFillWidth = Math.max(5, Math.min(100, Math.round((1 - Math.min(dist, 1.0) / 1.0) * 100)));
+
+                        let commText = '';
+                        let triggerText = '';
+
+                        if (isContact) {
+                            commText = isVolOk 
                                 ? ValkyrieCommentaryEngine.getContactVolOk(cleanS, c.targetName, volSurge, minSurge, rsScore, c.action, pPrice, tPrice)
                                 : ValkyrieCommentaryEngine.getContactVolWaiting(cleanS, c.targetName, volSurge, minSurge, rsScore, c.action, pPrice, tPrice);
-
-                            thoughtItems.push({
-                                cat: 'near',
-                                symbol: cleanS,
-                                color: isVolOk ? '#10b981' : '#f59e0b',
-                                icon: isVolOk ? '🚀' : '🔥',
-                                tag: isVolOk ? 'TEMASTA (HACİM ONAYLI)' : 'TEMASTA (HACİM BEKLENİYOR)',
-                                tagClass: isVolOk ? 'tag-macro' : 'tag-vol',
-                                title: `${isVolOk ? '🚀' : '🔥'} ${cleanS} • ${c.targetName} SEVİYESİNDE TAM TEMAS! (${nowStr})`,
-                                text: `Fiyat şu an <b>$${pPrice}</b> ile <b>${c.targetName} ($${tPrice})</b> seviyesine tam temas halinde.<br>
-                                ${telemetryBar}
-                                <div style="margin-top:4px; padding:6px 10px; background:${isVolOk ? 'rgba(16,185,129,0.08)' : 'rgba(245,158,11,0.08)'}; border-left:3px solid ${isVolOk ? '#10b981' : '#f59e0b'}; border-radius:4px; font-size:12px; line-height:1.45;">
-                                    <b>❓ Durum & Neden Bekliyor?</b> ${commText}<br>
-                                    <b>✅ Tetiklenme Şartı:</b> 5M mum kapanışı ve en az <b>${minSurge.toFixed(1)}x</b> hacim sağlandığında anında <b>${c.action}</b> tetiklenecektir.
-                                </div>`
-                            });
-                        } else if (dist <= 0.85) {
-                            const appText = ValkyrieCommentaryEngine.getApproaching(cleanS, c.targetName, dist, minSurge, rsScore);
-                            thoughtItems.push({
-                                cat: 'near',
-                                symbol: cleanS,
-                                color: '#38bdf8',
-                                icon: '🎯',
-                                tag: 'PUSUDA (YAKLAŞIYOR)',
-                                tagClass: 'tag-autopsy-win',
-                                title: `🎯 ${cleanS} • ${c.targetName} PUSUSU (Kalan Mesafe: %${dist.toFixed(2)})`,
-                                text: `Fiyat ${c.targetName} ($${tPrice}) seviyesine doğru süzülüyor.<br>
-                                ${telemetryBar}
-                                <div style="margin-top:4px; padding:6px 10px; background:rgba(56,189,248,0.08); border-left:3px solid #38bdf8; border-radius:4px; font-size:12px; line-height:1.45;">
-                                    <b>⚡ Beklenen Senaryo:</b> ${appText}
-                                </div>`
-                            });
+                            triggerText = `5M mum kapanışı ve en az <b>${minSurge.toFixed(1)}x</b> bağımsız hacim sağlandığında anında <b>${c.action}</b> tetiklenecektir.`;
+                        } else {
+                            commText = ValkyrieCommentaryEngine.getApproaching(cleanS, c.targetName, dist, minSurge, rsScore);
+                            triggerText = `Fiyat kilit seviyeye (%0.25 temas bandı) ulaştığında emir defteri emilimi ve hacim patlaması aranacak.`;
                         }
+
+                        const cardHtml = `
+                        <div class="opportunity-card ai-thought-item ${cardStateClass}" id="opp-card-${cleanS}">
+                            <div class="opp-card-header">
+                                <div class="opp-sym-box">
+                                    <span class="opp-sym-ticker">${cleanS}</span>
+                                    <span class="opp-sym-pair">/USDT</span>
+                                    <span class="opp-target-badge">${c.targetName}</span>
+                                </div>
+                                <div class="opp-header-right">
+                                    <span class="opp-status-pill ${statusPillClass}">
+                                        <span>${statusIcon}</span>
+                                        <span>${statusPillText}</span>
+                                    </span>
+                                    <button class="btn-open-chart" onclick="openTradingViewModal('${cleanS}')" title="${cleanSymSafe(cleanS)} Canlı Grafiği Aç" style="padding:3px 9px; font-size:11px;">
+                                        📈 Grafik
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="opp-price-bar">
+                                <div class="opp-price-col">
+                                    <span class="opp-price-lbl">FİYAT</span>
+                                    <span class="opp-price-val">$${pPrice}</span>
+                                </div>
+                                <div class="opp-proximity-indicator">
+                                    <span class="opp-prox-text">Mesafe: %${dist.toFixed(2)}</span>
+                                    <div class="opp-prox-track">
+                                        <div class="opp-prox-fill" style="width: ${proxFillWidth}%;"></div>
+                                    </div>
+                                </div>
+                                <div class="opp-price-col align-right">
+                                    <span class="opp-price-lbl">HEDEF SEVİYE</span>
+                                    <span class="opp-target-val">$${tPrice}</span>
+                                </div>
+                            </div>
+
+                            <div class="opp-metrics-grid">
+                                <div class="opp-metric-chip ${isVolOk ? 'chip-ok' : 'chip-wait'}">
+                                    <span class="opp-chip-label">5M HACİM</span>
+                                    <span class="opp-chip-val" style="color:${isVolOk ? '#10b981' : '#f59e0b'};">${volSurge.toFixed(2)}x</span>
+                                    <span class="opp-chip-sub">Min ${minSurge.toFixed(1)}x [${isVolOk ? '✓ Onay' : '⏳ Bekliyor'}]</span>
+                                </div>
+                                <div class="opp-metric-chip">
+                                    <span class="opp-chip-label">RS VS BTC</span>
+                                    <span class="opp-chip-val" style="color:${rsColor};">${rsScore >= 0 ? '+' : ''}${rsScore.toFixed(2)}</span>
+                                    <span class="opp-chip-sub">${decouplingStatus.split(' ')[0]}</span>
+                                </div>
+                                <div class="opp-metric-chip">
+                                    <span class="opp-chip-label">ICEBERG TEYİDİ</span>
+                                    <span class="opp-chip-val" style="color:${hasIce ? '#00f2fe' : '#94a3b8'};">${hasIce ? iRatio.toFixed(1) + 'x Duvar' : (iRatio >= 2.0 ? iRatio.toFixed(1) + 'x' : 'Yok')}</span>
+                                    <span class="opp-chip-sub">${hasIce ? (c.icebergSide === 'ICEBERG_ASK_RESISTANCE' ? 'Satıcı Emilimi' : 'Alıcı Emilimi') : 'Normal Derinlik'}</span>
+                                </div>
+                                <div class="opp-metric-chip">
+                                    <span class="opp-chip-label">KUANT DEĞERLERİ</span>
+                                    <span class="opp-chip-val" style="color:#c084fc;">S:%${Math.round(entVal*100)} | H:${hurstVal.toFixed(2)}</span>
+                                    <span class="opp-chip-sub">${hurstVal >= 0.55 ? 'Trend Fazı' : 'Yatay / Fraktal'}</span>
+                                </div>
+                                <div class="opp-metric-chip">
+                                    <span class="opp-chip-label">HAVUZ LİKİDİTESİ</span>
+                                    <span class="opp-chip-val" style="color:${isTop80 ? '#38bdf8' : '#94a3b8'};">${isTop80 ? '✓ Top %80' : '⚠️ Top %20 Altı'}</span>
+                                    <span class="opp-chip-sub">${curVolStr ? curVolStr + ' Hacim' : 'Likidite Uygun'}</span>
+                                </div>
+                                <div class="opp-metric-chip">
+                                    <span class="opp-chip-label">VOLATİLİTE (ATR)</span>
+                                    <span class="opp-chip-val" style="color:#c084fc;">%${atrPct.toFixed(2)}</span>
+                                    <span class="opp-chip-sub">${atrPct >= 1.5 ? 'Geniş Kanal' : 'Sıkışma'}</span>
+                                </div>
+                            </div>
+
+                            <div class="opp-action-box">
+                                <div class="opp-action-row">
+                                    <span class="opp-action-icon">${isContact ? '❓' : '⚡'}</span>
+                                    <div class="opp-action-content">
+                                        <span class="opp-action-title">${isContact ? 'Durum & Neden Bekliyor?' : 'Beklenen Senaryo:'}</span>
+                                        <span class="opp-action-desc">${commText}</span>
+                                    </div>
+                                </div>
+                                <div class="opp-action-row opp-trigger-row">
+                                    <span class="opp-action-icon">✅</span>
+                                    <div class="opp-action-content">
+                                        <span class="opp-action-title">Tetiklenme Şartı:</span>
+                                        <span class="opp-action-desc">${triggerText}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+
+                        thoughtItems.push({
+                            cat: 'near',
+                            symbol: cleanS,
+                            color: isContact ? (isVolOk ? '#10b981' : '#f59e0b') : '#38bdf8',
+                            icon: statusIcon,
+                            tag: statusPillText,
+                            tagClass: isContact ? (isVolOk ? 'tag-macro' : 'tag-vol') : 'tag-autopsy-win',
+                            title: `${statusIcon} ${cleanS} • ${c.targetName} (${nowStr})`,
+                            text: commText,
+                            customHtml: cardHtml,
+                            sig: `${cleanS}:${c.targetName}:${cardStateClass}:${dist.toFixed(1)}:${isVolOk}`
+                        });
                     });
                 } else {
                     thoughtItems.push({
@@ -11497,7 +12301,8 @@ async function loadAdminMetrics() {
                             <div style="margin-top:4px; padding:6px 10px; background:rgba(244,63,94,0.08); border-left:3px solid #f43f5e; border-radius:4px;">
                                 <b>🚫 Neden Poz Açılmadı?</b> <span style="color:#fda4af; font-weight:700;">${rej.reason}</span>.<br>
                                 <b>💡 Alınan Önlem:</b> ${rejAutopsy}
-                            </div>`
+                            </div>`,
+                            sig: `${cleanRej}:${rej.setup}:${rej.time}`
                         });
                     });
                 } else {
@@ -11541,7 +12346,8 @@ async function loadAdminMetrics() {
                             tag: isHalf ? 'BREAKEVEN KOŞUSU' : 'AKTİF TAKTİK',
                             tagClass: 'tag-pos',
                             title: tacticTitle,
-                            text: tacticText
+                            text: tacticText,
+                            sig: `${cleanS}:${pos.side}:${isHalf}:${roePct.toFixed(1)}`
                         });
                     });
                 } else {
@@ -11582,7 +12388,8 @@ async function loadAdminMetrics() {
                             tag: autopsyTag,
                             tagClass: autopsyTagClass,
                             title: autopsyTitle,
-                            text: autopsyText
+                            text: autopsyText,
+                            sig: `${cleanS}:${tr.id || tr.trade_id || tr.close_time}:${pnl.toFixed(1)}`
                         });
                     });
                 }
@@ -11608,15 +12415,44 @@ async function loadAdminMetrics() {
                 if (elPos) elPos.innerText = posCnt;
                 if (elAut) elAut.innerText = autCnt;
 
+                // Radar Son Güncelleme Etiketi
+                const syncEl = document.getElementById('radar-last-sync');
+                if (syncEl && !window.radarIsPaused) {
+                    syncEl.innerText = `⏱️ Son Güncelleme: ${nowStr} (Stabil Akış)`;
+                }
+
+                // Helper for safe clean symbol
+                function cleanSymSafe(s) {
+                    return (s || '').replace('/USDT', '').replace('USDT', '').trim();
+                }
+
                 window.renderAiThoughts = function() {
+                    // ⏸️ Kullanıcı Akışı Dondurduysa DOM Değişikliği Yapma
+                    if (window.radarIsPaused) {
+                        return;
+                    }
+
                     const f = window.currentAiFilter || 'all';
                     const filtered = f === 'all' ? thoughtItems : thoughtItems.filter(t => t.cat === f);
                     if (filtered.length === 0) {
-                        feed.innerHTML = `<div style="text-align:center; padding:20px; color:#64748b; font-size:12.5px;">Bu kategoride henüz yeni bir akıl yürütme notu bulunmuyor.</div>`;
+                        feed.innerHTML = `<div style="text-align:center; padding:30px; color:#64748b; font-size:12.5px; font-family:'JetBrains Mono';">Bu kategoride henüz yeni bir istihbarat notu bulunmuyor.</div>`;
                         return;
                     }
+
+                    // 🛡️ Flicker Önleyici DOM İmza Kontrolü (Aynı veri geldiyse DOM'u silip yeniden oluşturma!)
+                    const feedSig = f + '::' + filtered.map(t => `${t.cat}:${t.symbol || ''}:${t.sig || t.tag || ''}`).join('|');
+                    if (window._lastThoughtFeedSig === feedSig && feed.children.length > 0) {
+                        return;
+                    }
+                    window._lastThoughtFeedSig = feedSig;
+
                     feed.innerHTML = filtered.map(t => {
-                        const cleanSym = t.symbol ? t.symbol.replace('/USDT', '').replace('USDT', '').trim() : '';
+                        // Eğer kartın özel yüksek teknolojili HTML'i varsa doğrudan kullan
+                        if (t.customHtml) {
+                            return t.customHtml;
+                        }
+
+                        const cleanSym = t.symbol ? cleanSymSafe(t.symbol) : '';
                         const chartBtn = cleanSym ? `
                             <button class="btn-open-chart" onclick="openTradingViewModal('${cleanSym}')" title="${cleanSym} Canlı Göstergeli Grafiği Aç" style="padding:2px 8px; font-size:11px; margin-left:auto; flex-shrink:0;">
                                 📈 Grafik
