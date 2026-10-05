@@ -77,7 +77,19 @@ def calculate_anchored_vwap_series(df_candles: pd.DataFrame, anchor_idx) -> list
     for i in range(len(sub_df)):
         v = cum_vol.iloc[i]
         val = (cum_tp_vol.iloc[i] / v) if v > 0 else hlc3.iloc[i]
-        ts = int(sub_df['timestamp'].iloc[i] / 1000)
+        if 'timestamp' in sub_df.columns:
+            raw_ts = sub_df['timestamp'].iloc[i]
+            ts = int(raw_ts / 1000) if raw_ts > 1e11 else int(raw_ts)
+        elif 'time' in sub_df.columns:
+            raw_ts = sub_df['time'].iloc[i]
+            ts = int(raw_ts / 1000) if raw_ts > 1e11 else int(raw_ts)
+        elif isinstance(sub_df.index, pd.DatetimeIndex):
+            ts = int(sub_df.index[i].timestamp())
+        else:
+            try:
+                ts = int(sub_df.index[i])
+            except Exception:
+                ts = int(i)
         points.append({"time": ts, "value": round(float(val), 6)})
     return points
 

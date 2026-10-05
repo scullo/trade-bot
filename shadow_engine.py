@@ -1304,7 +1304,7 @@ class ShadowExecutionEngine:
             return "SETUP_8_MVAL_BREAKDOWN"
 
         # 7. SETUP 7: S4 BREAKDOWN / RESISTANCE FLIP (SHORT)
-        if "SETUP 7" in s or "SETUP_7" in s or "S4_RESISTANCE_FLIP" in s or "S4 RESISTANCE FLIP" in s or "S4 RETEST REDDİ" in s or "S4 RETEST REDDI" in s or "S4 DİRENÇ RETEST" in s or "S4 DIRENC RETEST" in s or "S4_BREAKDOWN" in s or ("S4" in s and "FLIP" in s):
+        if "SETUP 7" in s or "SETUP_7" in s or "S4_RESISTANCE_FLIP" in s or "S4 RESISTANCE FLIP" in s or "S4 RETEST REDDİ" in s or "S4 RETEST REDDI" in s or "S4 DİRENÇ RETEST" in s or "S4 DIRENC RETEST" in s or "SETUP_7_S4_BREAKDOWN" in s or ("S4" in s and "FLIP" in s):
             return "SETUP_7_S4_BREAKDOWN"
 
         # 6. SETUP 6: MVAH BREAKOUT (LONG)
