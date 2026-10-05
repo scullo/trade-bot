@@ -1400,10 +1400,11 @@ class MarketDataManager:
         top_bid_usd = float(depth.get('bid_price', 0.0)) * float(depth.get('bid_qty', 0.0))
         top_ask_usd = float(depth.get('ask_price', 0.0)) * float(depth.get('ask_qty', 0.0))
         cur_p = current_p if current_p > 0 else self.current_prices.get(symbol, 0.0)
-        if top_bid_usd <= 0 and cur_p > 0:
-            top_bid_usd = cur_p * 50.0
-        if top_ask_usd <= 0 and cur_p > 0:
-            top_ask_usd = cur_p * 50.0
+        default_top_depth_usd = 25000.0 if (symbol in ["BTC/USDT", "ETH/USDT", "SOL/USDT"]) else 8000.0
+        if top_bid_usd <= 0:
+            top_bid_usd = default_top_depth_usd
+        if top_ask_usd <= 0:
+            top_ask_usd = default_top_depth_usd
 
         ice_data = detect_iceberg_orders(diff_buy, diff_sell, top_bid_usd, top_ask_usd)
         ask_ice_r = float(ice_data.get('ask_iceberg_ratio', 1.0))
@@ -1807,9 +1808,9 @@ class MarketDataManager:
                 diff_sell = max(0.0, float(h_deque[-1][2] - h_deque[0][2]))
                 top_bid_usd = float(depth.get('bid_price', 0.0)) * float(depth.get('bid_qty', 0.0))
                 top_ask_usd = float(depth.get('ask_price', 0.0)) * float(depth.get('ask_qty', 0.0))
-                cur_p = self.current_prices.get(symbol, 0.0)
-                if top_bid_usd <= 0 and cur_p > 0: top_bid_usd = cur_p * 50.0
-                if top_ask_usd <= 0 and cur_p > 0: top_ask_usd = cur_p * 50.0
+                default_top_depth_usd = 25000.0 if (symbol in ["BTC/USDT", "ETH/USDT", "SOL/USDT"]) else 8000.0
+                if top_bid_usd <= 0: top_bid_usd = default_top_depth_usd
+                if top_ask_usd <= 0: top_ask_usd = default_top_depth_usd
                 
                 from indicators import detect_iceberg_orders
                 ice_live = detect_iceberg_orders(diff_buy, diff_sell, top_bid_usd, top_ask_usd)

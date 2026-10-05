@@ -142,9 +142,9 @@ class ShadowExecutionEngine:
             "SETUP_14_AVWAP_SUPPORT",
             "SETUP_15_AVWAP_MVAH_RECLAIM",
             "SETUP_15_AVWAP_RECLAIM",
-            "SETUP_16_FAKEOUT_RECLAIM_LONG",
             "SETUP_16_R3_SUPPORT_FLIP",
             "SETUP_16_R3_FLIP",
+            "SETUP_16_FAKEOUT_RECLAIM_LONG",
             "SETUP_FAKEOUT_RECLAIM_LONG"
         }
         short_setups = {
@@ -1255,16 +1255,16 @@ class ShadowExecutionEngine:
         if not s:
             return "SETUP_DİĞER"
 
-        # 16. SETUP 16: FAKEOUT RECLAIM LONG / R3 SUPPORT FLIP (LONG)
-        if "SETUP_FAKEOUT_RECLAIM_LONG" in s or "FAKEOUT_RECLAIM_LONG" in s or ("FAKEOUT" in s and "LONG" in s) or ("AYI TUZAĞI" in s and "LONG" in s) or ("BEAR TRAP" in s and "LONG" in s) or "SETUP_16_FAKEOUT_RECLAIM_LONG" in s:
-            return "SETUP_16_FAKEOUT_RECLAIM_LONG"
+        # 16. SETUP 16: R3 DİRENÇ AŞIMI & RETEST BOĞA DEVAMI LONG (R3 Support Flip)
         if "SETUP 16" in s or "SETUP_16" in s or "R3_SUPPORT_FLIP" in s or "R3 SUPPORT FLIP" in s or "R3 FLIP" in s:
             return "SETUP_16_R3_SUPPORT_FLIP"
+        if "SETUP_FAKEOUT_RECLAIM_LONG" in s or "FAKEOUT_RECLAIM_LONG" in s or ("FAKEOUT" in s and "LONG" in s) or ("AYI TUZAĞI" in s and "LONG" in s) or ("BEAR TRAP" in s and "LONG" in s) or "SETUP_16_FAKEOUT_RECLAIM_LONG" in s:
+            return "SETUP_16_R3_SUPPORT_FLIP"
 
-        # 15. SETUP 15: PDH SWEEP SHORT / AVWAP MVAH RECLAIM LONG
-        if "PDH_SWEEP" in s or "PDH SWEEP" in s or ("SWEEP" in s and "SHORT" in s) or "SETUP_15_PDH_SWEEP_RECLAIM_SHORT" in s:
+        # 15. SETUP 15: AVWAP RECLAIM & mVAH BOĞA KIRILIMI RETEST LONG (Macro Absorption Flip)
+        if "SETUP_15_PDH_SWEEP_RECLAIM_SHORT" in s or ("PDH_SWEEP" in s and "SHORT" in s):
             return "SETUP_15_PDH_SWEEP_RECLAIM_SHORT"
-        if "SETUP 15" in s or "SETUP_15" in s or "AVWAP_MVAH_RECLAIM" in s or "AVWAP_RECLAIM" in s or ("AVWAP" in s and "MVAH" in s) or ("AVWAP" in s and "RECLAIM" in s):
+        if "SETUP 15" in s or "SETUP_15" in s or "AVWAP_MVAH_RECLAIM" in s or "AVWAP_RECLAIM" in s or ("AVWAP" in s and "MVAH" in s) or ("AVWAP" in s and "RECLAIM" in s) or "PDH_SWEEP" in s:
             return "SETUP_15_AVWAP_MVAH_RECLAIM"
 
         # 14. SETUP 14: ASIA SWEEP LONG / PIVOT SUPPORT FLIP (LONG)
@@ -1279,16 +1279,16 @@ class ShadowExecutionEngine:
         if "SETUP 13" in s or "SETUP_13" in s or "S3_RESISTANCE_FLIP" in s or "S3 RESISTANCE FLIP" in s or "S3 FLIP" in s:
             return "SETUP_13_S3_RESISTANCE_FLIP"
 
-        # 12. SETUP 12: PDL SWEEP RECLAIM LONG / SUPPORT BREAKDOWN SHORT
-        if "PDL_SWEEP" in s or "PDL SWEEP" in s or ("SWEEP" in s and "LONG" in s) or "SETUP_12_PDL_SWEEP_RECLAIM_LONG" in s:
+        # 12. SETUP 12: DESTEK ÇÖKÜŞÜ SHORT / PDL SWEEP RECLAIM LONG
+        if "SETUP_12_PDL_SWEEP_RECLAIM_LONG" in s or ("PDL_SWEEP" in s and "LONG" in s):
             return "SETUP_12_PDL_SWEEP_RECLAIM_LONG"
-        if "SETUP 12" in s or "SETUP_12" in s or "SUPPORT_BREAKDOWN" in s or "DESTEK ÇÖKÜŞÜ" in s or "DESTEK COKUSU" in s or "ÇÖKÜŞ" in s or "COKUS" in s:
+        if "SETUP 12" in s or "SETUP_12" in s or "SUPPORT_BREAKDOWN" in s or "DESTEK ÇÖKÜŞÜ" in s or "DESTEK COKUSU" in s or "ÇÖKÜŞ" in s or "COKUS" in s or "PDL_SWEEP" in s:
             return "SETUP_12_SUPPORT_BREAKDOWN"
 
-        # 11. SETUP 11: FAKEOUT RECLAIM SHORT / RESISTANCE FLIP (SHORT)
-        if "SETUP_FAKEOUT_RECLAIM_SHORT" in s or "FAKEOUT_RECLAIM_SHORT" in s or ("FAKEOUT" in s and "SHORT" in s) or ("BOĞA TUZAĞI" in s and "SHORT" in s) or ("BULL TRAP" in s) or "SETUP_11_FAKEOUT_RECLAIM_SHORT" in s:
-            return "SETUP_11_FAKEOUT_RECLAIM_SHORT"
+        # 11. SETUP 11: PİVOT P / mPOC / TEPE AVWAP ALTTAN RETEST AYI REDDİ SHORT (Bearish Resistance Flip)
         if "SETUP 11" in s or "SETUP_11" in s or "SETUP_11_RESISTANCE_FLIP" in s or ("RESISTANCE_FLIP" in s and not any(k in s for k in ["S4", "S3", "SETUP_7", "SETUP 7", "SETUP_13", "SETUP 13"])):
+            return "SETUP_11_RESISTANCE_FLIP"
+        if "SETUP_FAKEOUT_RECLAIM_SHORT" in s or "FAKEOUT_RECLAIM_SHORT" in s or ("FAKEOUT" in s and "SHORT" in s) or ("BOĞA TUZAĞI" in s and "SHORT" in s) or ("BULL TRAP" in s) or "SETUP_11_FAKEOUT_RECLAIM_SHORT" in s:
             return "SETUP_11_RESISTANCE_FLIP"
 
         # 10. SETUP 10: ABOVE NPOC REJECTION (SHORT)
@@ -1304,7 +1304,7 @@ class ShadowExecutionEngine:
             return "SETUP_8_MVAL_BREAKDOWN"
 
         # 7. SETUP 7: S4 BREAKDOWN / RESISTANCE FLIP (SHORT)
-        if "SETUP 7" in s or "SETUP_7" in s or "S4_RESISTANCE_FLIP" in s or "S4 RESISTANCE FLIP" in s or "S4 RETEST REDDİ" in s or "S4 RETEST REDDI" in s or "S4 DİRENÇ RETEST" in s or "S4 DIRENC RETEST" in s or ("S4" in s and "FLIP" in s):
+        if "SETUP 7" in s or "SETUP_7" in s or "S4_RESISTANCE_FLIP" in s or "S4 RESISTANCE FLIP" in s or "S4 RETEST REDDİ" in s or "S4 RETEST REDDI" in s or "S4 DİRENÇ RETEST" in s or "S4 DIRENC RETEST" in s or "S4_BREAKDOWN" in s or ("S4" in s and "FLIP" in s):
             return "SETUP_7_S4_BREAKDOWN"
 
         # 6. SETUP 6: MVAH BREAKOUT (LONG)

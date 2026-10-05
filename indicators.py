@@ -24,11 +24,22 @@ def calculate_camarilla_pivots(high: float, low: float, close: float) -> dict:
         "S3": s3, "S4": s4, "S5": s5
     }
 
-def calculate_anchored_vwap(df_candles: pd.DataFrame, anchor_idx: int) -> float:
-    if df_candles.empty or anchor_idx >= len(df_candles) or anchor_idx < 0:
+def calculate_anchored_vwap(df_candles: pd.DataFrame, anchor_idx) -> float:
+    if df_candles.empty:
+        return 0.0
+
+    if anchor_idx in df_candles.index:
+        pos = int(df_candles.index.get_loc(anchor_idx))
+    else:
+        try:
+            pos = int(anchor_idx)
+        except Exception:
+            return 0.0
+
+    if pos < 0 or pos >= len(df_candles):
         return 0.0
         
-    sub_df = df_candles.iloc[anchor_idx:].copy()
+    sub_df = df_candles.iloc[pos:].copy()
     hlc3 = (sub_df['high'] + sub_df['low'] + sub_df['close']) / 3.0
     tp_vol = hlc3 * sub_df['volume']
     
@@ -40,11 +51,23 @@ def calculate_anchored_vwap(df_candles: pd.DataFrame, anchor_idx: int) -> float:
         return float(cum_tp_vol.iloc[-1] / valid_vol)
     return float(hlc3.iloc[-1])
 
-def calculate_anchored_vwap_series(df_candles: pd.DataFrame, anchor_idx: int) -> list:
+def calculate_anchored_vwap_series(df_candles: pd.DataFrame, anchor_idx) -> list:
     """Returns list of dicts: [{'time': int, 'value': float}] for Lightweight Charts plotting."""
-    if df_candles.empty or anchor_idx >= len(df_candles) or anchor_idx < 0:
+    if df_candles.empty:
         return []
-    sub_df = df_candles.iloc[anchor_idx:].copy()
+
+    if anchor_idx in df_candles.index:
+        pos = int(df_candles.index.get_loc(anchor_idx))
+    else:
+        try:
+            pos = int(anchor_idx)
+        except Exception:
+            return []
+
+    if pos < 0 or pos >= len(df_candles):
+        return []
+
+    sub_df = df_candles.iloc[pos:].copy()
     hlc3 = (sub_df['high'] + sub_df['low'] + sub_df['close']) / 3.0
     tp_vol = hlc3 * sub_df['volume']
     cum_tp_vol = tp_vol.cumsum()
