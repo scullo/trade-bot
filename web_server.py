@@ -8705,8 +8705,9 @@ async function loadAdminMetrics() {
             }
 
             function render() {
-                // If not on cockpit tab or in simple mode, pause rendering to save 100% CPU
-                if ((window.currentActiveMainTab && window.currentActiveMainTab !== 'cockpit') || (window.currentBattleMode && window.currentBattleMode !== 'arena') || !ctx) {
+                // Radar ve Kokpit sekmesinde arena modunda 60 FPS çizim yap (diğer sekmelerde CPU tasarrufu)
+                const activeTab = window.currentActiveMainTab || 'radar';
+                if ((activeTab !== 'cockpit' && activeTab !== 'radar') || (window.currentBattleMode && window.currentBattleMode !== 'arena') || !ctx) {
                     animId = requestAnimationFrame(render);
                     return;
                 }
@@ -10216,7 +10217,9 @@ async function loadAdminMetrics() {
             }
 
             function render() {
-                if ((window.currentActiveMainTab && window.currentActiveMainTab !== 'cockpit') || document.hidden || !ctx) {
+                // Radar ve Kokpit sekmelerinde 360° radar çizimini çalıştır
+                const activeTab = window.currentActiveMainTab || 'radar';
+                if ((activeTab !== 'cockpit' && activeTab !== 'radar') || document.hidden || !ctx) {
                     return;
                 }
                 if (currentRadarMode === 'collapsed') return;
