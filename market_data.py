@@ -2378,6 +2378,7 @@ class MarketDataManager:
                                                 'volume': float(closed_k[5]) / base_div,
                                                 'quote_volume': float(closed_k[7]),
                                                 'qav': float(closed_k[7]),
+                                                'taker_base': float(closed_k[9]) / base_div if len(closed_k) > 9 else 0.0,
                                                 'taker_quote': float(closed_k[10]) if len(closed_k) > 10 else 0.0
                                             }
                                             prev_candle = {
@@ -2389,6 +2390,7 @@ class MarketDataManager:
                                                 'volume': float(prev_k[5]) / base_div,
                                                 'quote_volume': float(prev_k[7]),
                                                 'qav': float(prev_k[7]),
+                                                'taker_base': float(prev_k[9]) / base_div if len(prev_k) > 9 else 0.0,
                                                 'taker_quote': float(prev_k[10]) if len(prev_k) > 10 else 0.0
                                             }
                                             break
@@ -2676,7 +2678,10 @@ class MarketDataManager:
                                                 'low': float(kline.get('l')),
                                                 'close': float(kline.get('c')),
                                                 'volume': float(kline.get('v')),
-                                                'quote_volume': float(kline.get('q', 0.0))
+                                                'quote_volume': float(kline.get('q', 0.0)),
+                                                'num_trades': int(kline.get('n', 0)),
+                                                'taker_base': float(kline.get('V', 0.0)),
+                                                'taker_quote': float(kline.get('Q', 0.0))
                                             }
                                             prev_candle = self.candles_5m[norm_s].iloc[-1].to_dict() if not self.candles_5m[norm_s].empty else new_candle
                                             if not self.candles_5m[norm_s].empty:
