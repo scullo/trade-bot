@@ -1410,9 +1410,11 @@ def create_shadow_dna_excel_report(
     ws3.set_column('Z:Z', 12)  # Süre dk
     ws3.set_column('AA:AA', 18)  # Giriş Zamanı
     ws3.set_column('AB:AB', 18)  # Çıkış Zamanı
+    ws3.set_column('AC:AC', 22)  # O-U Yarılanma (τ)
+    ws3.set_column('AD:AD', 26)  # Kapanış Nedeni
 
-    ws3.merge_range('B2:AB2', 'MİKROSKOBİK GÖLGE İŞLEM DEFTERİ (CANLI PİYASA SİMÜLASYONU)', title_fmt)
-    ws3.merge_range('B3:AB3', 'Canlı Mumlarla Takip Edilerek TP1, TP2 veya Stop Akıbeti Belirlenmiş Tüm Sanal Pozisyonlar ve Adli Otopsi Raporu', subtitle_fmt)
+    ws3.merge_range('B2:AD2', 'MİKROSKOBİK GÖLGE İŞLEM DEFTERİ (CANLI PİYASA SİMÜLASYONU)', title_fmt)
+    ws3.merge_range('B3:AD3', 'Canlı Mumlarla Takip Edilerek TP1, TP2 veya Stop Akıbeti Belirlenmiş Tüm Sanal Pozisyonlar ve Adli Otopsi Raporu', subtitle_fmt)
     ws3.set_row(1, 28)
     ws3.set_row(2, 18)
 
@@ -1423,7 +1425,8 @@ def create_shadow_dna_excel_report(
         'Giriş ($)', 'Çıkış ($)', 'Stop ($)', 'Planlanan TP1 ($)', 'Planlanan TP2 ($)',
         'Zirve MFE (%)', 'Maks MAE (%)', 'ROE (%)', 'Sanal Net PnL ($)', 'Kalkan Teşhisi',
         'Volatilite ATR (%)', 'Hacim Çarpanı', 'CVD Alıcı (%)', 'RS Skoru',
-        'Süre (Dk)', 'Giriş Zamanı', 'Çıkış Zamanı'
+        'Süre (Dk)', 'Giriş Zamanı', 'Çıkış Zamanı',
+        'O-U Yarılanma Ömrü (τ)', 'Kapanış Nedeni'
     ]
     ws3.set_row(4, 24)
     for c_i, h_txt in enumerate(headers_s3, start=1):
@@ -1490,6 +1493,13 @@ def create_shadow_dna_excel_report(
         ws3.write(r3_idx, 25, dur, cell_c)
         ws3.write(r3_idx, 26, in_t, cell_c)
         ws3.write(r3_idx, 27, out_t, cell_c)
+
+        ou_tau_val = float(t_item.get('ou_half_life_min') or telem.get('ou_half_life_min', 0.0) or 0.0)
+        ou_reg_val = str(t_item.get('ou_regime') or telem.get('ou_regime', ''))
+        ou_str = f"{ou_tau_val:.1f} dk ({ou_reg_val})" if ou_tau_val > 0 else "-"
+        close_reason_val = str(t_item.get('exit_status') or t_item.get('close_reason') or t_item.get('status') or '-')
+        ws3.write(r3_idx, 28, ou_str, cell_c)
+        ws3.write(r3_idx, 29, close_reason_val, cell_l)
         r3_idx += 1
 
     # ══════════════════════════════════════════════════════════════════════

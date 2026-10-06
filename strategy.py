@@ -195,6 +195,21 @@ class StrategyEngine:
                         telemetry.setdefault("wick_ratio_pct", round(((l_wick + u_wick) / c_rng) * 100.0, 1))
                         telemetry.setdefault("lower_wick_ratio", round(l_wick / c_rng, 3))
                         telemetry.setdefault("upper_wick_ratio", round(u_wick / c_rng, 3))
+                        if len(df_c) >= 20 and "ou_half_life_min" not in telemetry:
+                            try:
+                                close_series = df_c['close'].iloc[-min(len(df_c), int(OU_LOOKBACK_CANDLES)):].tolist()
+                                ou_p = calculate_ornstein_uhlenbeck_params(
+                                    prices=close_series,
+                                    anchor_price=entry_p,
+                                    dt_minutes=5.0,
+                                    min_half_life=OU_MIN_HALF_LIFE_MIN,
+                                    max_half_life=OU_MAX_HALF_LIFE_MIN
+                                )
+                                if ou_p and ou_p.get('is_valid'):
+                                    telemetry.setdefault("ou_half_life_min", float(ou_p.get("half_life_min", 30.0)))
+                                    telemetry.setdefault("ou_regime", str(ou_p.get("regime", "MODERATE_MEAN_REVERTING")))
+                            except Exception:
+                                pass
 
                     self.shadow_engine.spawn_shadow_trade(
                         symbol=clean_s,
@@ -3588,7 +3603,8 @@ class StrategyEngine:
                 pos["tp1"] = r5
             elif "S4 Breakdown" in reason and side == "SHORT" and s5 > 0 and abs(old_tp1 - s5) > 0.0001:
                 pos["tp1"] = s5
-            self.paper_trader.save_history()
+            if hasattr(self.paper_trader, 'save_history'):
+                self.paper_trader.save_history()
             return False
 
         # ── 1. SADECE HEDEFİ PİVOT P OLAN FADE / SCALP İŞLEMLERİ ───────────
@@ -3630,7 +3646,8 @@ class StrategyEngine:
         elif "S4 Direnc Retest" in reason and side == "SHORT" and s5 > 0 and abs(old_tp1 - s5) > 0.0001:
             pos["tp1"] = s5
 
-        self.paper_trader.save_history()
+        if hasattr(self.paper_trader, 'save_history'):
+            self.paper_trader.save_history()
         return False
 
     # =========================================================================
@@ -3991,7 +4008,8 @@ class StrategyEngine:
                 # ── 1e-OU. ORNSTEIN-UHLENBECK STOKASTİK YARILANMA & 3-KADEMELİ ALFA ÇÜRÜME MOTORU ──
                 # SpaceX PID Runner Bağışıklığı: Kârda koşan pozisyonu (ROE >= +%2.0 veya PID kilitli) O-U zaman stopu ASLA erken kesmez!
                 pid_engaged = bool(pos.get("pid_engaged", False)) or bool(pos.get("chandelier_locked", False))
-                pid_immune = (roe_raw >= float(OU_PID_IMMUNITY_ROE)) or pid_engaged or (max_mfe_seen >= 3.5 and roe_raw >= 1.0)
+                has_tp1_taken = bool(pos.get("tp1_hit", False)) or bool(pos.get("is_half_closed", False))
+                pid_immune = (roe_raw >= float(OU_PID_IMMUNITY_ROE)) or pid_engaged or has_tp1_taken or (max_mfe_seen >= 3.5 and roe_raw >= 1.0)
 
                 if ENABLE_OU_TIME_STOP and not pid_immune:
                     ou_tau = float(pos.get("ou_half_life_min", 30.0))
@@ -4011,18 +4029,6 @@ class StrategyEngine:
                         if tot_dist > 0:
                             progress_ratio = max(0.0, cur_dist / tot_dist)
 
-                    # Kademe 2: 1.5 x tau (Alfa Çürüme Tahliyesi - Testere / Sıkışma / CVD Tükenişi)
-                    # İşlem 1.5 yarılanma ömrü geçmesine rağmen kâra geçememiş veya hedefin %35'ine bile ulaşamamışsa
-                    if hold_mins >= ou_decay_lim:
-                        if roe_raw <= 1.0 and (cvd_exhausted or progress_ratio < float(OU_MIN_PROGRESS_RATIO) or roe_raw <= 0.0):
-                            record = await self._safe_close_position(
-                                symbol, close_price,
-                                f"⏳ O-U Alfa Çürüme Tahliyesi (1.5τ={ou_decay_lim:.1f}dk, ROE: %{roe_raw:+.1f}, CVD Çürümesi)")
-                            if record:
-                                await self._notify_close(record, levels=levels)
-                                self._cleanup_tracking(symbol)
-                            return
-
                     # Kademe 3: 2.0 x tau (Mutlak Matematiksel Zaman Stopu - İstatistiksel Üstünlük Tükendi)
                     if hold_mins >= ou_hard_lim:
                         record = await self._safe_close_position(
@@ -4032,6 +4038,18 @@ class StrategyEngine:
                             await self._notify_close(record, levels=levels)
                             self._cleanup_tracking(symbol)
                         return
+
+                    # Kademe 2: 1.5 x tau (Alfa Çürüme Tahliyesi - Testere / Sıkışma / CVD Tükenişi)
+                    # İşlem 1.5 yarılanma ömrü geçmesine rağmen kâra geçememiş veya hedefin %35'ine bile ulaşamamışsa
+                    elif hold_mins >= ou_decay_lim:
+                        if roe_raw <= 1.0 and (cvd_exhausted or progress_ratio < float(OU_MIN_PROGRESS_RATIO) or roe_raw <= 0.0):
+                            record = await self._safe_close_position(
+                                symbol, close_price,
+                                f"⏳ O-U Alfa Çürüme Tahliyesi (1.5τ={ou_decay_lim:.1f}dk, ROE: %{roe_raw:+.1f}, CVD Çürümesi)")
+                            if record:
+                                await self._notify_close(record, levels=levels)
+                                self._cleanup_tracking(symbol)
+                            return
 
                 # Kural A: Kırılımlar (BREAKOUT) İçin 4-Mum (20dk) İvme Zorunluluğu
                 # Breakout ivmelenmeli ancak anlık %0.15'lik retest fitillerinde infaz edilmemelidir (en az -%0.40 fiyat / -%2.0 ROE sapması):

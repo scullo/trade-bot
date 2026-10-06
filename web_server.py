@@ -5134,7 +5134,7 @@ HTML_PAGE = """
                                 <th>Maks MAE</th>
                                 <th>Canlı ROE</th>
                                 <th>Canlı Sanal PnL</th>
-                                <th>Süre (Dk)</th>
+                                <th>Süre / O-U τ</th>
                             </tr>
                         </thead>
                         <tbody id="shadow-active-tbody">
@@ -7229,7 +7229,10 @@ async function loadAdminMetrics() {
                                     <td style="text-align:center; color:#f43f5e;">-%{p.max_mae_pct.toFixed(2)}</td>
                                     <td style="text-align:center; font-weight:700; color:${pnlColor};">${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%</td>
                                     <td style="text-align:center; font-weight:700; color:${pnlColor};">${pnlPct >= 0 ? '+$' : '-$'}${Math.abs(pnlUsd)}</td>
-                                    <td style="text-align:center; color:#64748b;">${((Date.now() / 1000 - p.entry_ts) / 60).toFixed(0)} dk</td>
+                                    <td style="text-align:center; color:#64748b;">
+                                        ${((Date.now() / 1000 - p.entry_ts) / 60).toFixed(0)} dk
+                                        ${p.ou_half_life_min ? `<div style="margin-top:2px;"><span class="badge-ou" style="font-size:10px; padding:1px 5px;">τ ${Number(p.ou_half_life_min).toFixed(0)}m</span></div>` : ''}
+                                    </td>
                                 </tr>
                             `;
                         }).join('');
@@ -7267,7 +7270,10 @@ async function loadAdminMetrics() {
                                         </span>
                                     </td>
                                     <td style="text-align:left; color:#cbd5e1; font-size:11px; max-width:280px; white-space:normal; line-height:1.4;">${t.narrative || t.reason || '-'}</td>
-                                    <td style="text-align:center; color:#64748b;">${t.status}</td>
+                                    <td style="text-align:center; color:#64748b;">
+                                        <div>${t.exit_status || t.status}</div>
+                                        ${t.ou_half_life_min ? `<span class="badge-ou" style="font-size:9px; padding:1px 4px; margin-top:2px; display:inline-block;">τ ${Number(t.ou_half_life_min).toFixed(0)}m</span>` : ''}
+                                    </td>
                                     <td style="text-align:center; color:#64748b; font-size:11px;">${t.entry_time ? t.entry_time.split(' ')[1] : '-'}</td>
                                 </tr>
                             `;
