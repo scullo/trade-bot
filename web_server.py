@@ -8711,38 +8711,88 @@ async function loadAdminMetrics() {
             } catch(e) {}
         }
 
-        function formatWhaleNetflowRegime(regime, isDump) {
-            const r = String(regime || '').toUpperCase();
-            if (r.includes('INFLOW_SURGE') || r === 'DUMP_RISK') {
-                return '<span style="color:#ef4444; font-weight:800;" title="Borsaya anormal coin yatırıldı; satış baskısı ve dump tehlikesi">🚨 Yoğun Giriş (Dump Riski)</span>';
-            }
-            if (r === 'HEAVY_INFLOW') {
-                return '<span style="color:#ef4444; font-weight:700;" title="Borsaya yüksek hacimli coin aktarımı; satış baskısı">🚨 Yoğun Giriş (Satış Baskısı)</span>';
-            }
-            if (r === 'MILD_INFLOW') {
-                return '<span style="color:#f59e0b; font-weight:600;" title="Borsaya hafif coin girişi; hafif satış eğilimi">⚠️ Hafif Giriş (Satış Eğilimi)</span>';
-            }
-            if (r.includes('OUTFLOW_SURGE') || r === 'ACCUMULATION') {
-                return '<span style="color:#38bdf8; font-weight:800;" title="Borsadan kurumsal soğuk cüzdanlara yüklü çekim; arz şoku ve birikim">🛡️ Yoğun Soğuk Çekim (Arz Şoku)</span>';
-            }
-            if (r === 'HEAVY_OUTFLOW') {
-                return '<span style="color:#38bdf8; font-weight:700;" title="Borsadan yüksek miktarda coin çekimi; birikim">🛡️ Yoğun Çekim (Birikim)</span>';
-            }
-            if (r === 'MILD_OUTFLOW') {
-                return '<span style="color:#34d399; font-weight:600;" title="Borsadan hafif coin çekimi; alım eğilimi">🟢 Hafif Çekim (Alım Eğilimi)</span>';
-            }
-            if (r === 'BALANCED_FLOW') {
-                return '<span style="color:#94a3b8;" title="Olağandışı kurumsal akış yok; olağan piyasa hacmi">⚪ Dengeli Akış (Normal Piyasa)</span>';
-            }
-            return `<span style="color:#cbd5e1;">${r}</span>`;
+        function formatZScore(z) {
+            const val = Number(z || 0);
+            if (Math.abs(val) < 0.05) return '0.0&sigma;';
+            return (val > 0 ? '+' : '') + val.toFixed(1) + '&sigma;';
         }
 
-        function formatWhaleTierBadge(tier) {
+        function formatNetflowAmount(c, isDumpTable) {
+            const netUsd = Number(c.netflow_24h_usd || 0);
+            const whaleAmt = Number(c.last_whale_amount_usd || 0);
+            const intent = String(c.last_whale_intent || '').toUpperCase();
+            
+            // Eğer borsa içi veya on-chain balina transferiyle tetiklendiyse balina hacmini ön plana al
+            if (whaleAmt >= 250000 && (intent === 'DUMP_PREPARATION' || intent === 'COLD_STORAGE_ACCUMULATION' || intent === 'AGGRESSIVE_MARKET_DUMP' || intent === 'AGGRESSIVE_MARKET_BUY')) {
+                const prefix = isDumpTable ? '+' : '-';
+                const wStr = (whaleAmt / 1e6).toFixed(2);
+                return `<span title="Son Doğrulanmış Balina Transferi: ${prefix}$${wStr}M | 24s Net Taker: ${netUsd >= 0 ? '+' : ''}$${(netUsd/1e6).toFixed(2)}M">${prefix}$${wStr}M <span style="font-size:9px; opacity:0.85;">(Balina)</span></span>`;
+            }
+            const prefix = netUsd >= 0 ? '+' : '-';
+            return `${prefix}$${(Math.abs(netUsd)/1e6).toFixed(2)}M`;
+        }
+
+        function formatWhaleNetflowRegime(c, isDumpTable) {
+            if (!c) return '<span style="color:#94a3b8;">⚪ Dengeli Akış</span>';
+            if (typeof c === 'string') {
+                const r = c.toUpperCase();
+                if (r.includes('INFLOW_SURGE') || r === 'DUMP_RISK') return '<span style="color:#ef4444; font-weight:800;">🚨 Yoğun Giriş (Dump Riski)</span>';
+                if (r.includes('OUTFLOW_SURGE') || r === 'ACCUMULATION') return '<span style="color:#38bdf8; font-weight:800;">🛡️ Yoğun Soğuk Çekim (Arz Şoku)</span>';
+                if (r === 'MILD_INFLOW') return '<span style="color:#f59e0b; font-weight:600;">⚠️ Hafif Giriş (Satış Eğilimi)</span>';
+                if (r === 'MILD_OUTFLOW') return '<span style="color:#34d399; font-weight:600;">🟢 Hafif Çekim (Alım Eğilimi)</span>';
+                return '<span style="color:#94a3b8;">⚪ Dengeli Akış</span>';
+            }
+
+            const regime = String(c.regime || '').toUpperCase();
+            const intent = String(c.last_whale_intent || '').toUpperCase();
+            const whaleAmt = Number(c.last_whale_amount_usd || 0);
+            const whaleStr = whaleAmt >= 1e6 ? `$${(whaleAmt/1e6).toFixed(1)}M` : (whaleAmt > 0 ? `$${(whaleAmt/1e3).toFixed(0)}k` : '');
+            const isMempool = Boolean(c.mempool_dump_threat || c.mempool_squeeze_threat);
+
+            if (isDumpTable) {
+                if (intent === 'DUMP_PREPARATION' || c.mempool_dump_threat) {
+                    const tag = isMempool ? 'Mempool Balina Girişi' : 'Borsaya Balina Yatırma';
+                    return `<span style="color:#ef4444; font-weight:800;" title="Balina borsaya ${whaleStr} yatırdı; mal boşaltma tehlikesine karşı Long veto">🚨 ${tag} (${whaleStr || 'Dump'})</span>`;
+                }
+                if (intent === 'AGGRESSIVE_MARKET_DUMP') {
+                    return `<span style="color:#ef4444; font-weight:800;" title="Tahtaya agresif blok piyasa satışı yapıldı">🛑 Agresif Blok Satış (${whaleStr})</span>`;
+                }
+                if (c.z_score >= 2.0) {
+                    return `<span style="color:#ef4444; font-weight:800;" title="Borsa net giriş hacminde istatistiksel anomali (+${c.z_score.toFixed(1)}&sigma;)">🚨 Borsa Giriş Patlaması (+${c.z_score.toFixed(1)}&sigma;)</span>`;
+                }
+                if (regime === 'MILD_INFLOW' || c.netflow_24h_usd > 0) {
+                    return '<span style="color:#f59e0b; font-weight:600;" title="Borsaya net coin girişi var; satış eğilimi">⚠️ Hafif Giriş (Satış Eğilimi)</span>';
+                }
+                return '<span style="color:#ef4444; font-weight:700;" title="Balina satış baskısı nedeniyle Long işlemleri veto edildi">🚨 Balina Satış Baskısı (Veto)</span>';
+            } else {
+                // Accumulation Table
+                if (intent === 'COLD_STORAGE_ACCUMULATION' || c.mempool_squeeze_threat) {
+                    const tag = isMempool ? 'Mempool Soğuk Çekim' : 'Soğuk Cüzdana Çekim';
+                    return `<span style="color:#38bdf8; font-weight:800;" title="Balina borsadan ${whaleStr} tutarında coini soğuk cüzdana çekti; arz şoku ve short sıkışması">🧊 ${tag} (${whaleStr || 'Arz Şoku'})</span>`;
+                }
+                if (intent === 'AGGRESSIVE_MARKET_BUY') {
+                    return `<span style="color:#22c55e; font-weight:800;" title="Tahtadan agresif blok piyasa alımı yapıldı">⚡ Agresif Blok Alım (${whaleStr})</span>`;
+                }
+                if (c.z_score <= -2.0) {
+                    return `<span style="color:#38bdf8; font-weight:800;" title="Borsadan soğuk cüzdanlara rekor çıkış (${c.z_score.toFixed(1)}&sigma;)">🛡️ Borsa Çıkış Patlaması (${c.z_score.toFixed(1)}&sigma;)</span>`;
+                }
+                if (regime === 'MILD_OUTFLOW' || c.netflow_24h_usd < 0) {
+                    return '<span style="color:#34d399; font-weight:600;" title="Borsadan hafif coin çekimi var; alım/birikim eğilimi">🟢 Hafif Çekim (Alım Eğilimi)</span>';
+                }
+                return '<span style="color:#38bdf8; font-weight:700;" title="Balina çekimi nedeniyle Short işlemleri veto edildi">🛡️ Balina Arz Şoku (Veto)</span>';
+            }
+        }
+
+        function formatWhaleTierBadge(tier, symbol) {
+            const sym = String(symbol || '').toUpperCase();
             const t = String(tier || '').toUpperCase();
-            if (t === 'TIER_1') {
+            const isMega = t === 'TIER_1' || /^(BTC|ETH|SOL|BNB)/i.test(sym);
+            const isMeme = t === 'TIER_3' || /(PEPE|SHIB|DOGE|BONK|MEME|FLOKI|WIF)/i.test(sym);
+
+            if (isMega) {
                 return '<span style="background:rgba(234,179,8,0.12); color:#facc15; border:1px solid rgba(234,179,8,0.3); padding:2px 7px; border-radius:4px; font-size:10px; font-weight:800;" title="1. Kademe: Mega Cap Kurumsal Varlıklar (BTC, ETH, SOL, BNB)">⭐ 1. Kademe (Mega Cap)</span>';
             }
-            if (t === 'TIER_3') {
+            if (isMeme) {
                 return '<span style="background:rgba(244,63,94,0.12); color:#fb7185; border:1px solid rgba(244,63,94,0.3); padding:2px 7px; border-radius:4px; font-size:10px; font-weight:800;" title="3. Kademe: Yüksek Oynaklıklı Meme & Spekülatif Tokenlar">⚠️ 3. Kademe (Meme / Risk)</span>';
             }
             return '<span style="background:rgba(56,189,248,0.1); color:#38bdf8; border:1px solid rgba(56,189,248,0.25); padding:2px 7px; border-radius:4px; font-size:10px; font-weight:700;" title="2. Kademe: Standart Büyük Hacimli Altcoinler">🔹 2. Kademe (Altcoin)</span>';
@@ -8965,9 +9015,9 @@ async function loadAdminMetrics() {
                         dumpTbody.innerHTML = dumpRiskCoins.slice(0, 15).map(c => `
                             <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
                                 <td style="padding:7px 10px; font-weight:700; color:#fff;">${c.symbol || '-'}</td>
-                                <td style="padding:7px 10px; text-align:right; font-weight:700; color:#ef4444;">+$${(Math.abs(c.netflow_24h_usd || 0)/1e6).toFixed(2)}M</td>
-                                <td style="padding:7px 10px; text-align:center; font-family:'JetBrains Mono'; font-weight:800; color:#ef4444;" title="Z-Skor: Normalden kaç standart sapma saptığını gösterir.">+${(c.z_score || 0).toFixed(1)}&sigma;</td>
-                                <td style="padding:7px 10px; font-size:11px;">${formatWhaleNetflowRegime(c.regime, true)}</td>
+                                <td style="padding:7px 10px; text-align:right; font-weight:700; color:#ef4444;">${formatNetflowAmount(c, true)}</td>
+                                <td style="padding:7px 10px; text-align:center; font-family:'JetBrains Mono'; font-weight:800; color:#ef4444;" title="Z-Skor: Normalden kaç standart sapma saptığını gösterir.">${formatZScore(c.z_score)}</td>
+                                <td style="padding:7px 10px; font-size:11px;">${formatWhaleNetflowRegime(c, true)}</td>
                                 <td style="padding:7px 10px; text-align:center;"><span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:3px 8px; border-radius:5px; font-size:10px; font-weight:800;" title="Borsaya anormal coin yatırıldı; yükseliş tuzaklarına karşı LONG alımlar veto edilir.">🛑 LONG VETO</span></td>
                             </tr>
                         `).join('');
@@ -8983,9 +9033,9 @@ async function loadAdminMetrics() {
                         accumTbody.innerHTML = accumCoins.slice(0, 15).map(c => `
                             <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
                                 <td style="padding:7px 10px; font-weight:700; color:#fff;">${c.symbol || '-'}</td>
-                                <td style="padding:7px 10px; text-align:right; font-weight:700; color:#38bdf8;">-$${(Math.abs(c.netflow_24h_usd || 0)/1e6).toFixed(2)}M</td>
-                                <td style="padding:7px 10px; text-align:center; font-family:'JetBrains Mono'; font-weight:800; color:#38bdf8;" title="Z-Skor: Normalden kaç standart sapma saptığını gösterir.">${(c.z_score || 0).toFixed(1)}&sigma;</td>
-                                <td style="padding:7px 10px; font-size:11px;">${formatWhaleNetflowRegime(c.regime, false)}</td>
+                                <td style="padding:7px 10px; text-align:right; font-weight:700; color:#38bdf8;">${formatNetflowAmount(c, false)}</td>
+                                <td style="padding:7px 10px; text-align:center; font-family:'JetBrains Mono'; font-weight:800; color:#38bdf8;" title="Z-Skor: Normalden kaç standart sapma saptığını gösterir.">${formatZScore(c.z_score)}</td>
+                                <td style="padding:7px 10px; font-size:11px;">${formatWhaleNetflowRegime(c, false)}</td>
                                 <td style="padding:7px 10px; text-align:center;"><span style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:3px 8px; border-radius:5px; font-size:10px; font-weight:800;" title="Borsadan agresif coin çekildi; arz sıkışması (squeeze) riskine karşı SHORT satışlar veto edilir.">🛡️ SHORT VETO</span></td>
                             </tr>
                         `).join('');
@@ -9046,7 +9096,7 @@ async function loadAdminMetrics() {
                             }
 
                             const intentHtml = formatWhaleIntentBadge(a.intent, a.source, a.price, txUrl, a.blockchain, explorerName);
-                            const tierHtml = formatWhaleTierBadge(a.tier);
+                            const tierHtml = formatWhaleTierBadge(a.tier, a.symbol);
                             const severityHtml = formatWhaleSeverityBadge(a.severity);
 
                             let txHashHtml = '';

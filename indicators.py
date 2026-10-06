@@ -2045,6 +2045,7 @@ def classify_whale_transfer(
         'is_whale': is_whale,
         'severity': severity,
         'intent': intent,
+        'tier': tier_upper,
         'vol_ratio_pct': round(vol_ratio, 2),
         'is_dump_risk': is_dump_risk,
         'is_bull_ammo': is_bull_ammo

@@ -2294,6 +2294,7 @@ class MarketDataManager:
         res['from_label'] = str(from_label or ('Mempool Balina Cüzdanı' if res.get('is_dump_risk') else 'Borsa Sıcak Cüzdanı'))
         res['to_label'] = str(to_label or ('Borsa Sıcak Cüzdanı' if res.get('is_dump_risk') else 'Soğuk Cüzdan Kasası'))
         res['blockchain'] = str(blockchain or ('BTC' if 'BTC' in clean_s else ('ETH' if 'ETH' in clean_s else ('SOL' if 'SOL' in clean_s else 'ONCHAIN'))))
+        res['tier'] = tier_str
 
         if res['is_whale']:
             self.whale_transactions_feed.append(res)
