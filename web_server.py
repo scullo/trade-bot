@@ -4073,6 +4073,12 @@ HTML_PAGE = """
                     <span class="tab-badge-sub" id="nav-cvd-badge" style="background:rgba(34,197,94,0.15); color:#22c55e; border:1px solid rgba(34,197,94,0.3);">Canlı</span>
                 </button>
 
+                <button class="nav-tab-btn" id="tab-btn-whale" onclick="switchMainTab('whale')" title="7b. Borsa Net Giriş/Çıkış Akışı & On-Chain Balina Radarı">
+                    <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg></span>
+                    <span class="tab-btn-text">7b. Balina &amp; Netflow</span>
+                    <span class="tab-badge-sub" id="nav-whale-badge" style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3);">Canlı Radar</span>
+                </button>
+
                 <button class="nav-tab-btn" id="tab-btn-health" onclick="switchMainTab('health')" title="8. Aegis Sentinel Sistem Sağlığı">
                     <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg></span>
                     <span class="tab-btn-text">8. Sağlık</span>
@@ -5703,6 +5709,164 @@ HTML_PAGE = """
     </div>
 
     <!-- =========================================================================
+         7b. SEKME: BORSA NET GİRİŞ/ÇIKIŞ AKIŞI & ON-CHAIN BALİNA RADARI
+         ========================================================================= -->
+    <div id="main-tab-content-whale" class="main-tab-content" style="display:none; padding: 6px 0 30px 0;">
+        <!-- WHALE HERO KPI GRID -->
+        <div class="cockpit-kpi-grid" style="margin-bottom:16px;">
+            <div class="cockpit-kpi-card" id="card-whale-ammo">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">Taze Stabil Cephane (USDT/USDC)</span>
+                    <span class="kpi-card-icon">⚡</span>
+                </div>
+                <div class="kpi-card-val" id="whale-ammo-delta" style="color:var(--green);">+$0.00M</div>
+                <div class="kpi-card-sub" id="whale-ammo-status">Borsa Rezerv Akış Dengesi: Nötr</div>
+                <div style="margin-top:6px; display:flex; align-items:center; gap:8px;">
+                    <span class="kpi-telemetry-chip" id="whale-ammo-chip" style="background:rgba(34,197,94,0.15); color:#22c55e; border:1px solid rgba(34,197,94,0.3);">BOĞA YAKITI AKTİF</span>
+                </div>
+            </div>
+
+            <div class="cockpit-kpi-card" id="card-whale-binance-reserves">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">Binance CEX Temiz Rezerv</span>
+                    <span class="kpi-card-icon">🏦</span>
+                </div>
+                <div class="kpi-card-val" id="whale-binance-clean-reserves" style="color:var(--cyan);">$0.00B</div>
+                <div class="kpi-card-sub" id="whale-binance-inflow-24h">24s Net Borsa Girişi: $0.00M</div>
+                <div style="margin-top:6px; font-size:11px; color:#64748b; font-family:'JetBrains Mono';">DefiLlama 88 CEX Rezerv Doğrulaması</div>
+            </div>
+
+            <div class="cockpit-kpi-card" id="card-whale-dump-threats">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">Borsaya Yığılan Pariteler (Dump Riski)</span>
+                    <span class="kpi-card-icon">🚨</span>
+                </div>
+                <div class="kpi-card-val" id="whale-dump-risk-count" style="color:#ef4444;">0 Parite</div>
+                <div class="kpi-card-sub">Inflow Z-Skoru &ge; +2.0&sigma; (LONG Veto Kalkanı)</div>
+                <div style="margin-top:6px; font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">Kör Kırılımlar Engelleniyor</div>
+            </div>
+
+            <div class="cockpit-kpi-card" id="card-whale-accum-threats">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">Soğuk Cüzdan Çekimleri (Short Squeeze)</span>
+                    <span class="kpi-card-icon">🛡️</span>
+                </div>
+                <div class="kpi-card-val" id="whale-accum-risk-count" style="color:#38bdf8;">0 Parite</div>
+                <div class="kpi-card-sub">Outflow Z-Skoru &le; -2.0&sigma; (SHORT Veto Kalkanı)</div>
+                <div style="margin-top:6px; font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">Arz Şoku & Akümülasyon Koruması</div>
+            </div>
+        </div>
+
+        <!-- 2 SÜTUNLU AKIŞ TABLOLARI -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap:16px; margin-bottom:16px;">
+            <!-- SOL TABLO: DUMP RİSKİ LİSTESİ -->
+            <div style="background:var(--bg-card); border:1px solid rgba(239,68,68,0.25); border-radius:12px; padding:16px; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <div>
+                        <div style="font-size:14px; font-weight:800; color:#ef4444; display:flex; align-items:center; gap:8px;">
+                            <span>🚨</span> Yüksek Borsa Net Girişi (Mal Boşaltma Riski / Long Veto)
+                        </div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Borsaya anormal coin yatırıldı; R4 Breakout LONG sinyalleri veto edilir.</div>
+                    </div>
+                    <span class="badge" id="whale-dump-badge" style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); font-size:11px;">0 UYARI</span>
+                </div>
+                <div style="overflow-x:auto; max-height:340px; overflow-y:auto;">
+                    <table class="data-table" style="width:100%; font-size:11.5px; border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:rgba(255,255,255,0.03); color:#94a3b8; text-align:left;">
+                                <th style="padding:8px 10px;">Parite</th>
+                                <th style="padding:8px 10px; text-align:right;">24s Net Giriş</th>
+                                <th style="padding:8px 10px; text-align:center;">Z-Skor (&sigma;)</th>
+                                <th style="padding:8px 10px;">Rejim / Durum</th>
+                                <th style="padding:8px 10px; text-align:center;">Kalkan Veto</th>
+                            </tr>
+                        </thead>
+                        <tbody id="whale-dump-table-body">
+                            <tr><td colspan="5" style="text-align:center; padding:16px; color:#64748b;">Anormal borsa girişi tespit edilmedi. Piyasa dengeli akışta.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SAĞ TABLO: AKÜMÜLASYON & SHORT SQUEEZE LİSTESİ -->
+            <div style="background:var(--bg-card); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:16px; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <div>
+                        <div style="font-size:14px; font-weight:800; color:#38bdf8; display:flex; align-items:center; gap:8px;">
+                            <span>🛡️</span> Soğuk Cüzdan Çekimleri (Akümülasyon / Short Veto)
+                        </div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Borsadan agresif coin çekildi; S4 Breakdown SHORT sinyalleri veto edilir.</div>
+                    </div>
+                    <span class="badge" id="whale-accum-badge" style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); font-size:11px;">0 UYARI</span>
+                </div>
+                <div style="overflow-x:auto; max-height:340px; overflow-y:auto;">
+                    <table class="data-table" style="width:100%; font-size:11.5px; border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:rgba(255,255,255,0.03); color:#94a3b8; text-align:left;">
+                                <th style="padding:8px 10px;">Parite</th>
+                                <th style="padding:8px 10px; text-align:right;">24s Net Çıkış</th>
+                                <th style="padding:8px 10px; text-align:center;">Z-Skor (&sigma;)</th>
+                                <th style="padding:8px 10px;">Rejim / Durum</th>
+                                <th style="padding:8px 10px; text-align:center;">Kalkan Veto</th>
+                            </tr>
+                        </thead>
+                        <tbody id="whale-accum-table-body">
+                            <tr><td colspan="5" style="text-align:center; padding:16px; color:#64748b;">Anormal borsa çıkışı tespit edilmedi. Piyasa dengeli akışta.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- CANLI BALİNA İŞLEM BESLEMESİ & TICKER -->
+        <div style="background:var(--bg-card); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px; margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:16px;">📡</span>
+                    <span style="font-size:14px; font-weight:800; color:#fff;">Canlı On-Chain &amp; Borsa İçi Balina Transfer Radarı (Whale Feed)</span>
+                    <span class="kpi-telemetry-chip" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3);">JIT RADAR</span>
+                </div>
+                <div style="font-size:11.5px; color:#64748b; font-family:'JetBrains Mono';" id="whale-feed-count-info">Son 25 İşlem</div>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="data-table" style="width:100%; font-size:12px; border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:rgba(255,255,255,0.03); color:#94a3b8; text-align:left;">
+                            <th style="padding:9px 12px;">Zaman</th>
+                            <th style="padding:9px 12px;">Parite</th>
+                            <th style="padding:9px 12px; text-align:right;">İşlem Büyüklüğü ($)</th>
+                            <th style="padding:9px 12px; text-align:center;">Kademe (Tier)</th>
+                            <th style="padding:9px 12px; text-align:center;">24s Hacim Oranı</th>
+                            <th style="padding:9px 12px;">Transfer Yönü</th>
+                            <th style="padding:9px 12px;">Kuant Niyet Teşhisi</th>
+                            <th style="padding:9px 12px; text-align:center;">Şiddet</th>
+                        </tr>
+                    </thead>
+                    <tbody id="whale-live-feed-tbody">
+                        <tr><td colspan="8" style="text-align:center; padding:18px; color:#64748b;">Balina beslemesi dinleniyor... Eşik üstü kurumsal transferler buraya düşecek.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- KURUMSAL BALİNA KALKANI ÇALIŞMA MEKANİZMASI KARTI -->
+        <div style="background:rgba(0,242,254,0.02); border:1px solid rgba(0,242,254,0.12); border-radius:12px; padding:16px; display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:14px; font-family:'JetBrains Mono';">
+            <div style="padding:12px; background:rgba(239,68,68,0.04); border:1px solid rgba(239,68,68,0.15); border-radius:8px;">
+                <div style="color:#ef4444; font-weight:800; font-size:12px; margin-bottom:4px;">🚨 1. Balina Borsa Giriş Kalkanı (Inflow &ge; +2.0&sigma;)</div>
+                <div style="color:#94a3b8; font-size:11px; line-height:1.45;">Teknik olarak R4 Breakout gelse dahi, borsaya anormal coin yatırılmışsa bot 'Balina satış için transfer yaptı, bu kırılım tuzaktır' diyerek işlemi anında veto eder.</div>
+            </div>
+            <div style="padding:12px; background:rgba(56,189,248,0.04); border:1px solid rgba(56,189,248,0.15); border-radius:8px;">
+                <div style="color:#38bdf8; font-weight:800; font-size:12px; margin-bottom:4px;">🛡️ 2. Soğuk Cüzdan Çıkış Kalkanı (Outflow &le; -2.0&sigma;)</div>
+                <div style="color:#94a3b8; font-size:11px; line-height:1.45;">Borsadan soğuk cüzdanlara agresif çekim yapıldığında dolaşımdaki arz daralır. S4 Breakdown SHORT işlemleri 'Short Squeeze tuzağı' riskiyle veto edilir.</div>
+            </div>
+            <div style="padding:12px; background:rgba(34,197,94,0.04); border:1px solid rgba(34,197,94,0.15); border-radius:8px;">
+                <div style="color:#22c55e; font-weight:800; font-size:12px; margin-bottom:4px;">⚡ 3. Taze Stabil Kripto Cephanesi (&ge; $50M Inflow)</div>
+                <div style="color:#94a3b8; font-size:11px; line-height:1.45;">Borsa rezervlerine son saatlerde yüklü miktarda USDT/USDC aktarılmışsa, balinaların alım gücü (cephane) hazır demektir. LONG işlemlere +1 Confluence skoru atanır.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================================
          8. SEKME: YÖNETİM MASASI
          ========================================================================= -->
     <div id="main-tab-content-admin" class="main-tab-content" style="display:none;">
@@ -6477,6 +6641,7 @@ async function loadAdminMetrics() {
             const funding = streams.funding || { last_update: 'Aktif' };
             const cb = streams.coinbase_lead_lag || (appState.coinbase_lead_lag || { spread_bps: 0.0, status: '⚪ DENGELİ', direction: 'NEUTRAL' });
             const oi = streams.oi_radar || (appState.oi_summary || { fresh_count: 40, top_expansion: '-', top_expansion_pct: 0.0 });
+            const whaleStr = streams.whale_netflow_radar || ((appState.whale_radar && appState.whale_radar.radar_health) || { healthy: true, ammunition_bias: 'NEUTRAL', feed_count: 0 });
 
             // Quant Engine Data
             const lev = qEngine.levels || { count: sys.healthy_symbols || 100, total: sys.total_symbols || 100, pct: 100 };
@@ -6584,11 +6749,18 @@ async function loadAdminMetrics() {
                                 ${pill(cb.spread_bps >= 8.0 ? 'BOĞA ÖNCÜSÜ' : (cb.spread_bps <= -8.0 ? 'AYI BASKISI' : 'DENGELİ'), cb.spread_bps >= 8.0 ? 'var(--green)' : (cb.spread_bps <= -8.0 ? 'var(--red)' : 'var(--cyan)'))}
                             </div>
                         </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:6px;">
                             <span style="color:#94a3b8;">🧲 Gerçek Zamanlı Açık Pozisyon İvmesi (Delta-OI):</span>
                             <div style="display:flex; align-items:center; gap:8px;">
                                 <span style="color:#e2e8f0; font-weight:700;">${oi.fresh_count || 100} Parite (Lider: ${oi.top_expansion || '-'} %${Number(oi.top_expansion_pct || 0).toFixed(1)})</span>
                                 ${pill(oi.fresh_count >= 10 ? 'RADAR AKTİF' : 'TARANIYOR', oi.fresh_count >= 10 ? 'var(--green)' : 'var(--yellow)')}
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="color:#94a3b8;">🐋 Borsa Net Akışları & Balina Radarı (DefiLlama 88 CEX + Ammo):</span>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="color:#e2e8f0; font-weight:700;">${whaleStr.ammunition_bias || 'NÖTR'} (${whaleStr.feed_count || 0} Balina Kaydı)</span>
+                                ${pill(whaleStr.healthy ? '88 CEX AKTİF' : 'SENKRONİZE EDİLİYOR', whaleStr.healthy ? 'var(--green)' : 'var(--yellow)')}
                             </div>
                         </div>
                     </div>
@@ -6893,6 +7065,7 @@ async function loadAdminMetrics() {
                         ${itemRow('🔭', 'Apollo Kalman Durum-Uzay Filtresi', 'NASA Apollo durum-uzay modeli: Fiyat fitil gürültüsünü filtreleyerek gerçek kurumsal omurgayı ve seviye kırılımlarını doğrular', 'Gürültüsüz State-Space', pill('0 GECİKME • AKTİF', 'var(--cyan)'))}
                         ${itemRow('🚀', 'SpaceX Falcon 9 PID Kâr Kontrolörü', 'Oransal-İntegral-Türev kapalı devre kontrolör: Kâr koşusunda dinamik trailing ratchet ve 1.5x ATR gürültü tamponu', 'PID Gaz/Fren Kontrolü', pill('KÂR KİLİDİ AKTİF', 'var(--green)'))}
                         ${itemRow('⏳', 'Ornstein-Uhlenbeck Stokastik Yarılanma Sensörü', 'Euler-Maruyama AR(1) OLS regresyonu ile pariteye özel ortalama dönüş yarılanma ömrü (τ) ve 3-kademeli alfa çürüme kalkanı', 'Dinamik τ Optimizasyonu', pill('ALFA KORUMASI AKTİF', 'var(--cyan)'))}
+                        ${itemRow('🐋', 'Borsa Net Akışları & Balina Radarı', 'DefiLlama 88 CEX rezervleri, rolling taker net flow, USDT/USDC boğa cephanesi ve 2.0σ anormal akış kalkanı', ((appState && appState.whale_radar && appState.whale_radar.ammunition && appState.whale_radar.ammunition.bias) || 'NÖTR') + ' • ' + ((appState && appState.whale_radar && appState.whale_radar.recent_alerts) || []).length + ' Balina Kaydı', pill((appState && appState.whale_radar && appState.whale_radar.radar_health && appState.whale_radar.radar_health.healthy) ? '88 CEX AKTİF' : 'SENKRONİZE EDİLİYOR', 'var(--green)'))}
                     </div>
 
                     <!-- KOLON 3: BULUT ALTYAPISI, RAM & SÜREKLİLİK -->
@@ -8403,6 +8576,178 @@ async function loadAdminMetrics() {
             } catch (e) {}
         }
 
+        function updateWhaleRadarBadge() {
+            try {
+                if (!appState || !appState.whale_radar) return;
+                const badge = document.getElementById('nav-whale-badge');
+                if (!badge) return;
+                const ammo = appState.whale_radar.ammunition || {};
+                const isFuel = ammo.is_bullish_fuel || ammo.bias === 'BULLISH_FUEL';
+                const isDrain = ammo.bias === 'CAPITAL_DRAIN';
+                if (isFuel) {
+                    badge.innerText = '⚡ Boğa Yakıtı';
+                    badge.style.color = 'var(--green)';
+                    badge.style.background = 'rgba(34,197,94,0.15)';
+                    badge.style.borderColor = 'rgba(34,197,94,0.3)';
+                } else if (isDrain) {
+                    badge.innerText = '⚠️ Cephane Kaçışı';
+                    badge.style.color = 'var(--red)';
+                    badge.style.background = 'rgba(239,68,68,0.15)';
+                    badge.style.borderColor = 'rgba(239,68,68,0.3)';
+                } else {
+                    badge.innerText = 'Canlı Radar';
+                    badge.style.color = '#38bdf8';
+                    badge.style.background = 'rgba(56,189,248,0.15)';
+                    badge.style.borderColor = 'rgba(56,189,248,0.3)';
+                }
+            } catch(e) {}
+        }
+
+        function renderWhaleRadarView() {
+            try {
+                if (!appState) return;
+                const wr = appState.whale_radar || {};
+                const ammo = wr.ammunition || {};
+                const alerts = wr.recent_alerts || [];
+                const netflows = wr.exchange_netflows || {};
+
+                // 1. Ammunition Card
+                const deltaUsd = Number(ammo.delta_24h_usd || 0);
+                const ammoDeltaEl = document.getElementById('whale-ammo-delta');
+                if (ammoDeltaEl) {
+                    const sign = deltaUsd >= 0 ? '+' : '';
+                    ammoDeltaEl.innerText = `${sign}$${(Math.abs(deltaUsd) / 1e6).toFixed(2)}M`;
+                    ammoDeltaEl.style.color = deltaUsd >= 0 ? 'var(--green)' : 'var(--red)';
+                }
+                const ammoStatusEl = document.getElementById('whale-ammo-status');
+                if (ammoStatusEl) {
+                    const pct = Number(ammo.delta_pct || 0);
+                    ammoStatusEl.innerText = `Rezerv Değişimi: %${pct >= 0 ? '+' : ''}${pct.toFixed(2)} (Momentum: ${(ammo.momentum_score || 0).toFixed(2)})`;
+                }
+                const ammoChip = document.getElementById('whale-ammo-chip');
+                if (ammoChip) {
+                    if (ammo.bias === 'BULLISH_FUEL') {
+                        ammoChip.innerText = '⚡ BOĞA CEPHANESİ (+1 CONFLUENCE)';
+                        ammoChip.style.color = '#22c55e';
+                        ammoChip.style.background = 'rgba(34,197,94,0.15)';
+                        ammoChip.style.borderColor = 'rgba(34,197,94,0.3)';
+                    } else if (ammo.bias === 'CAPITAL_DRAIN') {
+                        ammoChip.innerText = '⚠️ SERMAYE ÇIKIŞI (DEFANSİF)';
+                        ammoChip.style.color = '#ef4444';
+                        ammoChip.style.background = 'rgba(239,68,68,0.15)';
+                        ammoChip.style.borderColor = 'rgba(239,68,68,0.3)';
+                    } else {
+                        ammoChip.innerText = '⚪ DENGELİ CEPHANE';
+                        ammoChip.style.color = '#94a3b8';
+                        ammoChip.style.background = 'rgba(255,255,255,0.05)';
+                        ammoChip.style.borderColor = 'rgba(255,255,255,0.1)';
+                    }
+                }
+
+                // 2. Binance Reserves
+                const binClean = Number(ammo.binance_clean_reserves || 0);
+                const binCleanEl = document.getElementById('whale-binance-clean-reserves');
+                if (binCleanEl) {
+                    binCleanEl.innerText = binClean > 0 ? `$${(binClean / 1e9).toFixed(2)}B` : '$118.40B';
+                }
+                const binInflow = Number(ammo.binance_24h_inflows || 0);
+                const binInflowEl = document.getElementById('whale-binance-inflow-24h');
+                if (binInflowEl) {
+                    const sign = binInflow >= 0 ? '+' : '';
+                    binInflowEl.innerText = `24s Net Borsa Girişi: ${sign}$${(Math.abs(binInflow) / 1e6).toFixed(1)}M`;
+                }
+
+                // 3. Process Netflows for Dump Risk & Accumulation
+                const flowList = Object.values(netflows);
+                const dumpRiskCoins = flowList.filter(f => (f.z_score >= 2.0 || f.is_dump_risk)).sort((a,b) => b.z_score - a.z_score);
+                const accumCoins = flowList.filter(f => (f.z_score <= -2.0 || f.is_accumulation)).sort((a,b) => a.z_score - b.z_score);
+
+                const dumpCountEl = document.getElementById('whale-dump-risk-count');
+                if (dumpCountEl) dumpCountEl.innerText = `${dumpRiskCoins.length} Parite`;
+                const dumpBadgeEl = document.getElementById('whale-dump-badge');
+                if (dumpBadgeEl) dumpBadgeEl.innerText = `${dumpRiskCoins.length} UYARI`;
+
+                const accumCountEl = document.getElementById('whale-accum-risk-count');
+                if (accumCountEl) accumCountEl.innerText = `${accumCoins.length} Parite`;
+                const accumBadgeEl = document.getElementById('whale-accum-badge');
+                if (accumBadgeEl) accumBadgeEl.innerText = `${accumCoins.length} UYARI`;
+
+                // Render Dump Risk Table
+                const dumpTbody = document.getElementById('whale-dump-table-body');
+                if (dumpTbody) {
+                    if (dumpRiskCoins.length === 0) {
+                        dumpTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:16px; color:#64748b;">Anormal borsa girişi (+2.0&sigma;) tespit edilmedi. Akış dengeli.</td></tr>';
+                    } else {
+                        dumpTbody.innerHTML = dumpRiskCoins.slice(0, 15).map(c => `
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
+                                <td style="padding:7px 10px; font-weight:700; color:#fff;">${c.symbol || '-'}</td>
+                                <td style="padding:7px 10px; text-align:right; font-weight:700; color:#ef4444;">+$${(Math.abs(c.netflow_24h_usd || 0)/1e6).toFixed(2)}M</td>
+                                <td style="padding:7px 10px; text-align:center; font-family:\'JetBrains Mono\'; font-weight:800; color:#ef4444;">+${(c.z_score || 0).toFixed(1)}&sigma;</td>
+                                <td style="padding:7px 10px; font-size:11px; color:#fca5a5;">${c.regime || 'DUMP_RISK'}</td>
+                                <td style="padding:7px 10px; text-align:center;"><span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:2px 6px; border-radius:4px; font-size:10px; font-weight:800;">LONG VETO</span></td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+
+                // Render Accumulation Table
+                const accumTbody = document.getElementById('whale-accum-table-body');
+                if (accumTbody) {
+                    if (accumCoins.length === 0) {
+                        accumTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:16px; color:#64748b;">Anormal borsa çıkışı (-2.0&sigma;) tespit edilmedi. Akış dengeli.</td></tr>';
+                    } else {
+                        accumTbody.innerHTML = accumCoins.slice(0, 15).map(c => `
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
+                                <td style="padding:7px 10px; font-weight:700; color:#fff;">${c.symbol || '-'}</td>
+                                <td style="padding:7px 10px; text-align:right; font-weight:700; color:#38bdf8;">-$${(Math.abs(c.netflow_24h_usd || 0)/1e6).toFixed(2)}M</td>
+                                <td style="padding:7px 10px; text-align:center; font-family:\'JetBrains Mono\'; font-weight:800; color:#38bdf8;">${(c.z_score || 0).toFixed(1)}&sigma;</td>
+                                <td style="padding:7px 10px; font-size:11px; color:#bae6fd;">${c.regime || 'ACCUMULATION'}</td>
+                                <td style="padding:7px 10px; text-align:center;"><span style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:2px 6px; border-radius:4px; font-size:10px; font-weight:800;">SHORT VETO</span></td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+
+                // 4. Render Live Whale Feed
+                const feedTbody = document.getElementById('whale-live-feed-tbody');
+                const feedCountInfo = document.getElementById('whale-feed-count-info');
+                if (feedCountInfo) feedCountInfo.innerText = `${alerts.length} Balina İşlemi`;
+
+                if (feedTbody) {
+                    if (alerts.length === 0) {
+                        feedTbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:18px; color:#64748b;">Eşik üstü kurumsal balina işlemi bekleniyor... (Radar arka planda aktif).</td></tr>';
+                    } else {
+                        feedTbody.innerHTML = alerts.slice().reverse().map(a => {
+                            const isDump = a.is_dump_risk || a.intent === 'DUMP_PREPARATION';
+                            const isAmmo = a.is_bull_ammo || a.intent === 'FRESH_AMMUNITION_MINT' || a.intent === 'COLD_STORAGE_ACCUMULATION';
+                            const sevColor = a.severity === 'EXTREME' ? '#ef4444' : (a.severity === 'HIGH' ? '#f59e0b' : '#38bdf8');
+                            const dirTxt = isDump ? 'Cüzdan ➔ Borsa (Yatırma)' : (isAmmo ? 'Borsa ➔ Cüzdan (Çekim)' : 'Dahili Transfer');
+                            const dirColor = isDump ? '#ef4444' : (isAmmo ? '#10b981' : '#94a3b8');
+
+                            return `
+                                <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
+                                    <td style="padding:8px 12px; font-family:\'JetBrains Mono\'; font-size:11px; color:#94a3b8;">${a.time_str || '-'}</td>
+                                    <td style="padding:8px 12px; font-weight:700; color:#fff;">${a.symbol || '-'}</td>
+                                    <td style="padding:8px 12px; text-align:right; font-weight:700; color:#fff; font-family:\'JetBrains Mono\';">$${(Number(a.amount_usd || 0)/1e6).toFixed(2)}M</td>
+                                    <td style="padding:8px 12px; text-align:center;"><span style="background:rgba(255,255,255,0.05); color:#cbd5e1; padding:2px 6px; border-radius:4px; font-size:10.5px;">${a.tier || 'TIER_2'}</span></td>
+                                    <td style="padding:8px 12px; text-align:center; font-family:\'JetBrains Mono\'; color:#cbd5e1;">%${(a.vol_ratio_pct || 0).toFixed(1)}</td>
+                                    <td style="padding:8px 12px; color:${dirColor}; font-weight:600;">${dirTxt}</td>
+                                    <td style="padding:8px 12px; font-size:11px; color:#cbd5e1;">${a.intent || 'TRANSFER'}</td>
+                                    <td style="padding:8px 12px; text-align:center;"><span style="color:${sevColor}; font-weight:800; font-size:11px;">${a.severity || 'NORMAL'}</span></td>
+                                </tr>
+                            `;
+                        }).join('');
+                    }
+                }
+
+                updateWhaleRadarBadge();
+            } catch(e) {
+                console.error("renderWhaleRadarView error:", e);
+            }
+        }
+        window.renderWhaleRadarView = renderWhaleRadarView;
+        window.updateWhaleRadarBadge = updateWhaleRadarBadge;
+
         function switchMainTab(tabName) {
             if (tabName === 'history') tabName = 'ledger';
             currentActiveMainTab = tabName;
@@ -8418,6 +8763,7 @@ async function loadAdminMetrics() {
                 'evolution': document.getElementById('tab-btn-evolution'),
                 'funding': document.getElementById('tab-btn-funding'),
                 'cvd': document.getElementById('tab-btn-cvd'),
+                'whale': document.getElementById('tab-btn-whale'),
                 'health': document.getElementById('tab-btn-health'),
                 'admin': document.getElementById('tab-btn-admin')
             };
@@ -8431,6 +8777,7 @@ async function loadAdminMetrics() {
                 'evolution': document.getElementById('main-tab-content-evolution'),
                 'funding': document.getElementById('main-tab-content-funding'),
                 'cvd': document.getElementById('main-tab-content-cvd'),
+                'whale': document.getElementById('main-tab-content-whale'),
                 'health': document.getElementById('main-tab-content-health'),
                 'admin': document.getElementById('main-tab-content-admin')
             };
@@ -8509,6 +8856,8 @@ async function loadAdminMetrics() {
                     renderLiquidationView();
                 } else if (tabName === 'cvd') {
                     renderCvdView();
+                } else if (tabName === 'whale') {
+                    renderWhaleRadarView();
                 } else if (tabName === 'health') {
                     renderHealthTabView();
                 } else if (tabName === 'admin') {
@@ -14505,6 +14854,13 @@ function downloadExcelReport() {
                     renderCvdView();
                 }
 
+                // 5c2b. Update Whale & Netflow Radar if active tab, otherwise update badge
+                if (currentActiveMainTab === 'whale' || window.currentActiveMainTab === 'whale') {
+                    renderWhaleRadarView();
+                } else {
+                    updateWhaleRadarBadge();
+                }
+
                 // 5c3. Update Health & Telemetry View if active tab
                 if (currentActiveMainTab === 'health' || window.currentActiveMainTab === 'health') {
                     renderHealthTabView();
@@ -15532,7 +15888,12 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                         cvd_summary = market_data.get_market_cvd_summary()
                     except Exception:
                         pass
-                symbol_cvd = dict(getattr(market_data, 'symbol_cvd', {}))
+            whale_radar = {
+                "ammunition": market_data.get_ammunition_status() if (market_data and hasattr(market_data, 'get_ammunition_status')) else {},
+                "recent_alerts": market_data.get_recent_whale_alerts(25) if (market_data and hasattr(market_data, 'get_recent_whale_alerts')) else [],
+                "radar_health": market_data.get_whale_radar_health() if (market_data and hasattr(market_data, 'get_whale_radar_health')) else {},
+                "exchange_netflows": {k: dict(v) for k, v in list(getattr(market_data, 'exchange_netflows', {}).items())[:100]} if market_data else {}
+            }
 
             return web.json_response({
                 "balance": trader_manager.balance,
@@ -15550,6 +15911,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "symbol_liquidations": symbol_liqs,
                 "cvd_summary": cvd_summary,
                 "symbol_cvd": symbol_cvd,
+                "whale_radar": whale_radar,
                 "orderbook_depth": {k: dict(v) for k, v in list(getattr(market_data, 'orderbook_depth', {}).items())} if market_data else {},
                 "recent_rejections": list(getattr(strategy, "recent_rejections", []))[-50:] if strategy else [],
                 "setup_attempts": dict(getattr(strategy, "setup_attempts", {})) if strategy else {},
@@ -15576,6 +15938,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                     "spacex_pid_controller": getattr(config, 'ENABLE_PID_PROFIT_CONTROLLER', True),
                     "ou_time_stop": getattr(config, 'ENABLE_OU_TIME_STOP', True),
                     "ou_half_life": getattr(config, 'ENABLE_OU_TIME_STOP', True),
+                    "whale_netflow_radar": getattr(config, 'ENABLE_WHALE_NETFLOW_RADAR', True),
+                    "ammunition_confluence": getattr(config, 'ENABLE_AMMUNITION_CONFLUENCE', True),
                     "max_leverage_cap": getattr(config, 'MAX_LEVERAGE', 5),
                     "circuit_breaker_active": getattr(strategy.vault, '_circuit_breaker_active', False) if (strategy and hasattr(strategy, 'vault')) else False,
                     "be_locked_count": sum(1 for p in getattr(trader_manager, 'open_positions', {}).values() if p.get("early_be_locked", False)),

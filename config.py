@@ -308,4 +308,22 @@ OU_DECAY_TIER3_MULT = 2.0                   # Kademe 3: 2.0 x tau (Mutlak Matema
 OU_MIN_PROGRESS_RATIO = 0.35                # 1.0 tau anında hedefin en az %35'i katedilmelidir
 OU_PID_IMMUNITY_ROE = 2.0                   # Pozisyon ROE >= +%2.0 ise SpaceX PID devrededir, O-U kârı ASLA kesmez
 
+# 16. Borsa Net Giriş/Çıkış Akışı (Exchange Netflows) ve On-Chain Balina Radarı (Whale Ammunition)
+ENABLE_WHALE_NETFLOW_RADAR = True            # Borsa Net Akışları ve Balina Giriş/Çıkış Radarı
+NETFLOW_INFLOW_ZSCORE_THRESHOLD = 2.0        # Borsa net girişi (Inflow) 24s ortalamasından +2.0 sigma saparsa VETO
+NETFLOW_OUTFLOW_ZSCORE_THRESHOLD = -2.0      # Borsa net çıkışı (Outflow) 24s ortalamasından -2.0 sigma saparsa SHORT VETO / ARZ ŞOKU
+NETFLOW_LOOKBACK_HOURS = 24                  # Net akış hareketli ortalaması için geçmiş pencere (saat)
+NETFLOW_REFRESH_INTERVAL_SEC = 90            # Çoklu kaynak arka plan sorgu sıklığı (sn)
+
+# Dinamik Likidite Kademeleri Balina Transfer Eşikleri ($ USD)
+WHALE_TIER1_MIN_USD = 10_000_000.0           # Tier-1 Majörler (BTC, ETH, SOL, BNB) tek işlem balina eşiği ($10M)
+WHALE_TIER2_MIN_USD = 2_000_000.0            # Tier-2 Standart Altcoinler tek işlem balina eşiği ($2M)
+WHALE_TIER3_MIN_USD = 500_000.0              # Tier-3 Meme & Düşük Likidite tek işlem balina eşiği ($500K)
+WHALE_VOL_RATIO_THRESHOLD_PCT = 2.0          # İşlem büyüklüğü paritenin 24s hacminin %2.0'sini aşarsa doğrudan DUMP uyarısı
+
+# Stabil Kripto Cephane & Confluence Parametreleri
+ENABLE_AMMUNITION_CONFLUENCE = True          # Borsa taze USDT/USDC girişini LONG confluence (+1 skor) olarak ödüllendir
+AMMUNITION_SURGE_THRESHOLD_USD = 50_000_000.0# Borsalara son 1-4 saatte >= $50M taze stabil kripto girişi = Boğa Cephanesi
+STALE_NETFLOW_TIMEOUT_SEC = 1200             # 20 dakikadan eski verilerde sinyali engelleme (Fail-safe passthrough)
+
 

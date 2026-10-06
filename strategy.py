@@ -52,7 +52,11 @@ from config import (
     ENABLE_PID_PROFIT_CONTROLLER, PID_KP, PID_KI, PID_KD, PID_MIN_MFE_TRIGGER, PID_ATR_NOISE_FLOOR_MULT,
     PID_CAPTURE_TIER1, PID_CAPTURE_TIER2, PID_CAPTURE_TIER3,
     ENABLE_OU_TIME_STOP, OU_LOOKBACK_CANDLES, OU_MIN_HALF_LIFE_MIN, OU_MAX_HALF_LIFE_MIN,
-    OU_DECAY_TIER1_MULT, OU_DECAY_TIER2_MULT, OU_DECAY_TIER3_MULT, OU_MIN_PROGRESS_RATIO, OU_PID_IMMUNITY_ROE
+    OU_DECAY_TIER1_MULT, OU_DECAY_TIER2_MULT, OU_DECAY_TIER3_MULT, OU_MIN_PROGRESS_RATIO, OU_PID_IMMUNITY_ROE,
+    ENABLE_WHALE_NETFLOW_RADAR, NETFLOW_INFLOW_ZSCORE_THRESHOLD, NETFLOW_OUTFLOW_ZSCORE_THRESHOLD,
+    NETFLOW_LOOKBACK_HOURS, NETFLOW_REFRESH_INTERVAL_SEC,
+    WHALE_TIER1_MIN_USD, WHALE_TIER2_MIN_USD, WHALE_TIER3_MIN_USD, WHALE_VOL_RATIO_THRESHOLD_PCT,
+    ENABLE_AMMUNITION_CONFLUENCE, AMMUNITION_SURGE_THRESHOLD_USD, STALE_NETFLOW_TIMEOUT_SEC
 )
 
 
@@ -174,7 +178,7 @@ class StrategyEngine:
                             side = "LONG"
 
                     telemetry = kwargs.get("telemetry") or {}
-                    for k in ["macro_regime", "setup_archetype", "regime_alignment", "btc_chg_4h", "btc_chg_1h", "dynamic_rs_score", "cvd_ratio_60s"]:
+                    for k in ["macro_regime", "setup_archetype", "regime_alignment", "btc_chg_4h", "btc_chg_1h", "dynamic_rs_score", "cvd_ratio_60s", "exchange_netflow_usd", "netflow_zscore", "netflow_regime", "ammunition_bias"]:
                         if k in kwargs and k not in telemetry:
                             telemetry[k] = kwargs[k]
                     if self.market_data and hasattr(self.market_data, 'get_symbol_metrics'):
@@ -182,6 +186,22 @@ class StrategyEngine:
                         telemetry.setdefault("atr_pct", met.get("atr_pct", 1.2))
                         telemetry.setdefault("vol_surge", met.get("vol_surge", 1.0))
                         telemetry.setdefault("rs_score", met.get("dynamic_rs_score", 0.0))
+                    if self.market_data and hasattr(self.market_data, 'get_symbol_netflow'):
+                        try:
+                            fl = self.market_data.get_symbol_netflow(clean_s)
+                            if fl:
+                                telemetry.setdefault("exchange_netflow_usd", float(fl.get("netflow_24h_usd", 0.0)))
+                                telemetry.setdefault("netflow_zscore", float(fl.get("z_score", 0.0)))
+                                telemetry.setdefault("netflow_regime", str(fl.get("regime", "BALANCED_FLOW")))
+                        except Exception:
+                            pass
+                    if self.market_data and hasattr(self.market_data, 'get_ammunition_status'):
+                        try:
+                            am = self.market_data.get_ammunition_status()
+                            if am:
+                                telemetry.setdefault("ammunition_bias", str(am.get("bias", "NEUTRAL")))
+                        except Exception:
+                            pass
 
                     if df_c is not None and not df_c.empty:
                         c_last = df_c.iloc[-1]
@@ -3464,6 +3484,79 @@ class StrategyEngine:
             except Exception:
                 pass
 
+        # ── 16. BORSA NET AKIŞI (EXCHANGE NETFLOWS) VE ON-CHAIN BALİNA RADARI ──
+        exchange_netflow_usd = 0.0
+        netflow_zscore = 0.0
+        netflow_regime = "BALANCED_FLOW"
+        ammunition_bias = "NEUTRAL"
+        binance_clean_reserves = 0.0
+
+        if ENABLE_WHALE_NETFLOW_RADAR and hasattr(self, 'market_data') and self.market_data:
+            try:
+                sym_netflow = self.market_data.get_symbol_netflow(symbol)
+                ammo_status = self.market_data.get_ammunition_status()
+
+                exchange_netflow_usd = float(sym_netflow.get('netflow_24h_usd', 0.0))
+                netflow_zscore = float(sym_netflow.get('z_score', 0.0))
+                netflow_regime = str(sym_netflow.get('regime', 'BALANCED_FLOW'))
+                ammunition_bias = str(ammo_status.get('bias', 'NEUTRAL'))
+                binance_clean_reserves = float(ammo_status.get('binance_clean_reserves', 0.0))
+
+                # Fail-safe zaman aşımı kontrolü: Veri STALE_NETFLOW_TIMEOUT_SEC (20 dk) eskiyse kalkanı baypas et
+                last_flow_update = float(sym_netflow.get('last_update', 0.0))
+                is_data_fresh = (time.time() - last_flow_update) <= STALE_NETFLOW_TIMEOUT_SEC if last_flow_update > 0 else False
+
+                if is_data_fresh:
+                    # Dinamik Z-Skor Eşiği: AutonomousDNACalibrator / coin_dna hassasiyet çarpanı
+                    dna_whale_mult = 1.0
+                    clean_sym_upper = self.market_data._clean_symbol(symbol) if hasattr(self.market_data, '_clean_symbol') else symbol.replace('/', '').replace(':USDT', '').upper()
+                    if hasattr(self, 'calibrated_coin_dna') and clean_sym_upper in self.calibrated_coin_dna:
+                        dna_whale_mult = float(self.calibrated_coin_dna[clean_sym_upper].get('whale_sensitivity', 1.0))
+
+                    dyn_inflow_thresh = NETFLOW_INFLOW_ZSCORE_THRESHOLD / max(0.5, min(2.0, dna_whale_mult))
+                    dyn_outflow_thresh = NETFLOW_OUTFLOW_ZSCORE_THRESHOLD / max(0.5, min(2.0, dna_whale_mult))
+
+                    is_dump_risk = bool(sym_netflow.get('is_dump_risk', False))
+                    is_accum_risk = bool(sym_netflow.get('is_accumulation', False))
+
+                    # Kural 1: LONG Veto (Balina Borsa Giriş Kalkanı / Exchange Inflow Dump Shield)
+                    if side == "LONG" and (netflow_zscore >= dyn_inflow_thresh or is_dump_risk):
+                        rej_msg = (
+                            f"🚨 Balina Borsa Giriş Kalkanı: Borsaya anormal coin girişi/satış baskısı tespit edildi "
+                            f"(Netflow: ${exchange_netflow_usd/1e6:+.1f}M, Z: {netflow_zscore:+.1f}σ >= {dyn_inflow_thresh:.1f}σ, "
+                            f"Rejim: {netflow_regime}, Mal Boşaltma Riski!)"
+                        )
+                        try:
+                            print(f">> [RED - BALİNA BORSA GİRİŞ KALKANI] {symbol}: {rej_msg}")
+                        except Exception:
+                            pass
+                        self.log_rejection(symbol, setup_id or reason, rej_msg, exchange_netflow_usd=exchange_netflow_usd, netflow_zscore=netflow_zscore, netflow_regime=netflow_regime, ammunition_bias=ammunition_bias)
+                        return {"error": "WHALE_EXCHANGE_INFLOW_DUMP_VETO", "reason": rej_msg}
+
+                    # Kural 2: SHORT Veto (Soğuk Cüzdan Çıkış Kalkanı / Exchange Outflow Squeeze Shield)
+                    if side == "SHORT" and (netflow_zscore <= dyn_outflow_thresh or is_accum_risk):
+                        rej_msg = (
+                            f"🛡️ Soğuk Cüzdan Çıkış Kalkanı: Borsadan soğuk cüzdanlara agresif çekim/akümülasyon tespit edildi "
+                            f"(Netflow: ${exchange_netflow_usd/1e6:+.1f}M, Z: {netflow_zscore:+.1f}σ <= {dyn_outflow_thresh:.1f}σ, "
+                            f"Rejim: {netflow_regime}, Short Squeeze Riski!)"
+                        )
+                        try:
+                            print(f">> [RED - SOĞUK CÜZDAN ÇIKIŞ KALKANI] {symbol}: {rej_msg}")
+                        except Exception:
+                            pass
+                        self.log_rejection(symbol, setup_id or reason, rej_msg, exchange_netflow_usd=exchange_netflow_usd, netflow_zscore=netflow_zscore, netflow_regime=netflow_regime, ammunition_bias=ammunition_bias)
+                        return {"error": "WHALE_EXCHANGE_OUTFLOW_SQUEEZE_VETO", "reason": rej_msg}
+
+                    # Kural 3: Stabil Kripto Cephane Confluence Ödülü
+                    if ENABLE_AMMUNITION_CONFLUENCE and side == "LONG" and ammunition_bias == "BULLISH_FUEL":
+                        if "Stabil_Cephane_Baskisi_Pozitif" not in confluence_list:
+                            confluence_list.append("Stabil_Cephane_Baskisi_Pozitif")
+            except Exception as e:
+                try:
+                    print(f">> [UYARI - BALİNA NETFLOW RADARI İSTİSNA] {symbol}: {e}")
+                except Exception:
+                    pass
+
         macro_clim = self.get_macro_climate()
         res = await self._safe_open_position(
             symbol=symbol, side=side, entry_price=entry_price,
@@ -3547,7 +3640,12 @@ class StrategyEngine:
             ou_hard_limit_min=ou_hard_limit_min,
             ou_equilibrium_mu=ou_eq_mu,
             ou_r_squared=ou_r2,
-            ou_sigma=ou_sigma
+            ou_sigma=ou_sigma,
+            exchange_netflow_usd=exchange_netflow_usd,
+            netflow_zscore=netflow_zscore,
+            netflow_regime=netflow_regime,
+            ammunition_bias=ammunition_bias,
+            binance_clean_reserves=binance_clean_reserves
         )
 
         if isinstance(res, dict) and res.get("error") == "INSUFFICIENT_BALANCE":

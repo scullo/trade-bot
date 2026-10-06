@@ -185,7 +185,11 @@ class ShadowExecutionEngine:
     def extract_shield_name(self, reason: str) -> str:
         """Hata veya ret mesajından profesyonel kalkan adını teşhis eder."""
         r = str(reason or "")
-        if "Harmonik Akış" in r or "CVD" in r:
+        if "Balina Borsa Giriş" in r or "WHALE_EXCHANGE_INFLOW" in r or ("Balina" in r and "Giriş" in r):
+            return "Balina Borsa Giriş Kalkanı (Exchange Inflow Dump Shield)"
+        elif "Soğuk Cüzdan" in r or "WHALE_EXCHANGE_OUTFLOW" in r or ("Soğuk" in r and "Çıkış" in r):
+            return "Soğuk Cüzdan Çıkış Kalkanı (Exchange Outflow Squeeze Shield)"
+        elif "Harmonik Akış" in r or "CVD" in r:
             return "Harmonik Akış Kalkanı (CVD Taker Flow)"
         elif "Dip AVWAP" in r:
             return "Dip AVWAP Taban Kalkanı (Institutional Floor)"
@@ -352,6 +356,10 @@ class ShadowExecutionEngine:
             "notional_usd": 1250.0,
             "ou_half_life_min": float(telemetry_dict.get("ou_half_life_min", 30.0) or 30.0),
             "ou_regime": str(telemetry_dict.get("ou_regime", "MODERATE_MEAN_REVERTING")),
+            "exchange_netflow_usd": float(telemetry_dict.get("exchange_netflow_usd", 0.0) or 0.0),
+            "netflow_zscore": float(telemetry_dict.get("netflow_zscore", 0.0) or 0.0),
+            "netflow_regime": str(telemetry_dict.get("netflow_regime", "BALANCED_FLOW")),
+            "ammunition_bias": str(telemetry_dict.get("ammunition_bias", "NEUTRAL")),
             "telemetry": telemetry_dict
         }
 

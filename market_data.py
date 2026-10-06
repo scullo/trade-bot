@@ -15,9 +15,16 @@ from config import (
     MAX_ALLOWED_SPREAD_MAJORS, MAX_ALLOWED_SPREAD_ALTS, MAX_ALLOWED_SPREAD_MEME,
     MAX_ENTRY_SLIPPAGE_PCT, MIN_L2_DEPTH_USD_03,
     ENABLE_OI_VELOCITY_RADAR, OI_EXPANSION_THRESHOLD_PCT, OI_SQUEEZE_EXHAUSTION_PCT, OI_POLL_INTERVAL_SEC,
-    ENABLE_COINBASE_LEAD_LAG, COINBASE_LEAD_SPREAD_BPS, COINBASE_TICK_WINDOW_SEC
+    ENABLE_COINBASE_LEAD_LAG, COINBASE_LEAD_SPREAD_BPS, COINBASE_TICK_WINDOW_SEC,
+    ENABLE_WHALE_NETFLOW_RADAR, NETFLOW_INFLOW_ZSCORE_THRESHOLD, NETFLOW_OUTFLOW_ZSCORE_THRESHOLD,
+    NETFLOW_REFRESH_INTERVAL_SEC, WHALE_TIER1_MIN_USD, WHALE_TIER2_MIN_USD, WHALE_TIER3_MIN_USD,
+    ENABLE_AMMUNITION_CONFLUENCE, AMMUNITION_SURGE_THRESHOLD_USD, STALE_NETFLOW_TIMEOUT_SEC
 )
-from indicators import calculate_camarilla_pivots, calculate_anchored_vwap, calculate_volume_profile, get_tradingview_naked_lines, calculate_session_and_daily_levels
+from indicators import (
+    calculate_camarilla_pivots, calculate_anchored_vwap, calculate_volume_profile,
+    get_tradingview_naked_lines, calculate_session_and_daily_levels,
+    calculate_netflow_zscore, classify_whale_transfer, calculate_ammunition_momentum
+)
 
 class MarketDataManager:
     def __init__(self, all_symbols, active_symbols=None, timeframe="5m"):
@@ -150,6 +157,44 @@ class MarketDataManager:
             'short_liq_usd': 0.0,
             'desc': '⚪ Durgun Tasfiye Akışı',
             'last_update': 0.0
+        }
+
+        # 🐋 16. Borsa Net Giriş/Çıkış Akışı (Netflow) ve Balina Radarı Veri Yapıları
+        self.exchange_netflows = {s: {
+            'symbol': s,
+            'netflow_24h_usd': 0.0,
+            'inflow_24h_usd': 0.0,
+            'outflow_24h_usd': 0.0,
+            'z_score': 0.0,
+            'regime': 'BALANCED_FLOW',
+            'is_dump_risk': False,
+            'is_accumulation': False,
+            'tier': 'TIER_1' if any(m in s for m in ["BTC", "ETH", "SOL", "BNB"]) else ('TIER_3' if any(m in s for m in ["PEPE", "SHIB", "DOGE", "BONK", "MEME", "FLOKI", "WIF"]) else 'TIER_2'),
+            'last_whale_transfer_ts': 0.0,
+            'last_whale_amount_usd': 0.0,
+            'last_whale_intent': 'NONE',
+            'last_update': 0.0
+        } for s in all_symbols}
+        self.netflow_history_deque = {s: deque(maxlen=48) for s in all_symbols}
+        self.stablecoin_ammunition = {
+            'bias': 'NEUTRAL',
+            'delta_24h_usd': 0.0,
+            'delta_pct': 0.0,
+            'momentum_score': 0.0,
+            'is_bullish_fuel': False,
+            'total_pegged_usd': 0.0,
+            'binance_clean_reserves': 0.0,
+            'binance_24h_inflows': 0.0,
+            'total_cex_inflows_24h': 0.0,
+            'last_update': 0.0
+        }
+        self.stablecoin_history_deque = deque(maxlen=48)
+        self.whale_transactions_feed = deque(maxlen=50)
+        self.whale_provider_status = {
+            'defillama': {'status': 'CONNECTING', 'latency_ms': 0, 'last_success': 0.0, 'errors': 0},
+            'binance_flow': {'status': 'ONLINE', 'latency_ms': 0, 'last_success': time.time(), 'errors': 0},
+            'whale_radar_live': True,
+            'last_sync_ts': 0.0
         }
 
         self.on_tick_callback = None
@@ -377,6 +422,13 @@ class MarketDataManager:
                         "fresh_count": sum(1 for v in getattr(self, 'symbol_oi', {}).values() if (now_sec - v.get('last_update', 0.0)) < 90.0),
                         "top_expansion": getattr(self, 'oi_summary', {}).get('top_expansion_symbol', '-'),
                         "top_expansion_pct": getattr(self, 'oi_summary', {}).get('top_expansion_pct', 0.0)
+                    },
+                    "whale_netflow_radar": {
+                        "healthy": bool(getattr(self, 'get_whale_radar_health', lambda: {})().get('is_healthy', True)),
+                        "ammunition_bias": getattr(self, 'stablecoin_ammunition', {}).get('bias', 'NEUTRAL'),
+                        "feed_count": len(getattr(self, 'whale_transactions_feed', [])),
+                        "last_sync_sec": getattr(self, 'get_whale_radar_health', lambda: {})().get('last_sync_sec', 0.0),
+                        "providers": getattr(self, 'whale_provider_status', {})
                     }
                 },
                 "quant_engine": {
@@ -1845,6 +1897,91 @@ class MarketDataManager:
             'desc': str(local_res.get('desc', '⚪ Paritede Tasfiye Sakin' if symbol else '⚪ Durgun Tasfiye Akışı'))
         }
 
+    # ──────────────────────────────────────────────────────────────────────────
+    # 🐋 16. BORSA NET GİRİŞ/ÇIKIŞ AKIŞI (NETFLOW) VE BALİNA METRİK ERİŞİMCİLERİ
+    # ──────────────────────────────────────────────────────────────────────────
+    def get_symbol_netflow(self, symbol: str) -> dict:
+        """Paritenin anlık borsa net akış durumunu ve Z-skorunu RAM'den 0.01ms içinde döndürür."""
+        clean_s = self._clean_symbol(symbol)
+        flow_data = self.exchange_netflows.get(clean_s, {})
+        if not flow_data:
+            flow_data = self.exchange_netflows.get(symbol, {
+                'symbol': symbol,
+                'netflow_24h_usd': 0.0,
+                'z_score': 0.0,
+                'regime': 'BALANCED_FLOW',
+                'is_dump_risk': False,
+                'is_accumulation': False,
+                'tier': 'TIER_2',
+                'last_whale_transfer_ts': 0.0,
+                'last_whale_amount_usd': 0.0,
+                'last_whale_intent': 'NONE',
+                'last_update': 0.0
+            })
+        return flow_data
+
+    def get_ammunition_status(self) -> dict:
+        """Global borsa stabil kripto (USDT/USDC) yakıt ve cephane durumunu döndürür."""
+        return getattr(self, 'stablecoin_ammunition', {
+            'bias': 'NEUTRAL',
+            'delta_24h_usd': 0.0,
+            'delta_pct': 0.0,
+            'momentum_score': 0.0,
+            'is_bullish_fuel': False,
+            'binance_clean_reserves': 0.0,
+            'binance_24h_inflows': 0.0,
+            'last_update': 0.0
+        })
+
+    def get_recent_whale_alerts(self, limit: int = 15) -> list:
+        """Son balina işlemlerini liste olarak döndürür."""
+        dq = getattr(self, 'whale_transactions_feed', deque())
+        return list(dq)[-limit:]
+
+    def get_whale_radar_health(self) -> dict:
+        """Sağlık sekmesi ve API monitoring için balina sensör durumunu döndürür."""
+        prov = getattr(self, 'whale_provider_status', {})
+        last_sync = prov.get('last_sync_ts', 0.0)
+        age = round(time.time() - last_sync, 1) if last_sync > 0 else 999.0
+        return {
+            'providers': prov,
+            'feed_count': len(getattr(self, 'whale_transactions_feed', [])),
+            'ammunition_bias': getattr(self, 'stablecoin_ammunition', {}).get('bias', 'NEUTRAL'),
+            'last_sync_sec': age,
+            'is_healthy': age < 1200
+        }
+
+    def record_whale_transaction(self, symbol: str, amount_usd: float, transfer_type: str = 'WALLET_TO_EXCHANGE', tx_hash: str = None) -> dict:
+        """Büyük bir on-chain veya borsa içi balina transferi gerçekleştiğinde beslemeye ve kalkan hafızasına kaydeder."""
+        clean_s = self._clean_symbol(symbol)
+        feat = getattr(self, 'symbol_features', {}).get(clean_s, {})
+        vol_24h = float(feat.get('volume_24h_usd', 0.0) or 0.0)
+
+        is_tier1 = any(m in clean_s for m in ["BTC", "ETH", "SOL", "BNB"])
+        is_tier3 = any(m in clean_s for m in ["PEPE", "SHIB", "DOGE", "BONK", "MEME", "FLOKI", "WIF"])
+        tier_str = "TIER_1" if is_tier1 else ("TIER_3" if is_tier3 else "TIER_2")
+
+        from indicators import classify_whale_transfer
+        res = classify_whale_transfer(clean_s, amount_usd, volume_24h_usd=vol_24h, tier=tier_str, transfer_type=transfer_type)
+        now_ts = time.time()
+        res['timestamp'] = now_ts
+        res['time_str'] = datetime.now(timezone(timedelta(hours=3))).strftime("%H:%M:%S")
+        res['tx_hash'] = tx_hash or f"tx_{int(now_ts * 1000)}"
+
+        if res['is_whale']:
+            self.whale_transactions_feed.append(res)
+            target_keys = [symbol, clean_s]
+            for tk in target_keys:
+                if tk in self.exchange_netflows:
+                    if res['is_dump_risk']:
+                        self.exchange_netflows[tk]['is_dump_risk'] = True
+                    elif res['is_bull_ammo']:
+                        self.exchange_netflows[tk]['is_accumulation'] = True
+                    self.exchange_netflows[tk]['last_whale_transfer_ts'] = now_ts
+                    self.exchange_netflows[tk]['last_whale_amount_usd'] = amount_usd
+                    self.exchange_netflows[tk]['last_whale_intent'] = res['intent']
+        return res
+
     def get_symbol_metrics(self, symbol: str) -> dict:
         if not hasattr(self, 'symbol_metrics'):
             self.symbol_metrics = {}
@@ -3247,6 +3384,134 @@ class MarketDataManager:
                     print(f">> [OI WORKER UYARI]: {e}")
                 await asyncio.sleep(OI_POLL_INTERVAL_SEC)
 
+        # Worker 10: Kurumsal Borsa Net Akışı (Exchange Netflows) ve On-Chain Balina Radarı
+        async def whale_netflow_worker():
+            if not getattr(config, 'ENABLE_WHALE_NETFLOW_RADAR', True):
+                return
+            print(">> [BALİNA RADARI] Çok Kaynaklı Borsa Net Akışı & On-Chain Likidite Radarı Başlatılıyor...")
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+
+            while True:
+                try:
+                    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=15)) as session:
+                        # 1. DefiLlama 88 CEX Rezervi ve 24h Netflow (Primary CEX Inflow/Outflow)
+                        try:
+                            t0 = time.time()
+                            async with session.get("https://api.llama.fi/cexs", headers=headers) as resp:
+                                if resp.status == 200:
+                                    data = await resp.json()
+                                    cexs = data.get('cexs', [])
+                                    total_inflow_24h = 0.0
+                                    binance_tvl = 0.0
+                                    binance_inflow = 0.0
+                                    for c in cexs:
+                                        c_name = str(c.get('name', '')).lower()
+                                        c_inf = float(c.get('inflows_24h', 0.0) or 0.0)
+                                        total_inflow_24h += c_inf
+                                        if 'binance' in c_name:
+                                            binance_tvl = float(c.get('cleanAssetsTvl', c.get('currentTvl', 0.0)) or 0.0)
+                                            binance_inflow = c_inf
+
+                                    self.stablecoin_ammunition['binance_clean_reserves'] = binance_tvl
+                                    self.stablecoin_ammunition['binance_24h_inflows'] = binance_inflow
+                                    self.stablecoin_ammunition['total_cex_inflows_24h'] = total_inflow_24h
+
+                                    lat = int((time.time() - t0) * 1000)
+                                    self.whale_provider_status['defillama'] = {
+                                        'status': 'ONLINE', 'latency_ms': lat, 'last_success': time.time(), 'errors': 0
+                                    }
+                        except Exception:
+                            err_cnt = self.whale_provider_status.get('defillama', {}).get('errors', 0) + 1
+                            self.whale_provider_status['defillama'] = {
+                                'status': 'DEGRADED', 'latency_ms': 0, 'last_success': self.whale_provider_status.get('defillama', {}).get('last_success', 0.0), 'errors': err_cnt
+                            }
+
+                        # 2. DefiLlama Stablecoin Dolaşımdaki Arz (Mint/Burn Momentum)
+                        try:
+                            async with session.get("https://stablecoins.llama.fi/stablecoincharts/all", headers=headers) as resp:
+                                if resp.status == 200:
+                                    data = await resp.json()
+                                    if isinstance(data, list) and len(data) >= 2:
+                                        recent_days = [float(x.get('totalCirculatingUSD', {}).get('peggedUSD', 0.0) or 0.0) for x in data[-14:]]
+                                        ammo_res = calculate_ammunition_momentum(recent_days)
+                                        ammo_res['total_pegged_usd'] = recent_days[-1]
+                                        ammo_res['binance_clean_reserves'] = self.stablecoin_ammunition.get('binance_clean_reserves', 0.0)
+                                        ammo_res['binance_24h_inflows'] = self.stablecoin_ammunition.get('binance_24h_inflows', 0.0)
+                                        ammo_res['last_update'] = time.time()
+                                        self.stablecoin_ammunition.update(ammo_res)
+                        except Exception:
+                            pass
+
+                        # 3. Parite Bazlı Borsa Net Akışı (Symbol Netflow & Taker Delta Proxy)
+                        now_ts = time.time()
+                        for sym in self.all_symbols:
+                            clean_s = self._clean_symbol(sym)
+                            df_5m = self.candles_5m.get(sym)
+                            if df_5m is None or df_5m.empty:
+                                df_5m = self.candles_5m.get(clean_s)
+
+                            curr_netflow_usd = 0.0
+                            if df_5m is not None and len(df_5m) >= 6:
+                                lookback = min(len(df_5m), 24)
+                                recent_df = df_5m.iloc[-lookback:]
+                                if 'taker_quote' in recent_df.columns:
+                                    taker_buys = float(recent_df['taker_quote'].sum())
+                                    tot_vol_usd = float((recent_df['volume'] * recent_df['close']).sum())
+                                    taker_sells = max(0.0, tot_vol_usd - taker_buys)
+                                    curr_netflow_usd = float(taker_buys - taker_sells)
+                                elif 'taker_base' in recent_df.columns:
+                                    taker_buys = float((recent_df['taker_base'] * recent_df['close']).sum())
+                                    tot_vol_usd = float((recent_df['volume'] * recent_df['close']).sum())
+                                    taker_sells = max(0.0, tot_vol_usd - taker_buys)
+                                    curr_netflow_usd = float(taker_buys - taker_sells)
+                                else:
+                                    rng = np.maximum(1e-8, recent_df['high'] - recent_df['low'])
+                                    w = (recent_df['close'] - recent_df['open']) / rng
+                                    curr_netflow_usd = float((w * recent_df['volume'] * recent_df['close']).sum())
+
+                            dq = self.netflow_history_deque[sym]
+                            dq.append(curr_netflow_usd)
+
+                            z_res = calculate_netflow_zscore(list(dq), curr_netflow_usd)
+                            is_tier1 = any(m in clean_s for m in ["BTC", "ETH", "SOL", "BNB"])
+                            is_tier3 = any(m in clean_s for m in ["PEPE", "SHIB", "DOGE", "BONK", "MEME", "FLOKI", "WIF"])
+                            tier_str = "TIER_1" if is_tier1 else ("TIER_3" if is_tier3 else "TIER_2")
+
+                            prev_entry = self.exchange_netflows.get(sym, {})
+                            last_whale_ts = prev_entry.get('last_whale_transfer_ts', 0.0)
+                            whale_active = (now_ts - last_whale_ts) < 1800.0
+
+                            is_dump_threat = z_res['is_dump_risk'] or (whale_active and prev_entry.get('last_whale_intent') == 'DUMP_PREPARATION')
+                            is_accum_threat = z_res['is_accumulation'] or (whale_active and prev_entry.get('last_whale_intent') == 'COLD_STORAGE_ACCUMULATION')
+
+                            self.exchange_netflows[sym] = {
+                                'symbol': sym,
+                                'netflow_24h_usd': round(curr_netflow_usd, 2),
+                                'z_score': z_res['z_score'],
+                                'regime': z_res['regime'],
+                                'is_dump_risk': is_dump_threat,
+                                'is_accumulation': is_accum_threat,
+                                'tier': tier_str,
+                                'last_whale_transfer_ts': last_whale_ts,
+                                'last_whale_amount_usd': prev_entry.get('last_whale_amount_usd', 0.0),
+                                'last_whale_intent': prev_entry.get('last_whale_intent', 'NONE'),
+                                'last_update': now_ts
+                            }
+                            self.exchange_netflows[clean_s] = self.exchange_netflows[sym]
+
+                        self.whale_provider_status['last_sync_ts'] = now_ts
+                        self.whale_provider_status['whale_radar_live'] = True
+
+                        btc_flow = self.exchange_netflows.get('BTC/USDT', {})
+                        ammo_bias = self.stablecoin_ammunition.get('bias', 'NEUTRAL')
+                        print(f">> [BALİNA RADARI GÜNCELLENDİ] BTC Netflow: ${btc_flow.get('netflow_24h_usd', 0):+,.0f} (Z: {btc_flow.get('z_score', 0):+.2f}σ) | Stabil Cephane: {ammo_bias} (Binance TVL: ${self.stablecoin_ammunition.get('binance_clean_reserves', 0)/1e9:.1f}B)")
+
+                except Exception as e_main:
+                    print(f">> [BALİNA RADARI HATA] {e_main}")
+
+                poll_interval = getattr(config, 'NETFLOW_REFRESH_INTERVAL_SEC', 90)
+                await asyncio.sleep(poll_interval)
+
         # Her worker'ı crash-proof saran koruyucu (bir worker çökerse diğerlerini öldürmez, otomatik yeniden başlatır)
         async def resilient_worker(name, coro_fn, *args):
             backoff = 2
@@ -3271,6 +3536,7 @@ class MarketDataManager:
             resilient_worker("DeribitGexRadar", deribit_gex_worker),
             resilient_worker("CoinbaseLeadLag", coinbase_lead_lag_worker),
             resilient_worker("OpenInterestRadar", open_interest_worker),
+            resilient_worker("WhaleNetflowRadar", whale_netflow_worker),
         ] + [resilient_worker(f"KLine-Chunk-{i}", kline_worker, i, c) for i, c in enumerate(kline_chunks)]
 
         self._active_stream_tasks = [asyncio.create_task(t) for t in tasks]

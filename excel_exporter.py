@@ -111,7 +111,9 @@ HEADERS_GRANULAR = [
     ('L2 Derinlik Kaynağı', 20),
     ('Apollo Kalman Teyidi', 24),
     ('SpaceX PID Kâr Kilidi', 24),
-    ('O-U Yarılanma Ömrü (τ)', 24)
+    ('O-U Yarılanma Ömrü (τ)', 24),
+    ('Borsa Net Akış Durumu', 24),
+    ('Balina Cephane Skoru', 24)
 ]
 headers_granular = HEADERS_GRANULAR
 
@@ -717,6 +719,31 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         else:
             ou_txt = "⚪ Standart"
         ws.write(r_idx, 97, ou_txt, cell_center)
+
+        # Borsa Net Akış Durumu (98)
+        flow_usd = _safe_float(h.get('exchange_netflow_usd', 0.0))
+        flow_z = _safe_float(h.get('netflow_zscore', 0.0))
+        if abs(flow_usd) > 0:
+            flow_sign = "+" if flow_usd >= 0 else "-"
+            flow_txt = f"{flow_sign}${abs(flow_usd)/1e6:.1f}M ({flow_z:+.1f}σ)"
+            flow_cell_fmt = cell_green if flow_usd >= 0 else cell_red
+        else:
+            flow_txt = "⚪ Dengeli"
+            flow_cell_fmt = cell_center
+        ws.write(r_idx, 98, flow_txt, flow_cell_fmt)
+
+        # Balina Cephane Skoru (99)
+        ammo_bias = str(h.get('ammunition_bias', 'NEUTRAL'))
+        if ammo_bias == 'BULLISH_FUEL':
+            ammo_txt = "⚡ Boğa Yakıtı"
+            ammo_fmt = cell_roe_green
+        elif ammo_bias == 'CAPITAL_DRAIN':
+            ammo_txt = "⚠️ Cephane Kaçışı"
+            ammo_fmt = cell_roe_red
+        else:
+            ammo_txt = "⚪ Nötr Rezerv"
+            ammo_fmt = cell_center
+        ws.write(r_idx, 99, ammo_txt, ammo_fmt)
 
 
     def render_table_sheet(ws_obj, t_list):

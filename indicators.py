@@ -1868,8 +1868,194 @@ def calculate_ornstein_uhlenbeck_params(prices, anchor_price=None, dt_minutes=5.
         return default_res
 
 
+# ═════════════════════════════════════════════════════════════════════════════
+# 16. BORSA NET GİRİŞ/ÇIKIŞ AKIŞI (NETFLOW) VE ON-CHAIN BALİNA METRİKLERİ
+# ═════════════════════════════════════════════════════════════════════════════
+
+def calculate_netflow_zscore(flow_history: list, current_flow: float) -> dict:
+    """
+    Borsa Net Akışı (Netflow = Inflow - Outflow) için İstatistiksel Z-Skor Hesabı.
+    Z = (X - mu) / sigma
+    
+    Z >= +2.0: Borsa Giriş Patlaması (DUMP UYARISI / Mal Boşaltma)
+    Z <= -2.0: Borsa Çıkış Patlaması (ARZ ŞOKU / Soğuk Cüzdan Akümülasyonu)
+    """
+    default_res = {
+        'z_score': 0.0,
+        'mean_flow': float(current_flow),
+        'std_flow': 0.0,
+        'regime': 'BALANCED_FLOW',
+        'is_dump_risk': False,
+        'is_accumulation': False,
+        'is_anomaly': False
+    }
+    if not flow_history or len(flow_history) < 3:
+        return default_res
+
+    try:
+        arr = np.array(flow_history, dtype=float)
+        arr = arr[np.isfinite(arr)]
+        if len(arr) < 3:
+            return default_res
+
+        mu = float(np.mean(arr))
+        sigma = float(np.std(arr))
+        if sigma < 1e-4:
+            sigma = 1.0
+
+        z = (float(current_flow) - mu) / sigma
+        z_clamped = max(-5.0, min(5.0, z))
+
+        if z_clamped >= 2.0:
+            regime = 'INFLOW_SURGE_DUMP_RISK'
+            dump_risk = True
+            accum = False
+            anomaly = True
+        elif z_clamped <= -2.0:
+            regime = 'OUTFLOW_SURGE_ACCUMULATION'
+            dump_risk = False
+            accum = True
+            anomaly = True
+        elif z_clamped >= 1.0:
+            regime = 'MILD_INFLOW'
+            dump_risk = False
+            accum = False
+            anomaly = False
+        elif z_clamped <= -1.0:
+            regime = 'MILD_OUTFLOW'
+            dump_risk = False
+            accum = False
+            anomaly = False
+        else:
+            regime = 'BALANCED_FLOW'
+            dump_risk = False
+            accum = False
+            anomaly = False
+
+        return {
+            'z_score': round(float(z_clamped), 2),
+            'mean_flow': round(mu, 2),
+            'std_flow': round(sigma, 2),
+            'regime': regime,
+            'is_dump_risk': dump_risk,
+            'is_accumulation': accum,
+            'is_anomaly': anomaly
+        }
+    except Exception:
+        return default_res
 
 
+def classify_whale_transfer(
+    symbol: str,
+    amount_usd: float,
+    volume_24h_usd: float = 0.0,
+    tier: str = 'TIER_2',
+    transfer_type: str = 'WALLET_TO_EXCHANGE'
+) -> dict:
+    """
+    On-Chain Balina Transferini Parite Kademesi (Tier-1, 2, 3) ve 24s Hacme Göre Sınıflandırır.
+    
+    Tier-1 (Majör: BTC, ETH, SOL): >= $10,000,000
+    Tier-2 (Standart Altcoin):     >= $2,000,000
+    Tier-3 (Meme & Düşük Liq):    >= $500,000
+    Hacim Oranı:                   >= %2.0 (Tek transferde 24s hacmin %2'si aşılırsa doğrudan DUMP riski)
+    """
+    tier_upper = str(tier).upper()
+    if '1' in tier_upper:
+        tier_thresh = 10_000_000.0
+    elif '3' in tier_upper:
+        tier_thresh = 500_000.0
+    else:
+        tier_thresh = 2_000_000.0
+
+    amt = float(amount_usd or 0.0)
+    vol = float(volume_24h_usd or 0.0)
+    vol_ratio = (amt / vol * 100.0) if vol > 0 else 0.0
+
+    is_whale = (amt >= tier_thresh) or (vol_ratio >= 2.0 and amt >= 200_000.0)
+
+    severity = 'NORMAL'
+    if is_whale:
+        if amt >= tier_thresh * 3.0 or vol_ratio >= 5.0:
+            severity = 'EXTREME'
+        elif amt >= tier_thresh * 1.5 or vol_ratio >= 3.0:
+            severity = 'HIGH'
+        else:
+            severity = 'MODERATE'
+
+    # Transfer yönü niyeti
+    t_type = str(transfer_type).upper()
+    if 'WALLET_TO_EXCHANGE' in t_type or 'TO_EXCHANGE' in t_type:
+        intent = 'DUMP_PREPARATION' if is_whale else 'DEPOSIT'
+        is_dump_risk = is_whale
+        is_bull_ammo = False
+    elif 'EXCHANGE_TO_WALLET' in t_type or 'TO_WALLET' in t_type:
+        intent = 'COLD_STORAGE_ACCUMULATION' if is_whale else 'WITHDRAWAL'
+        is_dump_risk = False
+        is_bull_ammo = is_whale
+    elif 'TREASURY' in t_type or 'STABLE' in t_type:
+        intent = 'FRESH_AMMUNITION_MINT'
+        is_dump_risk = False
+        is_bull_ammo = True
+    else:
+        intent = 'INTERNAL_TRANSFER'
+        is_dump_risk = False
+        is_bull_ammo = False
+
+    return {
+        'symbol': symbol,
+        'amount_usd': round(amt, 2),
+        'is_whale': is_whale,
+        'severity': severity,
+        'intent': intent,
+        'vol_ratio_pct': round(vol_ratio, 2),
+        'is_dump_risk': is_dump_risk,
+        'is_bull_ammo': is_bull_ammo
+    }
 
 
+def calculate_ammunition_momentum(stablecoin_history: list) -> dict:
+    """
+    Borsalara Stabil Kripto (USDT/USDC) Rezerv Akış Momentumunu ve Boğa Yakıtını Hesaplarlar.
+    Pozitif akış: Balinalar taze alım gücü (Cephane) yığıyor demektir.
+    """
+    default_res = {
+        'bias': 'NEUTRAL',
+        'delta_24h_usd': 0.0,
+        'delta_pct': 0.0,
+        'momentum_score': 0.0,
+        'is_bullish_fuel': False
+    }
+    if not stablecoin_history or len(stablecoin_history) < 2:
+        return default_res
+
+    try:
+        cur = float(stablecoin_history[-1])
+        prev = float(stablecoin_history[0])
+        delta = cur - prev
+        pct = (delta / prev * 100.0) if prev > 0 else 0.0
+
+        # Son 24 saatte borsa rezervlerine >= $50M stabil para girdiyse boğa yakıtıdır
+        if delta >= 50_000_000.0 or pct >= 0.50:
+            bias = 'BULLISH_FUEL'
+            is_fuel = True
+            score = min(1.0, delta / 200_000_000.0)
+        elif delta <= -50_000_000.0 or pct <= -0.50:
+            bias = 'CAPITAL_DRAIN'
+            is_fuel = False
+            score = max(-1.0, delta / 200_000_000.0)
+        else:
+            bias = 'NEUTRAL'
+            is_fuel = False
+            score = 0.0
+
+        return {
+            'bias': bias,
+            'delta_24h_usd': round(delta, 2),
+            'delta_pct': round(pct, 2),
+            'momentum_score': round(score, 3),
+            'is_bullish_fuel': is_fuel
+        }
+    except Exception:
+        return default_res
 
