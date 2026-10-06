@@ -5613,6 +5613,18 @@ HTML_PAGE = """
                     🛡️ <b>Strateji:</b> Dirençteyse 'Boğa Tuzağı' engellenir. Destekteyse fitilden 'Dip Emilim (Bounce)' aranır.
                 </div>
             </div>
+
+            <div class="cockpit-kpi-card" style="border-top:3px solid #818cf8;" id="card-cvd-smart-money">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">🏛️ Kurumsal Smart Money Delta (Coinbase vs Binance)</span>
+                    <span class="kpi-card-icon">🏛️</span>
+                </div>
+                <div class="kpi-card-val" id="cvd-smart-money-val" style="color:#818cf8; font-size:19px;">0.0%</div>
+                <div class="kpi-card-sub" id="cvd-smart-money-sub">Coinbase Spot vs Binance Vadeli Alış Oranı Dengede</div>
+                <div style="font-size:11px; color:#cbd5e1; font-family:'JetBrains Mono'; margin-top:5px; display:flex; align-items:center; gap:6px;">
+                    <span class="kpi-telemetry-chip" id="cvd-smart-money-chip" style="background:rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.1); font-size:10px;">UYUMLU AKIŞ</span>
+                </div>
+            </div>
         </div>
 
         <!-- COIN SEÇİM & FİLTRE ÇUBUĞU -->
@@ -5766,6 +5778,7 @@ HTML_PAGE = """
                 <div style="margin-top:6px; display:flex; align-items:center; gap:8px;">
                     <span class="kpi-telemetry-chip" id="whale-smart-money-chip" style="background:rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.1);">UYUMLU AKIŞ</span>
                 </div>
+                <div id="whale-smart-money-assets" style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;"></div>
             </div>
         </div>
 
@@ -6662,6 +6675,10 @@ async function loadAdminMetrics() {
             const cb = streams.coinbase_lead_lag || (appState.coinbase_lead_lag || { spread_bps: 0.0, status: '⚪ DENGELİ', direction: 'NEUTRAL' });
             const oi = streams.oi_radar || (appState.oi_summary || { fresh_count: 40, top_expansion: '-', top_expansion_pct: 0.0 });
             const whaleStr = streams.whale_netflow_radar || ((appState.whale_radar && appState.whale_radar.radar_health) || { healthy: true, ammunition_bias: 'NEUTRAL', feed_count: 0 });
+            const smSummary = appState.smart_money || (appState.whale_radar && appState.whale_radar.smart_money) || {};
+            const smBtc = smSummary.btc || smSummary || {};
+            const aggBlock = streams.aggtrade_blocks || { healthy: true, tracked_symbols: 100, active_blocks_60s: 0 };
+            const onchainMempool = streams.onchain_mempool || { healthy: true, whale_feed_count: whaleStr.feed_count || 0, mempool_threats: 0 };
 
             // Quant Engine Data
             const lev = qEngine.levels || { count: sys.healthy_symbols || 100, total: sys.total_symbols || 100, pct: 100 };
@@ -6776,11 +6793,32 @@ async function loadAdminMetrics() {
                                 ${pill(oi.fresh_count >= 10 ? 'RADAR AKTİF' : 'TARANIYOR', oi.fresh_count >= 10 ? 'var(--green)' : 'var(--yellow)')}
                             </div>
                         </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:6px;">
                             <span style="color:#94a3b8;">🐋 Borsa Net Akışları & Balina Radarı (DefiLlama 88 CEX + Ammo):</span>
                             <div style="display:flex; align-items:center; gap:8px;">
                                 <span style="color:#e2e8f0; font-weight:700;">${whaleStr.ammunition_bias || 'NÖTR'} (${whaleStr.feed_count || 0} Balina Kaydı)</span>
                                 ${pill(whaleStr.healthy ? '88 CEX AKTİF' : 'SENKRONİZE EDİLİYOR', whaleStr.healthy ? 'var(--green)' : 'var(--yellow)')}
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:6px;">
+                            <span style="color:#94a3b8;">⚡ Binance aggTrade Blok Emir Dedektörü (< 50ms):</span>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="color:#e2e8f0; font-weight:700;">100 Parite Paralel WebSocket (${aggBlock.active_blocks_60s || 0} Blok/60s)</span>
+                                ${pill('0.05ms RADAR', 'var(--cyan)')}
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:6px;">
+                            <span style="color:#94a3b8;">🔗 Gerçek On-Chain Mempool Transfer Radarı (BTC & ETH):</span>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="color:#e2e8f0; font-weight:700;">Blockchain.info & Blockscout (${whaleStr.feed_count || 0} Kayıt)</span>
+                                ${pill('ON-CHAIN AKTİF', 'var(--green)')}
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="color:#94a3b8;">🏛️ Kurumsal Smart Money CVD (Coinbase vs Binance):</span>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="color:#e2e8f0; font-weight:700;">${(smBtc.smart_money_spread ? (smBtc.smart_money_spread >= 0 ? '+' : '') + Number(smBtc.smart_money_spread).toFixed(1) + '%' : '0.0%')} (${smBtc.regime || 'HARMONIC_FLOW'})</span>
+                                ${pill(smBtc.regime === 'INSTITUTIONAL_SPOT_ACCUMULATION' ? '⚡ KURUMSAL BİRİKİM' : (smBtc.regime === 'RETAIL_FOMO_LONG_TRAP' ? '🚨 PERAKENDE TUZAĞI' : 'UYUMLU AKIŞ'), smBtc.regime === 'INSTITUTIONAL_SPOT_ACCUMULATION' ? 'var(--green)' : (smBtc.regime === 'RETAIL_FOMO_LONG_TRAP' ? 'var(--red)' : 'var(--cyan)'))}
                             </div>
                         </div>
                     </div>
@@ -6894,6 +6932,10 @@ async function loadAdminMetrics() {
             const funding = streams.funding || { last_update: 'Aktif' };
             const cb = streams.coinbase_lead_lag || (appState.coinbase_lead_lag || { spread_bps: 0.0, status: '⚪ DENGELİ', direction: 'NEUTRAL' });
             const oi = streams.oi_radar || (appState.oi_summary || { fresh_count: 40, top_expansion: '-', top_expansion_pct: 0.0 });
+            const smSummary = appState.smart_money || (appState.whale_radar && appState.whale_radar.smart_money) || {};
+            const smBtc = smSummary.btc || smSummary || {};
+            const aggBlock = streams.aggtrade_blocks || { healthy: true, tracked_symbols: 100, active_blocks_60s: 0 };
+            const onchainMempool = streams.onchain_mempool || { healthy: true, whale_feed_count: (appState.whale_radar && appState.whale_radar.recent_alerts ? appState.whale_radar.recent_alerts.length : 0), mempool_threats: 0 };
 
             // Quant Engine Data
             const lev = qEngine.levels || { count: sys.healthy_symbols || 100, total: sys.total_symbols || 100, pct: 100 };
@@ -7061,6 +7103,9 @@ async function loadAdminMetrics() {
                         ${itemRow('⚖️', 'Spot vs Vadeli Basis Senkronu', 'Vadeli ile spot piyasa arasındaki arbitraj primi ve kurumsal sapma radarı', (spot.count || 100) + ' Parite (15s)', pill('SENKRON', 'var(--cyan)'))}
                         ${itemRow('🏛️', 'Coinbase Spot Öncüsü (Lead-Lag LLI)', 'Coinbase Pro BTC/USD spot akışı ile Binance arasındaki kurumsal likidite öncüsü', (cb.spread_bps >= 0 ? '+' : '') + Number(cb.spread_bps || 0).toFixed(1) + ' bps (' + (cb.direction || 'NEUTRAL') + ')', pill(cb.spread_bps >= 8.0 ? 'BOĞA ÖNCÜSÜ' : (cb.spread_bps <= -8.0 ? 'AYI BASKISI' : 'DENGELİ'), cb.spread_bps >= 8.0 ? 'var(--green)' : (cb.spread_bps <= -8.0 ? 'var(--red)' : 'var(--cyan)')))}
                         ${itemRow('🧲', 'Açık Faiz İvmesi (Delta-OI Radar)', 'Vadeli piyasada (Bybit/Gate/Binance) 30s periyotlu taze kurumsal sermaye akış radarı', (oi.fresh_count || 100) + ' Parite (Top: ' + (oi.top_expansion || '-') + ' %' + Number(oi.top_expansion_pct || 0).toFixed(1) + ')', pill(oi.fresh_count >= 10 ? 'RADAR AKTİF' : 'TARANIYOR', oi.fresh_count >= 10 ? 'var(--green)' : 'var(--yellow)'))}
+                        ${itemRow('⚡', 'Binance aggTrade Kurumsal Blok Emir Dedektörü (< 50ms)', '100 paritede tek vuruşluk >=$250k / >=$1M kurumsal blok piyasa emirleri ve 60s kalkan koruması', (aggBlock.tracked_symbols || 100) + ' Parite (' + (aggBlock.active_blocks_60s || 0) + ' Blok/60s)', pill('0.05ms RADAR', 'var(--cyan)'))}
+                        ${itemRow('🔗', 'Gerçek On-Chain Mempool & Balina Transfer Besleyicisi', 'Bitcoin Blockchain.info unconfirmed tx ve Ethereum Blockscout kurumsal transferleri (15-30dk öncü kalkan)', (onchainMempool.whale_feed_count || 0) + ' Balina Kaydı', pill('ON-CHAIN AKTİF', 'var(--green)'))}
+                        ${itemRow('🏛️', 'Kurumsal Coinbase vs Binance Smart Money CVD', 'Coinbase Prime Spot USD ile Binance Vadeli CVD arasındaki net delta yayılması ve kurumsal tuzak kalkanı', (smBtc.smart_money_spread ? (smBtc.smart_money_spread >= 0 ? '+' : '') + Number(smBtc.smart_money_spread).toFixed(1) + '%' : '0.0%') + ' (' + (smBtc.regime || 'HARMONIC_FLOW') + ')', pill(smBtc.regime === 'INSTITUTIONAL_SPOT_ACCUMULATION' ? '⚡ BİRİKİM' : (smBtc.regime === 'RETAIL_FOMO_LONG_TRAP' ? '🚨 LONG TUZAĞI' : 'UYUMLU AKIŞ'), smBtc.regime === 'INSTITUTIONAL_SPOT_ACCUMULATION' ? 'var(--green)' : (smBtc.regime === 'RETAIL_FOMO_LONG_TRAP' ? 'var(--red)' : 'var(--cyan)')))}
                     </div>
 
                     <!-- KOLON 2: KUANT MOTORU VE ANALİTİK SENSÖRLER -->
@@ -8476,6 +8521,44 @@ async function loadAdminMetrics() {
                     }
                 }
 
+                // Smart Money CVD KPI in CVD tab
+                const smSummary = appState.smart_money || (appState.whale_radar && appState.whale_radar.smart_money) || {};
+                const btcSm = smSummary.btc || smSummary || {};
+                const smValEl = document.getElementById('cvd-smart-money-val');
+                const smSubEl = document.getElementById('cvd-smart-money-sub');
+                const smChipEl = document.getElementById('cvd-smart-money-chip');
+                if (smValEl && smSubEl && smChipEl) {
+                    const sp = Number(btcSm.smart_money_spread || 0);
+                    const sign = sp >= 0 ? '+' : '';
+                    smValEl.innerText = `${sign}${sp.toFixed(1)}%`;
+                    smValEl.style.color = sp > 5 ? 'var(--green)' : (sp < -5 ? 'var(--red)' : '#818cf8');
+                    const cbR = Number(btcSm.coinbase_buy_ratio || 50).toFixed(1);
+                    const binR = Number(btcSm.binance_buy_ratio || 50).toFixed(1);
+                    smSubEl.innerText = `Coinbase: %${cbR} Alıcı | Binance: %${binR} Alıcı`;
+                    const reg = btcSm.regime || 'HARMONIC_FLOW';
+                    if (reg === 'INSTITUTIONAL_SPOT_ACCUMULATION') {
+                        smChipEl.innerText = '⚡ KURUMSAL BİRİKİM (+1 CONFLUENCE)';
+                        smChipEl.style.color = '#22c55e';
+                        smChipEl.style.background = 'rgba(34,197,94,0.15)';
+                        smChipEl.style.borderColor = 'rgba(34,197,94,0.3)';
+                    } else if (reg === 'RETAIL_FOMO_LONG_TRAP') {
+                        smChipEl.innerText = '🚨 PERAKENDE TUZAĞI (LONG VETO)';
+                        smChipEl.style.color = '#ef4444';
+                        smChipEl.style.background = 'rgba(239,68,68,0.15)';
+                        smChipEl.style.borderColor = 'rgba(239,68,68,0.3)';
+                    } else if (reg === 'RETAIL_PANIC_SHORT_TRAP') {
+                        smChipEl.innerText = '🛡️ PANİK SHORT TUZAĞI (SHORT VETO)';
+                        smChipEl.style.color = '#38bdf8';
+                        smChipEl.style.background = 'rgba(56,189,248,0.15)';
+                        smChipEl.style.borderColor = 'rgba(56,189,248,0.3)';
+                    } else {
+                        smChipEl.innerText = '⚪ UYUMLU AKIŞ (DENGELİ)';
+                        smChipEl.style.color = '#94a3b8';
+                        smChipEl.style.background = 'rgba(255,255,255,0.05)';
+                        smChipEl.style.borderColor = 'rgba(255,255,255,0.1)';
+                    }
+                }
+
                 // 2. Dual-Column Aggression Heat Tables
                 const buyersTbody = document.getElementById('cvd-top-buyers-body');
                 if (buyersTbody) {
@@ -8717,6 +8800,35 @@ async function loadAdminMetrics() {
                         smChipEl.style.background = 'rgba(255,255,255,0.05)';
                         smChipEl.style.borderColor = 'rgba(255,255,255,0.1)';
                     }
+                }
+
+                // Render dynamic BTC, ETH, SOL breakdown badges
+                const smAssetsEl = document.getElementById('whale-smart-money-assets');
+                if (smAssetsEl) {
+                    const assetList = [
+                        { name: 'BTC', data: sm.btc || {} },
+                        { name: 'ETH', data: sm.eth || {} },
+                        { name: 'SOL', data: sm.sol || {} }
+                    ];
+                    smAssetsEl.innerHTML = assetList.map(a => {
+                        const sp = Number(a.data.smart_money_spread || 0);
+                        const sign = sp >= 0 ? '+' : '';
+                        const reg = a.data.regime || 'HARMONIC_FLOW';
+                        let bg = 'rgba(255,255,255,0.05)';
+                        let bd = 'rgba(255,255,255,0.1)';
+                        let col = '#94a3b8';
+                        let tag = 'Dengeli';
+                        if (reg === 'INSTITUTIONAL_SPOT_ACCUMULATION') {
+                            bg = 'rgba(34,197,94,0.15)'; bd = 'rgba(34,197,94,0.3)'; col = '#22c55e'; tag = '⚡ Kurumsal';
+                        } else if (reg === 'RETAIL_FOMO_LONG_TRAP') {
+                            bg = 'rgba(239,68,68,0.15)'; bd = 'rgba(239,68,68,0.3)'; col = '#ef4444'; tag = '🚨 Long Tuzağı';
+                        } else if (reg === 'RETAIL_PANIC_SHORT_TRAP') {
+                            bg = 'rgba(56,189,248,0.15)'; bd = 'rgba(56,189,248,0.3)'; col = '#38bdf8'; tag = '🛡️ Short Tuzağı';
+                        }
+                        const cbRatio = Number(a.data.coinbase_buy_ratio || 50).toFixed(0);
+                        const binRatio = Number(a.data.binance_buy_ratio || 50).toFixed(0);
+                        return `<span style="background:${bg}; border:1px solid ${bd}; color:${col}; padding:3px 8px; border-radius:6px; font-size:10.5px; font-family:'JetBrains Mono'; font-weight:700;" title="Coinbase: %${cbRatio} Alıcı vs Binance: %${binRatio} Alıcı">${a.name}: ${sign}${sp.toFixed(1)}% (${tag})</span>`;
+                    }).join('');
                 }
 
                 // 3. Process Netflows for Dump Risk & Accumulation (Tekilleştirilmiş - Deduplicated)

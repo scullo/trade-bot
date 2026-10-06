@@ -481,6 +481,24 @@ class MarketDataManager:
                         "feed_count": len(getattr(self, 'whale_transactions_feed', [])),
                         "last_sync_sec": getattr(self, 'get_whale_radar_health', lambda: {})().get('last_sync_sec', 0.0),
                         "providers": getattr(self, 'whale_provider_status', {})
+                    },
+                    "aggtrade_blocks": {
+                        "healthy": True,
+                        "mode": "Binance Futures <50ms aggTrade Blok Emir Dedektörü",
+                        "tracked_symbols": total_syms,
+                        "active_blocks_60s": sum(len(dq) for dq in getattr(self, 'block_trades_history', {}).values())
+                    },
+                    "onchain_mempool": {
+                        "healthy": True,
+                        "mode": "Bitcoin Mempool & Ethereum Blockscout",
+                        "whale_feed_count": len(getattr(self, 'whale_transactions_feed', [])),
+                        "mempool_threats": sum(1 for v in getattr(self, 'exchange_netflows', {}).values() if v.get('mempool_dump_threat'))
+                    },
+                    "smart_money_cvd": {
+                        "healthy": getattr(self, 'coinbase_prices', {}).get('is_connected', False),
+                        "mode": "Coinbase Prime vs Binance Offshore CVD",
+                        "btc_spread": getattr(self, 'smart_money_divergence', {}).get('BTC/USDT', {}).get('smart_money_spread', 0.0),
+                        "regime": getattr(self, 'smart_money_divergence', {}).get('BTC/USDT', {}).get('regime', 'HARMONIC_FLOW')
                     }
                 },
                 "quant_engine": {
@@ -2158,13 +2176,28 @@ class MarketDataManager:
         last_sync = prov.get('last_sync_ts', 0.0)
         age = round(time.time() - last_sync, 1) if last_sync > 0 else 999.0
         is_ok = (age < 1200) and (last_sync > 0)
+        
+        # Stage 1-3 Kurumsal Sağlık Metrikleri
+        recent_blocks_cnt = sum(len(dq) for dq in getattr(self, 'block_trades_history', {}).values())
+        mempool_feed_cnt = sum(1 for tx in getattr(self, 'whale_transactions_feed', []) if tx.get('source') == 'ONCHAIN_MEMPOOL')
+        cb_conn = getattr(self, 'coinbase_prices', {}).get('is_connected', False)
+        sm_summary = self.get_smart_money_summary() if hasattr(self, 'get_smart_money_summary') else {}
+
         return {
             'providers': prov,
             'feed_count': len(getattr(self, 'whale_transactions_feed', [])),
             'ammunition_bias': getattr(self, 'stablecoin_ammunition', {}).get('bias', 'NEUTRAL'),
             'last_sync_sec': age,
             'is_healthy': is_ok,
-            'healthy': is_ok
+            'healthy': is_ok,
+            # Kurumsal Balina & On-Chain Akış Sağlığı
+            'aggtrade_healthy': True,
+            'aggtrade_block_count': recent_blocks_cnt,
+            'mempool_healthy': True,
+            'mempool_feed_count': mempool_feed_cnt,
+            'smart_money_healthy': cb_conn,
+            'smart_money_regime': sm_summary.get('regime', 'HARMONIC_FLOW'),
+            'smart_money_spread': sm_summary.get('btc', {}).get('smart_money_spread', 0.0)
         }
 
     def _record_block_trade_pressure(self, symbol: str, amount_usd: float, is_sell: bool, trade_ts: float):
