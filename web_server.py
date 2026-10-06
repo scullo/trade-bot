@@ -5799,11 +5799,11 @@ HTML_PAGE = """
                     <table class="data-table" style="width:100%; font-size:11.5px; border-collapse:collapse;">
                         <thead>
                             <tr style="background:rgba(255,255,255,0.03); color:#94a3b8; text-align:left;">
-                                <th style="padding:8px 10px;">Parite</th>
-                                <th style="padding:8px 10px; text-align:right;">24s Net Giriş</th>
-                                <th style="padding:8px 10px; text-align:center;">Z-Skor (&sigma;)</th>
-                                <th style="padding:8px 10px;">Rejim / Durum</th>
-                                <th style="padding:8px 10px; text-align:center;">Kalkan Veto</th>
+                                <th style="padding:8px 10px;" title="İşlem Gören Kripto Varlık Sembolü">Parite</th>
+                                <th style="padding:8px 10px; text-align:right;" title="Son 24 saatte borsaya giren ve çıkan coin hacminin net farkı (Giriş - Çıkış)">24s Net Giriş</th>
+                                <th style="padding:8px 10px; text-align:center;" title="İstatistiksel Anomali Skoru (Z = (Akış - Ortalama) / Standart Sapma). +2.0σ üzeri kurumsal giriş patlamasıdır.">Z-Skor (&sigma;)</th>
+                                <th style="padding:8px 10px;" title="Piyasa Akış Rejimi: Yoğun borsa girişi, satış baskısı veya dengeli akış">Rejim / Durum</th>
+                                <th style="padding:8px 10px; text-align:center;" title="Kalkan Koruma Durumu: Balina mal boşaltma tehlikesine karşı yukarı kırılım (LONG) işlemleri engellenir.">Kalkan Veto</th>
                             </tr>
                         </thead>
                         <tbody id="whale-dump-table-body">
@@ -5828,11 +5828,11 @@ HTML_PAGE = """
                     <table class="data-table" style="width:100%; font-size:11.5px; border-collapse:collapse;">
                         <thead>
                             <tr style="background:rgba(255,255,255,0.03); color:#94a3b8; text-align:left;">
-                                <th style="padding:8px 10px;">Parite</th>
-                                <th style="padding:8px 10px; text-align:right;">24s Net Çıkış</th>
-                                <th style="padding:8px 10px; text-align:center;">Z-Skor (&sigma;)</th>
-                                <th style="padding:8px 10px;">Rejim / Durum</th>
-                                <th style="padding:8px 10px; text-align:center;">Kalkan Veto</th>
+                                <th style="padding:8px 10px;" title="İşlem Gören Kripto Varlık Sembolü">Parite</th>
+                                <th style="padding:8px 10px; text-align:right;" title="Son 24 saatte borsadan soğuk cüzdanlara çekilen net coin hacmi (USD eşdeğeri)">24s Net Çıkış</th>
+                                <th style="padding:8px 10px; text-align:center;" title="İstatistiksel Anomali Skoru (Z = (Akış - Ortalama) / Standart Sapma). -2.0σ altı kurumsal soğuk cüzdan çekim patlamasıdır.">Z-Skor (&sigma;)</th>
+                                <th style="padding:8px 10px;" title="Piyasa Akış Rejimi: Yoğun soğuk çekim, arz şoku veya dengeli akış">Rejim / Durum</th>
+                                <th style="padding:8px 10px; text-align:center;" title="Kalkan Koruma Durumu: Balina arz şoku ve short sıkışması tehlikesine karşı aşağı kırılım (SHORT) işlemleri engellenir.">Kalkan Veto</th>
                             </tr>
                         </thead>
                         <tbody id="whale-accum-table-body">
@@ -5862,14 +5862,14 @@ HTML_PAGE = """
                 <table class="data-table" style="width:100%; font-size:12px; border-collapse:collapse;">
                     <thead>
                         <tr style="background:rgba(255,255,255,0.03); color:#94a3b8; text-align:left;">
-                            <th style="padding:9px 12px;">Zaman</th>
-                            <th style="padding:9px 12px;">Parite</th>
-                            <th style="padding:9px 12px; text-align:right;">İşlem Büyüklüğü ($)</th>
-                            <th style="padding:9px 12px; text-align:center;">Kademe (Tier)</th>
-                            <th style="padding:9px 12px; text-align:center;">24s Hacim Oranı</th>
-                            <th style="padding:9px 12px;">Transfer Yönü</th>
-                            <th style="padding:9px 12px;">Kuant Niyet Teşhisi</th>
-                            <th style="padding:9px 12px; text-align:center;">Şiddet</th>
+                            <th style="padding:9px 12px;" title="İşlem Saati ve Doğrulanmış Blok Gezgini / Tx ID Linki">Zaman / Gezgin</th>
+                            <th style="padding:9px 12px;" title="İşlem Gören Kripto Varlık">Parite</th>
+                            <th style="padding:9px 12px; text-align:right;" title="Transfer Edilen Net USD Eşdeğer Büyüklük">İşlem Büyüklüğü ($)</th>
+                            <th style="padding:9px 12px; text-align:center;" title="Likidite ve Risk Kademesi (1. Kademe Mega Cap, 2. Kademe Standart Altcoin, 3. Kademe Meme)">Kademe (Tier)</th>
+                            <th style="padding:9px 12px; text-align:center;" title="Transfer büyüklüğünün paritenin günlük 24 saatlik toplam hacmine yüzdesel oranı">24s Hacim Oranı</th>
+                            <th style="padding:9px 12px;" title="Fonların Akış Yönü: Borsaya yatırma, soğuk cüzdana çekim veya borsa içi agresif piyasa emri">Transfer Yönü</th>
+                            <th style="padding:9px 12px;" title="Kuantum Algoritması ve On-Chain Analizi ile Teşhis Edilen Kurumsal Balina Amacı">Kuant Niyet Teşhisi</th>
+                            <th style="padding:9px 12px; text-align:center;" title="Piyasayı Hareket Ettirme Potansiyeli ve Risk Şiddeti">Şiddet</th>
                         </tr>
                     </thead>
                     <tbody id="whale-live-feed-tbody">
@@ -8711,6 +8711,95 @@ async function loadAdminMetrics() {
             } catch(e) {}
         }
 
+        function formatWhaleNetflowRegime(regime, isDump) {
+            const r = String(regime || '').toUpperCase();
+            if (r.includes('INFLOW_SURGE') || r === 'DUMP_RISK') {
+                return '<span style="color:#ef4444; font-weight:800;" title="Borsaya anormal coin yatırıldı; satış baskısı ve dump tehlikesi">🚨 Yoğun Giriş (Dump Riski)</span>';
+            }
+            if (r === 'HEAVY_INFLOW') {
+                return '<span style="color:#ef4444; font-weight:700;" title="Borsaya yüksek hacimli coin aktarımı; satış baskısı">🚨 Yoğun Giriş (Satış Baskısı)</span>';
+            }
+            if (r === 'MILD_INFLOW') {
+                return '<span style="color:#f59e0b; font-weight:600;" title="Borsaya hafif coin girişi; hafif satış eğilimi">⚠️ Hafif Giriş (Satış Eğilimi)</span>';
+            }
+            if (r.includes('OUTFLOW_SURGE') || r === 'ACCUMULATION') {
+                return '<span style="color:#38bdf8; font-weight:800;" title="Borsadan kurumsal soğuk cüzdanlara yüklü çekim; arz şoku ve birikim">🛡️ Yoğun Soğuk Çekim (Arz Şoku)</span>';
+            }
+            if (r === 'HEAVY_OUTFLOW') {
+                return '<span style="color:#38bdf8; font-weight:700;" title="Borsadan yüksek miktarda coin çekimi; birikim">🛡️ Yoğun Çekim (Birikim)</span>';
+            }
+            if (r === 'MILD_OUTFLOW') {
+                return '<span style="color:#34d399; font-weight:600;" title="Borsadan hafif coin çekimi; alım eğilimi">🟢 Hafif Çekim (Alım Eğilimi)</span>';
+            }
+            if (r === 'BALANCED_FLOW') {
+                return '<span style="color:#94a3b8;" title="Olağandışı kurumsal akış yok; olağan piyasa hacmi">⚪ Dengeli Akış (Normal Piyasa)</span>';
+            }
+            return `<span style="color:#cbd5e1;">${r}</span>`;
+        }
+
+        function formatWhaleTierBadge(tier) {
+            const t = String(tier || '').toUpperCase();
+            if (t === 'TIER_1') {
+                return '<span style="background:rgba(234,179,8,0.12); color:#facc15; border:1px solid rgba(234,179,8,0.3); padding:2px 7px; border-radius:4px; font-size:10px; font-weight:800;" title="1. Kademe: Mega Cap Kurumsal Varlıklar (BTC, ETH, SOL, BNB)">⭐ 1. Kademe (Mega Cap)</span>';
+            }
+            if (t === 'TIER_3') {
+                return '<span style="background:rgba(244,63,94,0.12); color:#fb7185; border:1px solid rgba(244,63,94,0.3); padding:2px 7px; border-radius:4px; font-size:10px; font-weight:800;" title="3. Kademe: Yüksek Oynaklıklı Meme & Spekülatif Tokenlar">⚠️ 3. Kademe (Meme / Risk)</span>';
+            }
+            return '<span style="background:rgba(56,189,248,0.1); color:#38bdf8; border:1px solid rgba(56,189,248,0.25); padding:2px 7px; border-radius:4px; font-size:10px; font-weight:700;" title="2. Kademe: Standart Büyük Hacimli Altcoinler">🔹 2. Kademe (Altcoin)</span>';
+        }
+
+        function formatWhaleSeverityBadge(severity) {
+            const s = String(severity || '').toUpperCase();
+            if (s === 'EXTREME') {
+                return '<span style="color:#ef4444; font-weight:900; font-size:11px; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); padding:2px 7px; border-radius:4px;" title="Piyasayı sarsacak büyüklükte ekstrem kurumsal işlem">🚨 KRİTİK</span>';
+            }
+            if (s === 'HIGH') {
+                return '<span style="color:#f59e0b; font-weight:800; font-size:11px; background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); padding:2px 7px; border-radius:4px;" title="Yüksek hacimli balina aktivitesi">⚠️ YÜKSEK</span>';
+            }
+            if (s === 'MODERATE') {
+                return '<span style="color:#38bdf8; font-weight:800; font-size:11px; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); padding:2px 7px; border-radius:4px;" title="Kayda değer kurumsal hareket">ℹ️ ORTA</span>';
+            }
+            return '<span style="color:#94a3b8; font-weight:700; font-size:11px;">STANDART</span>';
+        }
+
+        function formatWhaleIntentBadge(intent, source, price, txUrl, blockchain, explorerName) {
+            const isAggTrade = source === 'BINANCE_AGGTRADE';
+            const isMempool = source === 'ONCHAIN_MEMPOOL';
+
+            if (isAggTrade) {
+                const pVal = Number(price || 0);
+                const pStr = pVal > 0 ? ` @ $${pVal.toLocaleString('en-US', {minimumFractionDigits: (pVal < 1 ? 4 : 2), maximumFractionDigits: (pVal < 1 ? 6 : 2)})}` : '';
+                return `<span style="background:rgba(0,242,254,0.12); color:#00f2fe; border:1px solid rgba(0,242,254,0.3); padding:2px 6px; border-radius:4px; font-weight:800; font-size:10px;" title="Binance Vadeli emir tahtasına çarpan anlık yüksek montanlı piyasa emri">⚡ Borsa İçi Blok Emir (&lt;50ms)</span><span style="font-size:11px; color:#cbd5e1; margin-left:4px;">${pStr}</span>`;
+            }
+
+            if (isMempool) {
+                const chainBadge = blockchain ? `<span style="background:rgba(192,132,252,0.15); color:#c084fc; border:1px solid rgba(192,132,252,0.3); padding:2px 5px; border-radius:3px; font-size:9.5px; font-weight:800; margin-right:4px;">${blockchain}</span>` : '';
+                const targetOpenUrl = txUrl || (blockchain === 'BTC' ? 'https://www.blockchain.com/explorer' : 'https://etherscan.io');
+                return `${chainBadge}<a href="${targetOpenUrl}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;" title="Doğrulanmış Blokzincir Mempool Transferini Aç (${explorerName})"><span style="background:rgba(168,85,247,0.22); color:#e9d5ff; border:1px solid rgba(168,85,247,0.5); padding:3px 8px; border-radius:5px; font-weight:800; font-size:10px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 8px rgba(168,85,247,0.25); transition:all 0.2s;" onmouseenter="this.style.background='rgba(168,85,247,0.4)'; this.style.borderColor='#d8b4fe';" onmouseleave="this.style.background='rgba(168,85,247,0.22)'; this.style.borderColor='rgba(168,85,247,0.5)';">🔗 Blokzincir Mempool Transferi <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg></span></a>`;
+            }
+
+            const i = String(intent || '').toUpperCase();
+            if (i === 'COLD_STORAGE_ACCUMULATION') {
+                return '<span style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:2px 6px; border-radius:4px; font-size:10.5px; font-weight:700;" title="Borsadan kurumsal soğuk cüzdana çekildi (Arz şoku / uzun vadeli birikim)">🧊 Soğuk Cüzdan Kasası (Arz Şoku Birikimi)</span>';
+            }
+            if (i === 'DUMP_PREPARATION') {
+                return '<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:2px 6px; border-radius:4px; font-size:10.5px; font-weight:800;" title="Borsaya yüklü miktarda coin aktarıldı (Mal boşaltma hazırlığı)">🚨 Borsaya Mal Boşaltma Hazırlığı</span>';
+            }
+            if (i === 'AGGRESSIVE_MARKET_DUMP') {
+                return '<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:2px 6px; border-radius:4px; font-size:10.5px; font-weight:800;" title="Piyasa emriyle tahtaya doğrudan sert satış yapıldı">🛑 Agresif Piyasa Satışı (Blok Dump)</span>';
+            }
+            if (i === 'AGGRESSIVE_MARKET_BUY') {
+                return '<span style="background:rgba(34,197,94,0.15); color:#22c55e; border:1px solid rgba(34,197,94,0.3); padding:2px 6px; border-radius:4px; font-size:10.5px; font-weight:800;" title="Piyasa emriyle tahtadan agresif blok alım yapıldı">⚡ Agresif Piyasa Alışı (Blok Squeeze)</span>';
+            }
+            if (i === 'FRESH_AMMUNITION_MINT') {
+                return '<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 6px; border-radius:4px; font-size:10.5px; font-weight:800;" title="Hazine tarafından taze USDT/USDC basıldı (Piyasa için boğa yakıtı)">💵 Taze Stabil Kripto Basımı (Boğa Yakıtı)</span>';
+            }
+            if (i === 'TRANSFER') {
+                return '<span style="color:#94a3b8; font-size:11px;">⚪ Dahili Transfer</span>';
+            }
+            return `<span style="color:#cbd5e1; font-size:11px;">${i}</span>`;
+        }
+
         function renderWhaleRadarView() {
             try {
                 if (!appState) return;
@@ -8735,17 +8824,20 @@ async function loadAdminMetrics() {
                 const ammoChip = document.getElementById('whale-ammo-chip');
                 if (ammoChip) {
                     if (ammo.bias === 'BULLISH_FUEL') {
-                        ammoChip.innerText = '⚡ BOĞA CEPHANESİ (+1 CONFLUENCE)';
+                        ammoChip.innerText = '⚡ BOĞA CEPHANESİ (+1 Confluence, Alım Gücü Artışı)';
+                        ammoChip.title = 'Borsalara net taze USDT/USDC girdi, kurumsal alım gücü arttı.';
                         ammoChip.style.color = '#22c55e';
                         ammoChip.style.background = 'rgba(34,197,94,0.15)';
                         ammoChip.style.borderColor = 'rgba(34,197,94,0.3)';
                     } else if (ammo.bias === 'CAPITAL_DRAIN') {
-                        ammoChip.innerText = '⚠️ SERMAYE ÇIKIŞI (DEFANSİF)';
+                        ammoChip.innerText = '⚠️ SERMAYE ÇIKIŞI (Defansif Mod)';
+                        ammoChip.title = 'Borsalardan stabil kripto çekiliyor, risk azaltılıyor.';
                         ammoChip.style.color = '#ef4444';
                         ammoChip.style.background = 'rgba(239,68,68,0.15)';
                         ammoChip.style.borderColor = 'rgba(239,68,68,0.3)';
                     } else {
-                        ammoChip.innerText = '⚪ DENGELİ CEPHANE';
+                        ammoChip.innerText = '⚪ DENGELİ CEPHANE (Normal Piyasa Akışı)';
+                        ammoChip.title = 'Rezervlerde olağandışı sermaye hareketi yok, akış dengeli.';
                         ammoChip.style.color = '#94a3b8';
                         ammoChip.style.background = 'rgba(255,255,255,0.05)';
                         ammoChip.style.borderColor = 'rgba(255,255,255,0.1)';
@@ -8785,22 +8877,26 @@ async function loadAdminMetrics() {
                 if (smChipEl) {
                     const reg = btcSm.regime || 'HARMONIC_FLOW';
                     if (reg === 'INSTITUTIONAL_SPOT_ACCUMULATION') {
-                        smChipEl.innerText = '⚡ KURUMSAL BİRİKİM (+1 CONFLUENCE, x1.25 MARJİN)';
+                        smChipEl.innerText = '⚡ KURUMSAL SPOT BİRİKİMİ (+1 Confluence, x1.25 Marjin)';
+                        smChipEl.title = 'Coinbase Prime kurumsal alıcıları agresif spot biriktiriyor; yükseliş trendi teyit edildi.';
                         smChipEl.style.color = '#22c55e';
                         smChipEl.style.background = 'rgba(34,197,94,0.15)';
                         smChipEl.style.borderColor = 'rgba(34,197,94,0.3)';
                     } else if (reg === 'RETAIL_FOMO_LONG_TRAP') {
-                        smChipEl.innerText = '🚨 PERAKENDE FOMO TUZAĞI (LONG VETO)';
+                        smChipEl.innerText = '🚨 PERAKENDE FOMO TUZAĞI (Long İşlemler Veto)';
+                        smChipEl.title = 'Vadeli piyasada perakende FOMO ile alıyor ancak kurumsal spot desteklemiyor; sahte yükseliş tuzağı riski.';
                         smChipEl.style.color = '#ef4444';
                         smChipEl.style.background = 'rgba(239,68,68,0.15)';
                         smChipEl.style.borderColor = 'rgba(239,68,68,0.3)';
                     } else if (reg === 'RETAIL_PANIC_SHORT_TRAP') {
-                        smChipEl.innerText = '🛡️ PANİK SHORT TUZAĞI (SHORT VETO)';
+                        smChipEl.innerText = '🛡️ PANİK SHORT TUZAĞI (Short İşlemler Veto)';
+                        smChipEl.title = 'Vadeli piyasada perakende panikle short açıyor ancak kurumsal spot alttan topluyor; short sıkışması (squeeze) riski.';
                         smChipEl.style.color = '#38bdf8';
                         smChipEl.style.background = 'rgba(56,189,248,0.15)';
                         smChipEl.style.borderColor = 'rgba(56,189,248,0.3)';
                     } else {
-                        smChipEl.innerText = '⚪ UYUMLU AKIŞ (DENGELİ)';
+                        smChipEl.innerText = '⚪ UYUMLU AKIŞ (Spot ve Vadeli Dengeli)';
+                        smChipEl.title = 'Coinbase spot ve Binance vadeli akışları birbirine paralel, uyumsuzluk yok.';
                         smChipEl.style.color = '#94a3b8';
                         smChipEl.style.background = 'rgba(255,255,255,0.05)';
                         smChipEl.style.borderColor = 'rgba(255,255,255,0.1)';
@@ -8822,9 +8918,9 @@ async function loadAdminMetrics() {
                         let bg = 'rgba(255,255,255,0.05)';
                         let bd = 'rgba(255,255,255,0.1)';
                         let col = '#94a3b8';
-                        let tag = 'Dengeli';
+                        let tag = '⚪ Dengeli';
                         if (reg === 'INSTITUTIONAL_SPOT_ACCUMULATION') {
-                            bg = 'rgba(34,197,94,0.15)'; bd = 'rgba(34,197,94,0.3)'; col = '#22c55e'; tag = '⚡ Kurumsal';
+                            bg = 'rgba(34,197,94,0.15)'; bd = 'rgba(34,197,94,0.3)'; col = '#22c55e'; tag = '⚡ Kurumsal Alış';
                         } else if (reg === 'RETAIL_FOMO_LONG_TRAP') {
                             bg = 'rgba(239,68,68,0.15)'; bd = 'rgba(239,68,68,0.3)'; col = '#ef4444'; tag = '🚨 Long Tuzağı';
                         } else if (reg === 'RETAIL_PANIC_SHORT_TRAP') {
@@ -8870,9 +8966,9 @@ async function loadAdminMetrics() {
                             <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
                                 <td style="padding:7px 10px; font-weight:700; color:#fff;">${c.symbol || '-'}</td>
                                 <td style="padding:7px 10px; text-align:right; font-weight:700; color:#ef4444;">+$${(Math.abs(c.netflow_24h_usd || 0)/1e6).toFixed(2)}M</td>
-                                <td style="padding:7px 10px; text-align:center; font-family:\'JetBrains Mono\'; font-weight:800; color:#ef4444;">+${(c.z_score || 0).toFixed(1)}&sigma;</td>
-                                <td style="padding:7px 10px; font-size:11px; color:#fca5a5;">${c.regime || 'DUMP_RISK'}</td>
-                                <td style="padding:7px 10px; text-align:center;"><span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:2px 6px; border-radius:4px; font-size:10px; font-weight:800;">LONG VETO</span></td>
+                                <td style="padding:7px 10px; text-align:center; font-family:'JetBrains Mono'; font-weight:800; color:#ef4444;" title="Z-Skor: Normalden kaç standart sapma saptığını gösterir.">+${(c.z_score || 0).toFixed(1)}&sigma;</td>
+                                <td style="padding:7px 10px; font-size:11px;">${formatWhaleNetflowRegime(c.regime, true)}</td>
+                                <td style="padding:7px 10px; text-align:center;"><span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:3px 8px; border-radius:5px; font-size:10px; font-weight:800;" title="Borsaya anormal coin yatırıldı; yükseliş tuzaklarına karşı LONG alımlar veto edilir.">🛑 LONG VETO</span></td>
                             </tr>
                         `).join('');
                     }
@@ -8888,9 +8984,9 @@ async function loadAdminMetrics() {
                             <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
                                 <td style="padding:7px 10px; font-weight:700; color:#fff;">${c.symbol || '-'}</td>
                                 <td style="padding:7px 10px; text-align:right; font-weight:700; color:#38bdf8;">-$${(Math.abs(c.netflow_24h_usd || 0)/1e6).toFixed(2)}M</td>
-                                <td style="padding:7px 10px; text-align:center; font-family:\'JetBrains Mono\'; font-weight:800; color:#38bdf8;">${(c.z_score || 0).toFixed(1)}&sigma;</td>
-                                <td style="padding:7px 10px; font-size:11px; color:#bae6fd;">${c.regime || 'ACCUMULATION'}</td>
-                                <td style="padding:7px 10px; text-align:center;"><span style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:2px 6px; border-radius:4px; font-size:10px; font-weight:800;">SHORT VETO</span></td>
+                                <td style="padding:7px 10px; text-align:center; font-family:'JetBrains Mono'; font-weight:800; color:#38bdf8;" title="Z-Skor: Normalden kaç standart sapma saptığını gösterir.">${(c.z_score || 0).toFixed(1)}&sigma;</td>
+                                <td style="padding:7px 10px; font-size:11px;">${formatWhaleNetflowRegime(c.regime, false)}</td>
+                                <td style="padding:7px 10px; text-align:center;"><span style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:3px 8px; border-radius:5px; font-size:10px; font-weight:800;" title="Borsadan agresif coin çekildi; arz sıkışması (squeeze) riskine karşı SHORT satışlar veto edilir.">🛡️ SHORT VETO</span></td>
                             </tr>
                         `).join('');
                     }
@@ -8910,24 +9006,23 @@ async function loadAdminMetrics() {
                             const isAmmo = a.is_bull_ammo || a.intent === 'FRESH_AMMUNITION_MINT' || a.intent === 'COLD_STORAGE_ACCUMULATION' || a.intent === 'AGGRESSIVE_MARKET_BUY';
                             const isAggTrade = a.source === 'BINANCE_AGGTRADE';
                             const isMempool = a.source === 'ONCHAIN_MEMPOOL';
-                            const sevColor = a.severity === 'EXTREME' ? '#ef4444' : (a.severity === 'HIGH' ? '#f59e0b' : '#38bdf8');
 
-                            let dirTxt = isDump ? 'Cüzdan ➔ Borsa (Yatırma)' : (isAmmo ? 'Borsa ➔ Cüzdan (Çekim)' : 'Dahili Transfer');
+                            let dirTxt = isDump ? '🚨 Cüzdandan Borsaya (Yatırma / Dump)' : (isAmmo ? '🧊 Borsadan Cüzdana (Çekim / Birikim)' : '⚪ Dahili Transfer');
                             let dirColor = isDump ? '#ef4444' : (isAmmo ? '#10b981' : '#94a3b8');
 
                             if (isAggTrade) {
                                 if (a.side === 'TAKER_SELL' || isDump) {
-                                    dirTxt = '⚡ Piyasa Satışı (Taker Sell)';
+                                    dirTxt = '⚡ Piyasa Satışı (Agresif Blok Satış)';
                                     dirColor = '#ef4444';
                                 } else {
-                                    dirTxt = '⚡ Piyasa Alışı (Taker Buy)';
+                                    dirTxt = '⚡ Piyasa Alışı (Agresif Blok Alım)';
                                     dirColor = '#10b981';
                                 }
                             } else if (isMempool) {
                                 if (a.from_label && a.to_label) {
                                     dirTxt = `${a.from_label} ➔ ${a.to_label}`;
                                 } else {
-                                    dirTxt = isDump ? 'Balina ➔ Borsa Sıcak Cüzdanı' : (isAmmo ? 'Borsa ➔ Soğuk Cüzdan' : 'On-Chain Mempool Transfer');
+                                    dirTxt = isDump ? '🚨 Mempool Balina ➔ Borsa Sıcak Cüzdanı' : (isAmmo ? '🧊 Borsa ➔ Kurumsal Soğuk Cüzdan' : '🔗 On-Chain Mempool Transferi');
                                 }
                                 dirColor = isDump ? '#f87171' : (isAmmo ? '#34d399' : '#c084fc');
                             }
@@ -8950,44 +9045,37 @@ async function loadAdminMetrics() {
                                 }
                             }
 
-                            let intentHtml = a.intent || 'TRANSFER';
-                            if (isAggTrade) {
-                                const pVal = Number(a.price || 0);
-                                const pStr = pVal > 0 ? ` @ $${pVal.toLocaleString('en-US', {minimumFractionDigits: (pVal < 1 ? 4 : 2), maximumFractionDigits: (pVal < 1 ? 6 : 2)})}` : '';
-                                intentHtml = `<span style="background:rgba(0,242,254,0.12); color:#00f2fe; border:1px solid rgba(0,242,254,0.3); padding:2px 5px; border-radius:4px; font-weight:800; font-size:10px;">⚡ BLOK EMİR (&lt;50ms)</span><span style="font-size:11px; color:#cbd5e1; margin-left:4px;">${pStr}</span>`;
-                            } else if (isMempool) {
-                                const chainBadge = a.blockchain ? `<span style="background:rgba(192,132,252,0.15); color:#c084fc; border:1px solid rgba(192,132,252,0.3); padding:1px 4px; border-radius:3px; font-size:9.5px; font-weight:800; margin-right:4px;">${a.blockchain}</span>` : '';
-                                const targetOpenUrl = txUrl || (a.blockchain === 'BTC' ? 'https://www.blockchain.com/explorer' : 'https://etherscan.io');
-                                intentHtml = `${chainBadge}<a href="${targetOpenUrl}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;" title="Doğrulanmış Blokzincir Transferini Aç (${explorerName})"><span style="background:rgba(168,85,247,0.22); color:#e9d5ff; border:1px solid rgba(168,85,247,0.5); padding:3px 7px; border-radius:5px; font-weight:800; font-size:10px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 8px rgba(168,85,247,0.25); transition:all 0.2s;" onmouseenter="this.style.background='rgba(168,85,247,0.4)'; this.style.borderColor='#d8b4fe';" onmouseleave="this.style.background='rgba(168,85,247,0.22)'; this.style.borderColor='rgba(168,85,247,0.5)';">🔗 ON-CHAIN MEMPOOL <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg></span></a>`;
-                            }
+                            const intentHtml = formatWhaleIntentBadge(a.intent, a.source, a.price, txUrl, a.blockchain, explorerName);
+                            const tierHtml = formatWhaleTierBadge(a.tier);
+                            const severityHtml = formatWhaleSeverityBadge(a.severity);
 
                             let txHashHtml = '';
                             if (a.tx_hash) {
                                 if (a.tx_hash.startsWith('agg_')) {
-                                    txHashHtml = `<div style="font-size:9.5px; color:#64748b; font-family:\'JetBrains Mono\';" title="Binance Futures aggTrade Blok ID">${a.tx_hash}</div>`;
+                                    txHashHtml = `<div style="font-size:9.5px; color:#64748b; font-family:'JetBrains Mono';" title="Binance Futures aggTrade Blok ID">${a.tx_hash}</div>`;
                                 } else if (txUrl) {
                                     const shortH = a.tx_hash.length > 12 ? (a.tx_hash.slice(0, 6) + '...' + a.tx_hash.slice(-4)) : a.tx_hash;
                                     const altLink = altUrl ? `<a href="${altUrl}" target="_blank" rel="noopener noreferrer" style="color:#94a3b8; font-size:8.5px; text-decoration:none; padding:1px 4px; background:rgba(255,255,255,0.06); border-radius:3px; border:1px solid rgba(255,255,255,0.1);" title="${altLabel} alternatif aynada aç">${altLabel}</a>` : '';
-                                    txHashHtml = `<div style="font-size:9.5px; font-family:\'JetBrains Mono\'; display:flex; align-items:center; gap:4px; margin-top:2px;"><a href="${txUrl}" target="_blank" rel="noopener noreferrer" style="color:#38bdf8; font-weight:700; text-decoration:none;" title="${explorerName} üzerinde aç">🔗 ${shortH}</a> ${altLink}</div>`;
+                                    txHashHtml = `<div style="font-size:9.5px; font-family:'JetBrains Mono'; display:flex; align-items:center; gap:4px; margin-top:2px;"><a href="${txUrl}" target="_blank" rel="noopener noreferrer" style="color:#38bdf8; font-weight:700; text-decoration:none;" title="${explorerName} üzerinde aç">🔗 ${shortH}</a> ${altLink}</div>`;
                                 } else {
                                     const shortH = a.tx_hash.length > 14 ? (a.tx_hash.slice(0, 6) + '...' + a.tx_hash.slice(-4)) : a.tx_hash;
-                                    txHashHtml = `<div style="font-size:9.5px; color:#64748b; font-family:\'JetBrains Mono\';">${shortH}</div>`;
+                                    txHashHtml = `<div style="font-size:9.5px; color:#64748b; font-family:'JetBrains Mono';">${shortH}</div>`;
                                 }
                             }
 
                             return `
                                 <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
-                                    <td style="padding:8px 12px; font-family:\'JetBrains Mono\'; font-size:11px; color:#94a3b8;">
+                                    <td style="padding:8px 12px; font-family:'JetBrains Mono'; font-size:11px; color:#94a3b8;">
                                         ${a.time_str || '-'}
                                         ${txHashHtml}
                                     </td>
                                     <td style="padding:8px 12px; font-weight:700; color:#fff;">${a.symbol || '-'}</td>
-                                    <td style="padding:8px 12px; text-align:right; font-weight:700; color:#fff; font-family:\'JetBrains Mono\';">$${(Number(a.amount_usd || 0)/1e6).toFixed(2)}M</td>
-                                    <td style="padding:8px 12px; text-align:center;"><span style="background:rgba(255,255,255,0.05); color:#cbd5e1; padding:2px 6px; border-radius:4px; font-size:10.5px;">${a.tier || 'TIER_2'}</span></td>
-                                    <td style="padding:8px 12px; text-align:center; font-family:\'JetBrains Mono\'; color:#cbd5e1;">%${(a.vol_ratio_pct || 0).toFixed(1)}</td>
+                                    <td style="padding:8px 12px; text-align:right; font-weight:700; color:#fff; font-family:'JetBrains Mono';">$${(Number(a.amount_usd || 0)/1e6).toFixed(2)}M</td>
+                                    <td style="padding:8px 12px; text-align:center;">${tierHtml}</td>
+                                    <td style="padding:8px 12px; text-align:center; font-family:'JetBrains Mono'; color:#cbd5e1;">%${(a.vol_ratio_pct || 0).toFixed(1)}</td>
                                     <td style="padding:8px 12px; color:${dirColor}; font-weight:600;">${dirTxt}</td>
                                     <td style="padding:8px 12px; font-size:11px; color:#cbd5e1;">${intentHtml}</td>
-                                    <td style="padding:8px 12px; text-align:center;"><span style="color:${sevColor}; font-weight:800; font-size:11px;">${a.severity || 'NORMAL'}</span></td>
+                                    <td style="padding:8px 12px; text-align:center;">${severityHtml}</td>
                                 </tr>
                             `;
                         }).join('');
@@ -11490,27 +11578,80 @@ async function loadAdminMetrics() {
             }
         };
 
+        function getSetupDescription(sId, side) {
+            const s = String(sId || '').toUpperCase();
+            if (s.includes('SETUP_1_') || s.includes('R4_BREAKOUT')) return 'Camarilla R4 direnç tavanının hacimle kırılması; güçlü yukarı ivme takibi (LONG).';
+            if (s.includes('SETUP_2_') || s.includes('S4_BREAKDOWN')) return 'Camarilla S4 destek tabanının aşağı kırılması; güçlü satış ivmesi takibi (SHORT).';
+            if (s.includes('SETUP_3_') || s.includes('S3_BOUNCE')) return 'Camarilla S3 aşırı satım bölgesinden alıcıların devreye girmesiyle ortalamaya dönüş sıçraması (LONG).';
+            if (s.includes('SETUP_4_') || s.includes('R3_REJECTION')) return 'Camarilla R3 aşırı alım bölgesinde dirençten aşağı ret ve düzeltme (SHORT).';
+            if (s.includes('SETUP_5_') || s.includes('R4_SUPPORT_FLIP')) return 'Kırılan R4 direncinin test edilip yeni güçlü desteğe dönüşmesi (Bullish Support Flip - LONG).';
+            if (s.includes('SETUP_6_') || s.includes('MVAH_MACRO')) return 'Makro Hacim Profili Değer Alanı Tepesi (mVAH) üzerine kalıcı yerleşme kırılımı (LONG).';
+            if (s.includes('SETUP_7_') || s.includes('S4_RESISTANCE_FLIP')) return 'Kırılan S4 desteğinin yukarı tepkide direnç olarak çalışması (Bearish Resistance Flip - SHORT).';
+            if (s.includes('SETUP_8_') || s.includes('MVAL_MACRO')) return 'Makro Hacim Profili Değer Alanı Dibi (mVAL) altına sarkma ve satıcı hakimiyeti (SHORT).';
+            if (s.includes('SETUP_9_') || s.includes('BELOW_NPOC')) return 'Daha önce test edilmemiş bakir hacim düğümü (nPOC) desteğinden sıçrama (LONG).';
+            if (s.includes('SETUP_10_') || s.includes('ABOVE_NPOC')) return 'Yukarıda bekleyen bakir kontrol noktası (nPOC) direncinden satıcı reddi (SHORT).';
+            if (s.includes('SETUP_11_') || s.includes('RESISTANCE_FLIP')) return 'Direnç seviyesinin test edilip yukarı geçilememesi ve satış baskısıyla aşağı dönmesi (SHORT).';
+            if (s.includes('SETUP_12_') || s.includes('SUPPORT_BREAKDOWN')) return 'Önemli yapısal desteğin çökmesi ve aşağı yönlü hareketin devamı (SHORT).';
+            if (s.includes('SETUP_13_') || s.includes('S3_RESISTANCE_FLIP')) return 'S3 desteğinin kırılarak direnç haline gelmesi (Bearish Retest - SHORT).';
+            if (s.includes('SETUP_14_') || s.includes('PIVOT_SUPPORT_FLIP')) return 'Merkezi pivot seviyesinin alıcılarca savunulup desteğe evrilmesi (LONG).';
+            if (s.includes('SETUP_15_') || s.includes('AVWAP_MVAH_RECLAIM')) return 'Anchored VWAP hacim ağırlıklı maliyet ortalamasının geri kazanılması (LONG).';
+            if (s.includes('SETUP_16_') || s.includes('R3_SUPPORT_FLIP')) return 'R3 seviyesinin test edilerek desteğe dönüştüğünün teyit edilmesi (LONG).';
+            if (s.includes('FAKEOUT_RECLAIM')) return 'Tuzak kırılımın tersine dönmesi ve seviyenin geri kazanılması (Fakeout Reclaim).';
+            return 'Valkyrie Kuantum Karar Motoru tarafından onaylanan çoklu gösterge (confluence) işlemi.';
+        }
+
         function formatSetupDisplayName(sId) {
-            if (!sId) return 'AI Kurulum';
+            if (!sId) return 'AI Algoritmik Kurulum';
             const s = String(sId).toUpperCase();
-            if (s.includes('SETUP_1_') || s.includes('R4_BREAKOUT')) return 'S1: R4 Breakout';
-            if (s.includes('SETUP_2_') || s.includes('S4_BREAKDOWN')) return 'S2: S4 Breakdown';
-            if (s.includes('SETUP_3_') || s.includes('S3_BOUNCE')) return 'S3: S3 Sekmesi';
-            if (s.includes('SETUP_4_') || s.includes('R3_REJECTION')) return 'S4: R3 Reddi';
-            if (s.includes('SETUP_5_') || s.includes('R4_SUPPORT_FLIP')) return 'S5: R4 Destek Flip';
-            if (s.includes('SETUP_6_') || s.includes('MVAH_MACRO')) return 'S6: mVAH Breakout';
-            if (s.includes('SETUP_7_') || s.includes('S4_RESISTANCE_FLIP')) return 'S7: S4 Direnç Flip';
-            if (s.includes('SETUP_8_') || s.includes('MVAL_MACRO')) return 'S8: mVAL Breakdown';
-            if (s.includes('SETUP_9_') || s.includes('BELOW_NPOC')) return 'S9: Dip nPOC Sekme';
-            if (s.includes('SETUP_10_') || s.includes('ABOVE_NPOC')) return 'S10: Tepe nPOC Ret';
-            if (s.includes('SETUP_11_') || s.includes('RESISTANCE_FLIP')) return 'S11: Direnç Retest';
-            if (s.includes('SETUP_12_') || s.includes('SUPPORT_BREAKDOWN')) return 'S12: Destek Çöküşü';
-            if (s.includes('SETUP_13_') || s.includes('S3_RESISTANCE_FLIP')) return 'S13: S3 Direnç Flip';
-            if (s.includes('SETUP_14_') || s.includes('PIVOT_SUPPORT_FLIP')) return 'S14: Pivot Destek Flip';
-            if (s.includes('SETUP_15_') || s.includes('AVWAP_MVAH_RECLAIM')) return 'S15: AVWAP Reclaim';
-            if (s.includes('SETUP_16_') || s.includes('R3_SUPPORT_FLIP')) return 'S16: R3 Destek Flip';
-            if (s.includes('FAKEOUT_RECLAIM')) return '🪤 Fakeout Reclaim';
-            return s.replace('SETUP_', '').replace(/_/g, ' ');
+            if (s.includes('SETUP_1_') || s.includes('R4_BREAKOUT')) return 'Kurulum 1: R4 Yukarı Patlama (Breakout)';
+            if (s.includes('SETUP_2_') || s.includes('S4_BREAKDOWN')) return 'Kurulum 2: S4 Aşağı Çöküş (Breakdown)';
+            if (s.includes('SETUP_3_') || s.includes('S3_BOUNCE')) return 'Kurulum 3: Camarilla S3 Aşırı Satış Sekmesi';
+            if (s.includes('SETUP_4_') || s.includes('R3_REJECTION')) return 'Kurulum 4: R3 Aşırı Alım Reddi (Direnç)';
+            if (s.includes('SETUP_5_') || s.includes('R4_SUPPORT_FLIP')) return 'Kurulum 5: R4 Direnç ➔ Destek Dönüşümü';
+            if (s.includes('SETUP_6_') || s.includes('MVAH_MACRO')) return 'Kurulum 6: Makro Değer Alanı Tepe Kırılımı';
+            if (s.includes('SETUP_7_') || s.includes('S4_RESISTANCE_FLIP')) return 'Kurulum 7: S4 Destek ➔ Direnç Dönüşümü';
+            if (s.includes('SETUP_8_') || s.includes('MVAL_MACRO')) return 'Kurulum 8: Makro Değer Alanı Dip Çöküşü';
+            if (s.includes('SETUP_9_') || s.includes('BELOW_NPOC')) return 'Kurulum 9: Hacim Profili nPOC Dip Sekmesi';
+            if (s.includes('SETUP_10_') || s.includes('ABOVE_NPOC')) return 'Kurulum 10: Hacim Profili nPOC Tepe Reddi';
+            if (s.includes('SETUP_11_') || s.includes('RESISTANCE_FLIP')) return 'Kurulum 11: Direnç Retest & Satış Reddi';
+            if (s.includes('SETUP_12_') || s.includes('SUPPORT_BREAKDOWN')) return 'Kurulum 12: Destek Çöküşü & Retest';
+            if (s.includes('SETUP_13_') || s.includes('S3_RESISTANCE_FLIP')) return 'Kurulum 13: S3 Destek ➔ Direnç Dönüşümü';
+            if (s.includes('SETUP_14_') || s.includes('PIVOT_SUPPORT_FLIP')) return 'Kurulum 14: Pivot Destek Flip (Dönüş)';
+            if (s.includes('SETUP_15_') || s.includes('AVWAP_MVAH_RECLAIM')) return 'Kurulum 15: AVWAP Hacim Ağırlıklı Onay';
+            if (s.includes('SETUP_16_') || s.includes('R3_SUPPORT_FLIP')) return 'Kurulum 16: R3 Direnç ➔ Destek Dönüşümü';
+            if (s.includes('FAKEOUT_RECLAIM')) return '🪤 Tuzak Kırılım Geri Kazanımı (Fakeout Reclaim)';
+            return s.replace('SETUP_', 'Kurulum ').replace(/_/g, ' ');
+        }
+
+        function formatSetupReasonBadges(reason) {
+            if (!reason) return '-';
+            const parts = reason.split(/(\[.*?\])/);
+            let html = '';
+            parts.forEach(p => {
+                const trimmed = p.trim();
+                if (!trimmed) return;
+                if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+                    const inner = trimmed.slice(1, -1).trim();
+                    let bg = 'rgba(255,255,255,0.06)';
+                    let col = '#cbd5e1';
+                    let bd = 'rgba(255,255,255,0.12)';
+                    if (inner.includes('Tasfiye')) {
+                        bg = 'rgba(168,85,247,0.15)'; col = '#d8b4fe'; bd = 'rgba(168,85,247,0.3)';
+                    } else if (inner.includes('CVD')) {
+                        bg = 'rgba(56,189,248,0.15)'; col = '#38bdf8'; bd = 'rgba(56,189,248,0.3)';
+                    } else if (inner.includes('Alfa') || inner.includes('RS:')) {
+                        bg = 'rgba(234,179,8,0.15)'; col = '#fde047'; bd = 'rgba(234,179,8,0.3)';
+                    } else if (inner.includes('Standart') || inner.includes('x')) {
+                        bg = 'rgba(34,197,94,0.12)'; col = '#4ade80'; bd = 'rgba(34,197,94,0.25)';
+                    } else if (inner.includes('Buzdağı')) {
+                        bg = 'rgba(0,242,254,0.15)'; col = '#00f2fe'; bd = 'rgba(0,242,254,0.3)';
+                    }
+                    html += `<span style="display:inline-block; margin:2px 3px; padding:2px 7px; background:${bg}; color:${col}; border:1px solid ${bd}; border-radius:4px; font-size:11px; font-weight:600;">${inner}</span>`;
+                } else {
+                    html += `<span style="font-weight:700; color:#fff; margin-right:4px;">${trimmed}</span>`;
+                }
+            });
+            return html;
         }
 
         function renderCockpitOpenPositions() {
@@ -11590,14 +11731,35 @@ async function loadAdminMetrics() {
                     const sTp1 = typeof formatSmartPrice === 'function' ? formatSmartPrice(tp1) : tp1.toFixed(4);
                     const sStop = hardStop > 0 ? (typeof formatSmartPrice === 'function' ? formatSmartPrice(hardStop) : hardStop.toFixed(4)) : null;
 
+                    // Stop loss durum teşhisi (Garantili kârda mı, başa baş mı, başlangıç riskinde mi?)
+                    const isProfitStop = hardStop > 0 && ((isLong && hardStop > entry * 1.0005) || (!isLong && hardStop < entry * 0.9995));
+                    const isBreakevenStop = pos.is_half_closed || (hardStop > 0 && Math.abs(hardStop - entry) / entry <= 0.001);
+
+                    let stopLabel = '🛑 Risk Stopu';
+                    let stopColor = '#f87171';
+                    let stopTooltip = 'Azami Güvenlik Stopu (1.5 ATR dinamik koruma)';
+
+                    if (isProfitStop) {
+                        stopLabel = '🔒 Kârda Stop';
+                        stopColor = '#22c55e';
+                        stopTooltip = 'Garantili Kâr Kilidi: Stop seviyesi giriş fiyatının ötesine taşındı. Fiyat geri çekilse dahi pozisyon net kâr ile kapanacaktır!';
+                    } else if (isBreakevenStop) {
+                        stopLabel = '🛡️ Başa Baş';
+                        stopColor = '#34d399';
+                        stopTooltip = 'Başa Baş Stop: Risk tamamen sıfırlandı. Fiyat giriş seviyesine gerilese dahi zarar edilmez!';
+                    }
+
+                    const tpTooltip = pos.is_half_closed || pos.tp1_hit ? 'TP1 Alındı (%50 kâr kasada, kalan pozisyon risksiz trend takibinde)' : '1. Kâr Alma Hedefi (%50 pozisyon kârla kapatılır)';
+                    const tpText = pos.is_half_closed || pos.tp1_hit ? '🎯 TP1 ALINDI ✅' : `🎯 TP1: <b>$${sTp1}</b>`;
+
                     progressHtml = `
                         <div style="margin-top:12px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; color:#94a3b8; margin-bottom:5px; font-family:'JetBrains Mono'; white-space:nowrap; gap:6px;">
-                                <span>Giriş: <b style="color:#e2e8f0;">$${sEntry}</b></span>
-                                ${sStop ? `<span style="color:var(--red);">SL: <b>$${sStop}</b></span>` : ''}
-                                <span style="color:#38bdf8;">TP: <b>$${sTp1}</b></span>
+                            <div style="display:flex; justify-content:space-between; align-items:center; font-size:10.5px; color:#94a3b8; margin-bottom:5px; font-family:'JetBrains Mono'; white-space:nowrap; gap:6px;">
+                                <span title="Pozisyona Girilen Fiyat Seviyesi">Giriş: <b style="color:#e2e8f0;">$${sEntry}</b></span>
+                                ${sStop ? `<span style="color:${stopColor}; font-weight:700;" title="${stopTooltip}">${stopLabel}: <b>$${sStop}</b></span>` : ''}
+                                <span style="color:${(pos.is_half_closed || pos.tp1_hit) ? '#10b981' : '#38bdf8'}; font-weight:700;" title="${tpTooltip}">${tpText}</span>
                             </div>
-                            <div style="width:100%; height:4px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden;">
+                            <div style="width:100%; height:5px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;" title="TP1 Hedefine İlerleme Oranı: %${pct.toFixed(1)}">
                                 <div style="height:100%; width:${pct.toFixed(1)}%; background:linear-gradient(90deg, ${sideColor}, #38bdf8); box-shadow:0 0 6px ${sideColor}; transition:width 0.5s ease;"></div>
                             </div>
                         </div>
@@ -11606,6 +11768,11 @@ async function loadAdminMetrics() {
 
                 const sCurPrice = typeof formatSmartPrice === 'function' ? formatSmartPrice(curP) : curP.toFixed(4);
                 const displaySetup = formatSetupDisplayName(pos.setup_id || 'AI_SETUP');
+                const setupDesc = getSetupDescription(pos.setup_id, side);
+                const ouMins = pos.ou_half_life_min ? Number(pos.ou_half_life_min).toFixed(0) : null;
+                const ouTooltip = ouMins ? `Ornstein-Uhlenbeck İstatistiği: Fiyatın ortalama hedefe/dengeye ulaşma yarılanma ömrü ~${ouMins} dakikadır. Bu süre aşıldığında zaman bazlı dinamik alfa çürümesi devreye girer.` : '';
+                const pidMfe = Number(pos.peak_mfe_pct || 0).toFixed(2);
+                const pidTooltip = 'SpaceX Falcon 9 Kapalı Devre Kontrolörü: Pozisyon kârı kilitlendi, kârın geri verilmesi engelleniyor. Zirve kârdan çekilme durumunda otomatik koruma tetiklenir.';
 
                 html += `
                     <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:15px; position:relative; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.2);">
@@ -11616,12 +11783,12 @@ async function loadAdminMetrics() {
                                     <span onclick="openTradingViewModal('${cleanSym}')" style="cursor:pointer;" title="${cleanSym} Göstergeli Canlı Grafiğini Aç">${cleanSym}</span>
                                     <span style="font-size:10px; font-weight:700; padding:2px 7px; border-radius:6px; background:${sideBg}; color:${sideColor}; border:1px solid ${sideColor}; white-space:nowrap;">${side} ${pos.leverage || 5}x</span>
                                 </div>
-                                <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono', monospace; margin-top:4px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                                    <span style="background:rgba(0,242,254,0.08); color:var(--cyan); border:1px solid rgba(0,242,254,0.25); padding:1px 6px; border-radius:4px; font-weight:700; font-size:10px;" title="${pos.setup_id || ''}">${displaySetup}</span>
-                                    <span style="color:#38bdf8; font-size:11px;">$${sCurPrice}</span>
-                                    ${pos.pid_engaged ? `<span class="badge-pid" style="font-size:9.5px; padding:1px 5px;" title="SpaceX Falcon 9 PID Kâr Kontrolörü Devrede">🚀 PID KİLİT</span>` : ''}
-                                    ${pos.kalman_state ? `<span class="badge-kalman" style="font-size:9.5px; padding:1px 5px;" title="Apollo Kalman Filtresi Onaylı">🛡️ KALMAN</span>` : ''}
-                                    ${pos.ou_half_life_min ? `<span class="badge-ou" style="font-size:9.5px; padding:1px 5px;" title="O-U Yarılanma Ömrü: τ=${Number(pos.ou_half_life_min).toFixed(1)}dk (${pos.ou_regime || 'Dönüş'})">⏳ τ=${Number(pos.ou_half_life_min).toFixed(0)}dk</span>` : ''}
+                                <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono', monospace; margin-top:5px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                    <span style="background:rgba(0,242,254,0.08); color:var(--cyan); border:1px solid rgba(0,242,254,0.25); padding:2px 7px; border-radius:5px; font-weight:800; font-size:10px;" title="${setupDesc}">📌 ${displaySetup}</span>
+                                    <span style="color:#38bdf8; font-size:11.5px; font-weight:700;" title="Canlı Piyasa Fiyatı">$${sCurPrice}</span>
+                                    ${pos.pid_engaged ? `<span class="badge-pid" style="font-size:9.5px; padding:2px 6px;" title="${pidTooltip}">🚀 KÂR KİLİTLENDİ (PID: +%${pidMfe})</span>` : ''}
+                                    ${pos.kalman_state ? `<span class="badge-kalman" style="font-size:9.5px; padding:2px 6px;" title="Apollo Kalman Gürültüsüz Fiyat Filtresi: Mikro-fiyat gürültüsü temizlenmiş gerçek piyasa seviyesi onaylandı.">🛡️ KALMAN ONAYLI</span>` : ''}
+                                    ${ouMins ? `<span class="badge-ou" style="font-size:9.5px; padding:2px 6px;" title="${ouTooltip}">⏳ Hedef: ~${ouMins} dk</span>` : ''}
                                 </div>
                             </div>
                             <div style="text-align:right; flex-shrink:0; min-width:85px;">
@@ -14038,12 +14205,27 @@ async function loadAdminMetrics() {
                 // Stop: Kademeli kâr veya trailing ile stop taşınmışsa Breakeven/Lock, yoksa 1.5 ATR dinamik sert stop
                 const activeStop = pos.is_half_closed ? (pos.soft_stop || pos.hard_stop) : (pos.hard_stop || pos.soft_stop);
                 const stopVal = activeStop ? formatSmartPrice(activeStop) : '-';
-                const stopColor = pos.is_half_closed ? 'var(--green)' : '#f87171';
-                const stopLabel = pos.is_half_closed ? '🛡️ Breakeven Stop' : '🛑 Aktif Stop';
-
-                // Stop / TP Route Progress Calculation
                 const entryNum = Number(pos.entry_price || 0.0);
                 const curPNum = Number(metrics.curP || entryNum);
+
+                const isProfitStop = activeStop && ((pos.side === 'LONG' && Number(activeStop) > entryNum * 1.0005) || (pos.side === 'SHORT' && Number(activeStop) < entryNum * 0.9995));
+                const isBreakevenStop = pos.is_half_closed || (activeStop && Math.abs(Number(activeStop) - entryNum) / entryNum <= 0.001);
+
+                let stopColor = '#f87171';
+                let stopLabel = '🛑 Risk Stopu';
+                let stopTooltip = '1.5 ATR dinamik güvenlik koruma stop seviyesi';
+
+                if (isProfitStop) {
+                    stopColor = 'var(--green)';
+                    stopLabel = '🔒 Kârda Stop (Sıfır Risk)';
+                    stopTooltip = 'Garantili Kâr Kilidi: Stop seviyesi giriş fiyatının ötesine taşındı. Fiyat geri çekilse dahi pozisyon net kâr ile kapanacaktır!';
+                } else if (isBreakevenStop) {
+                    stopColor = '#34d399';
+                    stopLabel = '🛡️ Başa Baş Stop (Sıfır Risk)';
+                    stopTooltip = 'Başa Baş Stop: Risk tamamen sıfırlandı. Fiyat giriş seviyesine dönse dahi zarar edilmez!';
+                }
+
+                // Stop / TP Route Progress Calculation
                 const stopNum = Number(activeStop || (pos.side === 'LONG' ? entryNum * 0.985 : entryNum * 1.015));
                 const tp1Num = Number(pos.tp1 || (pos.side === 'LONG' ? entryNum * 1.02 : entryNum * 0.98));
 
@@ -14102,9 +14284,9 @@ async function loadAdminMetrics() {
                     <!-- 2.5 DİNAMİK STOP/TP ROTA BAR -->
                     <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:8px 10px;">
                         <div class="pos-route-labels">
-                            <span style="color:#f87171;">🛑 Stop: $${stopVal}</span>
-                            <span style="color:#cbd5e1; font-weight:700;">Giriş: $${entryVal}</span>
-                            <span style="color:#34d399;">🎯 TP1: $${tp1Val}</span>
+                            <span style="color:${stopColor};" title="${stopTooltip}">${stopLabel}: $${stopVal}</span>
+                            <span style="color:#cbd5e1; font-weight:700;" title="Pozisyon Giriş Seviyesi">Giriş: $${entryVal}</span>
+                            <span style="color:#34d399;" title="1. Kâr Alma Hedefi (%50 Satış)">🎯 TP1: $${tp1Val}</span>
                         </div>
                         <div class="pos-route-track" title="Anlık Fiyat Pozisyonu Rotası (Kırmızı: Stop Bölgesi | Yeşil: TP1 Bölgesi)">
                             <div class="pos-route-loss-zone"></div>
@@ -14115,20 +14297,20 @@ async function loadAdminMetrics() {
 
                     <!-- 3. TARGETS & STOP PILLS -->
                     <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-                        ${pos.is_half_closed || pos.tp1_hit ? '<span class="badge-tp1-hit">🎯 TP1 ALINDI (%50 Kâr Kasada)</span>' : '<span style="font-size:12px; background:rgba(255,255,255,0.04); border:1px solid var(--border); padding:3px 8px; border-radius:6px;">🎯 TP1: <b style="color:#fff;">$' + tp1Val + '</b></span>'}
-                        <span style="font-size:12px; background:rgba(255,255,255,0.04); border:1px solid var(--border); padding:3px 8px; border-radius:6px;">
+                        ${pos.is_half_closed || pos.tp1_hit ? '<span class="badge-tp1-hit">🎯 TP1 ALINDI (%50 Kâr Kasada - Risksiz Koşu)</span>' : '<span style="font-size:12px; background:rgba(255,255,255,0.04); border:1px solid var(--border); padding:3px 8px; border-radius:6px;" title="1. Kâr Alma Hedefi (%50 Pozisyon Kapatılır)">🎯 TP1: <b style="color:#fff;">$' + tp1Val + '</b></span>'}
+                        <span style="font-size:12px; background:rgba(255,255,255,0.04); border:1px solid var(--border); padding:3px 8px; border-radius:6px;" title="${stopTooltip}">
                             ${stopLabel}: <b style="color:${stopColor};">$${stopVal}</b>
                         </span>
-                        ${pos.tp2 ? '<span style="font-size:12px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; padding:3px 8px; border-radius:6px;">🚀 TP2: <b>$' + tp2Val + '</b></span>' : ''}
+                        ${pos.tp2 ? '<span style="font-size:12px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; padding:3px 8px; border-radius:6px;" title="2. Kâr Alma / Trend Koşucu Hedefi (Kalan %50)">🚀 TP2 Runner: <b>$' + tp2Val + '</b></span>' : ''}
                         ${pos.trail_status ? '<span class="badge-trailing-lock">' + pos.trail_status + '</span>' : ''}
-                        ${pos.pid_engaged ? '<span class="badge-pid" title="' + (pos.pid_telemetry ? ('PID Taban Stop: $' + formatSmartPrice(pos.pid_telemetry.pid_stop) + ' | Mod: ' + (pos.pid_telemetry.thrust_mode || '')) : 'SpaceX Falcon 9 Kâr Kontrolörü Aktif') + '">🚀 SpaceX PID Kilit (+' + Number(pos.peak_mfe_pct || 0).toFixed(2) + '% MFE)</span>' : ''}
-                        ${pos.kalman_state ? '<span class="badge-kalman" title="Apollo Kalman Gürültüsüz Fiyat: $' + formatSmartPrice(pos.kalman_state.clean_price) + ' (Z: ' + Number(pos.kalman_state.z_score || 0).toFixed(2) + ')">🛡️ Apollo Kalman Onaylı</span>' : ''}
-                        ${pos.ou_half_life_min ? '<span class="badge-ou" title="O-U Yarılanma: τ=' + Number(pos.ou_half_life_min).toFixed(1) + 'dk | 1.5τ Alfa Çürüme: ' + Number(pos.ou_decay_limit_min || pos.ou_half_life_min * 1.5).toFixed(0) + 'dk">⏳ O-U: τ=' + Number(pos.ou_half_life_min).toFixed(0) + 'dk (' + (pos.ou_regime || 'Dönüş') + ')</span>' : ''}
+                        ${pos.pid_engaged ? '<span class="badge-pid" title="SpaceX Falcon 9 Kapalı Devre Kontrolörü: Pozisyon kârı kilitlendi, kârın geri verilmesi engelleniyor. Zirve kârdan çekilme durumunda otomatik çıkış yapar.">🚀 KÂR KİLİTLENDİ (SpaceX PID: +' + Number(pos.peak_mfe_pct || 0).toFixed(2) + '% MFE)</span>' : ''}
+                        ${pos.kalman_state ? '<span class="badge-kalman" title="Apollo Kalman Gürültüsüz Fiyat: $' + formatSmartPrice(pos.kalman_state.clean_price) + ' (Z: ' + Number(pos.kalman_state.z_score || 0).toFixed(2) + ')">🛡️ Apollo Kalman Filtresi Onaylı</span>' : ''}
+                        ${pos.ou_half_life_min ? '<span class="badge-ou" title="Ornstein-Uhlenbeck İstatistiği: Hedef denge vadesi ~' + Number(pos.ou_half_life_min).toFixed(0) + ' dk | Dinamik Alfa Çürümesi: ' + Number(pos.ou_decay_limit_min || pos.ou_half_life_min * 1.5).toFixed(0) + ' dk">⏳ Hedef Vadesi: ~' + Number(pos.ou_half_life_min).toFixed(0) + ' dk (' + (pos.ou_regime || 'Dengeye Dönüş') + ')</span>' : ''}
                     </div>
 
                     <!-- 4. SETUP REASON -->
-                    <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:11.5px; color:#cbd5e1; line-height:1.4;">
-                        📌 <b>Kurulum:</b> ${pos.reason}
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px; padding:8px 12px; font-size:11.5px; color:#cbd5e1; line-height:1.6;">
+                        📌 <b>Kurulum Stratejisi:</b> ${formatSetupReasonBadges(pos.reason)}
                     </div>
 
                     <!-- 5. ACTION BUTTONS (GRAFIK + POZISYONU KAPAT) -->
