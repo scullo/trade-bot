@@ -19,7 +19,11 @@ from config import (
     ENABLE_COINBASE_LEAD_LAG, COINBASE_LEAD_SPREAD_BPS, COINBASE_TICK_WINDOW_SEC,
     ENABLE_WHALE_NETFLOW_RADAR, NETFLOW_INFLOW_ZSCORE_THRESHOLD, NETFLOW_OUTFLOW_ZSCORE_THRESHOLD,
     NETFLOW_REFRESH_INTERVAL_SEC, WHALE_TIER1_MIN_USD, WHALE_TIER2_MIN_USD, WHALE_TIER3_MIN_USD,
-    ENABLE_AMMUNITION_CONFLUENCE, AMMUNITION_SURGE_THRESHOLD_USD, STALE_NETFLOW_TIMEOUT_SEC
+    ENABLE_AMMUNITION_CONFLUENCE, AMMUNITION_SURGE_THRESHOLD_USD, STALE_NETFLOW_TIMEOUT_SEC,
+    ENABLE_SMART_MONEY_DIVERGENCE, SMART_MONEY_ACCUM_CB_BUY_MIN,
+    SMART_MONEY_RETAIL_LONG_TRAP_BINANCE, SMART_MONEY_RETAIL_LONG_TRAP_CB_MAX,
+    SMART_MONEY_RETAIL_SHORT_TRAP_BINANCE, SMART_MONEY_RETAIL_SHORT_TRAP_CB_MIN,
+    SMART_MONEY_DIVERGENCE_SPREAD_TRAP, SMART_MONEY_MARGIN_BONUS_MULT
 )
 from indicators import (
     calculate_camarilla_pivots, calculate_anchored_vwap, calculate_volume_profile,
@@ -168,6 +172,10 @@ class MarketDataManager:
             'desc': 'Coinbase Spot ile Binance Vadeli dengede.',
             'last_update': 0.0
         }
+
+        # 🇺🇸 Stage 3: Kurumsal Coinbase Prime vs. Binance Offshore CVD Ayrışması (Smart Money Delta)
+        self.coinbase_cvd_history = {asset: deque() for asset in self.coinbase_supported_assets}
+        self.smart_money_divergence = {}
 
         # ⚡ 1. BTC Ani Mikro-Şok Kalkanı Veri Yapıları (60s Flush / Spike Gate)
         self.btc_price_60s_deque = deque(maxlen=120)
@@ -1859,6 +1867,128 @@ class MarketDataManager:
             'age_seconds': (now_ts - cb_last_upd) if cb_last_upd > 0 else 999.0
         }
 
+    # ──────────────────────────────────────────────────────────────────────────
+    # 🏛️ STAGE 3: KURUMSAL COINBASE SPOT VS. BINANCE OFFSHORE CVD AYRIŞMASI
+    # ──────────────────────────────────────────────────────────────────────────
+    def get_coinbase_cvd(self, base_asset: str = "BTC") -> dict:
+        """Coinbase Spot son 60 saniyelik Taker Alış/Satış hacimlerini ve kümülatif delta oranını döndürür."""
+        clean_a = base_asset.upper().replace('/', '').replace(':USDT', '')
+        if clean_a.endswith('USDT'):
+            clean_a = clean_a[:-4]
+        for prefix in ['1000000', '100000', '10000', '1000']:
+            if clean_a.startswith(prefix):
+                clean_a = clean_a[len(prefix):]
+                break
+
+        dq = getattr(self, 'coinbase_cvd_history', {}).get(clean_a, deque())
+        now_t = time.time()
+        cutoff = now_t - 60.0
+        while dq and dq[0][0] < cutoff:
+            dq.popleft()
+
+        buy_usd = sum(x[1] for x in dq)
+        sell_usd = sum(x[2] for x in dq)
+        tot_usd = buy_usd + sell_usd
+        delta_usd = buy_usd - sell_usd
+        buy_ratio = (buy_usd / tot_usd * 100.0) if tot_usd > 0 else 50.0
+
+        return {
+            'asset': clean_a,
+            'buy_usd_60s': round(buy_usd, 2),
+            'sell_usd_60s': round(sell_usd, 2),
+            'tot_usd_60s': round(tot_usd, 2),
+            'delta_usd_60s': round(delta_usd, 2),
+            'buy_ratio_60s': round(buy_ratio, 1),
+            'trade_count_60s': len(dq)
+        }
+
+    def get_smart_money_divergence(self, symbol: str = "BTC/USDT") -> dict:
+        """
+        Stage 3: ABD Kurumsal Coinbase Spot CVD ile Binance Vadeli CVD arasındaki
+        ayrışmayı (Smart Money Delta) ve tuzak rejimlerini hesaplar.
+        """
+        clean_s = self._clean_symbol(symbol)
+        base_asset = clean_s.replace('/USDT', '').replace(':USDT', '')
+        for prefix in ['1000000', '100000', '10000', '1000']:
+            if base_asset.startswith(prefix):
+                base_asset = base_asset[len(prefix):]
+                break
+
+        # 1. Coinbase Spot CVD
+        is_cb_supported = hasattr(self, 'coinbase_supported_assets') and (base_asset in self.coinbase_supported_assets)
+        target_asset = base_asset if is_cb_supported else 'BTC'
+        cb_cvd = self.get_coinbase_cvd(target_asset)
+        cb_ratio = float(cb_cvd.get('buy_ratio_60s', 50.0))
+        cb_delta = float(cb_cvd.get('delta_usd_60s', 0.0))
+        cb_tot = float(cb_cvd.get('tot_usd_60s', 0.0))
+
+        # 2. Binance Vadeli CVD
+        bin_item = self.symbol_cvd.get(symbol, self.symbol_cvd.get(clean_s, {}))
+        bin_ratio = float(bin_item.get('ratio_60s', 50.0) or 50.0)
+        bin_delta = float(bin_item.get('delta_60s', 0.0) or 0.0)
+
+        # 3. Smart Money Delta Oranı & Spread
+        spread_ratio = round(cb_ratio - bin_ratio, 1)
+
+        # 4. Rejim Teşhisi
+        is_cb_active = (cb_tot >= 100.0 or cb_cvd.get('trade_count_60s', 0) >= 2)
+
+        # Senaryo A: INSTITUTIONAL_SPOT_ACCUMULATION
+        is_accum = is_cb_active and (cb_ratio >= SMART_MONEY_ACCUM_CB_BUY_MIN and cb_delta > 0 and (bin_ratio <= 52.0 or spread_ratio >= 5.0))
+
+        # Senaryo B: RETAIL_FOMO_LONG_TRAP
+        is_long_trap = is_cb_active and (bin_ratio >= SMART_MONEY_RETAIL_LONG_TRAP_BINANCE and (cb_ratio <= SMART_MONEY_RETAIL_LONG_TRAP_CB_MAX or spread_ratio <= -SMART_MONEY_DIVERGENCE_SPREAD_TRAP))
+
+        # Senaryo C: RETAIL_PANIC_SHORT_TRAP
+        is_short_trap = is_cb_active and (bin_ratio <= SMART_MONEY_RETAIL_SHORT_TRAP_BINANCE and (cb_ratio >= SMART_MONEY_RETAIL_SHORT_TRAP_CB_MIN or spread_ratio >= SMART_MONEY_DIVERGENCE_SPREAD_TRAP))
+
+        regime = "HARMONIC_FLOW"
+        status_desc = "⚪ Kurumsal Spot ve Vadeli Akış Dengeli"
+        if is_accum:
+            regime = "INSTITUTIONAL_SPOT_ACCUMULATION"
+            status_desc = f"⚡ ABD Kurumsal Spot Birikimi (Coinbase %{cb_ratio:.1f} vs Binance %{bin_ratio:.1f})"
+        elif is_long_trap:
+            regime = "RETAIL_FOMO_LONG_TRAP"
+            status_desc = f"🚨 Perakende FOMO Long Tuzağı (Binance %{bin_ratio:.1f} vs Coinbase %{cb_ratio:.1f})"
+        elif is_short_trap:
+            regime = "RETAIL_PANIC_SHORT_TRAP"
+            status_desc = f"🛡️ Perakende Panik Short Tuzağı (Binance %{bin_ratio:.1f} vs Coinbase %{cb_ratio:.1f})"
+
+        res = {
+            'symbol': symbol,
+            'target_asset': target_asset,
+            'is_macro_proxy': (not is_cb_supported),
+            'coinbase_buy_ratio': cb_ratio,
+            'coinbase_delta_60s': cb_delta,
+            'coinbase_tot_60s': cb_tot,
+            'binance_buy_ratio': bin_ratio,
+            'binance_delta_60s': bin_delta,
+            'smart_money_spread': spread_ratio,
+            'regime': regime,
+            'status_desc': status_desc,
+            'is_institutional_accum': is_accum,
+            'is_retail_long_trap': is_long_trap,
+            'is_retail_short_trap': is_short_trap,
+            'margin_multiplier': SMART_MONEY_MARGIN_BONUS_MULT if is_accum else 1.0,
+            'last_update': time.time()
+        }
+        self.smart_money_divergence[symbol] = res
+        return res
+
+    def get_smart_money_summary(self) -> dict:
+        """Kokpit ve Web Dashboard için Smart Money Ayrışma Özetini döndürür."""
+        btc_div = self.get_smart_money_divergence("BTC/USDT")
+        eth_div = self.get_smart_money_divergence("ETH/USDT")
+        sol_div = self.get_smart_money_divergence("SOL/USDT")
+        return {
+            'btc': btc_div,
+            'eth': eth_div,
+            'sol': sol_div,
+            'regime': btc_div.get('regime', 'HARMONIC_FLOW'),
+            'status_desc': btc_div.get('status_desc', '⚪ Akış Dengeli'),
+            'cb_connected': getattr(self, 'coinbase_prices', {}).get('is_connected', False)
+        }
+
     async def fetch_deribit_gex_immediate(self):
         """Aegis Sentinel veya manuel tetikleyici tarafından çağrılan anlık ve crash-proof Deribit GEX tazeleyicisi."""
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
@@ -3385,6 +3515,22 @@ class MarketDataManager:
                                             self.coinbase_prices[base_asset] = p
                                             self.coinbase_prices[f"{base_asset}_time"] = now_t
                                             self.coinbase_prices['last_update'] = now_t
+
+                                            # Stage 3: Coinbase Taker Hacim ve CVD Akışını Kaydet
+                                            last_size = float(d.get("last_size", 0.0) or 0.0)
+                                            side_str = str(d.get("side", "")).lower()
+                                            if last_size > 0:
+                                                size_usd = p * last_size
+                                                is_buy = (side_str == "buy")
+                                                buy_u = size_usd if is_buy else 0.0
+                                                sell_u = 0.0 if is_buy else size_usd
+                                                if not hasattr(self, 'coinbase_cvd_history'):
+                                                    self.coinbase_cvd_history = {}
+                                                dq = self.coinbase_cvd_history.setdefault(base_asset, deque())
+                                                dq.append((now_t, buy_u, sell_u))
+                                                cutoff_t = now_t - 60.0
+                                                while dq and dq[0][0] < cutoff_t:
+                                                    dq.popleft()
 
                                             # Binance BTC/USDT ile Lead-Lag Karşılaştırması (VDA-09: USDT/USD peg sapmasından arındırılmış)
                                             if base_asset == "BTC":

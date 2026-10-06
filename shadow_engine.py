@@ -193,6 +193,10 @@ class ShadowExecutionEngine:
             return "Mempool Balina Giriş Kalkanı (Mempool Inflow Dump Shield)"
         elif "Mempool Soğuk Cüzdan" in r or "MEMPOOL_WHALE_OUTFLOW" in r:
             return "Mempool Soğuk Cüzdan Kalkanı (Mempool Outflow Squeeze Shield)"
+        elif "Perakende Long Tuzağı" in r or "INSTITUTIONAL_DIVERGENCE_RETAIL_TRAP" in r or "RETAIL_TRAP" in r:
+            return "Perakende Long Tuzağı Kalkanı (Retail FOMO Long Trap Shield)"
+        elif "Perakende Panik Short" in r or "INSTITUTIONAL_DIVERGENCE_PANIC_SHORT" in r or "PANIC_SHORT" in r:
+            return "Perakende Panik Short Tuzağı Kalkanı (Retail Panic Short Squeeze Shield)"
         elif "Balina Borsa Giriş" in r or "WHALE_EXCHANGE_INFLOW" in r or ("Balina" in r and "Giriş" in r):
             return "Balina Borsa Giriş Kalkanı (Exchange Inflow Dump Shield)"
         elif "Soğuk Cüzdan" in r or "WHALE_EXCHANGE_OUTFLOW" in r or ("Soğuk" in r and "Çıkış" in r):

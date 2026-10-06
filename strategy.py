@@ -35,6 +35,7 @@ from config import (
     MAX_ABSOLUTE_STOP_PCT, ENABLE_FAKEOUT_RECLAIM, FAKEOUT_RECLAIM_MAX_CANDLES,
     ENABLE_OI_VELOCITY_RADAR, OI_EXPANSION_THRESHOLD_PCT, OI_SQUEEZE_EXHAUSTION_PCT,
     ENABLE_COINBASE_LEAD_LAG, COINBASE_LEAD_SPREAD_BPS,
+    ENABLE_SMART_MONEY_DIVERGENCE,
     ENABLE_DYNAMIC_LEVERAGE, MIN_LEVERAGE, MAX_LEVERAGE, DEFAULT_LEVERAGE,
     ENABLE_MAX_STOP_DIST_GATE, MAX_ENTRY_STOP_DIST_PCT,
     ENABLE_MEME_DEFENSIVE_MODE, MEME_SYMBOLS, MEME_MAX_LEVERAGE, MEME_MAX_MARGIN, MEME_MAX_STOP_DIST_PCT,
@@ -1526,6 +1527,49 @@ class StrategyEngine:
             except Exception:
                 pass
 
+        # ── 0g. KURUMSAL COINBASE SPOT VS. BINANCE OFFSHORE CVD AYRIŞMASI (SMART MONEY VETO & BOOST) ──
+        if hasattr(self, 'market_data') and self.market_data and ENABLE_SMART_MONEY_DIVERGENCE:
+            try:
+                sm_div = self.market_data.get_smart_money_divergence(symbol)
+                cb_r = sm_div.get('coinbase_buy_ratio', 50.0)
+                bin_r = sm_div.get('binance_buy_ratio', 50.0)
+                sm_spread = sm_div.get('smart_money_spread', 0.0)
+                proxy_str = " (Macro BTC Şemsiyesi)" if sm_div.get('is_macro_proxy') else ""
+
+                if side == "LONG" and sm_div.get('is_retail_long_trap'):
+                    rej_msg = (
+                        f"🚨 Perakende Long Tuzağı Kalkanı: Binance Vadeli'de aşırı perakende FOMO alımı (%{bin_r:.1f}) var "
+                        f"ancak ABD Coinbase Spot satıcılı/pasif (%{cb_r:.1f}, Yayılma: {sm_spread:+.1f}%){proxy_str}! "
+                        f"(Long Squeeze Tehlikesi, Long VETO!)"
+                    )
+                    try:
+                        print(f">> [RED - PERAKENDE LONG TUZAĞI KALKANI] {symbol}: {rej_msg}")
+                    except Exception:
+                        pass
+                    self.log_rejection(symbol, setup_id or reason, rej_msg, planned_r=0.0)
+                    return {"error": "INSTITUTIONAL_DIVERGENCE_RETAIL_TRAP_VETO", "reason": rej_msg}
+
+                if side == "SHORT" and sm_div.get('is_retail_short_trap'):
+                    rej_msg = (
+                        f"🛡️ Perakende Panik Short Tuzağı Kalkanı: Binance Vadeli'de aşırı panik satışı (%{bin_r:.1f}) var "
+                        f"ancak ABD Coinbase Spot kurumsal emilimde (%{cb_r:.1f}, Yayılma: {sm_spread:+.1f}%){proxy_str}! "
+                        f"(Short Squeeze Tehlikesi, Short VETO!)"
+                    )
+                    try:
+                        print(f">> [RED - PERAKENDE PANİK SHORT KALKANI] {symbol}: {rej_msg}")
+                    except Exception:
+                        pass
+                    self.log_rejection(symbol, setup_id or reason, rej_msg, planned_r=0.0)
+                    return {"error": "INSTITUTIONAL_DIVERGENCE_PANIC_SHORT_VETO", "reason": rej_msg}
+
+                # Senaryo A: Akıllı Para Alımı (Kurumsal Spot Birikim) -> Confluence Teyidi
+                if side == "LONG" and sm_div.get('is_institutional_accum'):
+                    if confluence_list is not None and isinstance(confluence_list, list):
+                        if "Smart_Money_Kurumsal_Spot_Teyidi" not in confluence_list:
+                            confluence_list.append("Smart_Money_Kurumsal_Spot_Teyidi")
+            except Exception:
+                pass
+
         # ── 1. ATR / VOLATILITE HESABI & KATMANLI LİKİDİTE EŞİĞİ ──
         atr_pct = 1.2
         vol_surge = 1.0
@@ -2267,6 +2311,15 @@ class StrategyEngine:
                 local_margin_mult *= 1.10
             elif side == "SHORT" and cb_spread_bps <= -COINBASE_LEAD_SPREAD_BPS:
                 local_margin_mult *= 1.10
+
+        # Stage 3: Kurumsal Smart Money Spot Birikim Marjin Bonusu (x1.25)
+        if hasattr(self, 'market_data') and self.market_data and ENABLE_SMART_MONEY_DIVERGENCE:
+            try:
+                sm_div_mult = self.market_data.get_smart_money_divergence(symbol)
+                if side == "LONG" and sm_div_mult.get('is_institutional_accum'):
+                    local_margin_mult *= float(sm_div_mult.get('margin_multiplier', 1.25))
+            except Exception:
+                pass
         
         # Madde 5 Kuralı (2. Temas)
         is_mean_rev = (trade_type == "SCALP" or any(k in reason for k in ["nPOC", "Destek", "Retest", "Reclaim", "Sekmesi", "S3", "R3", "Flip"]))

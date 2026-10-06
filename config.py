@@ -326,4 +326,15 @@ ENABLE_AMMUNITION_CONFLUENCE = True          # Borsa taze USDT/USDC girişini LO
 AMMUNITION_SURGE_THRESHOLD_USD = 50_000_000.0# Borsalara son 1-4 saatte >= $50M taze stabil kripto girişi = Boğa Cephanesi
 STALE_NETFLOW_TIMEOUT_SEC = 1200             # 20 dakikadan eski verilerde sinyali engelleme (Fail-safe passthrough)
 
+# 17. Kurumsal Coinbase Prime vs. Binance Offshore CVD Ayrışması (Stage 3: Smart Money Delta)
+ENABLE_SMART_MONEY_DIVERGENCE = True           # ABD Kurumsal Spot vs. Offshore Vadeli CVD Ayrışma Kalkanı
+SMART_MONEY_ACCUM_CB_BUY_MIN = 53.0           # Kurumsal Spot Birikim için Coinbase asgari Alıcı oranı (%53.0)
+SMART_MONEY_RETAIL_LONG_TRAP_BINANCE = 60.0    # Perakende Long Tuzağı: Binance Futures alıcı oranı >= %60.0
+SMART_MONEY_RETAIL_LONG_TRAP_CB_MAX = 46.0     # Perakende Long Tuzağı: Coinbase Spot alıcı oranı <= %46.0
+SMART_MONEY_RETAIL_SHORT_TRAP_BINANCE = 40.0   # Perakende Short Tuzağı: Binance Futures alıcı oranı <= %40.0
+SMART_MONEY_RETAIL_SHORT_TRAP_CB_MIN = 53.0    # Perakende Short Tuzağı: Coinbase Spot alıcı oranı >= %53.0
+SMART_MONEY_DIVERGENCE_SPREAD_TRAP = 12.0      # Binance ile Coinbase arasındaki kritik ayrışma spread eşiği (%12.0)
+SMART_MONEY_MARGIN_BONUS_MULT = 1.25           # Kurumsal birikim teyitli Long'larda asimetrik marjin çarpanı (x1.25)
+
+
 

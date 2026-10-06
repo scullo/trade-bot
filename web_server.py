@@ -5755,6 +5755,18 @@ HTML_PAGE = """
                 <div class="kpi-card-sub">Outflow Z-Skoru &le; -2.0&sigma; (SHORT Veto Kalkanı)</div>
                 <div style="margin-top:6px; font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">Arz Şoku & Akümülasyon Koruması</div>
             </div>
+
+            <div class="cockpit-kpi-card" id="card-whale-smart-money">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">Kurumsal Smart Money CVD (Coinbase vs Binance)</span>
+                    <span class="kpi-card-icon">🏛️</span>
+                </div>
+                <div class="kpi-card-val" id="whale-smart-money-spread" style="color:#38bdf8;">0.0%</div>
+                <div class="kpi-card-sub" id="whale-smart-money-sub">Coinbase Spot vs Binance Vadeli Alış Oranı Dengede</div>
+                <div style="margin-top:6px; display:flex; align-items:center; gap:8px;">
+                    <span class="kpi-telemetry-chip" id="whale-smart-money-chip" style="background:rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.1);">UYUMLU AKIŞ</span>
+                </div>
+            </div>
         </div>
 
         <!-- 2 SÜTUNLU AKIŞ TABLOLARI -->
@@ -8663,6 +8675,48 @@ async function loadAdminMetrics() {
                 if (binInflowEl) {
                     const sign = binInflow >= 0 ? '+' : '';
                     binInflowEl.innerText = `24s Net Borsa Girişi: ${sign}$${(Math.abs(binInflow) / 1e6).toFixed(1)}M`;
+                }
+
+                // 2b. Smart Money CVD Divergence Card (Coinbase Spot vs Binance Futures)
+                const sm = wr.smart_money || appState.smart_money || {};
+                const btcSm = sm.btc || sm || {};
+                const spreadVal = Number(btcSm.smart_money_spread || 0);
+                const smSpreadEl = document.getElementById('whale-smart-money-spread');
+                if (smSpreadEl) {
+                    const sign = spreadVal >= 0 ? '+' : '';
+                    smSpreadEl.innerText = `${sign}${spreadVal.toFixed(1)}%`;
+                    smSpreadEl.style.color = spreadVal > 5 ? 'var(--green)' : (spreadVal < -5 ? 'var(--red)' : '#38bdf8');
+                }
+                const smSubEl = document.getElementById('whale-smart-money-sub');
+                if (smSubEl) {
+                    const cbR = Number(btcSm.coinbase_buy_ratio || 50).toFixed(1);
+                    const binR = Number(btcSm.binance_buy_ratio || 50).toFixed(1);
+                    smSubEl.innerText = `Coinbase Spot: %${cbR} Alıcı | Binance Vadeli: %${binR} Alıcı`;
+                }
+                const smChipEl = document.getElementById('whale-smart-money-chip');
+                if (smChipEl) {
+                    const reg = btcSm.regime || 'HARMONIC_FLOW';
+                    if (reg === 'INSTITUTIONAL_SPOT_ACCUMULATION') {
+                        smChipEl.innerText = '⚡ KURUMSAL BİRİKİM (+1 CONFLUENCE, x1.25 MARJİN)';
+                        smChipEl.style.color = '#22c55e';
+                        smChipEl.style.background = 'rgba(34,197,94,0.15)';
+                        smChipEl.style.borderColor = 'rgba(34,197,94,0.3)';
+                    } else if (reg === 'RETAIL_FOMO_LONG_TRAP') {
+                        smChipEl.innerText = '🚨 PERAKENDE FOMO TUZAĞI (LONG VETO)';
+                        smChipEl.style.color = '#ef4444';
+                        smChipEl.style.background = 'rgba(239,68,68,0.15)';
+                        smChipEl.style.borderColor = 'rgba(239,68,68,0.3)';
+                    } else if (reg === 'RETAIL_PANIC_SHORT_TRAP') {
+                        smChipEl.innerText = '🛡️ PANİK SHORT TUZAĞI (SHORT VETO)';
+                        smChipEl.style.color = '#38bdf8';
+                        smChipEl.style.background = 'rgba(56,189,248,0.15)';
+                        smChipEl.style.borderColor = 'rgba(56,189,248,0.3)';
+                    } else {
+                        smChipEl.innerText = '⚪ UYUMLU AKIŞ (DENGELİ)';
+                        smChipEl.style.color = '#94a3b8';
+                        smChipEl.style.background = 'rgba(255,255,255,0.05)';
+                        smChipEl.style.borderColor = 'rgba(255,255,255,0.1)';
+                    }
                 }
 
                 // 3. Process Netflows for Dump Risk & Accumulation (Tekilleştirilmiş - Deduplicated)
@@ -15958,6 +16012,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "ammunition": market_data.get_ammunition_status() if (market_data and hasattr(market_data, 'get_ammunition_status')) else {},
                 "recent_alerts": market_data.get_recent_whale_alerts(25) if (market_data and hasattr(market_data, 'get_recent_whale_alerts')) else [],
                 "radar_health": market_data.get_whale_radar_health() if (market_data and hasattr(market_data, 'get_whale_radar_health')) else {},
+                "smart_money": market_data.get_smart_money_summary() if (market_data and hasattr(market_data, 'get_smart_money_summary')) else {},
                 "exchange_netflows": {k: dict(v) for k, v in list(getattr(market_data, 'exchange_netflows', {}).items()) if '/' in k} if market_data else {}
             }
 
@@ -15978,6 +16033,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "cvd_summary": cvd_summary,
                 "symbol_cvd": symbol_cvd,
                 "whale_radar": whale_radar,
+                "smart_money": whale_radar.get("smart_money", {}),
                 "orderbook_depth": {k: dict(v) for k, v in list(getattr(market_data, 'orderbook_depth', {}).items())} if market_data else {},
                 "recent_rejections": list(getattr(strategy, "recent_rejections", []))[-50:] if strategy else [],
                 "setup_attempts": dict(getattr(strategy, "setup_attempts", {})) if strategy else {},
