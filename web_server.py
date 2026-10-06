@@ -5845,13 +5845,18 @@ HTML_PAGE = """
 
         <!-- CANLI BALİNA İŞLEM BESLEMESİ & TICKER -->
         <div style="background:var(--bg-card); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px; margin-bottom:16px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <span style="font-size:16px;">📡</span>
                     <span style="font-size:14px; font-weight:800; color:#fff;">Canlı On-Chain &amp; Borsa İçi Balina Transfer Radarı (Whale Feed)</span>
                     <span class="kpi-telemetry-chip" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3);">JIT RADAR</span>
                 </div>
-                <div style="font-size:11.5px; color:#64748b; font-family:'JetBrains Mono';" id="whale-feed-count-info">Son 25 İşlem</div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <a href="https://www.blockchain.com/explorer" target="_blank" rel="noopener noreferrer" style="color:#38bdf8; font-size:11px; text-decoration:none; font-family:'JetBrains Mono'; background:rgba(56,189,248,0.08); padding:3px 8px; border-radius:5px; border:1px solid rgba(56,189,248,0.25); display:inline-flex; align-items:center; gap:4px;" title="Blockchain.com Genel Gezgini">🌐 Blockchain.com ↗</a>
+                    <a href="https://mempool.space" target="_blank" rel="noopener noreferrer" style="color:#c084fc; font-size:11px; text-decoration:none; font-family:'JetBrains Mono'; background:rgba(192,132,252,0.08); padding:3px 8px; border-radius:5px; border:1px solid rgba(192,132,252,0.25); display:inline-flex; align-items:center; gap:4px;" title="Mempool.space Canlı Blok Havuzu">🌐 Mempool.space ↗</a>
+                    <a href="https://etherscan.io" target="_blank" rel="noopener noreferrer" style="color:#818cf8; font-size:11px; text-decoration:none; font-family:'JetBrains Mono'; background:rgba(129,140,248,0.08); padding:3px 8px; border-radius:5px; border:1px solid rgba(129,140,248,0.25); display:inline-flex; align-items:center; gap:4px;" title="Etherscan Ethereum Gezgini">🌐 Etherscan ↗</a>
+                    <span style="font-size:11.5px; color:#64748b; font-family:'JetBrains Mono';" id="whale-feed-count-info">Son 25 İşlem</span>
+                </div>
             </div>
             <div style="overflow-x:auto;">
                 <table class="data-table" style="width:100%; font-size:12px; border-collapse:collapse;">
@@ -8927,6 +8932,24 @@ async function loadAdminMetrics() {
                                 dirColor = isDump ? '#f87171' : (isAmmo ? '#34d399' : '#c084fc');
                             }
 
+                            let txUrl = '';
+                            let altUrl = '';
+                            let altLabel = '';
+                            let explorerName = 'Blokzincir';
+                            if (a.tx_hash) {
+                                if (a.tx_hash.startsWith('0x')) {
+                                    txUrl = `https://etherscan.io/tx/${a.tx_hash}`;
+                                    altUrl = `https://eth.blockscout.com/tx/${a.tx_hash}`;
+                                    altLabel = 'blockscout';
+                                    explorerName = 'Etherscan';
+                                } else if (a.blockchain === 'BTC' || (!a.tx_hash.startsWith('agg_') && !a.tx_hash.startsWith('tx_') && a.tx_hash.length >= 50)) {
+                                    txUrl = `https://www.blockchain.com/explorer/transactions/btc/${a.tx_hash}`;
+                                    altUrl = `https://mempool.space/tx/${a.tx_hash}`;
+                                    altLabel = 'mempool';
+                                    explorerName = 'Blockchain.com';
+                                }
+                            }
+
                             let intentHtml = a.intent || 'TRANSFER';
                             if (isAggTrade) {
                                 const pVal = Number(a.price || 0);
@@ -8934,19 +8957,18 @@ async function loadAdminMetrics() {
                                 intentHtml = `<span style="background:rgba(0,242,254,0.12); color:#00f2fe; border:1px solid rgba(0,242,254,0.3); padding:2px 5px; border-radius:4px; font-weight:800; font-size:10px;">⚡ BLOK EMİR (&lt;50ms)</span><span style="font-size:11px; color:#cbd5e1; margin-left:4px;">${pStr}</span>`;
                             } else if (isMempool) {
                                 const chainBadge = a.blockchain ? `<span style="background:rgba(192,132,252,0.15); color:#c084fc; border:1px solid rgba(192,132,252,0.3); padding:1px 4px; border-radius:3px; font-size:9.5px; font-weight:800; margin-right:4px;">${a.blockchain}</span>` : '';
-                                intentHtml = `${chainBadge}<span style="background:rgba(168,85,247,0.15); color:#d8b4fe; border:1px solid rgba(168,85,247,0.35); padding:2px 5px; border-radius:4px; font-weight:800; font-size:10px;">🔗 ON-CHAIN MEMPOOL</span>`;
+                                const targetOpenUrl = txUrl || (a.blockchain === 'BTC' ? 'https://www.blockchain.com/explorer' : 'https://etherscan.io');
+                                intentHtml = `${chainBadge}<a href="${targetOpenUrl}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;" title="Doğrulanmış Blokzincir Transferini Aç (${explorerName})"><span style="background:rgba(168,85,247,0.22); color:#e9d5ff; border:1px solid rgba(168,85,247,0.5); padding:3px 7px; border-radius:5px; font-weight:800; font-size:10px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 8px rgba(168,85,247,0.25); transition:all 0.2s;" onmouseenter="this.style.background='rgba(168,85,247,0.4)'; this.style.borderColor='#d8b4fe';" onmouseleave="this.style.background='rgba(168,85,247,0.22)'; this.style.borderColor='rgba(168,85,247,0.5)';">🔗 ON-CHAIN MEMPOOL <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg></span></a>`;
                             }
 
                             let txHashHtml = '';
                             if (a.tx_hash) {
                                 if (a.tx_hash.startsWith('agg_')) {
-                                    txHashHtml = `<div style="font-size:9.5px; color:#64748b; font-family:\'JetBrains Mono\';">${a.tx_hash}</div>`;
-                                } else if (a.blockchain === 'BTC' || (!a.tx_hash.startsWith('0x') && a.tx_hash.length >= 60)) {
-                                    const shortH = a.tx_hash.slice(0, 6) + '...' + a.tx_hash.slice(-4);
-                                    txHashHtml = `<div style="font-size:9.5px; font-family:\'JetBrains Mono\';"><a href="https://mempool.space/tx/${a.tx_hash}" target="_blank" rel="noopener noreferrer" style="color:#38bdf8; text-decoration:none;" title="Mempool Explorer Aç">&#128279; ${shortH}</a></div>`;
-                                } else if (a.tx_hash.startsWith('0x')) {
-                                    const shortH = a.tx_hash.slice(0, 6) + '...' + a.tx_hash.slice(-4);
-                                    txHashHtml = `<div style="font-size:9.5px; font-family:\'JetBrains Mono\';"><a href="https://etherscan.io/tx/${a.tx_hash}" target="_blank" rel="noopener noreferrer" style="color:#c084fc; text-decoration:none;" title="Etherscan Explorer Aç">&#128279; ${shortH}</a></div>`;
+                                    txHashHtml = `<div style="font-size:9.5px; color:#64748b; font-family:\'JetBrains Mono\';" title="Binance Futures aggTrade Blok ID">${a.tx_hash}</div>`;
+                                } else if (txUrl) {
+                                    const shortH = a.tx_hash.length > 12 ? (a.tx_hash.slice(0, 6) + '...' + a.tx_hash.slice(-4)) : a.tx_hash;
+                                    const altLink = altUrl ? `<a href="${altUrl}" target="_blank" rel="noopener noreferrer" style="color:#94a3b8; font-size:8.5px; text-decoration:none; padding:1px 4px; background:rgba(255,255,255,0.06); border-radius:3px; border:1px solid rgba(255,255,255,0.1);" title="${altLabel} alternatif aynada aç">${altLabel}</a>` : '';
+                                    txHashHtml = `<div style="font-size:9.5px; font-family:\'JetBrains Mono\'; display:flex; align-items:center; gap:4px; margin-top:2px;"><a href="${txUrl}" target="_blank" rel="noopener noreferrer" style="color:#38bdf8; font-weight:700; text-decoration:none;" title="${explorerName} üzerinde aç">🔗 ${shortH}</a> ${altLink}</div>`;
                                 } else {
                                     const shortH = a.tx_hash.length > 14 ? (a.tx_hash.slice(0, 6) + '...' + a.tx_hash.slice(-4)) : a.tx_hash;
                                     txHashHtml = `<div style="font-size:9.5px; color:#64748b; font-family:\'JetBrains Mono\';">${shortH}</div>`;
