@@ -8657,8 +8657,17 @@ async function loadAdminMetrics() {
                     binInflowEl.innerText = `24s Net Borsa Girişi: ${sign}$${(Math.abs(binInflow) / 1e6).toFixed(1)}M`;
                 }
 
-                // 3. Process Netflows for Dump Risk & Accumulation
-                const flowList = Object.values(netflows);
+                // 3. Process Netflows for Dump Risk & Accumulation (Tekilleştirilmiş - Deduplicated)
+                const uniqueFlows = {};
+                for (const f of Object.values(netflows)) {
+                    if (f && f.symbol) {
+                        const sKey = String(f.symbol).toUpperCase();
+                        if (!uniqueFlows[sKey]) {
+                            uniqueFlows[sKey] = f;
+                        }
+                    }
+                }
+                const flowList = Object.values(uniqueFlows);
                 const dumpRiskCoins = flowList.filter(f => (f.z_score >= 2.0 || f.is_dump_risk)).sort((a,b) => b.z_score - a.z_score);
                 const accumCoins = flowList.filter(f => (f.z_score <= -2.0 || f.is_accumulation)).sort((a,b) => a.z_score - b.z_score);
 
@@ -15892,7 +15901,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "ammunition": market_data.get_ammunition_status() if (market_data and hasattr(market_data, 'get_ammunition_status')) else {},
                 "recent_alerts": market_data.get_recent_whale_alerts(25) if (market_data and hasattr(market_data, 'get_recent_whale_alerts')) else [],
                 "radar_health": market_data.get_whale_radar_health() if (market_data and hasattr(market_data, 'get_whale_radar_health')) else {},
-                "exchange_netflows": {k: dict(v) for k, v in list(getattr(market_data, 'exchange_netflows', {}).items())} if market_data else {}
+                "exchange_netflows": {k: dict(v) for k, v in list(getattr(market_data, 'exchange_netflows', {}).items()) if '/' in k} if market_data else {}
             }
 
             return web.json_response({

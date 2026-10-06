@@ -1969,6 +1969,12 @@ class MarketDataManager:
         clean_s = self._clean_symbol(symbol)
         feat = getattr(self, 'symbol_features', {}).get(clean_s, {})
         vol_24h = float(feat.get('volume_24h_usd', 0.0) or 0.0)
+        if vol_24h <= 0.0 and hasattr(self, 'candles_5m'):
+            df_s = self.candles_5m.get(symbol)
+            if df_s is None or df_s.empty:
+                df_s = self.candles_5m.get(clean_s)
+            if df_s is not None and isinstance(df_s, pd.DataFrame) and not df_s.empty:
+                vol_24h = float((df_s['volume'] * df_s['close']).sum())
 
         is_tier1 = any(m in clean_s for m in ["BTC", "ETH", "SOL", "BNB"])
         is_tier3 = any(m in clean_s for m in ["PEPE", "SHIB", "DOGE", "BONK", "MEME", "FLOKI", "WIF"])
@@ -3516,12 +3522,12 @@ class MarketDataManager:
                             self.exchange_netflows[clean_unslashed] = self.exchange_netflows[sym]
                             self.exchange_netflows[sym_unslashed] = self.exchange_netflows[sym]
 
-                            # Whale Feed otomatik besleme (Taker Delta / Anormal Akış Tespiti)
+                            # Whale Feed otomatik besleme (Yalnızca gerçek eşik üstü kurumsal akışlar)
                             abs_flow = abs(curr_netflow_usd)
                             thresh_feed = 5_000_000.0 if is_tier1 else (1_000_000.0 if not is_tier3 else 250_000.0)
-                            if (abs_flow >= thresh_feed or is_dump_threat or is_accum_threat) and (now_ts - last_whale_ts) >= 300.0:
+                            if abs_flow >= thresh_feed and (now_ts - last_whale_ts) >= 300.0:
                                 t_dir = 'WALLET_TO_EXCHANGE' if curr_netflow_usd >= 0 else 'EXCHANGE_TO_WALLET'
-                                self.record_whale_transaction(sym, max(abs_flow, thresh_feed), transfer_type=t_dir)
+                                self.record_whale_transaction(sym, abs_flow, transfer_type=t_dir)
 
                         self.whale_provider_status['last_sync_ts'] = now_ts
                         self.whale_provider_status['whale_radar_live'] = True

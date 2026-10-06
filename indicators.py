@@ -1900,28 +1900,34 @@ def calculate_netflow_zscore(flow_history: list, current_flow: float) -> dict:
 
         mu = float(np.mean(arr))
         sigma = float(np.std(arr))
-        if sigma < 1e-4:
-            sigma = 1.0
+        # Kuant Gürültü Tabanı (Finansal Varyans Regülarizasyonu):
+        # Kripto piyasasında mikro-akış gürültüsünün ($1k - $50k) sahte Z-skor patlaması yaratmasını önlemek için
+        # asgari standart sapma tabanı $100,000 USD olarak uygulanır.
+        min_sigma = max(100_000.0, sigma)
 
-        z = (float(current_flow) - mu) / sigma
+        z = (float(current_flow) - mu) / min_sigma
         z_clamped = max(-5.0, min(5.0, z))
 
-        if z_clamped >= 2.0:
+        # Gerçek kurumsal balina tehdidi için hem Z-skoru (>= 2.0σ) hem de asgari $250,000 net akış şarttır.
+        # $10,000 veya $7,000 gibi mikro akışlar asla dump riski veya short squeeze olarak etiketlenemez.
+        has_whale_economic_size = abs(float(current_flow)) >= 250_000.0
+
+        if z_clamped >= 2.0 and has_whale_economic_size:
             regime = 'INFLOW_SURGE_DUMP_RISK'
             dump_risk = True
             accum = False
             anomaly = True
-        elif z_clamped <= -2.0:
+        elif z_clamped <= -2.0 and has_whale_economic_size:
             regime = 'OUTFLOW_SURGE_ACCUMULATION'
             dump_risk = False
             accum = True
             anomaly = True
-        elif z_clamped >= 1.0:
+        elif z_clamped >= 1.0 or (z_clamped >= 0.5 and float(current_flow) >= 100_000.0):
             regime = 'MILD_INFLOW'
             dump_risk = False
             accum = False
             anomaly = False
-        elif z_clamped <= -1.0:
+        elif z_clamped <= -1.0 or (z_clamped <= -0.5 and float(current_flow) <= -100_000.0):
             regime = 'MILD_OUTFLOW'
             dump_risk = False
             accum = False
