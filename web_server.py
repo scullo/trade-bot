@@ -8727,21 +8727,45 @@ async function loadAdminMetrics() {
                         feedTbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:18px; color:#64748b;">Eşik üstü kurumsal balina işlemi bekleniyor... (Radar arka planda aktif).</td></tr>';
                     } else {
                         feedTbody.innerHTML = alerts.slice().reverse().map(a => {
-                            const isDump = a.is_dump_risk || a.intent === 'DUMP_PREPARATION';
-                            const isAmmo = a.is_bull_ammo || a.intent === 'FRESH_AMMUNITION_MINT' || a.intent === 'COLD_STORAGE_ACCUMULATION';
+                            const isDump = a.is_dump_risk || a.intent === 'DUMP_PREPARATION' || a.intent === 'AGGRESSIVE_MARKET_DUMP';
+                            const isAmmo = a.is_bull_ammo || a.intent === 'FRESH_AMMUNITION_MINT' || a.intent === 'COLD_STORAGE_ACCUMULATION' || a.intent === 'AGGRESSIVE_MARKET_BUY';
+                            const isAggTrade = a.source === 'BINANCE_AGGTRADE';
                             const sevColor = a.severity === 'EXTREME' ? '#ef4444' : (a.severity === 'HIGH' ? '#f59e0b' : '#38bdf8');
-                            const dirTxt = isDump ? 'Cüzdan ➔ Borsa (Yatırma)' : (isAmmo ? 'Borsa ➔ Cüzdan (Çekim)' : 'Dahili Transfer');
-                            const dirColor = isDump ? '#ef4444' : (isAmmo ? '#10b981' : '#94a3b8');
+
+                            let dirTxt = isDump ? 'Cüzdan ➔ Borsa (Yatırma)' : (isAmmo ? 'Borsa ➔ Cüzdan (Çekim)' : 'Dahili Transfer');
+                            let dirColor = isDump ? '#ef4444' : (isAmmo ? '#10b981' : '#94a3b8');
+
+                            if (isAggTrade) {
+                                if (a.side === 'TAKER_SELL' || isDump) {
+                                    dirTxt = '⚡ Piyasa Satışı (Taker Sell)';
+                                    dirColor = '#ef4444';
+                                } else {
+                                    dirTxt = '⚡ Piyasa Alışı (Taker Buy)';
+                                    dirColor = '#10b981';
+                                }
+                            }
+
+                            let intentHtml = a.intent || 'TRANSFER';
+                            if (isAggTrade) {
+                                const pVal = Number(a.price || 0);
+                                const pStr = pVal > 0 ? ` @ $${pVal.toLocaleString('en-US', {minimumFractionDigits: (pVal < 1 ? 4 : 2), maximumFractionDigits: (pVal < 1 ? 6 : 2)})}` : '';
+                                intentHtml = `<span style="background:rgba(0,242,254,0.12); color:#00f2fe; border:1px solid rgba(0,242,254,0.3); padding:2px 5px; border-radius:4px; font-weight:800; font-size:10px;">⚡ BLOK EMİR (&lt;50ms)</span><span style="font-size:11px; color:#cbd5e1; margin-left:4px;">${pStr}</span>`;
+                            }
+
+                            const txHashShort = a.tx_hash ? (a.tx_hash.startsWith('agg_') ? a.tx_hash : (a.tx_hash.length > 14 ? a.tx_hash.slice(0, 6) + '...' + a.tx_hash.slice(-4) : a.tx_hash)) : '';
 
                             return `
                                 <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
-                                    <td style="padding:8px 12px; font-family:\'JetBrains Mono\'; font-size:11px; color:#94a3b8;">${a.time_str || '-'}</td>
+                                    <td style="padding:8px 12px; font-family:\'JetBrains Mono\'; font-size:11px; color:#94a3b8;">
+                                        ${a.time_str || '-'}
+                                        ${txHashShort ? `<div style="font-size:9.5px; color:#64748b; font-family:\'JetBrains Mono\';">${txHashShort}</div>` : ''}
+                                    </td>
                                     <td style="padding:8px 12px; font-weight:700; color:#fff;">${a.symbol || '-'}</td>
                                     <td style="padding:8px 12px; text-align:right; font-weight:700; color:#fff; font-family:\'JetBrains Mono\';">$${(Number(a.amount_usd || 0)/1e6).toFixed(2)}M</td>
                                     <td style="padding:8px 12px; text-align:center;"><span style="background:rgba(255,255,255,0.05); color:#cbd5e1; padding:2px 6px; border-radius:4px; font-size:10.5px;">${a.tier || 'TIER_2'}</span></td>
                                     <td style="padding:8px 12px; text-align:center; font-family:\'JetBrains Mono\'; color:#cbd5e1;">%${(a.vol_ratio_pct || 0).toFixed(1)}</td>
                                     <td style="padding:8px 12px; color:${dirColor}; font-weight:600;">${dirTxt}</td>
-                                    <td style="padding:8px 12px; font-size:11px; color:#cbd5e1;">${a.intent || 'TRANSFER'}</td>
+                                    <td style="padding:8px 12px; font-size:11px; color:#cbd5e1;">${intentHtml}</td>
                                     <td style="padding:8px 12px; text-align:center;"><span style="color:${sevColor}; font-weight:800; font-size:11px;">${a.severity || 'NORMAL'}</span></td>
                                 </tr>
                             `;

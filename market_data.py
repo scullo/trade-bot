@@ -191,6 +191,7 @@ class MarketDataManager:
         }
         self.stablecoin_history_deque = deque(maxlen=48)
         self.whale_transactions_feed = deque(maxlen=50)
+        self.block_trades_history = {}  # symbol -> deque((ts, notional, is_sell)) rolling 60s block orders
         self.whale_provider_status = {
             'defillama': {'status': 'CONNECTING', 'latency_ms': 0, 'last_success': 0.0, 'errors': 0},
             'binance_flow': {'status': 'ONLINE', 'latency_ms': 0, 'last_success': time.time(), 'errors': 0},
@@ -1924,12 +1925,27 @@ class MarketDataManager:
                 'regime': 'BALANCED_FLOW',
                 'is_dump_risk': False,
                 'is_accumulation': False,
+                'block_dump_active': False,
+                'block_squeeze_active': False,
+                'block_sells_60s': 0.0,
+                'block_buys_60s': 0.0,
+                'block_netflow_60s': 0.0,
+                'last_block_trade_ts': 0.0,
                 'tier': 'TIER_1' if any(m in clean_s for m in ["BTC", "ETH", "SOL", "BNB"]) else ('TIER_3' if any(m in clean_s for m in ["PEPE", "SHIB", "DOGE", "BONK", "MEME", "FLOKI", "WIF"]) else 'TIER_2'),
                 'last_whale_transfer_ts': 0.0,
                 'last_whale_amount_usd': 0.0,
                 'last_whale_intent': 'NONE',
                 'last_update': 0.0
             }
+        else:
+            # 60s Dinamik Blok Baskı Yaşlanma Doğrulaması (Fail-safe auto-cooling)
+            last_b_ts = float(flow_data.get('last_block_trade_ts', 0.0))
+            if (time.time() - last_b_ts) > 60.0:
+                flow_data['block_dump_active'] = False
+                flow_data['block_squeeze_active'] = False
+                flow_data['block_sells_60s'] = 0.0
+                flow_data['block_buys_60s'] = 0.0
+                flow_data['block_netflow_60s'] = 0.0
         return flow_data
 
     def get_ammunition_status(self) -> dict:
@@ -1964,7 +1980,70 @@ class MarketDataManager:
             'healthy': is_ok
         }
 
-    def record_whale_transaction(self, symbol: str, amount_usd: float, transfer_type: str = 'WALLET_TO_EXCHANGE', tx_hash: str = None) -> dict:
+    def _record_block_trade_pressure(self, symbol: str, amount_usd: float, is_sell: bool, trade_ts: float):
+        """Son 60 saniyelik agresif kurumsal piyasa vuruşlarını (aggTrade blok emirleri) kaydeder ve kalkan durumunu günceller."""
+        clean_s = self._clean_symbol(symbol)
+        if not hasattr(self, 'block_trades_history'):
+            self.block_trades_history = {}
+        if clean_s not in self.block_trades_history:
+            self.block_trades_history[clean_s] = deque()
+
+        dq = self.block_trades_history[clean_s]
+        dq.append((trade_ts, float(amount_usd), bool(is_sell)))
+
+        cutoff = trade_ts - 60.0
+        while dq and dq[0][0] < cutoff:
+            dq.popleft()
+
+        sells_60s = sum(item[1] for item in dq if item[2])
+        buys_60s = sum(item[1] for item in dq if not item[2])
+        block_netflow_60s = buys_60s - sells_60s
+
+        is_tier1 = any(m in clean_s for m in ["BTC", "ETH", "SOL", "BNB"])
+        is_tier3 = any(m in clean_s for m in ["PEPE", "SHIB", "DOGE", "BONK", "MEME", "FLOKI", "WIF"])
+        block_thresh_60s = 2_000_000.0 if is_tier1 else (500_000.0 if is_tier3 else 750_000.0)
+
+        block_dump_active = (sells_60s >= block_thresh_60s)
+        block_squeeze_active = (buys_60s >= block_thresh_60s)
+
+        target_keys = [
+            symbol,
+            clean_s,
+            clean_s.replace('/', '').replace(':USDT', ''),
+            symbol.replace('/', '').replace(':USDT', '')
+        ]
+        for tk in target_keys:
+            if tk not in self.exchange_netflows:
+                self.exchange_netflows[tk] = {
+                    'symbol': symbol,
+                    'netflow_24h_usd': 0.0,
+                    'z_score': 0.0,
+                    'regime': 'BALANCED_FLOW',
+                    'is_dump_risk': False,
+                    'is_accumulation': False,
+                    'tier': 'TIER_1' if is_tier1 else ('TIER_3' if is_tier3 else 'TIER_2'),
+                    'last_whale_transfer_ts': trade_ts,
+                    'last_whale_amount_usd': amount_usd,
+                    'last_whale_intent': 'AGGRESSIVE_MARKET_DUMP' if is_sell else 'AGGRESSIVE_MARKET_BUY',
+                    'last_update': trade_ts
+                }
+            self.exchange_netflows[tk]['block_dump_active'] = block_dump_active
+            self.exchange_netflows[tk]['block_squeeze_active'] = block_squeeze_active
+            self.exchange_netflows[tk]['block_sells_60s'] = round(sells_60s, 2)
+            self.exchange_netflows[tk]['block_buys_60s'] = round(buys_60s, 2)
+            self.exchange_netflows[tk]['block_netflow_60s'] = round(block_netflow_60s, 2)
+            self.exchange_netflows[tk]['last_block_trade_ts'] = trade_ts
+
+    def record_whale_transaction(
+        self,
+        symbol: str,
+        amount_usd: float,
+        transfer_type: str = 'WALLET_TO_EXCHANGE',
+        tx_hash: str = None,
+        price: float = 0.0,
+        source: str = 'BINANCE_CEX',
+        side: str = None
+    ) -> dict:
         """Büyük bir on-chain veya borsa içi balina transferi gerçekleştiğinde beslemeye ve kalkan hafızasına kaydeder."""
         clean_s = self._clean_symbol(symbol)
         feat = getattr(self, 'symbol_features', {}).get(clean_s, {})
@@ -1986,6 +2065,9 @@ class MarketDataManager:
         res['timestamp'] = now_ts
         res['time_str'] = datetime.now(timezone(timedelta(hours=3))).strftime("%H:%M:%S")
         res['tx_hash'] = tx_hash or f"tx_{int(now_ts * 1000)}"
+        res['price'] = float(price or 0.0)
+        res['source'] = str(source or 'BINANCE_CEX')
+        res['side'] = str(side or ('TAKER_SELL' if res.get('is_dump_risk') else 'TAKER_BUY'))
 
         if res['is_whale']:
             self.whale_transactions_feed.append(res)
@@ -3542,6 +3624,80 @@ class MarketDataManager:
                 poll_interval = getattr(config, 'NETFLOW_REFRESH_INTERVAL_SEC', 90)
                 await asyncio.sleep(poll_interval)
 
+        # Worker 11: Gerçek Zamanlı Binance WebSocket aggTrade Blok Emir Dedektörü (< 50ms)
+        agg_streams = []
+        for s in self.all_symbols:
+            clean_s_ws = self._clean_symbol(s).replace('/', '').lower().replace(':usdt', '')
+            agg_streams.append(f"{clean_s_ws}@aggTrade")
+
+        agg_chunk_size = 35
+        agg_chunks = [agg_streams[i:i + agg_chunk_size] for i in range(0, len(agg_streams), agg_chunk_size)]
+
+        async def aggtrade_worker(chunk_id, chunk):
+            url = f"wss://fstream.binance.com/market/stream?streams={'/'.join(chunk)}"
+            while True:
+                try:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.ws_connect(url, heartbeat=10) as ws:
+                            print(f">> [CANLI] Binance aggTrade Blok Emir Akışı chunk-{chunk_id} bağlandı ({len(chunk)} parite).")
+                            while True:
+                                try:
+                                    msg = await asyncio.wait_for(ws.receive(), timeout=45.0)
+                                except asyncio.TimeoutError:
+                                    print(f">> [AGGTRADE CHUNK-{chunk_id} ZOMBİ TESPİTİ] 45s veri gelmedi, soket yenileniyor...")
+                                    break
+
+                                if msg.type == aiohttp.WSMsgType.TEXT:
+                                    self.last_stream_tick_time = time.time()
+                                    data = json.loads(msg.data)
+                                    payload = data.get('data', data) if isinstance(data, dict) else {}
+                                    if not payload or not isinstance(payload, dict):
+                                        continue
+
+                                    p = float(payload.get('p', 0.0) or 0.0)
+                                    q = float(payload.get('q', 0.0) or 0.0)
+                                    notional = p * q
+                                    # Ultra-hafif mikrosaniye filtresi: 100k altı perakende işlemler tek satırda elenir
+                                    if notional < 100_000.0:
+                                        continue
+
+                                    raw_s = (payload.get('s') or '').upper()
+                                    norm_s = symbol_map.get(raw_s, raw_s.replace('USDT', '/USDT'))
+                                    if norm_s not in self.all_symbols:
+                                        continue
+
+                                    clean_s = self._clean_symbol(norm_s)
+                                    is_tier1 = any(m in clean_s for m in ["BTC", "ETH", "SOL", "BNB"])
+                                    is_tier3 = any(m in clean_s for m in ["PEPE", "SHIB", "DOGE", "BONK", "MEME", "FLOKI", "WIF"])
+
+                                    thresh = 1_000_000.0 if is_tier1 else (100_000.0 if is_tier3 else 250_000.0)
+                                    if notional >= thresh:
+                                        is_buyer_maker = bool(payload.get('m', False))
+                                        is_sell = is_buyer_maker  # True = Taker Seller (Agresif Piyasa Satışı)
+                                        side_str = 'TAKER_SELL' if is_sell else 'TAKER_BUY'
+                                        a_id = payload.get('a', '')
+                                        trade_ts = float(payload.get('T', time.time() * 1000.0)) / 1000.0
+
+                                        self._record_block_trade_pressure(norm_s, notional, is_sell, trade_ts)
+                                        self.record_whale_transaction(
+                                            symbol=norm_s,
+                                            amount_usd=notional,
+                                            transfer_type='MARKET_SELL_DUMP' if is_sell else 'MARKET_BUY_PUMP',
+                                            tx_hash=f"agg_{a_id}",
+                                            price=p,
+                                            source='BINANCE_AGGTRADE',
+                                            side=side_str
+                                        )
+                                        tier_str = "TIER_1" if is_tier1 else ("TIER_3" if is_tier3 else "TIER_2")
+                                        act_icon = "🛑 BLOK SATIŞ" if is_sell else "⚡ BLOK ALIŞ"
+                                        print(f">> [⚡ {act_icon} <50ms] {norm_s} ({tier_str}) | {side_str} | ${notional/1e6:.2f}M @ ${p:,.4f} | ID: agg_{a_id}")
+
+                                elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
+                                    break
+                except Exception as e:
+                    print(f">> [AGGTRADE WS UYARI chunk-{chunk_id}] {e}")
+                    await asyncio.sleep(2)
+
         # Her worker'ı crash-proof saran koruyucu (bir worker çökerse diğerlerini öldürmez, otomatik yeniden başlatır)
         async def resilient_worker(name, coro_fn, *args):
             backoff = 2
@@ -3567,7 +3723,8 @@ class MarketDataManager:
             resilient_worker("CoinbaseLeadLag", coinbase_lead_lag_worker),
             resilient_worker("OpenInterestRadar", open_interest_worker),
             resilient_worker("WhaleNetflowRadar", whale_netflow_worker),
-        ] + [resilient_worker(f"KLine-Chunk-{i}", kline_worker, i, c) for i, c in enumerate(kline_chunks)]
+        ] + [resilient_worker(f"KLine-Chunk-{i}", kline_worker, i, c) for i, c in enumerate(kline_chunks)] \
+          + [resilient_worker(f"AggTrade-Chunk-{i}", aggtrade_worker, i, c) for i, c in enumerate(agg_chunks)]
 
         self._active_stream_tasks = [asyncio.create_task(t) for t in tasks]
         try:

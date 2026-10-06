@@ -1959,26 +1959,44 @@ def classify_whale_transfer(
     transfer_type: str = 'WALLET_TO_EXCHANGE'
 ) -> dict:
     """
-    On-Chain Balina Transferini Parite Kademesi (Tier-1, 2, 3) ve 24s Hacme Göre Sınıflandırır.
+    On-Chain Balina Transferini veya Binance WebSocket aggTrade Blok Emirlerini
+    Parite Kademesi (Tier-1, 2, 3) ve 24s Hacme Göre Sınıflandırır.
     
-    Tier-1 (Majör: BTC, ETH, SOL): >= $10,000,000
-    Tier-2 (Standart Altcoin):     >= $2,000,000
-    Tier-3 (Meme & Düşük Liq):    >= $500,000
-    Hacim Oranı:                   >= %2.0 (Tek transferde 24s hacmin %2'si aşılırsa doğrudan DUMP riski)
+    Blok Emirler (aggTrade):
+      Tier-1 (BTC, ETH, SOL, BNB): >= $1,000,000
+      Tier-2 (Standart Altcoin):   >= $250,000
+      Tier-3 (Meme & Düşük Liq):  >= $100,000
+
+    On-Chain Transferler:
+      Tier-1: >= $10,000,000
+      Tier-2: >= $2,000,000
+      Tier-3: >= $500,000
     """
     tier_upper = str(tier).upper()
-    if '1' in tier_upper:
-        tier_thresh = 10_000_000.0
-    elif '3' in tier_upper:
-        tier_thresh = 500_000.0
+    t_type = str(transfer_type).upper()
+    is_block = any(k in t_type for k in ['AGGTRADE', 'BLOCK', 'MARKET'])
+
+    if is_block:
+        if '1' in tier_upper:
+            tier_thresh = 1_000_000.0
+        elif '3' in tier_upper:
+            tier_thresh = 100_000.0
+        else:
+            tier_thresh = 250_000.0
     else:
-        tier_thresh = 2_000_000.0
+        if '1' in tier_upper:
+            tier_thresh = 10_000_000.0
+        elif '3' in tier_upper:
+            tier_thresh = 500_000.0
+        else:
+            tier_thresh = 2_000_000.0
 
     amt = float(amount_usd or 0.0)
     vol = float(volume_24h_usd or 0.0)
     vol_ratio = (amt / vol * 100.0) if vol > 0 else 0.0
 
-    is_whale = (amt >= tier_thresh) or (vol_ratio >= 2.0 and amt >= 200_000.0)
+    min_abs_thresh = 100_000.0 if is_block else 200_000.0
+    is_whale = (amt >= tier_thresh) or (vol_ratio >= 2.0 and amt >= min_abs_thresh)
 
     severity = 'NORMAL'
     if is_whale:
@@ -1989,14 +2007,13 @@ def classify_whale_transfer(
         else:
             severity = 'MODERATE'
 
-    # Transfer yönü niyeti
-    t_type = str(transfer_type).upper()
-    if 'WALLET_TO_EXCHANGE' in t_type or 'TO_EXCHANGE' in t_type:
-        intent = 'DUMP_PREPARATION' if is_whale else 'DEPOSIT'
+    # Transfer / Blok Emir yönü niyeti
+    if 'WALLET_TO_EXCHANGE' in t_type or 'TO_EXCHANGE' in t_type or (is_block and ('SELL' in t_type or 'DUMP' in t_type)):
+        intent = 'AGGRESSIVE_MARKET_DUMP' if is_block else ('DUMP_PREPARATION' if is_whale else 'DEPOSIT')
         is_dump_risk = is_whale
         is_bull_ammo = False
-    elif 'EXCHANGE_TO_WALLET' in t_type or 'TO_WALLET' in t_type:
-        intent = 'COLD_STORAGE_ACCUMULATION' if is_whale else 'WITHDRAWAL'
+    elif 'EXCHANGE_TO_WALLET' in t_type or 'TO_WALLET' in t_type or (is_block and ('BUY' in t_type or 'PUMP' in t_type)):
+        intent = 'AGGRESSIVE_MARKET_BUY' if is_block else ('COLD_STORAGE_ACCUMULATION' if is_whale else 'WITHDRAWAL')
         is_dump_risk = False
         is_bull_ammo = is_whale
     elif 'TREASURY' in t_type or 'STABLE' in t_type:

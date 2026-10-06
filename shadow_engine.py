@@ -185,7 +185,11 @@ class ShadowExecutionEngine:
     def extract_shield_name(self, reason: str) -> str:
         """Hata veya ret mesajından profesyonel kalkan adını teşhis eder."""
         r = str(reason or "")
-        if "Balina Borsa Giriş" in r or "WHALE_EXCHANGE_INFLOW" in r or ("Balina" in r and "Giriş" in r):
+        if "Kurumsal Blok Satış" in r or "INSTITUTIONAL_BLOCK_SELL" in r or "BLOCK_SELL" in r:
+            return "Kurumsal Blok Satış Kalkanı (Institutional Block Sell Shield)"
+        elif "Kurumsal Blok Alış" in r or "INSTITUTIONAL_BLOCK_BUY" in r or "BLOCK_BUY" in r:
+            return "Kurumsal Blok Alış Kalkanı (Institutional Block Buy Squeeze Shield)"
+        elif "Balina Borsa Giriş" in r or "WHALE_EXCHANGE_INFLOW" in r or ("Balina" in r and "Giriş" in r):
             return "Balina Borsa Giriş Kalkanı (Exchange Inflow Dump Shield)"
         elif "Soğuk Cüzdan" in r or "WHALE_EXCHANGE_OUTFLOW" in r or ("Soğuk" in r and "Çıkış" in r):
             return "Soğuk Cüzdan Çıkış Kalkanı (Exchange Outflow Squeeze Shield)"

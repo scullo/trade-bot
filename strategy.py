@@ -1453,7 +1453,37 @@ class StrategyEngine:
                 rej_msg = f"⚡ Hawkes Tasfiye Çığı Freni: Piyasada kendi kendini besleyen tasfiye çığı aktif (η={hawkes_val:.2f} >= {HAWKES_AVALANCHE_THRESHOLD_ETA:.2f}). Seviyeler çığ altında ezileceği için işlem engellendi."
                 print(f">> [RED - HAWKES ÇIĞ FRENİ] {symbol}: {rej_msg}")
                 self.log_rejection(symbol, reason, rej_msg, hawkes_eta=hawkes_val)
-                return {"error": "HAWKES_AVALANCHE_BRAKE_ACTIVE"}
+        # ── 0e. GERÇEK ZAMANLI KURUMSAL aggTrade BLOK EMİR DEDEKTÖRÜ (<50ms VETO KALKANI) ──
+        if hasattr(self, 'market_data') and self.market_data:
+            try:
+                sym_netflow_fast = self.market_data.get_symbol_netflow(symbol)
+                if side == "LONG" and sym_netflow_fast.get('block_dump_active'):
+                    block_sells = float(sym_netflow_fast.get('block_sells_60s', 0.0))
+                    rej_msg = (
+                        f"🛑 Kurumsal Blok Satış Kalkanı: Son 60s içinde agresif kurumsal piyasa satışı tespit edildi "
+                        f"(Blok Satış Baskısı: ${block_sells/1e6:.2f}M, Long VETO!)"
+                    )
+                    try:
+                        print(f">> [RED - KURUMSAL BLOK SATIŞ KALKANI] {symbol}: {rej_msg}")
+                    except Exception:
+                        pass
+                    self.log_rejection(symbol, setup_id or reason, rej_msg, planned_r=0.0)
+                    return {"error": "INSTITUTIONAL_BLOCK_SELL_DUMP_VETO", "reason": rej_msg}
+
+                if side == "SHORT" and sym_netflow_fast.get('block_squeeze_active'):
+                    block_buys = float(sym_netflow_fast.get('block_buys_60s', 0.0))
+                    rej_msg = (
+                        f"🛡️ Kurumsal Blok Alış Kalkanı: Son 60s içinde agresif kurumsal piyasa alışı tespit edildi "
+                        f"(Blok Alış Baskısı: ${block_buys/1e6:.2f}M, Short Squeeze VETO!)"
+                    )
+                    try:
+                        print(f">> [RED - KURUMSAL BLOK ALIŞ KALKANI] {symbol}: {rej_msg}")
+                    except Exception:
+                        pass
+                    self.log_rejection(symbol, setup_id or reason, rej_msg, planned_r=0.0)
+                    return {"error": "INSTITUTIONAL_BLOCK_BUY_SQUEEZE_VETO", "reason": rej_msg}
+            except Exception:
+                pass
 
         # ── 1. ATR / VOLATILITE HESABI & KATMANLI LİKİDİTE EŞİĞİ ──
         atr_pct = 1.2
@@ -3563,6 +3593,34 @@ class StrategyEngine:
                             pass
                         self.log_rejection(symbol, setup_id or reason, rej_msg, exchange_netflow_usd=exchange_netflow_usd, netflow_zscore=netflow_zscore, netflow_regime=netflow_regime, ammunition_bias=ammunition_bias)
                         return {"error": "WHALE_EXCHANGE_OUTFLOW_SQUEEZE_VETO", "reason": rej_msg}
+
+                    # Aşama 1: Kurumsal aggTrade Blok Satış Kalkanı (<50ms Gerçek Zamanlı Long Veto)
+                    if side == "LONG" and sym_netflow.get('block_dump_active'):
+                        block_sells = float(sym_netflow.get('block_sells_60s', 0.0))
+                        rej_msg = (
+                            f"🛑 Kurumsal Blok Satış Kalkanı: Son 60s içinde agresif kurumsal piyasa satışı tespit edildi "
+                            f"(Blok Satış Baskısı: ${block_sells/1e6:.2f}M, Long VETO!)"
+                        )
+                        try:
+                            print(f">> [RED - KURUMSAL BLOK SATIŞ KALKANI] {symbol}: {rej_msg}")
+                        except Exception:
+                            pass
+                        self.log_rejection(symbol, setup_id or reason, rej_msg, exchange_netflow_usd=exchange_netflow_usd, netflow_zscore=netflow_zscore, netflow_regime=netflow_regime, ammunition_bias=ammunition_bias)
+                        return {"error": "INSTITUTIONAL_BLOCK_SELL_DUMP_VETO", "reason": rej_msg}
+
+                    # Aşama 1: Kurumsal aggTrade Blok Alış Kalkanı (<50ms Gerçek Zamanlı Short Veto)
+                    if side == "SHORT" and sym_netflow.get('block_squeeze_active'):
+                        block_buys = float(sym_netflow.get('block_buys_60s', 0.0))
+                        rej_msg = (
+                            f"🛡️ Kurumsal Blok Alış Kalkanı: Son 60s içinde agresif kurumsal piyasa alışı tespit edildi "
+                            f"(Blok Alış Baskısı: ${block_buys/1e6:.2f}M, Short Squeeze VETO!)"
+                        )
+                        try:
+                            print(f">> [RED - KURUMSAL BLOK ALIŞ KALKANI] {symbol}: {rej_msg}")
+                        except Exception:
+                            pass
+                        self.log_rejection(symbol, setup_id or reason, rej_msg, exchange_netflow_usd=exchange_netflow_usd, netflow_zscore=netflow_zscore, netflow_regime=netflow_regime, ammunition_bias=ammunition_bias)
+                        return {"error": "INSTITUTIONAL_BLOCK_BUY_SQUEEZE_VETO", "reason": rej_msg}
 
                     # Kural 3: Stabil Kripto Cephane Confluence Ödülü
                     if ENABLE_AMMUNITION_CONFLUENCE and side == "LONG" and ammunition_bias == "BULLISH_FUEL":
