@@ -2650,6 +2650,17 @@ class StrategyEngine:
                 setup_archetype = "COUNTER_TREND_CEILING"
                 setup_archetype_label = "Tepe Reddi / Tavan (Mean Reversion)"
 
+        # 🐋 Stabil Kripto Borsa Cephane Confluence Ödülü (Erken Kontrol)
+        if ENABLE_AMMUNITION_CONFLUENCE and side == "LONG" and hasattr(self, 'market_data') and self.market_data:
+            try:
+                ammo_st = self.market_data.get_ammunition_status()
+                if ammo_st.get('bias') == 'BULLISH_FUEL':
+                    if confluence_list is not None and isinstance(confluence_list, list):
+                        if "Stabil_Cephane_Baskisi_Pozitif" not in confluence_list:
+                            confluence_list.append("Stabil_Cephane_Baskisi_Pozitif")
+            except Exception:
+                pass
+
         is_macro_bear = (regime_clim in ["BEAR_DUMP", "BEAR_TREND"]) or (btc_chg_4h <= -1.2) or (btc_chg_4h <= -0.80 and btc_chg_1h <= -0.20)
         is_macro_bull = (regime_clim in ["BULL_TREND", "BULL_PUMP", "EXTREME_BULL"]) or (btc_chg_4h >= 1.2) or (btc_chg_4h >= 0.80 and btc_chg_1h >= 0.20)
 
@@ -3508,10 +3519,16 @@ class StrategyEngine:
 
                 if is_data_fresh:
                     # Dinamik Z-Skor Eşiği: AutonomousDNACalibrator / coin_dna hassasiyet çarpanı
-                    dna_whale_mult = 1.0
-                    clean_sym_upper = self.market_data._clean_symbol(symbol) if hasattr(self.market_data, '_clean_symbol') else symbol.replace('/', '').replace(':USDT', '').upper()
-                    if hasattr(self, 'calibrated_coin_dna') and clean_sym_upper in self.calibrated_coin_dna:
-                        dna_whale_mult = float(self.calibrated_coin_dna[clean_sym_upper].get('whale_sensitivity', 1.0))
+                    base_sym = symbol.replace('/USDT', '').replace(':USDT', '').replace('USDT', '').replace('/', '').upper()
+                    raw_sym = symbol.replace('/', '').replace(':USDT', '').upper()
+                    clean_sym = self.market_data._clean_symbol(symbol) if hasattr(self.market_data, '_clean_symbol') else symbol
+                    dna_entry = (
+                        getattr(self, 'calibrated_coin_dna', {}).get(base_sym) or
+                        getattr(self, 'calibrated_coin_dna', {}).get(raw_sym) or
+                        getattr(self, 'calibrated_coin_dna', {}).get(clean_sym) or
+                        getattr(self, 'calibrated_coin_dna', {}).get(symbol) or {}
+                    )
+                    dna_whale_mult = float(dna_entry.get('whale_sensitivity', 1.0))
 
                     dyn_inflow_thresh = NETFLOW_INFLOW_ZSCORE_THRESHOLD / max(0.5, min(2.0, dna_whale_mult))
                     dyn_outflow_thresh = NETFLOW_OUTFLOW_ZSCORE_THRESHOLD / max(0.5, min(2.0, dna_whale_mult))

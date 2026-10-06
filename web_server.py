@@ -15892,7 +15892,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "ammunition": market_data.get_ammunition_status() if (market_data and hasattr(market_data, 'get_ammunition_status')) else {},
                 "recent_alerts": market_data.get_recent_whale_alerts(25) if (market_data and hasattr(market_data, 'get_recent_whale_alerts')) else [],
                 "radar_health": market_data.get_whale_radar_health() if (market_data and hasattr(market_data, 'get_whale_radar_health')) else {},
-                "exchange_netflows": {k: dict(v) for k, v in list(getattr(market_data, 'exchange_netflows', {}).items())[:100]} if market_data else {}
+                "exchange_netflows": {k: dict(v) for k, v in list(getattr(market_data, 'exchange_netflows', {}).items())} if market_data else {}
             }
 
             return web.json_response({

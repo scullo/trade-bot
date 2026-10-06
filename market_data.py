@@ -1903,21 +1903,32 @@ class MarketDataManager:
     def get_symbol_netflow(self, symbol: str) -> dict:
         """Paritenin anlık borsa net akış durumunu ve Z-skorunu RAM'den 0.01ms içinde döndürür."""
         clean_s = self._clean_symbol(symbol)
-        flow_data = self.exchange_netflows.get(clean_s, {})
+        raw_s = symbol.replace('/', '').replace(':USDT', '')
+        clean_raw = clean_s.replace('/', '').replace(':USDT', '')
+
+        flow_data = (
+            self.exchange_netflows.get(clean_s) or
+            self.exchange_netflows.get(symbol) or
+            self.exchange_netflows.get(raw_s) or
+            self.exchange_netflows.get(clean_raw) or
+            self.exchange_netflows.get(f"{clean_s}:USDT") or
+            self.exchange_netflows.get(f"{clean_raw}USDT") or
+            {}
+        )
         if not flow_data:
-            flow_data = self.exchange_netflows.get(symbol, {
+            flow_data = {
                 'symbol': symbol,
                 'netflow_24h_usd': 0.0,
                 'z_score': 0.0,
                 'regime': 'BALANCED_FLOW',
                 'is_dump_risk': False,
                 'is_accumulation': False,
-                'tier': 'TIER_2',
+                'tier': 'TIER_1' if any(m in clean_s for m in ["BTC", "ETH", "SOL", "BNB"]) else ('TIER_3' if any(m in clean_s for m in ["PEPE", "SHIB", "DOGE", "BONK", "MEME", "FLOKI", "WIF"]) else 'TIER_2'),
                 'last_whale_transfer_ts': 0.0,
                 'last_whale_amount_usd': 0.0,
                 'last_whale_intent': 'NONE',
                 'last_update': 0.0
-            })
+            }
         return flow_data
 
     def get_ammunition_status(self) -> dict:
@@ -3498,6 +3509,10 @@ class MarketDataManager:
                                 'last_update': now_ts
                             }
                             self.exchange_netflows[clean_s] = self.exchange_netflows[sym]
+                            clean_unslashed = clean_s.replace('/', '').replace(':USDT', '')
+                            sym_unslashed = sym.replace('/', '').replace(':USDT', '')
+                            self.exchange_netflows[clean_unslashed] = self.exchange_netflows[sym]
+                            self.exchange_netflows[sym_unslashed] = self.exchange_netflows[sym]
 
                         self.whale_provider_status['last_sync_ts'] = now_ts
                         self.whale_provider_status['whale_radar_live'] = True

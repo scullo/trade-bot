@@ -1439,9 +1439,11 @@ def create_shadow_dna_excel_report(
     ws3.set_column('AB:AB', 18)  # Çıkış Zamanı
     ws3.set_column('AC:AC', 22)  # O-U Yarılanma (τ)
     ws3.set_column('AD:AD', 26)  # Kapanış Nedeni
+    ws3.set_column('AE:AE', 24)  # Borsa Net Akışı ($ / σ)
+    ws3.set_column('AF:AF', 22)  # Stabil Kripto Cephanesi
 
-    ws3.merge_range('B2:AD2', 'MİKROSKOBİK GÖLGE İŞLEM DEFTERİ (CANLI PİYASA SİMÜLASYONU)', title_fmt)
-    ws3.merge_range('B3:AD3', 'Canlı Mumlarla Takip Edilerek TP1, TP2 veya Stop Akıbeti Belirlenmiş Tüm Sanal Pozisyonlar ve Adli Otopsi Raporu', subtitle_fmt)
+    ws3.merge_range('B2:AF2', 'MİKROSKOBİK GÖLGE İŞLEM DEFTERİ (CANLI PİYASA SİMÜLASYONU)', title_fmt)
+    ws3.merge_range('B3:AF3', 'Canlı Mumlarla Takip Edilerek TP1, TP2 veya Stop Akıbeti Belirlenmiş Tüm Sanal Pozisyonlar ve Adli Otopsi Raporu', subtitle_fmt)
     ws3.set_row(1, 28)
     ws3.set_row(2, 18)
 
@@ -1453,7 +1455,8 @@ def create_shadow_dna_excel_report(
         'Zirve MFE (%)', 'Maks MAE (%)', 'ROE (%)', 'Sanal Net PnL ($)', 'Kalkan Teşhisi',
         'Volatilite ATR (%)', 'Hacim Çarpanı', 'CVD Alıcı (%)', 'RS Skoru',
         'Süre (Dk)', 'Giriş Zamanı', 'Çıkış Zamanı',
-        'O-U Yarılanma Ömrü (τ)', 'Kapanış Nedeni'
+        'O-U Yarılanma Ömrü (τ)', 'Kapanış Nedeni',
+        'Borsa Net Akışı ($ / σ)', 'Stabil Kripto Cephanesi'
     ]
     ws3.set_row(4, 24)
     for c_i, h_txt in enumerate(headers_s3, start=1):
@@ -1527,6 +1530,31 @@ def create_shadow_dna_excel_report(
         close_reason_val = str(t_item.get('exit_status') or t_item.get('close_reason') or t_item.get('status') or '-')
         ws3.write(r3_idx, 28, ou_str, cell_c)
         ws3.write(r3_idx, 29, close_reason_val, cell_l)
+
+        # Borsa Net Akışı & Balina (30 & 31)
+        sh_flow = float(t_item.get('exchange_netflow_usd') or telem.get('exchange_netflow_usd', 0.0) or 0.0)
+        sh_z = float(t_item.get('netflow_zscore') or telem.get('netflow_zscore', 0.0) or 0.0)
+        if abs(sh_flow) > 0:
+            sh_sign = "+" if sh_flow >= 0 else "-"
+            sh_flow_str = f"{sh_sign}${abs(sh_flow)/1e6:.1f}M ({sh_z:+.1f}σ)"
+            sh_flow_fmt = cell_pnl_green if sh_flow >= 0 else cell_pnl_red
+        else:
+            sh_flow_str = "⚪ Dengeli"
+            sh_flow_fmt = cell_c
+        ws3.write(r3_idx, 30, sh_flow_str, sh_flow_fmt)
+
+        sh_ammo = str(t_item.get('ammunition_bias') or telem.get('ammunition_bias', 'NEUTRAL'))
+        if sh_ammo == 'BULLISH_FUEL':
+            sh_ammo_str = "⚡ Boğa Yakıtı"
+            sh_ammo_fmt = cell_pnl_green
+        elif sh_ammo == 'CAPITAL_DRAIN':
+            sh_ammo_str = "⚠️ Cephane Kaçışı"
+            sh_ammo_fmt = cell_pnl_red
+        else:
+            sh_ammo_str = "⚪ Nötr Rezerv"
+            sh_ammo_fmt = cell_c
+        ws3.write(r3_idx, 31, sh_ammo_str, sh_ammo_fmt)
+
         r3_idx += 1
 
     # ══════════════════════════════════════════════════════════════════════

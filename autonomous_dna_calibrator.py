@@ -466,6 +466,14 @@ class AutonomousDNACalibrator:
                     candidate_reasons.append(f"{len(muted)} Zararlı Setup Uyutuldu ({', '.join(muted)})")
                     proposed = True
 
+            # Boyut 8: On-Chain Balina & Netflow Hassasiyet Çarpanı (Whale Sensitivity)
+            if "KORU" in base_status:
+                candidate_cfg["whale_sensitivity"] = 1.25
+            elif "GEVŞET" in base_status:
+                candidate_cfg["whale_sensitivity"] = 0.85
+            else:
+                candidate_cfg["whale_sensitivity"] = 1.00
+
             # 360° Derin Kuant Teşhis Yorumcusu (Forensic Commentary)
             commentary = (
                 f"{sym} paritesi {candidate_cfg.get('liquidity_tier_label', 'Tier-2')} katmanında analiz edildi. "
