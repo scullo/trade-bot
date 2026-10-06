@@ -189,6 +189,10 @@ class ShadowExecutionEngine:
             return "Kurumsal Blok Satış Kalkanı (Institutional Block Sell Shield)"
         elif "Kurumsal Blok Alış" in r or "INSTITUTIONAL_BLOCK_BUY" in r or "BLOCK_BUY" in r:
             return "Kurumsal Blok Alış Kalkanı (Institutional Block Buy Squeeze Shield)"
+        elif "Mempool Balina Giriş" in r or "MEMPOOL_WHALE_INFLOW" in r:
+            return "Mempool Balina Giriş Kalkanı (Mempool Inflow Dump Shield)"
+        elif "Mempool Soğuk Cüzdan" in r or "MEMPOOL_WHALE_OUTFLOW" in r:
+            return "Mempool Soğuk Cüzdan Kalkanı (Mempool Outflow Squeeze Shield)"
         elif "Balina Borsa Giriş" in r or "WHALE_EXCHANGE_INFLOW" in r or ("Balina" in r and "Giriş" in r):
             return "Balina Borsa Giriş Kalkanı (Exchange Inflow Dump Shield)"
         elif "Soğuk Cüzdan" in r or "WHALE_EXCHANGE_OUTFLOW" in r or ("Soğuk" in r and "Çıkış" in r):

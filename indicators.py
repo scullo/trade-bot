@@ -1956,7 +1956,8 @@ def classify_whale_transfer(
     amount_usd: float,
     volume_24h_usd: float = 0.0,
     tier: str = 'TIER_2',
-    transfer_type: str = 'WALLET_TO_EXCHANGE'
+    transfer_type: str = 'WALLET_TO_EXCHANGE',
+    source: str = None
 ) -> dict:
     """
     On-Chain Balina Transferini veya Binance WebSocket aggTrade Blok Emirlerini
@@ -1967,14 +1968,20 @@ def classify_whale_transfer(
       Tier-2 (Standart Altcoin):   >= $250,000
       Tier-3 (Meme & Düşük Liq):  >= $100,000
 
-    On-Chain Transferler:
-      Tier-1: >= $10,000,000
+    On-Chain Mempool Transferler:
+      Tier-1: >= $1,000,000
+      Tier-2: >= $500,000
+      Tier-3: >= $250,000
+
+    Genel On-Chain Transferler:
+      Tier-1: >= $5,000,000
       Tier-2: >= $2,000,000
       Tier-3: >= $500,000
     """
     tier_upper = str(tier).upper()
     t_type = str(transfer_type).upper()
-    is_block = any(k in t_type for k in ['AGGTRADE', 'BLOCK', 'MARKET'])
+    is_block = any(k in t_type for k in ['AGGTRADE', 'BLOCK', 'MARKET']) or (source == 'BINANCE_AGGTRADE')
+    is_mempool = any(k in t_type for k in ['MEMPOOL', 'ONCHAIN']) or (source == 'ONCHAIN_MEMPOOL')
 
     if is_block:
         if '1' in tier_upper:
@@ -1983,9 +1990,16 @@ def classify_whale_transfer(
             tier_thresh = 100_000.0
         else:
             tier_thresh = 250_000.0
+    elif is_mempool:
+        if '1' in tier_upper:
+            tier_thresh = 1_000_000.0
+        elif '3' in tier_upper:
+            tier_thresh = 250_000.0
+        else:
+            tier_thresh = 500_000.0
     else:
         if '1' in tier_upper:
-            tier_thresh = 10_000_000.0
+            tier_thresh = 5_000_000.0
         elif '3' in tier_upper:
             tier_thresh = 500_000.0
         else:
@@ -2016,7 +2030,7 @@ def classify_whale_transfer(
         intent = 'AGGRESSIVE_MARKET_BUY' if is_block else ('COLD_STORAGE_ACCUMULATION' if is_whale else 'WITHDRAWAL')
         is_dump_risk = False
         is_bull_ammo = is_whale
-    elif 'TREASURY' in t_type or 'STABLE' in t_type:
+    elif 'TREASURY' in t_type or 'STABLE' in t_type or 'MINT' in t_type:
         intent = 'FRESH_AMMUNITION_MINT'
         is_dump_risk = False
         is_bull_ammo = True

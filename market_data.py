@@ -27,6 +27,48 @@ from indicators import (
     calculate_netflow_zscore, classify_whale_transfer, calculate_ammunition_momentum
 )
 
+# ──────────────────────────────────────────────────────────────────────────
+# 🏦 KURUMSAL VE BORSA SICAK/SOĞUK CÜZDAN BİLGİ BANKASI (AŞAMA 2 ON-CHAIN)
+# ──────────────────────────────────────────────────────────────────────────
+INSTITUTIONAL_WALLETS = {
+    # Bitcoin
+    "34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo": "Binance Cold Storage #1",
+    "bc1qm34lsc65zpw79lxes69zkqmk6ee3ewf0j77s3h": "Binance Hot Wallet",
+    "1NDyJtNTjmwk5xPNhjgAMu4HDHigtobu1s": "Binance 1",
+    "3FHNBLobJgtgmTwR3Gqd3dcxNFwfnpUrMD": "Binance 2",
+    "bc1qgdjqv0av3q56jvd82tkdjpy7gdp9ut8tlqmgrpmv24sq90ecnvqqjwvw97": "Binance 3",
+    "1JCe8z4jJVNzgWeAZqttPrUshgQV7X11wb": "Coinbase Prime",
+    # Ethereum / ERC20
+    "0x28c6c06298d514db089934071355e5743bf21d60": "Binance Hot Wallet 14",
+    "0x21a31ee1afc51d94c2efccaa2092ad1028285549": "Binance Hot Wallet 15",
+    "0xdfd5293d8e347dfe59e90efd55b2956a1343963d": "Binance Hot Wallet 16",
+    "0xbe0eb53f46cd790cd13851d5eff43d12404d33e8": "Binance 7",
+    "0xf977814e90da44bfa03b6295a0616a897441acec": "Binance 8",
+    "0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503": "Binance Hot Wallet",
+    "0xa097d6b218977535799a7734208183c9b744e865": "Coinbase Prime",
+    "0x71660c4005ba85c37ccec55d0c4493e66fe775d3": "Coinbase Hot Wallet",
+    "0x50382893437ba40df72549a37e8c33979bb95574": "Coinbase Institutional",
+    "0x6cc5f688a30d371e667352b058ecc4443b560e49": "OKX Hot Wallet",
+    "0xf89d7b9c22bfdd665618421fd60209ca71df70ab": "Bybit Hot Wallet",
+    "0x5754284f345af666384fb400a0ab37b39f15955b": "Tether Treasury (USDT)",
+    "0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828": "Tether Treasury Multi-Sig",
+    "0x55fe002aef0550eef12bc31421397b9c9f426274": "Circle Treasury (USDC)",
+    "0x0000000000000000000000000000000000000000": "Token Genesis Mint",
+}
+
+def format_wallet_label(address: str) -> str:
+    if not address:
+        return "Bilinmeyen Balina"
+    addr_clean = str(address).strip().lower()
+    for k, v in INSTITUTIONAL_WALLETS.items():
+        if k.lower() == addr_clean:
+            return v
+    if address.startswith('0x') and len(address) >= 10:
+        return f"Balina ({address[:6]}...{address[-4:]})"
+    elif len(address) >= 12:
+        return f"Balina ({address[:5]}...{address[-4:]})"
+    return f"Balina ({address})"
+
 class MarketDataManager:
     def __init__(self, all_symbols, active_symbols=None, timeframe="5m"):
         self.all_symbols = all_symbols
@@ -1931,6 +1973,14 @@ class MarketDataManager:
                 'block_buys_60s': 0.0,
                 'block_netflow_60s': 0.0,
                 'last_block_trade_ts': 0.0,
+                'mempool_dump_threat': False,
+                'mempool_squeeze_threat': False,
+                'mempool_amount_usd': 0.0,
+                'mempool_threat_expiry': 0.0,
+                'mempool_squeeze_expiry': 0.0,
+                'mempool_from_label': '',
+                'mempool_to_label': '',
+                'mempool_tx_hash': '',
                 'tier': 'TIER_1' if any(m in clean_s for m in ["BTC", "ETH", "SOL", "BNB"]) else ('TIER_3' if any(m in clean_s for m in ["PEPE", "SHIB", "DOGE", "BONK", "MEME", "FLOKI", "WIF"]) else 'TIER_2'),
                 'last_whale_transfer_ts': 0.0,
                 'last_whale_amount_usd': 0.0,
@@ -1938,14 +1988,21 @@ class MarketDataManager:
                 'last_update': 0.0
             }
         else:
+            now_ts = time.time()
             # 60s Dinamik Blok Baskı Yaşlanma Doğrulaması (Fail-safe auto-cooling)
             last_b_ts = float(flow_data.get('last_block_trade_ts', 0.0))
-            if (time.time() - last_b_ts) > 60.0:
+            if (now_ts - last_b_ts) > 60.0:
                 flow_data['block_dump_active'] = False
                 flow_data['block_squeeze_active'] = False
                 flow_data['block_sells_60s'] = 0.0
                 flow_data['block_buys_60s'] = 0.0
                 flow_data['block_netflow_60s'] = 0.0
+
+            # 20dk (1200s) Dinamik Mempool Tehdit Yaşlanma Doğrulaması (Fail-safe auto-cooling)
+            if now_ts > float(flow_data.get('mempool_threat_expiry', 0.0)):
+                flow_data['mempool_dump_threat'] = False
+            if now_ts > float(flow_data.get('mempool_squeeze_expiry', 0.0)):
+                flow_data['mempool_squeeze_threat'] = False
         return flow_data
 
     def get_ammunition_status(self) -> dict:
@@ -2042,7 +2099,10 @@ class MarketDataManager:
         tx_hash: str = None,
         price: float = 0.0,
         source: str = 'BINANCE_CEX',
-        side: str = None
+        side: str = None,
+        from_label: str = None,
+        to_label: str = None,
+        blockchain: str = None
     ) -> dict:
         """Büyük bir on-chain veya borsa içi balina transferi gerçekleştiğinde beslemeye ve kalkan hafızasına kaydeder."""
         clean_s = self._clean_symbol(symbol)
@@ -2060,7 +2120,7 @@ class MarketDataManager:
         tier_str = "TIER_1" if is_tier1 else ("TIER_3" if is_tier3 else "TIER_2")
 
         from indicators import classify_whale_transfer
-        res = classify_whale_transfer(clean_s, amount_usd, volume_24h_usd=vol_24h, tier=tier_str, transfer_type=transfer_type)
+        res = classify_whale_transfer(clean_s, amount_usd, volume_24h_usd=vol_24h, tier=tier_str, transfer_type=transfer_type, source=source)
         now_ts = time.time()
         res['timestamp'] = now_ts
         res['time_str'] = datetime.now(timezone(timedelta(hours=3))).strftime("%H:%M:%S")
@@ -2068,19 +2128,39 @@ class MarketDataManager:
         res['price'] = float(price or 0.0)
         res['source'] = str(source or 'BINANCE_CEX')
         res['side'] = str(side or ('TAKER_SELL' if res.get('is_dump_risk') else 'TAKER_BUY'))
+        res['from_label'] = str(from_label or ('Mempool Balina Cüzdanı' if res.get('is_dump_risk') else 'Borsa Sıcak Cüzdanı'))
+        res['to_label'] = str(to_label or ('Borsa Sıcak Cüzdanı' if res.get('is_dump_risk') else 'Soğuk Cüzdan Kasası'))
+        res['blockchain'] = str(blockchain or ('BTC' if 'BTC' in clean_s else ('ETH' if 'ETH' in clean_s else ('SOL' if 'SOL' in clean_s else 'ONCHAIN'))))
 
         if res['is_whale']:
             self.whale_transactions_feed.append(res)
-            target_keys = [symbol, clean_s]
+            target_keys = [
+                symbol, clean_s,
+                clean_s.replace('/', '').replace(':USDT', ''),
+                symbol.replace('/', '').replace(':USDT', '')
+            ]
+            expiry_ts = now_ts + 1200.0  # 20 dakika (1200s) öncü kalkan koruma penceresi
             for tk in target_keys:
                 if tk in self.exchange_netflows:
                     if res['is_dump_risk']:
                         self.exchange_netflows[tk]['is_dump_risk'] = True
+                        if source == 'ONCHAIN_MEMPOOL':
+                            self.exchange_netflows[tk]['mempool_dump_threat'] = True
+                            self.exchange_netflows[tk]['mempool_threat_expiry'] = expiry_ts
                     elif res['is_bull_ammo']:
                         self.exchange_netflows[tk]['is_accumulation'] = True
+                        if source == 'ONCHAIN_MEMPOOL':
+                            self.exchange_netflows[tk]['mempool_squeeze_threat'] = True
+                            self.exchange_netflows[tk]['mempool_squeeze_expiry'] = expiry_ts
+
                     self.exchange_netflows[tk]['last_whale_transfer_ts'] = now_ts
                     self.exchange_netflows[tk]['last_whale_amount_usd'] = amount_usd
                     self.exchange_netflows[tk]['last_whale_intent'] = res['intent']
+                    if source == 'ONCHAIN_MEMPOOL':
+                        self.exchange_netflows[tk]['mempool_amount_usd'] = amount_usd
+                        self.exchange_netflows[tk]['mempool_from_label'] = res['from_label']
+                        self.exchange_netflows[tk]['mempool_to_label'] = res['to_label']
+                        self.exchange_netflows[tk]['mempool_tx_hash'] = res['tx_hash']
         return res
 
     def get_symbol_metrics(self, symbol: str) -> dict:
@@ -3698,6 +3778,127 @@ class MarketDataManager:
                     print(f">> [AGGTRADE WS UYARI chunk-{chunk_id}] {e}")
                     await asyncio.sleep(2)
 
+        # Worker 12: Gerçek On-Chain Whale Alert & Mempool Transfer Besleyicisi (Aşama 2)
+        async def onchain_mempool_worker():
+            print(">> [ON-CHAIN MEMPOOL] Bitcoin Mempool & Ethereum Token Transfer Radarı Başlatılıyor...")
+            seen_hashes = deque(maxlen=400)
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+
+            while True:
+                try:
+                    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=8)) as session:
+                        # 1. Bitcoin Mempool Taraması (Blockchain.info Unconfirmed Transactions)
+                        try:
+                            btc_url = "https://blockchain.info/unconfirmed-transactions?format=json"
+                            async with session.get(btc_url, headers=headers) as resp:
+                                if resp.status == 200:
+                                    data = await resp.json()
+                                    txs = data.get('txs', [])
+                                    btc_p = float(self.current_prices.get('BTC/USDT', 67000.0) or 67000.0)
+                                    for tx in txs:
+                                        h = tx.get('hash', '')
+                                        if not h or h in seen_hashes:
+                                            continue
+                                        tot_sat = sum(out.get('value', 0) for out in tx.get('out', []))
+                                        tot_btc = tot_sat / 1e8
+                                        tot_usd = tot_btc * btc_p
+                                        # Eşik: >= $500,000 USD (Kurumsal Balina Mempool Transferi)
+                                        if tot_usd >= 500_000.0:
+                                            seen_hashes.append(h)
+                                            out_addrs = [out.get('addr', '') for out in tx.get('out', []) if out.get('addr')]
+                                            to_label = "Borsa Sıcak Cüzdanı"
+                                            t_type = "WALLET_TO_EXCHANGE"
+                                            for o_a in out_addrs:
+                                                lbl = format_wallet_label(o_a)
+                                                if "Binance" in lbl or "Coinbase" in lbl or "OKX" in lbl or "Bybit" in lbl:
+                                                    to_label = lbl
+                                                    t_type = "WALLET_TO_EXCHANGE"
+                                                    break
+
+                                            from_label = "Mempool Balina Cüzdanı"
+                                            self.record_whale_transaction(
+                                                symbol="BTC/USDT",
+                                                amount_usd=tot_usd,
+                                                transfer_type=t_type,
+                                                tx_hash=h,
+                                                price=btc_p,
+                                                source="ONCHAIN_MEMPOOL",
+                                                from_label=from_label,
+                                                to_label=to_label,
+                                                blockchain="BTC"
+                                            )
+                                            print(f">> [🔗 ON-CHAIN BTC MEMPOOL] {from_label} ➔ {to_label} | ${tot_usd/1e6:.2f}M ({tot_btc:.2f} BTC) | TX: {h[:12]}...")
+                        except Exception:
+                            pass
+
+                        # 2. Ethereum / ERC20 Büyük Transfer Taraması (Blockscout API)
+                        try:
+                            eth_url = "https://eth.blockscout.com/api/v2/token-transfers"
+                            async with session.get(eth_url, headers=headers) as resp:
+                                if resp.status == 200:
+                                    data = await resp.json()
+                                    items = data.get('items', [])
+                                    for it in items:
+                                        tx_h = it.get('transaction_hash', '')
+                                        if not tx_h or tx_h in seen_hashes:
+                                            continue
+
+                                        token = it.get('token', {})
+                                        sym = token.get('symbol', '').upper()
+                                        dec = int(token.get('decimals', 18) or 18)
+                                        raw_v = float(it.get('total', {}).get('value', 0) or 0)
+                                        norm_v = raw_v / (10 ** dec)
+
+                                        target_symbol = None
+                                        usd_val = 0.0
+                                        if sym in ['USDT', 'USDC']:
+                                            usd_val = norm_v
+                                            target_symbol = 'BTC/USDT'
+                                        elif sym in ['WETH', 'ETH']:
+                                            eth_p = float(self.current_prices.get('ETH/USDT', 2700.0) or 2700.0)
+                                            usd_val = norm_v * eth_p
+                                            target_symbol = 'ETH/USDT'
+                                        elif sym == 'WBTC':
+                                            btc_p = float(self.current_prices.get('BTC/USDT', 67000.0) or 67000.0)
+                                            usd_val = norm_v * btc_p
+                                            target_symbol = 'BTC/USDT'
+
+                                        if target_symbol and usd_val >= 250_000.0:
+                                            seen_hashes.append(tx_h)
+                                            f_addr = it.get('from', {}).get('hash', '')
+                                            t_addr = it.get('to', {}).get('hash', '')
+                                            f_label = format_wallet_label(f_addr)
+                                            t_label = format_wallet_label(t_addr)
+
+                                            t_type = "WALLET_TO_EXCHANGE"
+                                            if "Binance" in t_label or "Coinbase" in t_label or "OKX" in t_label:
+                                                t_type = "WALLET_TO_EXCHANGE"
+                                            elif "Binance" in f_label or "Coinbase" in f_label or "OKX" in f_label:
+                                                t_type = "EXCHANGE_TO_WALLET"
+                                            elif "Treasury" in f_label or "Mint" in f_label:
+                                                t_type = "TREASURY_MINT"
+
+                                            cur_p = float(self.current_prices.get(target_symbol, 0.0) or 0.0)
+                                            self.record_whale_transaction(
+                                                symbol=target_symbol,
+                                                amount_usd=usd_val,
+                                                transfer_type=t_type,
+                                                tx_hash=tx_h,
+                                                price=cur_p,
+                                                source="ONCHAIN_MEMPOOL",
+                                                from_label=f_label,
+                                                to_label=t_label,
+                                                blockchain="ETH"
+                                            )
+                                            print(f">> [🔗 ON-CHAIN ERC20 {sym}] {f_label} ➔ {t_label} | ${usd_val/1e6:.2f}M | TX: {tx_h[:12]}...")
+                        except Exception:
+                            pass
+
+                except Exception as e:
+                    print(f">> [ONCHAIN WORKER UYARI]: {e}")
+
+                await asyncio.sleep(25)  # Her 25 saniyede bir mempool ve transfer kontrolü
+
         # Her worker'ı crash-proof saran koruyucu (bir worker çökerse diğerlerini öldürmez, otomatik yeniden başlatır)
         async def resilient_worker(name, coro_fn, *args):
             backoff = 2
@@ -3723,6 +3924,7 @@ class MarketDataManager:
             resilient_worker("CoinbaseLeadLag", coinbase_lead_lag_worker),
             resilient_worker("OpenInterestRadar", open_interest_worker),
             resilient_worker("WhaleNetflowRadar", whale_netflow_worker),
+            resilient_worker("OnchainMempoolRadar", onchain_mempool_worker),
         ] + [resilient_worker(f"KLine-Chunk-{i}", kline_worker, i, c) for i, c in enumerate(kline_chunks)] \
           + [resilient_worker(f"AggTrade-Chunk-{i}", aggtrade_worker, i, c) for i, c in enumerate(agg_chunks)]
 

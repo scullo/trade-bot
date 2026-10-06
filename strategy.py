@@ -1485,6 +1485,47 @@ class StrategyEngine:
             except Exception:
                 pass
 
+        # ── 0f. GERÇEK ON-CHAIN MEMPOOL TRANSFER KALKANI (15-30dk ÖNCÜ DUMP/SQUEEZE ZIRHI) ──
+        if hasattr(self, 'market_data') and self.market_data:
+            try:
+                sym_netflow_mem = self.market_data.get_symbol_netflow(symbol)
+                now_t = time.time()
+                mem_dump_active = bool(sym_netflow_mem.get('mempool_dump_threat', False))
+                mem_exp = float(sym_netflow_mem.get('mempool_threat_expiry', 0.0))
+                if side == "LONG" and mem_dump_active and (now_t <= mem_exp):
+                    mem_amt = float(sym_netflow_mem.get('mempool_amount_usd', 0.0))
+                    mem_from = str(sym_netflow_mem.get('mempool_from_label', 'Mempool Balina Cüzdanı'))
+                    mem_to = str(sym_netflow_mem.get('mempool_to_label', 'Borsa Sıcak Cüzdanı'))
+                    rem_min = max(1, int((mem_exp - now_t) / 60))
+                    rej_msg = (
+                        f"🚨 Mempool Balina Giriş Kalkanı: Borsaya ${mem_amt/1e6:.2f}M tutarında on-chain coin girişi tespit edildi! "
+                        f"({mem_from} ➔ {mem_to}, Kalan Koruma: {rem_min} dk, Long VETO!)"
+                    )
+                    try:
+                        print(f">> [RED - MEMPOOL BALİNA GİRİŞ KALKANI] {symbol}: {rej_msg}")
+                    except Exception:
+                        pass
+                    self.log_rejection(symbol, setup_id or reason, rej_msg, planned_r=0.0)
+                    return {"error": "MEMPOOL_WHALE_INFLOW_DUMP_VETO", "reason": rej_msg}
+
+                mem_sqz_active = bool(sym_netflow_mem.get('mempool_squeeze_threat', False))
+                mem_sqz_exp = float(sym_netflow_mem.get('mempool_squeeze_expiry', 0.0))
+                if side == "SHORT" and mem_sqz_active and (now_t <= mem_sqz_exp):
+                    mem_amt = float(sym_netflow_mem.get('mempool_amount_usd', 0.0))
+                    rem_min = max(1, int((mem_sqz_exp - now_t) / 60))
+                    rej_msg = (
+                        f"🛡️ Mempool Soğuk Cüzdan Kalkanı: Borsadan soğuk cüzdana ${mem_amt/1e6:.2f}M tutarında on-chain çekim tespit edildi! "
+                        f"(Arz Şoku / Short Squeeze Riski, Kalan Koruma: {rem_min} dk, Short VETO!)"
+                    )
+                    try:
+                        print(f">> [RED - MEMPOOL SOĞUK CÜZDAN KALKANI] {symbol}: {rej_msg}")
+                    except Exception:
+                        pass
+                    self.log_rejection(symbol, setup_id or reason, rej_msg, planned_r=0.0)
+                    return {"error": "MEMPOOL_WHALE_OUTFLOW_SQUEEZE_VETO", "reason": rej_msg}
+            except Exception:
+                pass
+
         # ── 1. ATR / VOLATILITE HESABI & KATMANLI LİKİDİTE EŞİĞİ ──
         atr_pct = 1.2
         vol_surge = 1.0

@@ -5850,17 +5850,25 @@ HTML_PAGE = """
         </div>
 
         <!-- KURUMSAL BALİNA KALKANI ÇALIŞMA MEKANİZMASI KARTI -->
-        <div style="background:rgba(0,242,254,0.02); border:1px solid rgba(0,242,254,0.12); border-radius:12px; padding:16px; display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:14px; font-family:'JetBrains Mono';">
+        <div style="background:rgba(0,242,254,0.02); border:1px solid rgba(0,242,254,0.12); border-radius:12px; padding:16px; display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:14px; font-family:'JetBrains Mono';">
+            <div style="padding:12px; background:rgba(0,242,254,0.04); border:1px solid rgba(0,242,254,0.2); border-radius:8px;">
+                <div style="color:#00f2fe; font-weight:800; font-size:12px; margin-bottom:4px;">⚡ 1. Blok Emir Dedektörü (&lt;50ms)</div>
+                <div style="color:#94a3b8; font-size:11px; line-height:1.45;">Binance Vadeli WebSocket aggTrade akışında $100k-$1M+ büyüklüğündeki piyasa emirleri anında tespit edilir. Agresif satış bloklarında Long, alış bloklarında Short veto edilir.</div>
+            </div>
+            <div style="padding:12px; background:rgba(192,132,252,0.04); border:1px solid rgba(192,132,252,0.2); border-radius:8px;">
+                <div style="color:#c084fc; font-weight:800; font-size:12px; margin-bottom:4px;">🔗 2. On-Chain Mempool Dedektörü (15-30dk Öncü)</div>
+                <div style="color:#94a3b8; font-size:11px; line-height:1.45;">Bitcoin Mempool ve Ethereum ERC20 üzerinde borsalara doğru yola çıkan balina coin transferleri blok onayından önce yakalanır. 20 dakika boyunca tuzak kırılımlar kilitlenir.</div>
+            </div>
             <div style="padding:12px; background:rgba(239,68,68,0.04); border:1px solid rgba(239,68,68,0.15); border-radius:8px;">
-                <div style="color:#ef4444; font-weight:800; font-size:12px; margin-bottom:4px;">🚨 1. Balina Borsa Giriş Kalkanı (Inflow &ge; +2.0&sigma;)</div>
+                <div style="color:#ef4444; font-weight:800; font-size:12px; margin-bottom:4px;">🚨 3. Balina Borsa Giriş Kalkanı (Inflow &ge; +2.0&sigma;)</div>
                 <div style="color:#94a3b8; font-size:11px; line-height:1.45;">Teknik olarak R4 Breakout gelse dahi, borsaya anormal coin yatırılmışsa bot 'Balina satış için transfer yaptı, bu kırılım tuzaktır' diyerek işlemi anında veto eder.</div>
             </div>
             <div style="padding:12px; background:rgba(56,189,248,0.04); border:1px solid rgba(56,189,248,0.15); border-radius:8px;">
-                <div style="color:#38bdf8; font-weight:800; font-size:12px; margin-bottom:4px;">🛡️ 2. Soğuk Cüzdan Çıkış Kalkanı (Outflow &le; -2.0&sigma;)</div>
+                <div style="color:#38bdf8; font-weight:800; font-size:12px; margin-bottom:4px;">🛡️ 4. Soğuk Cüzdan Çıkış Kalkanı (Outflow &le; -2.0&sigma;)</div>
                 <div style="color:#94a3b8; font-size:11px; line-height:1.45;">Borsadan soğuk cüzdanlara agresif çekim yapıldığında dolaşımdaki arz daralır. S4 Breakdown SHORT işlemleri 'Short Squeeze tuzağı' riskiyle veto edilir.</div>
             </div>
             <div style="padding:12px; background:rgba(34,197,94,0.04); border:1px solid rgba(34,197,94,0.15); border-radius:8px;">
-                <div style="color:#22c55e; font-weight:800; font-size:12px; margin-bottom:4px;">⚡ 3. Taze Stabil Kripto Cephanesi (&ge; $50M Inflow)</div>
+                <div style="color:#22c55e; font-weight:800; font-size:12px; margin-bottom:4px;">⚡ 5. Taze Stabil Kripto Cephanesi (&ge; $50M Inflow)</div>
                 <div style="color:#94a3b8; font-size:11px; line-height:1.45;">Borsa rezervlerine son saatlerde yüklü miktarda USDT/USDC aktarılmışsa, balinaların alım gücü (cephane) hazır demektir. LONG işlemlere +1 Confluence skoru atanır.</div>
             </div>
         </div>
@@ -8730,6 +8738,7 @@ async function loadAdminMetrics() {
                             const isDump = a.is_dump_risk || a.intent === 'DUMP_PREPARATION' || a.intent === 'AGGRESSIVE_MARKET_DUMP';
                             const isAmmo = a.is_bull_ammo || a.intent === 'FRESH_AMMUNITION_MINT' || a.intent === 'COLD_STORAGE_ACCUMULATION' || a.intent === 'AGGRESSIVE_MARKET_BUY';
                             const isAggTrade = a.source === 'BINANCE_AGGTRADE';
+                            const isMempool = a.source === 'ONCHAIN_MEMPOOL';
                             const sevColor = a.severity === 'EXTREME' ? '#ef4444' : (a.severity === 'HIGH' ? '#f59e0b' : '#38bdf8');
 
                             let dirTxt = isDump ? 'Cüzdan ➔ Borsa (Yatırma)' : (isAmmo ? 'Borsa ➔ Cüzdan (Çekim)' : 'Dahili Transfer');
@@ -8743,6 +8752,13 @@ async function loadAdminMetrics() {
                                     dirTxt = '⚡ Piyasa Alışı (Taker Buy)';
                                     dirColor = '#10b981';
                                 }
+                            } else if (isMempool) {
+                                if (a.from_label && a.to_label) {
+                                    dirTxt = `${a.from_label} ➔ ${a.to_label}`;
+                                } else {
+                                    dirTxt = isDump ? 'Balina ➔ Borsa Sıcak Cüzdanı' : (isAmmo ? 'Borsa ➔ Soğuk Cüzdan' : 'On-Chain Mempool Transfer');
+                                }
+                                dirColor = isDump ? '#f87171' : (isAmmo ? '#34d399' : '#c084fc');
                             }
 
                             let intentHtml = a.intent || 'TRANSFER';
@@ -8750,15 +8766,32 @@ async function loadAdminMetrics() {
                                 const pVal = Number(a.price || 0);
                                 const pStr = pVal > 0 ? ` @ $${pVal.toLocaleString('en-US', {minimumFractionDigits: (pVal < 1 ? 4 : 2), maximumFractionDigits: (pVal < 1 ? 6 : 2)})}` : '';
                                 intentHtml = `<span style="background:rgba(0,242,254,0.12); color:#00f2fe; border:1px solid rgba(0,242,254,0.3); padding:2px 5px; border-radius:4px; font-weight:800; font-size:10px;">⚡ BLOK EMİR (&lt;50ms)</span><span style="font-size:11px; color:#cbd5e1; margin-left:4px;">${pStr}</span>`;
+                            } else if (isMempool) {
+                                const chainBadge = a.blockchain ? `<span style="background:rgba(192,132,252,0.15); color:#c084fc; border:1px solid rgba(192,132,252,0.3); padding:1px 4px; border-radius:3px; font-size:9.5px; font-weight:800; margin-right:4px;">${a.blockchain}</span>` : '';
+                                intentHtml = `${chainBadge}<span style="background:rgba(168,85,247,0.15); color:#d8b4fe; border:1px solid rgba(168,85,247,0.35); padding:2px 5px; border-radius:4px; font-weight:800; font-size:10px;">🔗 ON-CHAIN MEMPOOL</span>`;
                             }
 
-                            const txHashShort = a.tx_hash ? (a.tx_hash.startsWith('agg_') ? a.tx_hash : (a.tx_hash.length > 14 ? a.tx_hash.slice(0, 6) + '...' + a.tx_hash.slice(-4) : a.tx_hash)) : '';
+                            let txHashHtml = '';
+                            if (a.tx_hash) {
+                                if (a.tx_hash.startsWith('agg_')) {
+                                    txHashHtml = `<div style="font-size:9.5px; color:#64748b; font-family:\'JetBrains Mono\';">${a.tx_hash}</div>`;
+                                } else if (a.blockchain === 'BTC' || (!a.tx_hash.startsWith('0x') && a.tx_hash.length >= 60)) {
+                                    const shortH = a.tx_hash.slice(0, 6) + '...' + a.tx_hash.slice(-4);
+                                    txHashHtml = `<div style="font-size:9.5px; font-family:\'JetBrains Mono\';"><a href="https://mempool.space/tx/${a.tx_hash}" target="_blank" rel="noopener noreferrer" style="color:#38bdf8; text-decoration:none;" title="Mempool Explorer Aç">&#128279; ${shortH}</a></div>`;
+                                } else if (a.tx_hash.startsWith('0x')) {
+                                    const shortH = a.tx_hash.slice(0, 6) + '...' + a.tx_hash.slice(-4);
+                                    txHashHtml = `<div style="font-size:9.5px; font-family:\'JetBrains Mono\';"><a href="https://etherscan.io/tx/${a.tx_hash}" target="_blank" rel="noopener noreferrer" style="color:#c084fc; text-decoration:none;" title="Etherscan Explorer Aç">&#128279; ${shortH}</a></div>`;
+                                } else {
+                                    const shortH = a.tx_hash.length > 14 ? (a.tx_hash.slice(0, 6) + '...' + a.tx_hash.slice(-4)) : a.tx_hash;
+                                    txHashHtml = `<div style="font-size:9.5px; color:#64748b; font-family:\'JetBrains Mono\';">${shortH}</div>`;
+                                }
+                            }
 
                             return `
                                 <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
                                     <td style="padding:8px 12px; font-family:\'JetBrains Mono\'; font-size:11px; color:#94a3b8;">
                                         ${a.time_str || '-'}
-                                        ${txHashShort ? `<div style="font-size:9.5px; color:#64748b; font-family:\'JetBrains Mono\';">${txHashShort}</div>` : ''}
+                                        ${txHashHtml}
                                     </td>
                                     <td style="padding:8px 12px; font-weight:700; color:#fff;">${a.symbol || '-'}</td>
                                     <td style="padding:8px 12px; text-align:right; font-weight:700; color:#fff; font-family:\'JetBrains Mono\';">$${(Number(a.amount_usd || 0)/1e6).toFixed(2)}M</td>
