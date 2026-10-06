@@ -7335,7 +7335,7 @@ async function loadAdminMetrics() {
                 if (activeEl) activeEl.innerText = `${summ.active_shadow_trades || activePos.length} Aktif`;
 
                 const totalEl = document.getElementById('shadow-kpi-total-tracked');
-                if (totalEl) totalEl.innerText = summ.total_shadow_trades || (activePos.length + hist.length);
+                if (totalEl) totalEl.innerText = summ.total_shadow_trades || ((summ.completed_shadow_trades || 0) + (summ.active_shadow_trades || activePos.length));
 
                 updateShadowBadge();
 
@@ -7488,7 +7488,7 @@ async function loadAdminMetrics() {
                     if (hist.length === 0) {
                         histTbody.innerHTML = `<tr><td colspan="14" style="text-align:center; padding:20px; color:#64748b;">Henüz tamamlanan gölge işlem yok. Pozisyonlar kapandıkça buraya dökülür.</td></tr>`;
                     } else {
-                        histTbody.innerHTML = [...hist].reverse().slice(0, 50).map(t => {
+                        histTbody.innerHTML = [...hist].reverse().slice(0, 150).map(t => {
                             const isHero = t.verdict === 'HERO_SHIELD';
                             const isSpoiler = t.verdict === 'SPOILER_SHIELD';
                             const badgeColor = isHero ? '#10b981' : (isSpoiler ? '#f43f5e' : '#94a3b8');
@@ -16412,7 +16412,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "macro_climate": strategy.get_macro_climate() if strategy and hasattr(strategy, 'get_macro_climate') else {},
                 "shadow_summary": strategy.shadow_engine.get_summary() if (strategy and hasattr(strategy, 'shadow_engine')) else {},
                 "shadow_positions": strategy.shadow_engine.get_active_positions() if (strategy and hasattr(strategy, 'shadow_engine')) else [],
-                "shadow_history": strategy.shadow_engine.get_recent_history(50) if (strategy and hasattr(strategy, 'shadow_engine')) else [],
+                "shadow_history": strategy.shadow_engine.get_recent_history(150) if (strategy and hasattr(strategy, 'shadow_engine')) else [],
                 "coin_dna_matrix": strategy.shadow_engine.get_coin_dna_matrix() if (strategy and hasattr(strategy, 'shadow_engine')) else [],
                 "shield_leaderboard": strategy.shadow_engine.get_shield_leaderboard() if (strategy and hasattr(strategy, 'shadow_engine')) else [],
                 "reforms": {
@@ -16607,7 +16607,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             from excel_exporter import create_shadow_dna_excel_report
             summary = strategy.shadow_engine.get_summary() if (strategy and hasattr(strategy, 'shadow_engine')) else {}
             coin_dna = strategy.shadow_engine.get_coin_dna_matrix() if (strategy and hasattr(strategy, 'shadow_engine')) else []
-            shadow_history = strategy.shadow_engine.get_recent_history(500) if (strategy and hasattr(strategy, 'shadow_engine')) else []
+            shadow_history = strategy.shadow_engine.get_recent_history(15000) if (strategy and hasattr(strategy, 'shadow_engine')) else []
             shield_leaderboard = strategy.shadow_engine.get_shield_leaderboard() if (strategy and hasattr(strategy, 'shadow_engine')) else []
 
             buf = create_shadow_dna_excel_report(

@@ -48,7 +48,7 @@ class ShadowExecutionEngine:
     Sıfır Gecikmeli Bellek İçi Gölge İşlem Motoru ve Otonom Kuant Kalibratörü.
     """
 
-    def __init__(self, history_file: str = "shadow_trades_history.json", max_active: int = 300, max_history: int = 5000):
+    def __init__(self, history_file: str = "shadow_trades_history.json", max_active: int = 300, max_history: int = 25000):
         self.history_file = os.path.join(os.path.dirname(__file__), history_file)
         self.max_active = max_active
         self.max_history = max_history
@@ -58,6 +58,7 @@ class ShadowExecutionEngine:
         self._github_sha: Optional[str] = None
         self._push_lock = threading.Lock()
         self._last_push_ts: float = 0.0
+        self._last_known_remote_completed_count: int = 0
         self.last_sync_status: str = "BEKLEMEDE"
         self.last_tick_ts: float = time.time()
         self.last_candle_ts: float = time.time()
@@ -1626,9 +1627,9 @@ class ShadowExecutionEngine:
         trades = list(self.completed_trades)
         return trades[-limit:] if len(trades) > limit else trades
 
-    def archive_old_trades(self, keep_latest: int = 3000):
+    def archive_old_trades(self, keep_latest: int = 20000):
         """
-        Aktif hafızadaki işlem sayısı 3000'i aştığında, en eski işlemleri aylık arşiv dosyasına
+        Aktif hafızadaki işlem sayısı 25000'i aştığında, en eski işlemleri aylık arşiv dosyasına
         (shadow_archive_YYYYMM.json) aktarır. Böylece RAM ve disk şişmesi önlenir,
         tarihsel veriler ise aylık bazda sonsuza kadar korunur.
         """
@@ -1681,8 +1682,8 @@ class ShadowExecutionEngine:
     # ──────────────────────────────────────────────────────────────────────────
     def save_history(self, critical: bool = False):
         """Hafızadaki gölge işlemleri hem lokal dosyaya atomik hem de GitHub state dalına kaydeder."""
-        if len(self.completed_trades) > 3000:
-            self.archive_old_trades(keep_latest=3000)
+        if len(self.completed_trades) > 25000:
+            self.archive_old_trades(keep_latest=20000)
 
         data = {
             "updated_at": datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S"),
@@ -1706,7 +1707,7 @@ class ShadowExecutionEngine:
                 self._last_push_ts = now_ts
                 threading.Thread(target=self._push_to_github, args=(data,), daemon=True).start()
             else:
-                if now_ts - self._last_push_ts >= 25.0:
+                if now_ts - self._last_push_ts >= 45.0:
                     self._last_push_ts = now_ts
                     threading.Thread(target=self._push_to_github, args=(data,), daemon=True).start()
 
@@ -1715,6 +1716,12 @@ class ShadowExecutionEngine:
         if self.is_test or not GITHUB_TOKEN or not self._push_lock.acquire(blocking=False):
             return
         try:
+            current_count = len(data.get("completed", []))
+            # Anti-Regression Güvenlik Freni: Mevcut uzak veriden daha az işlemle GitHub asla ezilemez!
+            if self._last_known_remote_completed_count > 0 and current_count < int(self._last_known_remote_completed_count * 0.90):
+                print(f">> [GÖLGE GÜVENLİK FRENİ] Yerel işlem sayısı ({current_count}) bilinen uzak işlem sayısından ({self._last_known_remote_completed_count}) az! Veri kaybını önlemek için GitHub güncellemesi reddedildi.")
+                return
+
             for attempt in range(1, 4):
                 try:
                     content_str = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
@@ -1727,14 +1734,14 @@ class ShadowExecutionEngine:
                             "Accept": "application/vnd.github.v3+json",
                             "User-Agent": "Valkyrie-Shadow-Engine"
                         })
-                        with urllib.request.urlopen(req, timeout=10) as res:
+                        with urllib.request.urlopen(req, timeout=15) as res:
                             gh = json.loads(res.read().decode("utf-8"))
                             self._github_sha = gh.get("sha")
                     except Exception:
                         pass
 
                     payload = {
-                        "message": f"[SHADOW] State auto-sync ({len(data.get('completed', []))} completed, {len(data.get('actives', []))} active)",
+                        "message": f"[SHADOW] State auto-sync ({current_count} completed, {len(data.get('actives', []))} active)",
                         "content": content_b64,
                         "branch": GITHUB_BRANCH
                     }
@@ -1748,9 +1755,10 @@ class ShadowExecutionEngine:
                         "Content-Type": "application/json",
                         "User-Agent": "Valkyrie-Shadow-Engine"
                     })
-                    with urllib.request.urlopen(req, timeout=20) as resp:
+                    with urllib.request.urlopen(req, timeout=30) as resp:
                         res_data = json.loads(resp.read().decode("utf-8"))
                         self._github_sha = res_data.get("content", {}).get("sha", self._github_sha)
+                        self._last_known_remote_completed_count = max(self._last_known_remote_completed_count, current_count)
                         self.last_sync_status = "SENKRONİZE"
                         return
                 except Exception as e:
@@ -1761,50 +1769,54 @@ class ShadowExecutionEngine:
 
     def load_history(self):
         """
-        Başlangıçta GitHub state dalından ve yerel diskten verileri çekip akıllıca birleştirir (Merge & Deduplicate).
+        Başlangıçta GitHub state dalından, yerel diskten ve arşiv dosyalarından verileri çekip akıllıca birleştirir (Merge & Deduplicate).
         Render yeniden başlatmalarında veya dağıtımlarda tek bir gölge işlem dahi kaybolmaz.
         """
         remote_completed = []
         remote_actives = []
 
-        # 1. GitHub state dalından yükle
+        # 1. GitHub state dalından yükle (3 Denemeli Sağlam Ağ Çağrısı)
         if GITHUB_TOKEN and not self.is_test:
-            try:
-                req = urllib.request.Request(f"{SHADOW_GITHUB_API_URL}?ref={GITHUB_BRANCH}", headers={
-                    "Authorization": f"token {GITHUB_TOKEN}",
-                    "Accept": "application/vnd.github.v3+json",
-                    "User-Agent": "Valkyrie-Shadow-Engine"
-                })
-                with urllib.request.urlopen(req, timeout=10) as resp:
-                    gh_data = json.loads(resp.read().decode("utf-8"))
-                    self._github_sha = gh_data.get("sha")
-                    content_b64 = gh_data.get("content", "")
-                    if content_b64:
-                        content_str = base64.b64decode(content_b64).decode("utf-8")
-                        data = json.loads(content_str)
-                    elif gh_data.get("download_url"):
-                        raw_req = urllib.request.Request(gh_data["download_url"], headers={
-                            "Authorization": f"token {GITHUB_TOKEN}",
-                            "User-Agent": "Valkyrie-Shadow-Engine"
-                        })
-                        with urllib.request.urlopen(raw_req, timeout=15) as raw_resp:
-                            data = json.loads(raw_resp.read().decode("utf-8"))
-                    elif gh_data.get("git_url"):
-                        blob_req = urllib.request.Request(gh_data["git_url"], headers={
-                            "Authorization": f"token {GITHUB_TOKEN}",
-                            "Accept": "application/vnd.github.v3+json",
-                            "User-Agent": "Valkyrie-Shadow-Engine"
-                        })
-                        with urllib.request.urlopen(blob_req, timeout=15) as blob_resp:
-                            blob_data = json.loads(blob_resp.read().decode("utf-8"))
-                            data = json.loads(base64.b64decode(blob_data.get("content", "")).decode("utf-8"))
-                    else:
-                        data = {}
-                    remote_completed = data.get("completed", [])
-                    remote_actives = data.get("actives", [])
-                    print(f">> [GÖLGE BULUT KALICILIĞI] GitHub state dalından {len(remote_completed)} tamamlanan, {len(remote_actives)} aktif işlem çekildi. (SHA: {self._github_sha[:8] if self._github_sha else 'OK'})")
-            except Exception as e:
-                print(f">> [GÖLGE BULUT BİLGİ] GitHub'dan çekilemedi: {e}")
+            for attempt in range(1, 4):
+                try:
+                    req = urllib.request.Request(f"{SHADOW_GITHUB_API_URL}?ref={GITHUB_BRANCH}", headers={
+                        "Authorization": f"token {GITHUB_TOKEN}",
+                        "Accept": "application/vnd.github.v3+json",
+                        "User-Agent": "Valkyrie-Shadow-Engine"
+                    })
+                    with urllib.request.urlopen(req, timeout=25) as resp:
+                        gh_data = json.loads(resp.read().decode("utf-8"))
+                        self._github_sha = gh_data.get("sha")
+                        content_b64 = gh_data.get("content", "")
+                        if content_b64:
+                            content_str = base64.b64decode(content_b64).decode("utf-8")
+                            data = json.loads(content_str)
+                        elif gh_data.get("download_url"):
+                            raw_req = urllib.request.Request(gh_data["download_url"], headers={
+                                "Authorization": f"token {GITHUB_TOKEN}",
+                                "User-Agent": "Valkyrie-Shadow-Engine"
+                            })
+                            with urllib.request.urlopen(raw_req, timeout=30) as raw_resp:
+                                data = json.loads(raw_resp.read().decode("utf-8"))
+                        elif gh_data.get("git_url"):
+                            blob_req = urllib.request.Request(gh_data["git_url"], headers={
+                                "Authorization": f"token {GITHUB_TOKEN}",
+                                "Accept": "application/vnd.github.v3+json",
+                                "User-Agent": "Valkyrie-Shadow-Engine"
+                            })
+                            with urllib.request.urlopen(blob_req, timeout=30) as blob_resp:
+                                blob_data = json.loads(blob_resp.read().decode("utf-8"))
+                                data = json.loads(base64.b64decode(blob_data.get("content", "")).decode("utf-8"))
+                        else:
+                            data = {}
+                        remote_completed = data.get("completed", [])
+                        remote_actives = data.get("actives", [])
+                        self._last_known_remote_completed_count = max(self._last_known_remote_completed_count, len(remote_completed))
+                        print(f">> [GÖLGE BULUT KALICILIĞI] GitHub state dalından {len(remote_completed)} tamamlanan, {len(remote_actives)} aktif işlem çekildi. (SHA: {self._github_sha[:8] if self._github_sha else 'OK'})")
+                        break
+                except Exception as e:
+                    print(f">> [GÖLGE BULUT DENEME {attempt}/3] GitHub'dan çekilemedi: {e}")
+                    time.sleep(2)
 
         # 2. Lokal diskten oku
         local_completed = []
@@ -1818,9 +1830,22 @@ class ShadowExecutionEngine:
             except Exception as e:
                 print(f">> [GÖLGE YEREL HATA] Yerel dosya okunamadı: {e}")
 
+        # 2b. Varsa yerel arşiv dosyalarını da tara ve birleştir (shadow_archive_*.json)
+        import glob
+        archive_completed = []
+        base_dir = os.path.dirname(self.history_file)
+        for af in glob.glob(os.path.join(base_dir, "shadow_archive_*.json")):
+            try:
+                with open(af, "r", encoding="utf-8") as f_a:
+                    arch_trades = json.load(f_a).get("completed", [])
+                    archive_completed.extend(arch_trades)
+                    print(f">> [GÖLGE ARŞİV BİRLEŞTİRME] {os.path.basename(af)} dosyasından {len(arch_trades)} tarihsel işlem kurtarıldı.")
+            except Exception as e_a:
+                print(f">> [GÖLGE ARŞİV HATA] {af}: {e_a}")
+
         # 3. Akıllı Birleştirme ve Mükerrer Kayıt Önleme (Deduplication Guard)
         completed_map = {}
-        for t in remote_completed + local_completed:
+        for t in remote_completed + local_completed + archive_completed:
             t_id = t.get("id") or t.get("shadow_id")
             if t_id:
                 completed_map[t_id] = t
@@ -1851,8 +1876,8 @@ class ShadowExecutionEngine:
         self.last_sync_status = "SENKRONİZE"
         print(f">> [GÖLGE KALICILIK ZIRHI] {len(self.completed_trades)} tamamlanan, {len(self.active_positions)} aktif gölge işlem hafızaya yüklendi ve korundu.")
 
-        # Eğer lokalde GitHub'dan daha fazla kayıt varsa GitHub'ı da senkronize et
-        if len(completed_map) > len(remote_completed):
+        # Eğer lokalde/arşivde GitHub'dakinden daha fazla kayıt varsa GitHub'ı da senkronize et
+        if len(remote_completed) > 0 and len(completed_map) > len(remote_completed):
             self.save_history(critical=True)
 
     def get_health_status(self) -> dict:
