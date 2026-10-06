@@ -2031,28 +2031,35 @@ def calculate_ammunition_momentum(stablecoin_history: list) -> dict:
 
     try:
         cur = float(stablecoin_history[-1])
-        prev = float(stablecoin_history[0])
-        delta = cur - prev
-        pct = (delta / prev * 100.0) if prev > 0 else 0.0
+        # Günlük zaman serisinde son 24 saatlik değişim: son gün ile bir önceki gün farkı
+        prev_24h = float(stablecoin_history[-2]) if len(stablecoin_history) >= 2 else float(stablecoin_history[0])
+        delta = cur - prev_24h
+        pct = (delta / prev_24h * 100.0) if prev_24h > 0 else 0.0
+
+        # 14 günlük makro akış trendi
+        base_14d = float(stablecoin_history[0]) if len(stablecoin_history) >= 2 else prev_24h
+        macro_delta_14d = cur - base_14d
+        macro_pct_14d = (macro_delta_14d / base_14d * 100.0) if base_14d > 0 else 0.0
 
         # Son 24 saatte borsa rezervlerine >= $50M stabil para girdiyse boğa yakıtıdır
-        if delta >= 50_000_000.0 or pct >= 0.50:
+        if delta >= 50_000_000.0 or pct >= 0.15:
             bias = 'BULLISH_FUEL'
             is_fuel = True
-            score = min(1.0, delta / 200_000_000.0)
-        elif delta <= -50_000_000.0 or pct <= -0.50:
+            score = min(1.0, max(0.2, delta / 200_000_000.0))
+        elif delta <= -50_000_000.0 or pct <= -0.15:
             bias = 'CAPITAL_DRAIN'
             is_fuel = False
-            score = max(-1.0, delta / 200_000_000.0)
+            score = max(-1.0, min(-0.2, delta / 200_000_000.0))
         else:
             bias = 'NEUTRAL'
             is_fuel = False
-            score = 0.0
+            score = round(delta / 200_000_000.0, 3)
 
         return {
             'bias': bias,
             'delta_24h_usd': round(delta, 2),
-            'delta_pct': round(pct, 2),
+            'delta_pct': round(pct, 3),
+            'macro_pct_14d': round(macro_pct_14d, 3),
             'momentum_score': round(score, 3),
             'is_bullish_fuel': is_fuel
         }

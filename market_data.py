@@ -7,6 +7,7 @@ import aiohttp
 import ccxt.async_support as ccxt
 import pandas as pd
 import numpy as np
+import config
 from config import (
     LOOKBACK_DAYS_AVWAP,
     BTC_SHOCK_60S_PCT, BTC_SHOCK_COOLDOWN_SEC,
@@ -1950,16 +1951,17 @@ class MarketDataManager:
         return list(dq)[-limit:]
 
     def get_whale_radar_health(self) -> dict:
-        """Sağlık sekmesi ve API monitoring için balina sensör durumunu döndürür."""
         prov = getattr(self, 'whale_provider_status', {})
         last_sync = prov.get('last_sync_ts', 0.0)
         age = round(time.time() - last_sync, 1) if last_sync > 0 else 999.0
+        is_ok = (age < 1200) and (last_sync > 0)
         return {
             'providers': prov,
             'feed_count': len(getattr(self, 'whale_transactions_feed', [])),
             'ammunition_bias': getattr(self, 'stablecoin_ammunition', {}).get('bias', 'NEUTRAL'),
             'last_sync_sec': age,
-            'is_healthy': age < 1200
+            'is_healthy': is_ok,
+            'healthy': is_ok
         }
 
     def record_whale_transaction(self, symbol: str, amount_usd: float, transfer_type: str = 'WALLET_TO_EXCHANGE', tx_hash: str = None) -> dict:
@@ -3513,6 +3515,13 @@ class MarketDataManager:
                             sym_unslashed = sym.replace('/', '').replace(':USDT', '')
                             self.exchange_netflows[clean_unslashed] = self.exchange_netflows[sym]
                             self.exchange_netflows[sym_unslashed] = self.exchange_netflows[sym]
+
+                            # Whale Feed otomatik besleme (Taker Delta / Anormal Akış Tespiti)
+                            abs_flow = abs(curr_netflow_usd)
+                            thresh_feed = 5_000_000.0 if is_tier1 else (1_000_000.0 if not is_tier3 else 250_000.0)
+                            if (abs_flow >= thresh_feed or is_dump_threat or is_accum_threat) and (now_ts - last_whale_ts) >= 300.0:
+                                t_dir = 'WALLET_TO_EXCHANGE' if curr_netflow_usd >= 0 else 'EXCHANGE_TO_WALLET'
+                                self.record_whale_transaction(sym, max(abs_flow, thresh_feed), transfer_type=t_dir)
 
                         self.whale_provider_status['last_sync_ts'] = now_ts
                         self.whale_provider_status['whale_radar_live'] = True
