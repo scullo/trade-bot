@@ -110,7 +110,8 @@ HEADERS_GRANULAR = [
     ('Coinbase Spot LLI (bps)', 24),
     ('L2 Derinlik Kaynağı', 20),
     ('Apollo Kalman Teyidi', 24),
-    ('SpaceX PID Kâr Kilidi', 24)
+    ('SpaceX PID Kâr Kilidi', 24),
+    ('O-U Yarılanma Ömrü (τ)', 24)
 ]
 headers_granular = HEADERS_GRANULAR
 
@@ -447,6 +448,8 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         # Kâr Kilit Tipi
         if 'SpaceX PID' in c_reason or 'PID' in c_reason or h.get('pid_engaged'):
             lock_type = "🚀 SpaceX PID Zirve Kilidi"
+        elif 'O-U' in c_reason or 'Yarılanma' in c_reason or 'Alfa Çürüme' in c_reason:
+            lock_type = "⏳ O-U Alfa Çürüme Tahliyesi"
         elif 'Dinamik ROE' in c_reason:
             lock_type = "🎯 Dinamik ROE (+%7.0)"
         elif 'Zaman Kalkanı' in c_reason:
@@ -698,12 +701,22 @@ def create_styled_excel_report(history_data: list, current_balance: float = 1000
         ws.write(r_idx, 93, cb_display, cell_center)
         ws.write(r_idx, 94, provider_display, cell_center)
 
-        # 2 AstroQuant Sütunu: Kalman & SpaceX PID (95, 96)
+        # 3 AstroQuant & Stochastic Sütunu: Kalman, SpaceX PID, O-U (95, 96, 97)
         kalman_txt = "🛡️ Kalman Onaylı" if ("Apollo_Kalman" in str(h.get('confluence_list', [])) or "Kalman" in str(h.get('reason', ''))) else "⚪ Standart"
         pid_eff = _safe_float(h.get('pid_efficiency', 0.0))
         pid_txt = f"🚀 PID Kilit (%{pid_eff:.0f})" if (h.get('pid_engaged') or 'PID' in c_reason) else "⚪ Standart Stop"
         ws.write(r_idx, 95, kalman_txt, cell_center)
         ws.write(r_idx, 96, pid_txt, cell_roe_green if 'PID' in pid_txt else cell_center)
+
+        # Ornstein-Uhlenbeck Yarılanma Ömrü & Rejimi (97)
+        ou_tau = _safe_float(h.get('ou_half_life_min', 0.0))
+        ou_regime = str(h.get('ou_regime', ''))
+        if ou_tau > 0:
+            regime_short = "Güçlü" if "STRONG" in ou_regime else ("Orta" if "MODERATE" in ou_regime else ("Yavaş" if "SLOW" in ou_regime else "Trend"))
+            ou_txt = f"⏳ τ={ou_tau:.1f}dk ({regime_short})"
+        else:
+            ou_txt = "⚪ Standart"
+        ws.write(r_idx, 97, ou_txt, cell_center)
 
 
     def render_table_sheet(ws_obj, t_list):

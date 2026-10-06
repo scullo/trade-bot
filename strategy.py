@@ -14,7 +14,7 @@ import pandas as pd
 import numpy as np
 from indicators import (
     calculate_fractional_kelly, calculate_hurst_exponent, estimate_hmm_market_phase,
-    calculate_kalman_state, calculate_pid_stop_level
+    calculate_kalman_state, calculate_pid_stop_level, calculate_ornstein_uhlenbeck_params
 )
 from config import (
     BUFFER_RATIO, MAX_OPEN_POSITIONS,
@@ -50,7 +50,9 @@ from config import (
     ENABLE_DYNAMIC_RUNNER_PROFIT_LOCK, RUNNER_LOCK_TIER1_MFE, RUNNER_LOCK_TIER2_MFE, RUNNER_LOCK_TIER3_MFE,
     ENABLE_KALMAN_PRICE_FILTER, KALMAN_PROCESS_NOISE_Q, KALMAN_MEASUREMENT_NOISE_R0, KALMAN_WICK_PENALTY_MULT,
     ENABLE_PID_PROFIT_CONTROLLER, PID_KP, PID_KI, PID_KD, PID_MIN_MFE_TRIGGER, PID_ATR_NOISE_FLOOR_MULT,
-    PID_CAPTURE_TIER1, PID_CAPTURE_TIER2, PID_CAPTURE_TIER3
+    PID_CAPTURE_TIER1, PID_CAPTURE_TIER2, PID_CAPTURE_TIER3,
+    ENABLE_OU_TIME_STOP, OU_LOOKBACK_CANDLES, OU_MIN_HALF_LIFE_MIN, OU_MAX_HALF_LIFE_MIN,
+    OU_DECAY_TIER1_MULT, OU_DECAY_TIER2_MULT, OU_DECAY_TIER3_MULT, OU_MIN_PROGRESS_RATIO, OU_PID_IMMUNITY_ROE
 )
 
 
@@ -3405,6 +3407,48 @@ class StrategyEngine:
             self.log_rejection(symbol, setup_id or reason, rej_msg)
             return {"error": "BEARISH_CVD_DIVERGENCE_BREAKOUT_VETO", "reason": rej_msg}
 
+        # ── 15. ORNSTEIN-UHLENBECK (O-U) STOKASTİK SÜRECİ & DİNAMİK YARILANMA ÖMRÜ (τ) ──
+        ou_half_life_min = 30.0
+        ou_theta = 0.0231
+        ou_regime = "MODERATE_MEAN_REVERTING"
+        ou_decay_limit_min = 45.0
+        ou_hard_limit_min = 60.0
+        ou_eq_mu = entry_price
+        ou_r2 = 0.50
+        ou_sigma = 0.005
+
+        if ENABLE_OU_TIME_STOP:
+            try:
+                snaps_ou = snapshot_levels or {}
+                anchor_cand = snaps_ou.get('camarilla', {}).get('P', 0.0) if 'camarilla' in snaps_ou else snaps_ou.get('P', 0.0)
+                if not anchor_cand or anchor_cand <= 0:
+                    anchor_cand = snaps_ou.get('daily_avwap', 0.0) or snaps_ou.get('mpoc', 0.0)
+                if not anchor_cand or anchor_cand <= 0:
+                    anchor_cand = entry_price
+
+                df_ou = self.market_data.candles_5m.get(symbol, pd.DataFrame()) if self.market_data else pd.DataFrame()
+                if not df_ou.empty and len(df_ou) >= 20:
+                    lookback_n = min(len(df_ou), int(OU_LOOKBACK_CANDLES))
+                    close_series = df_ou['close'].iloc[-lookback_n:].tolist()
+                    ou_res = calculate_ornstein_uhlenbeck_params(
+                        prices=close_series,
+                        anchor_price=anchor_cand,
+                        dt_minutes=5.0,
+                        min_half_life=OU_MIN_HALF_LIFE_MIN,
+                        max_half_life=OU_MAX_HALF_LIFE_MIN
+                    )
+                    if ou_res and ou_res.get('is_valid'):
+                        ou_half_life_min = float(ou_res.get('half_life_min', 30.0))
+                        ou_theta = float(ou_res.get('theta', 0.0231))
+                        ou_regime = str(ou_res.get('regime', 'MODERATE_MEAN_REVERTING'))
+                        ou_decay_limit_min = round(ou_half_life_min * OU_DECAY_TIER2_MULT, 1)
+                        ou_hard_limit_min = round(ou_half_life_min * OU_DECAY_TIER3_MULT, 1)
+                        ou_eq_mu = float(ou_res.get('equilibrium_mu', entry_price))
+                        ou_r2 = float(ou_res.get('r_squared', 0.50))
+                        ou_sigma = float(ou_res.get('sigma', 0.005))
+            except Exception:
+                pass
+
         macro_clim = self.get_macro_climate()
         res = await self._safe_open_position(
             symbol=symbol, side=side, entry_price=entry_price,
@@ -3480,7 +3524,15 @@ class StrategyEngine:
             coinbase_lead_lag_status=str(cb_lead.get('status', 'NOT_LISTED')) if ('cb_lead' in locals() and cb_lead) else 'NOT_LISTED',
             coinbase_spread_bps=float(cb_spread_bps if 'cb_spread_bps' in locals() else 0.0),
             coinbase_is_listed=bool(cb_is_listed if 'cb_is_listed' in locals() else False),
-            coinbase_macro_btc_spread=float(cb_macro_btc_spread if 'cb_macro_btc_spread' in locals() else 0.0)
+            coinbase_macro_btc_spread=float(cb_macro_btc_spread if 'cb_macro_btc_spread' in locals() else 0.0),
+            ou_half_life_min=ou_half_life_min,
+            ou_theta=ou_theta,
+            ou_regime=ou_regime,
+            ou_decay_limit_min=ou_decay_limit_min,
+            ou_hard_limit_min=ou_hard_limit_min,
+            ou_equilibrium_mu=ou_eq_mu,
+            ou_r_squared=ou_r2,
+            ou_sigma=ou_sigma
         )
 
         if isinstance(res, dict) and res.get("error") == "INSUFFICIENT_BALANCE":
@@ -3934,10 +3986,56 @@ class StrategyEngine:
 
                 # ── 1e. COIN DNA VE HIZINA UYARLI ZAMAN & İVMESİZLİK KALKANI ──
                 max_mfe_seen = float(pos.get("max_mfe_roe", 0.0))
+                hold_mins = hold_seconds / 60.0
+
+                # ── 1e-OU. ORNSTEIN-UHLENBECK STOKASTİK YARILANMA & 3-KADEMELİ ALFA ÇÜRÜME MOTORU ──
+                # SpaceX PID Runner Bağışıklığı: Kârda koşan pozisyonu (ROE >= +%2.0 veya PID kilitli) O-U zaman stopu ASLA erken kesmez!
+                pid_engaged = bool(pos.get("pid_engaged", False)) or bool(pos.get("chandelier_locked", False))
+                pid_immune = (roe_raw >= float(OU_PID_IMMUNITY_ROE)) or pid_engaged or (max_mfe_seen >= 3.5 and roe_raw >= 1.0)
+
+                if ENABLE_OU_TIME_STOP and not pid_immune:
+                    ou_tau = float(pos.get("ou_half_life_min", 30.0))
+                    ou_decay_lim = float(pos.get("ou_decay_limit_min", ou_tau * OU_DECAY_TIER2_MULT))
+                    ou_hard_lim = float(pos.get("ou_hard_limit_min", ou_tau * OU_DECAY_TIER3_MULT))
+
+                    # Hedefe ilerleme oranı hesabı (TP1'e olan mesafe)
+                    pos_tp1 = float(pos.get("tp1", 0.0))
+                    progress_ratio = 0.0
+                    if pos_tp1 > 0 and entry_p > 0:
+                        if side == "LONG":
+                            tot_dist = pos_tp1 - entry_p
+                            cur_dist = close_price - entry_p
+                        else:
+                            tot_dist = entry_p - pos_tp1
+                            cur_dist = entry_p - close_price
+                        if tot_dist > 0:
+                            progress_ratio = max(0.0, cur_dist / tot_dist)
+
+                    # Kademe 2: 1.5 x tau (Alfa Çürüme Tahliyesi - Testere / Sıkışma / CVD Tükenişi)
+                    # İşlem 1.5 yarılanma ömrü geçmesine rağmen kâra geçememiş veya hedefin %35'ine bile ulaşamamışsa
+                    if hold_mins >= ou_decay_lim:
+                        if roe_raw <= 1.0 and (cvd_exhausted or progress_ratio < float(OU_MIN_PROGRESS_RATIO) or roe_raw <= 0.0):
+                            record = await self._safe_close_position(
+                                symbol, close_price,
+                                f"⏳ O-U Alfa Çürüme Tahliyesi (1.5τ={ou_decay_lim:.1f}dk, ROE: %{roe_raw:+.1f}, CVD Çürümesi)")
+                            if record:
+                                await self._notify_close(record, levels=levels)
+                                self._cleanup_tracking(symbol)
+                            return
+
+                    # Kademe 3: 2.0 x tau (Mutlak Matematiksel Zaman Stopu - İstatistiksel Üstünlük Tükendi)
+                    if hold_mins >= ou_hard_lim:
+                        record = await self._safe_close_position(
+                            symbol, close_price,
+                            f"⏳ O-U Stokastik Yarılanma Zaman Stopu (2.0τ={ou_hard_lim:.1f}dk, ROE: %{roe_raw:+.1f})")
+                        if record:
+                            await self._notify_close(record, levels=levels)
+                            self._cleanup_tracking(symbol)
+                        return
 
                 # Kural A: Kırılımlar (BREAKOUT) İçin 4-Mum (20dk) İvme Zorunluluğu
                 # Breakout ivmelenmeli ancak anlık %0.15'lik retest fitillerinde infaz edilmemelidir (en az -%0.40 fiyat / -%2.0 ROE sapması):
-                if is_breakout and hold_candles >= 4.0:
+                if is_breakout and hold_candles >= 4.0 and not pid_immune:
                     if max_mfe_seen < 1.50 and roe_raw <= -2.00:
                         record = await self._safe_close_position(
                             symbol, close_price,
@@ -3951,9 +4049,8 @@ class StrategyEngine:
                 is_meme_or_high_beta = coin_atr >= 0.70 or any(m in symbol for m in ["PEPE", "WIF", "DOGE", "BONK", "SHIB", "MEME"])
                 stag_limit_candles = STAGNATION_CANDLES_MEME if is_meme_or_high_beta else STAGNATION_CANDLES_MAJOR
 
-                # İvmesizlik Kalkanı (Majörlerde 12 mum / 60dk, Meme'lerde 6 mum / 30dk sabır payı):
-                # Normal piyasa gürültüsünde erken kesilme önlenir:
-                if hold_candles >= stag_limit_candles and max_mfe_seen < 1.50 and roe_raw <= -2.50:
+                # İvmesizlik Kalkanı:
+                if hold_candles >= stag_limit_candles and max_mfe_seen < 1.50 and roe_raw <= -2.50 and not pid_immune:
                     record = await self._safe_close_position(
                         symbol, close_price,
                         f"⏱️ Erken İvmesizlik Kalkanı ({int(stag_limit_candles*5)}dk İvmelenmedi, ROE: %{roe_raw:+.1f})")
@@ -3962,8 +4059,8 @@ class StrategyEngine:
                         self._cleanup_tracking(symbol)
                     return
 
-                # Standart Stagnation / CVD Çürüme Çıkışı:
-                if hold_candles >= stag_limit_candles and -2.5 <= roe_raw <= 1.5 and cvd_exhausted:
+                # Standart Stagnation / CVD Çürüme Çıkışı (O-U devre dışı ise):
+                if not ENABLE_OU_TIME_STOP and hold_candles >= stag_limit_candles and -2.5 <= roe_raw <= 1.5 and cvd_exhausted and not pid_immune:
                     record = await self._safe_close_position(
                         symbol, close_price,
                         f"⏱️ Adaptif Zaman Stopu / İvme Kaybı ({int(hold_candles)} mum, ROE: %{roe_raw:+.1f}, CVD Çürümesi)")
@@ -3974,7 +4071,7 @@ class StrategyEngine:
 
                 # Normal azami tavan (4 saat)
                 max_seconds = SCALP_MAX_HOLD_CANDLES * 300  # candle sayisi x 5dk
-                if hold_seconds > max_seconds:
+                if hold_seconds > max_seconds and not pid_immune:
                     hours = hold_seconds / 3600.0
                     record = await self._safe_close_position(
                         symbol, close_price,

@@ -350,6 +350,8 @@ class ShadowExecutionEngine:
             "margin_usd": 250.0,
             "leverage": 5.0,
             "notional_usd": 1250.0,
+            "ou_half_life_min": float(telemetry_dict.get("ou_half_life_min", 30.0) or 30.0),
+            "ou_regime": str(telemetry_dict.get("ou_regime", "MODERATE_MEAN_REVERTING")),
             "telemetry": telemetry_dict
         }
 
@@ -542,9 +544,11 @@ class ShadowExecutionEngine:
                         closed_records.append(rec)
                     continue
 
-            # 4. ÖNCELİK: Zaman Aşımı (36 mum = 3 saat boyunca ne TP ne Stop olmadıysa kapat)
-            if pos["candles_elapsed"] >= 36:
-                rec = self._close_shadow_position(s_id, c_close, "Zaman Aşımı (3 Saat / 36 Mum)", "TIMEOUT")
+            # 4. ÖNCELİK: Zaman Aşımı (O-U Stokastik Yarılanma 2.0τ veya azami 36 mum boyunca ne TP ne Stop olmadıysa kapat)
+            ou_tau_s = float(pos.get("ou_half_life_min", 30.0) or 30.0)
+            max_shadow_candles = max(12, min(48, int(round(ou_tau_s * 2.0 / 5.0))))
+            if pos["candles_elapsed"] >= max_shadow_candles:
+                rec = self._close_shadow_position(s_id, c_close, f"⏳ O-U Zaman Aşımı ({max_shadow_candles * 5}dk / {max_shadow_candles} Mum)", "TIMEOUT")
                 if rec:
                     closed_records.append(rec)
                 continue

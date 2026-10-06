@@ -297,3 +297,15 @@ PID_CAPTURE_TIER1 = 0.60                # Erken kârda (%2 - %4 ROE) yakalama or
 PID_CAPTURE_TIER2 = 0.70                # Orta kârda (%4 - %8 ROE) yakalama oranı (%30 nefes payı)
 PID_CAPTURE_TIER3 = 0.80                # Zirve kârda (%8+ ROE) yakalama oranı (%20 nefes payı)
 
+# 15. Ornstein-Uhlenbeck (O-U) Stokastik Süreci ile Optimal Bekleme Süresi (Half-Life & Alpha Decay)
+ENABLE_OU_TIME_STOP = True                  # O-U Stokastik Yarılanma Ömrü & Dinamik Zaman Kalkanı
+OU_LOOKBACK_CANDLES = 80                    # OLS regresyonu için geçmiş mum penceresi (80 mum = ~6.5 saat)
+OU_MIN_HALF_LIFE_MIN = 15.0                 # Asgari yarılanma ömrü (15 dk altındaki aşırı hızlı gürültüyü sınırlar)
+OU_MAX_HALF_LIFE_MIN = 180.0                # Azami yarılanma ömrü tavanı (180 dk / 3 saat)
+OU_DECAY_TIER1_MULT = 1.0                   # Kademe 1: 1.0 x tau (İlk İlerleme Kontrolü)
+OU_DECAY_TIER2_MULT = 1.5                   # Kademe 2: 1.5 x tau (Alfa Çürüme Uyarısı & BE Koruma Tahliyesi)
+OU_DECAY_TIER3_MULT = 2.0                   # Kademe 3: 2.0 x tau (Mutlak Matematiksel Zaman Stopu)
+OU_MIN_PROGRESS_RATIO = 0.35                # 1.0 tau anında hedefin en az %35'i katedilmelidir
+OU_PID_IMMUNITY_ROE = 2.0                   # Pozisyon ROE >= +%2.0 ise SpaceX PID devrededir, O-U kârı ASLA kesmez
+
+

@@ -1750,6 +1750,125 @@ def calculate_pid_stop_level(
     }
 
 
+def calculate_ornstein_uhlenbeck_params(prices, anchor_price=None, dt_minutes=5.0, min_half_life=15.0, max_half_life=180.0):
+    """
+    Ornstein-Uhlenbeck (O-U) Stokastik Süreci ile Ortalama Dönüş Hızı (theta)
+    ve Matematiksel Yarılanma Ömrü (Half-Life - tau) Hesabı.
+    
+    dX_t = theta * (mu - X_t) dt + sigma * dW_t
+    
+    Euler-Maruyama & AR(1) OLS Çözümü:
+    X_t = a + b * X_{t-1} + e_t
+    b = exp(-theta * dt) => theta = -ln(b) / dt
+    tau (half-life) = ln(2) / theta
+    """
+    default_res = {
+        'is_valid': False,
+        'is_mean_reverting': True,
+        'theta': 0.0231,              # ~30 dk yarılanma varsayılanı
+        'half_life_min': 30.0,
+        'half_life_candles': 6.0,
+        'equilibrium_mu': float(anchor_price or (prices[-1] if prices else 0.0)),
+        'r_squared': 0.50,
+        'sigma': 0.005,
+        'regime': 'MODERATE_MEAN_REVERTING'
+    }
+    
+    if prices is None or len(prices) < 20:
+        return default_res
+        
+    try:
+        arr = np.array(prices, dtype=float)
+        # NaN / Inf temizliği
+        arr = arr[np.isfinite(arr)]
+        if len(arr) < 20:
+            return default_res
+            
+        cur_p = arr[-1]
+        mu = float(anchor_price) if (anchor_price is not None and anchor_price > 0) else float(np.mean(arr))
+        
+        # Sapma serisi: Log-sapma oransal olarak ölçek bağımsızdır
+        # X_t = ln(P_t / mu)
+        if mu <= 0:
+            return default_res
+            
+        series = np.log(arr / mu)
+        
+        # OLS AR(1): y = series[1:], x = series[:-1]
+        x = series[:-1]
+        y = series[1:]
+        
+        var_x = np.var(x)
+        if var_x < 1e-12:
+            return default_res
+            
+        cov_xy = np.cov(x, y)[0, 1]
+        b = cov_xy / var_x
+        a = np.mean(y) - b * np.mean(x)
+        
+        # R-kare hesabı
+        residuals = y - (a + b * x)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((y - np.mean(y)) ** 2)
+        r2 = max(0.0, min(1.0, 1.0 - (ss_res / max(1e-12, ss_tot))))
+        
+        # Difüzyon gürültüsü sigma (yıllıklandırılmamış, mum bazlı)
+        sigma = float(np.std(residuals))
+        
+        # b katsayısı analizi
+        if b >= 0.9999 or b <= 0.0:
+            # Seri ortalamaya dönmüyor (Random Walk veya Güçlü Trend patlaması)
+            return {
+                'is_valid': True,
+                'is_mean_reverting': False,
+                'theta': 0.001,
+                'half_life_min': float(max_half_life),
+                'half_life_candles': float(max_half_life / dt_minutes),
+                'equilibrium_mu': mu,
+                'r_squared': round(float(r2), 3),
+                'sigma': round(sigma, 5),
+                'regime': 'TRENDING_DIVERGENT'
+            }
+            
+        # Normal Mean-Reversion durumu:
+        # theta = -ln(b) / dt
+        theta = -np.log(b) / float(dt_minutes)
+        if theta <= 1e-6:
+            theta = 1e-6
+            
+        # tau = ln(2) / theta
+        tau_min = np.log(2.0) / theta
+        
+        # Dinamik sınırlama (min_half_life - max_half_life aralığı)
+        clamped_tau = max(float(min_half_life), min(float(max_half_life), float(tau_min)))
+        tau_candles = clamped_tau / float(dt_minutes)
+        
+        # Rejim sınıflaması
+        if clamped_tau <= 25.0:
+            regime = 'STRONG_MEAN_REVERTING'
+        elif clamped_tau <= 50.0:
+            regime = 'MODERATE_MEAN_REVERTING'
+        elif clamped_tau <= 100.0:
+            regime = 'SLOW_MEAN_REVERTING'
+        else:
+            regime = 'EXTENDED_MEAN_REVERTING'
+            
+        return {
+            'is_valid': True,
+            'is_mean_reverting': True,
+            'theta': round(float(theta), 5),
+            'half_life_min': round(clamped_tau, 1),
+            'half_life_candles': round(tau_candles, 1),
+            'equilibrium_mu': round(mu, 6),
+            'r_squared': round(float(r2), 3),
+            'sigma': round(sigma, 5),
+            'regime': regime
+        }
+    except Exception as e:
+        return default_res
+
+
+
 
 
 

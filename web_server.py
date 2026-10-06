@@ -1069,6 +1069,18 @@ HTML_PAGE = """
             align-items: center;
             gap: 5px;
         }
+        .badge-ou {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(147, 51, 234, 0.35));
+            border: 1px solid #c084fc;
+            color: #f3e8ff;
+            font-size: 11.5px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
 
     
         /* =========================================================================
@@ -6880,6 +6892,7 @@ async function loadAdminMetrics() {
                         ${itemRow('🌀', 'Shannon Confluence & Entropi Kalkanı', '3-Eksen bağımsız confluence doğrulaması ve Boltzmann L2 gürültü filtresi', 'JIT Anlık Doğrulama', pill('AKTİF', 'var(--cyan)'))}
                         ${itemRow('🔭', 'Apollo Kalman Durum-Uzay Filtresi', 'NASA Apollo durum-uzay modeli: Fiyat fitil gürültüsünü filtreleyerek gerçek kurumsal omurgayı ve seviye kırılımlarını doğrular', 'Gürültüsüz State-Space', pill('0 GECİKME • AKTİF', 'var(--cyan)'))}
                         ${itemRow('🚀', 'SpaceX Falcon 9 PID Kâr Kontrolörü', 'Oransal-İntegral-Türev kapalı devre kontrolör: Kâr koşusunda dinamik trailing ratchet ve 1.5x ATR gürültü tamponu', 'PID Gaz/Fren Kontrolü', pill('KÂR KİLİDİ AKTİF', 'var(--green)'))}
+                        ${itemRow('⏳', 'Ornstein-Uhlenbeck Stokastik Yarılanma Sensörü', 'Euler-Maruyama AR(1) OLS regresyonu ile pariteye özel ortalama dönüş yarılanma ömrü (τ) ve 3-kademeli alfa çürüme kalkanı', 'Dinamik τ Optimizasyonu', pill('ALFA KORUMASI AKTİF', 'var(--cyan)'))}
                     </div>
 
                     <!-- KOLON 3: BULUT ALTYAPISI, RAM & SÜREKLİLİK -->
@@ -10999,6 +11012,7 @@ async function loadAdminMetrics() {
                                     <span style="color:#38bdf8; font-size:11px;">$${sCurPrice}</span>
                                     ${pos.pid_engaged ? `<span class="badge-pid" style="font-size:9.5px; padding:1px 5px;" title="SpaceX Falcon 9 PID Kâr Kontrolörü Devrede">🚀 PID KİLİT</span>` : ''}
                                     ${pos.kalman_state ? `<span class="badge-kalman" style="font-size:9.5px; padding:1px 5px;" title="Apollo Kalman Filtresi Onaylı">🛡️ KALMAN</span>` : ''}
+                                    ${pos.ou_half_life_min ? `<span class="badge-ou" style="font-size:9.5px; padding:1px 5px;" title="O-U Yarılanma Ömrü: τ=${Number(pos.ou_half_life_min).toFixed(1)}dk (${pos.ou_regime || 'Dönüş'})">⏳ τ=${Number(pos.ou_half_life_min).toFixed(0)}dk</span>` : ''}
                                 </div>
                             </div>
                             <div style="text-align:right; flex-shrink:0; min-width:85px;">
@@ -13500,6 +13514,7 @@ async function loadAdminMetrics() {
                         ${pos.trail_status ? '<span class="badge-trailing-lock">' + pos.trail_status + '</span>' : ''}
                         ${pos.pid_engaged ? '<span class="badge-pid" title="' + (pos.pid_telemetry ? ('PID Taban Stop: $' + formatSmartPrice(pos.pid_telemetry.pid_stop) + ' | Mod: ' + (pos.pid_telemetry.thrust_mode || '')) : 'SpaceX Falcon 9 Kâr Kontrolörü Aktif') + '">🚀 SpaceX PID Kilit (+' + Number(pos.peak_mfe_pct || 0).toFixed(2) + '% MFE)</span>' : ''}
                         ${pos.kalman_state ? '<span class="badge-kalman" title="Apollo Kalman Gürültüsüz Fiyat: $' + formatSmartPrice(pos.kalman_state.clean_price) + ' (Z: ' + Number(pos.kalman_state.z_score || 0).toFixed(2) + ')">🛡️ Apollo Kalman Onaylı</span>' : ''}
+                        ${pos.ou_half_life_min ? '<span class="badge-ou" title="O-U Yarılanma: τ=' + Number(pos.ou_half_life_min).toFixed(1) + 'dk | 1.5τ Alfa Çürüme: ' + Number(pos.ou_decay_limit_min || pos.ou_half_life_min * 1.5).toFixed(0) + 'dk">⏳ O-U: τ=' + Number(pos.ou_half_life_min).toFixed(0) + 'dk (' + (pos.ou_regime || 'Dönüş') + ')</span>' : ''}
                     </div>
 
                     <!-- 4. SETUP REASON -->
@@ -14952,6 +14967,15 @@ function downloadExcelReport() {
                                     ${(item.pid_telemetry && item.pid_telemetry.thrust_mode) ? `İtiş Modu: ${item.pid_telemetry.thrust_mode}` : 'Dinamik Zirve Ratchet'}
                                 </div>
                             </div>
+                            <div style="background:rgba(255,255,255,0.02); border-radius:8px; padding:8px 12px; border:1px solid rgba(255,255,255,0.05);">
+                                <div style="font-size:10px; color:#94a3b8; margin-bottom:3px;">O-U Stokastik Yarılanma (τ)</div>
+                                <div style="font-size:12px; font-weight:800; color:#c084fc; font-family:'JetBrains Mono',monospace;">
+                                    ${item.ou_half_life_min ? `⏳ τ=${Number(item.ou_half_life_min).toFixed(1)} dk` : '⏳ Dinamik τ (30 dk)'}
+                                </div>
+                                <div style="font-size:9.5px; color:#64748b; margin-top:2px;">
+                                    ${item.ou_regime ? `${item.ou_regime} | 1.5τ: ${Number(item.ou_decay_limit_min || 45).toFixed(0)}dk` : 'Alfa Çürüme & Zaman Kalkanı'}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -15544,6 +15568,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                     "dynamic_runner_profit_lock": getattr(config, 'ENABLE_DYNAMIC_RUNNER_PROFIT_LOCK', True),
                     "kalman_price_filter": getattr(config, 'ENABLE_KALMAN_PRICE_FILTER', True),
                     "spacex_pid_controller": getattr(config, 'ENABLE_PID_PROFIT_CONTROLLER', True),
+                    "ou_time_stop": getattr(config, 'ENABLE_OU_TIME_STOP', True),
+                    "ou_half_life": getattr(config, 'ENABLE_OU_TIME_STOP', True),
                     "max_leverage_cap": getattr(config, 'MAX_LEVERAGE', 5),
                     "circuit_breaker_active": getattr(strategy.vault, '_circuit_breaker_active', False) if (strategy and hasattr(strategy, 'vault')) else False,
                     "be_locked_count": sum(1 for p in getattr(trader_manager, 'open_positions', {}).values() if p.get("early_be_locked", False)),
@@ -15573,6 +15599,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                     "asia_selective_shield": True,
                     "kalman_price_filter": True,
                     "spacex_pid_controller": True,
+                    "ou_time_stop": True,
+                    "ou_half_life": True,
                     "circuit_breaker_active": False,
                     "be_locked_count": 0,
                     "pid_locked_count": 0,
