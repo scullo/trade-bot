@@ -3740,7 +3740,7 @@ class StrategyEngine:
             wall_duration_sec=float(l2_info.get('wall_duration_sec', 0.0)) if 'l2_info' in locals() and l2_info else 0.0,
             spot_basis_bps=spot_basis_bps,
             entry_spread_pct=float(l2_info.get('spread_pct', 0.0)) if 'l2_info' in locals() and l2_info else 0.0,
-            entry_slippage_pct=float(l2_info.get('sim_slip_long' if side == 'LONG' else 'sim_slip_short', 0.0)) if 'l2_info' in locals() and l2_info else 0.0,
+            entry_slippage_pct=(float(l2_info.get('sim_slip_long' if side == 'LONG' else 'sim_slip_short', 0.0)) / 100.0) if 'l2_info' in locals() and l2_info else 0.0,
             btc_velocity_60s=btc_velocity_60s,
             calculated_dollar_risk=calculated_dollar_risk if 'calculated_dollar_risk' in locals() else 10.0,
             stoikov_micro_price=float(l2_info.get('stoikov_micro_price', entry_price)) if 'l2_info' in locals() and l2_info else entry_price,

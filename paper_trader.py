@@ -645,6 +645,11 @@ class PaperTrader:
         entry_slip = kwargs.get("entry_slippage_pct", 0.0)
         if entry_slip and float(entry_slip) > 0.0:
             slip_f = float(entry_slip)
+            # Emniyet Zırhı: Eğer değer yüzde formatında (örn. 0.04 = %0.04) geldiyse kesire dönüştür
+            if slip_f > 0.005:
+                slip_f = slip_f / 100.0
+            # Azami tavan: Giriş kayması asla %0.15'i (0.0015) aşamaz (sahte acil tavan stopu zırhı)
+            slip_f = min(0.0015, max(0.0002, slip_f))
             if side.upper() == "LONG":
                 entry_price = round(entry_price * (1.0 + slip_f), 8)
             else:
