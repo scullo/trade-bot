@@ -1454,121 +1454,6 @@ class StrategyEngine:
                 rej_msg = f"⚡ Hawkes Tasfiye Çığı Freni: Piyasada kendi kendini besleyen tasfiye çığı aktif (η={hawkes_val:.2f} >= {HAWKES_AVALANCHE_THRESHOLD_ETA:.2f}). Seviyeler çığ altında ezileceği için işlem engellendi."
                 print(f">> [RED - HAWKES ÇIĞ FRENİ] {symbol}: {rej_msg}")
                 self.log_rejection(symbol, reason, rej_msg, hawkes_eta=hawkes_val)
-        # ── 0e. GERÇEK ZAMANLI KURUMSAL aggTrade BLOK EMİR DEDEKTÖRÜ (<50ms VETO KALKANI) ──
-        if hasattr(self, 'market_data') and self.market_data:
-            try:
-                sym_netflow_fast = self.market_data.get_symbol_netflow(symbol)
-                if side == "LONG" and sym_netflow_fast.get('block_dump_active'):
-                    block_sells = float(sym_netflow_fast.get('block_sells_60s', 0.0))
-                    rej_msg = (
-                        f"🛑 Kurumsal Blok Satış Kalkanı: Son 60s içinde agresif kurumsal piyasa satışı tespit edildi "
-                        f"(Blok Satış Baskısı: ${block_sells/1e6:.2f}M, Long VETO!)"
-                    )
-                    try:
-                        print(f">> [RED - KURUMSAL BLOK SATIŞ KALKANI] {symbol}: {rej_msg}")
-                    except Exception:
-                        pass
-                    self.log_rejection(symbol, setup_id or reason, rej_msg, planned_r=0.0)
-                    return {"error": "INSTITUTIONAL_BLOCK_SELL_DUMP_VETO", "reason": rej_msg}
-
-                if side == "SHORT" and sym_netflow_fast.get('block_squeeze_active'):
-                    block_buys = float(sym_netflow_fast.get('block_buys_60s', 0.0))
-                    rej_msg = (
-                        f"🛡️ Kurumsal Blok Alış Kalkanı: Son 60s içinde agresif kurumsal piyasa alışı tespit edildi "
-                        f"(Blok Alış Baskısı: ${block_buys/1e6:.2f}M, Short Squeeze VETO!)"
-                    )
-                    try:
-                        print(f">> [RED - KURUMSAL BLOK ALIŞ KALKANI] {symbol}: {rej_msg}")
-                    except Exception:
-                        pass
-                    self.log_rejection(symbol, setup_id or reason, rej_msg, planned_r=0.0)
-                    return {"error": "INSTITUTIONAL_BLOCK_BUY_SQUEEZE_VETO", "reason": rej_msg}
-            except Exception:
-                pass
-
-        # ── 0f. GERÇEK ON-CHAIN MEMPOOL TRANSFER KALKANI (15-30dk ÖNCÜ DUMP/SQUEEZE ZIRHI) ──
-        if hasattr(self, 'market_data') and self.market_data:
-            try:
-                sym_netflow_mem = self.market_data.get_symbol_netflow(symbol)
-                now_t = time.time()
-                mem_dump_active = bool(sym_netflow_mem.get('mempool_dump_threat', False))
-                mem_exp = float(sym_netflow_mem.get('mempool_threat_expiry', 0.0))
-                if side == "LONG" and mem_dump_active and (now_t <= mem_exp):
-                    mem_amt = float(sym_netflow_mem.get('mempool_amount_usd', 0.0))
-                    mem_from = str(sym_netflow_mem.get('mempool_from_label', 'Mempool Balina Cüzdanı'))
-                    mem_to = str(sym_netflow_mem.get('mempool_to_label', 'Borsa Sıcak Cüzdanı'))
-                    rem_min = max(1, int((mem_exp - now_t) / 60))
-                    rej_msg = (
-                        f"🚨 Mempool Balina Giriş Kalkanı: Borsaya ${mem_amt/1e6:.2f}M tutarında on-chain coin girişi tespit edildi! "
-                        f"({mem_from} ➔ {mem_to}, Kalan Koruma: {rem_min} dk, Long VETO!)"
-                    )
-                    try:
-                        print(f">> [RED - MEMPOOL BALİNA GİRİŞ KALKANI] {symbol}: {rej_msg}")
-                    except Exception:
-                        pass
-                    self.log_rejection(symbol, setup_id or reason, rej_msg, planned_r=0.0)
-                    return {"error": "MEMPOOL_WHALE_INFLOW_DUMP_VETO", "reason": rej_msg}
-
-                mem_sqz_active = bool(sym_netflow_mem.get('mempool_squeeze_threat', False))
-                mem_sqz_exp = float(sym_netflow_mem.get('mempool_squeeze_expiry', 0.0))
-                if side == "SHORT" and mem_sqz_active and (now_t <= mem_sqz_exp):
-                    mem_amt = float(sym_netflow_mem.get('mempool_amount_usd', 0.0))
-                    rem_min = max(1, int((mem_sqz_exp - now_t) / 60))
-                    rej_msg = (
-                        f"🛡️ Mempool Soğuk Cüzdan Kalkanı: Borsadan soğuk cüzdana ${mem_amt/1e6:.2f}M tutarında on-chain çekim tespit edildi! "
-                        f"(Arz Şoku / Short Squeeze Riski, Kalan Koruma: {rem_min} dk, Short VETO!)"
-                    )
-                    try:
-                        print(f">> [RED - MEMPOOL SOĞUK CÜZDAN KALKANI] {symbol}: {rej_msg}")
-                    except Exception:
-                        pass
-                    self.log_rejection(symbol, setup_id or reason, rej_msg, planned_r=0.0)
-                    return {"error": "MEMPOOL_WHALE_OUTFLOW_SQUEEZE_VETO", "reason": rej_msg}
-            except Exception:
-                pass
-
-        # ── 0g. KURUMSAL COINBASE SPOT VS. BINANCE OFFSHORE CVD AYRIŞMASI (SMART MONEY VETO & BOOST) ──
-        if hasattr(self, 'market_data') and self.market_data and ENABLE_SMART_MONEY_DIVERGENCE:
-            try:
-                sm_div = self.market_data.get_smart_money_divergence(symbol)
-                cb_r = sm_div.get('coinbase_buy_ratio', 50.0)
-                bin_r = sm_div.get('binance_buy_ratio', 50.0)
-                sm_spread = sm_div.get('smart_money_spread', 0.0)
-                proxy_str = " (Macro BTC Şemsiyesi)" if sm_div.get('is_macro_proxy') else ""
-
-                if side == "LONG" and sm_div.get('is_retail_long_trap'):
-                    rej_msg = (
-                        f"🚨 Perakende Long Tuzağı Kalkanı: Binance Vadeli'de aşırı perakende FOMO alımı (%{bin_r:.1f}) var "
-                        f"ancak ABD Coinbase Spot satıcılı/pasif (%{cb_r:.1f}, Yayılma: {sm_spread:+.1f}%){proxy_str}! "
-                        f"(Long Squeeze Tehlikesi, Long VETO!)"
-                    )
-                    try:
-                        print(f">> [RED - PERAKENDE LONG TUZAĞI KALKANI] {symbol}: {rej_msg}")
-                    except Exception:
-                        pass
-                    self.log_rejection(symbol, setup_id or reason, rej_msg, planned_r=0.0)
-                    return {"error": "INSTITUTIONAL_DIVERGENCE_RETAIL_TRAP_VETO", "reason": rej_msg}
-
-                if side == "SHORT" and sm_div.get('is_retail_short_trap'):
-                    rej_msg = (
-                        f"🛡️ Perakende Panik Short Tuzağı Kalkanı: Binance Vadeli'de aşırı panik satışı (%{bin_r:.1f}) var "
-                        f"ancak ABD Coinbase Spot kurumsal emilimde (%{cb_r:.1f}, Yayılma: {sm_spread:+.1f}%){proxy_str}! "
-                        f"(Short Squeeze Tehlikesi, Short VETO!)"
-                    )
-                    try:
-                        print(f">> [RED - PERAKENDE PANİK SHORT KALKANI] {symbol}: {rej_msg}")
-                    except Exception:
-                        pass
-                    self.log_rejection(symbol, setup_id or reason, rej_msg, planned_r=0.0)
-                    return {"error": "INSTITUTIONAL_DIVERGENCE_PANIC_SHORT_VETO", "reason": rej_msg}
-
-                # Senaryo A: Akıllı Para Alımı (Kurumsal Spot Birikim) -> Confluence Teyidi
-                if side == "LONG" and sm_div.get('is_institutional_accum'):
-                    if confluence_list is not None and isinstance(confluence_list, list):
-                        if "Smart_Money_Kurumsal_Spot_Teyidi" not in confluence_list:
-                            confluence_list.append("Smart_Money_Kurumsal_Spot_Teyidi")
-            except Exception:
-                pass
 
         # ── 1. ATR / VOLATILITE HESABI & KATMANLI LİKİDİTE EŞİĞİ ──
         atr_pct = 1.2
@@ -3689,8 +3574,9 @@ class StrategyEngine:
                         return {"error": "WHALE_EXCHANGE_OUTFLOW_SQUEEZE_VETO", "reason": rej_msg}
 
                     # Aşama 1: Kurumsal aggTrade Blok Satış Kalkanı (<50ms Gerçek Zamanlı Long Veto)
-                    if side == "LONG" and sym_netflow.get('block_dump_active'):
-                        block_sells = float(sym_netflow.get('block_sells_60s', 0.0))
+                    is_block_dump = isinstance(sym_netflow, dict) and (sym_netflow.get('block_dump_active') is True)
+                    block_sells = float(sym_netflow.get('block_sells_60s', 0.0) or 0.0) if isinstance(sym_netflow, dict) else 0.0
+                    if side == "LONG" and is_block_dump and block_sells > 0.0:
                         rej_msg = (
                             f"🛑 Kurumsal Blok Satış Kalkanı: Son 60s içinde agresif kurumsal piyasa satışı tespit edildi "
                             f"(Blok Satış Baskısı: ${block_sells/1e6:.2f}M, Long VETO!)"
@@ -3703,8 +3589,9 @@ class StrategyEngine:
                         return {"error": "INSTITUTIONAL_BLOCK_SELL_DUMP_VETO", "reason": rej_msg}
 
                     # Aşama 1: Kurumsal aggTrade Blok Alış Kalkanı (<50ms Gerçek Zamanlı Short Veto)
-                    if side == "SHORT" and sym_netflow.get('block_squeeze_active'):
-                        block_buys = float(sym_netflow.get('block_buys_60s', 0.0))
+                    is_block_squeeze = isinstance(sym_netflow, dict) and (sym_netflow.get('block_squeeze_active') is True)
+                    block_buys = float(sym_netflow.get('block_buys_60s', 0.0) or 0.0) if isinstance(sym_netflow, dict) else 0.0
+                    if side == "SHORT" and is_block_squeeze and block_buys > 0.0:
                         rej_msg = (
                             f"🛡️ Kurumsal Blok Alış Kalkanı: Son 60s içinde agresif kurumsal piyasa alışı tespit edildi "
                             f"(Blok Alış Baskısı: ${block_buys/1e6:.2f}M, Short Squeeze VETO!)"
@@ -3715,6 +3602,87 @@ class StrategyEngine:
                             pass
                         self.log_rejection(symbol, setup_id or reason, rej_msg, exchange_netflow_usd=exchange_netflow_usd, netflow_zscore=netflow_zscore, netflow_regime=netflow_regime, ammunition_bias=ammunition_bias)
                         return {"error": "INSTITUTIONAL_BLOCK_BUY_SQUEEZE_VETO", "reason": rej_msg}
+
+                    # Aşama 2: Gerçek On-Chain Mempool Transfer Kalkanı (15-30dk Öncü Dump/Squeeze Zırhı)
+                    now_t = time.time()
+                    mem_dump_active = isinstance(sym_netflow, dict) and (sym_netflow.get('mempool_dump_threat') is True)
+                    mem_exp = float(sym_netflow.get('mempool_threat_expiry', 0.0) or 0.0) if isinstance(sym_netflow, dict) else 0.0
+                    if side == "LONG" and mem_dump_active and (now_t <= mem_exp):
+                        mem_amt = float(sym_netflow.get('mempool_amount_usd', 0.0) or 0.0)
+                        if mem_amt > 0.0:
+                            mem_from = str(sym_netflow.get('mempool_from_label', 'Mempool Balina Cüzdanı'))
+                            mem_to = str(sym_netflow.get('mempool_to_label', 'Borsa Sıcak Cüzdanı'))
+                            rem_min = max(1, int((mem_exp - now_t) / 60))
+                            rej_msg = (
+                                f"🚨 Mempool Balina Giriş Kalkanı: Borsaya ${mem_amt/1e6:.2f}M tutarında on-chain coin girişi tespit edildi! "
+                                f"({mem_from} ➔ {mem_to}, Kalan Koruma: {rem_min} dk, Long VETO!)"
+                            )
+                            try:
+                                print(f">> [RED - MEMPOOL BALİNA GİRİŞ KALKANI] {symbol}: {rej_msg}")
+                            except Exception:
+                                pass
+                            self.log_rejection(symbol, setup_id or reason, rej_msg, planned_r=0.0)
+                            return {"error": "MEMPOOL_WHALE_INFLOW_DUMP_VETO", "reason": rej_msg}
+
+                    mem_sqz_active = isinstance(sym_netflow, dict) and (sym_netflow.get('mempool_squeeze_threat') is True)
+                    mem_sqz_exp = float(sym_netflow.get('mempool_squeeze_expiry', 0.0) or 0.0) if isinstance(sym_netflow, dict) else 0.0
+                    if side == "SHORT" and mem_sqz_active and (now_t <= mem_sqz_exp):
+                        mem_amt = float(sym_netflow.get('mempool_amount_usd', 0.0) or 0.0)
+                        if mem_amt > 0.0:
+                            rem_min = max(1, int((mem_sqz_exp - now_t) / 60))
+                            rej_msg = (
+                                f"🛡️ Mempool Soğuk Cüzdan Kalkanı: Borsadan soğuk cüzdana ${mem_amt/1e6:.2f}M tutarında on-chain çekim tespit edildi! "
+                                f"(Arz Şoku / Short Squeeze Riski, Kalan Koruma: {rem_min} dk, Short VETO!)"
+                            )
+                            try:
+                                print(f">> [RED - MEMPOOL SOĞUK CÜZDAN KALKANI] {symbol}: {rej_msg}")
+                            except Exception:
+                                pass
+                            self.log_rejection(symbol, setup_id or reason, rej_msg, planned_r=0.0)
+                            return {"error": "MEMPOOL_WHALE_OUTFLOW_SQUEEZE_VETO", "reason": rej_msg}
+
+                    # Aşama 3: Kurumsal Coinbase Prime vs Binance Offshore CVD Ayrışması (Smart Money Veto & Boost)
+                    if ENABLE_SMART_MONEY_DIVERGENCE and hasattr(self, 'market_data') and self.market_data:
+                        try:
+                            sm_div = self.market_data.get_smart_money_divergence(symbol) if hasattr(self.market_data, 'get_smart_money_divergence') else {}
+                            if isinstance(sm_div, dict):
+                                cb_r = float(sm_div.get('coinbase_buy_ratio', 50.0) or 50.0)
+                                bin_r = float(sm_div.get('binance_buy_ratio', 50.0) or 50.0)
+                                sm_spread = float(sm_div.get('smart_money_spread', 0.0) or 0.0)
+                                proxy_str = " (Macro BTC Şemsiyesi)" if sm_div.get('is_macro_proxy') else ""
+
+                                if side == "LONG" and (sm_div.get('is_retail_long_trap') is True):
+                                    rej_msg = (
+                                        f"🚨 Perakende Long Tuzağı Kalkanı: Binance Vadeli'de aşırı perakende FOMO alımı (%{bin_r:.1f}) var "
+                                        f"ancak ABD Coinbase Spot satıcılı/pasif (%{cb_r:.1f}, Yayılma: {sm_spread:+.1f}%){proxy_str}! "
+                                        f"(Long Squeeze Tehlikesi, Long VETO!)"
+                                    )
+                                    try:
+                                        print(f">> [RED - PERAKENDE LONG TUZAĞI KALKANI] {symbol}: {rej_msg}")
+                                    except Exception:
+                                        pass
+                                    self.log_rejection(symbol, setup_id or reason, rej_msg, planned_r=0.0)
+                                    return {"error": "INSTITUTIONAL_DIVERGENCE_RETAIL_TRAP_VETO", "reason": rej_msg}
+
+                                if side == "SHORT" and (sm_div.get('is_retail_short_trap') is True):
+                                    rej_msg = (
+                                        f"🛡️ Perakende Panik Short Tuzağı Kalkanı: Binance Vadeli'de aşırı panik satışı (%{bin_r:.1f}) var "
+                                        f"ancak ABD Coinbase Spot kurumsal emilimde (%{cb_r:.1f}, Yayılma: {sm_spread:+.1f}%){proxy_str}! "
+                                        f"(Short Squeeze Tehlikesi, Short VETO!)"
+                                    )
+                                    try:
+                                        print(f">> [RED - PERAKENDE PANİK SHORT KALKANI] {symbol}: {rej_msg}")
+                                    except Exception:
+                                        pass
+                                    self.log_rejection(symbol, setup_id or reason, rej_msg, planned_r=0.0)
+                                    return {"error": "INSTITUTIONAL_DIVERGENCE_PANIC_SHORT_VETO", "reason": rej_msg}
+
+                                if side == "LONG" and (sm_div.get('is_institutional_accum') is True):
+                                    if confluence_list is not None and isinstance(confluence_list, list):
+                                        if "Smart_Money_Kurumsal_Spot_Teyidi" not in confluence_list:
+                                            confluence_list.append("Smart_Money_Kurumsal_Spot_Teyidi")
+                        except Exception:
+                            pass
 
                     # Kural 3: Stabil Kripto Cephane Confluence Ödülü
                     if ENABLE_AMMUNITION_CONFLUENCE and side == "LONG" and ammunition_bias == "BULLISH_FUEL":

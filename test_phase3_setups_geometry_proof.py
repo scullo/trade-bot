@@ -109,6 +109,18 @@ class TestPhase3SetupsGeometryProof(unittest.TestCase):
             "is_available": False, "basis_bps": 0.0, "spot_perp_divergence": 0.0
         })
         self.mock_md.get_jit_l2_depth = AsyncMock(return_value={"depth_available": False})
+        self.mock_md.get_symbol_netflow = MagicMock(return_value={
+            'symbol': 'BTC/USDT', 'netflow_24h_usd': 0.0, 'z_score': 0.0,
+            'regime': 'BALANCED_FLOW', 'is_dump_risk': False, 'is_accumulation': False,
+            'block_dump_active': False, 'block_squeeze_active': False,
+            'block_sells_60s': 0.0, 'block_buys_60s': 0.0, 'last_update': 0.0
+        })
+        self.mock_md.get_ammunition_status = MagicMock(return_value={'bias': 'NEUTRAL', 'binance_clean_reserves': 0.0})
+        self.mock_md.get_smart_money_divergence = MagicMock(return_value={
+            'coinbase_buy_ratio': 50.0, 'binance_buy_ratio': 50.0, 'smart_money_spread': 0.0,
+            'is_macro_proxy': False, 'is_retail_long_trap': False, 'is_retail_short_trap': False,
+            'is_institutional_accum': False, 'margin_multiplier': 1.0
+        })
         
         self.engine = StrategyEngine(self.mock_pt, self.mock_notifier, self.mock_md)
         self.engine.rejections = []
