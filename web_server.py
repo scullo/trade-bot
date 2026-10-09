@@ -16373,7 +16373,17 @@ function downloadExcelReport() {
                 loadQuantEvolutionData();
                 startBinanceGlobalFeed();
                 startSSEFallback();
-                setInterval(syncBackendState, 10000); // 10 Saniyede bir arka plan senkronizasyonu
+                // Render 100GB Bant Genisligi Korumasi: Sekme acikken 15s, arka plandayken durdur
+                setInterval(() => {
+                    if (document.visibilityState === 'visible') {
+                        syncBackendState();
+                    }
+                }, 15000);
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') {
+                        syncBackendState();
+                    }
+                });
             } catch (e) {
                 console.error("Valkyrie Init Error:", e);
             }
@@ -16412,9 +16422,24 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
 
     async def health_check(request):
         return web.Response(text="OK", content_type="text/plain")
-        
-    
-    # =========================================================================
+
+    def json_compressed_response(request, payload, status=200):
+        """Render 100GB bant genisligi limit korumasi: JSON yanitlarini gzip ile %85 sikistirir."""
+        import gzip
+        json_str = safe_json_dumps(payload)
+        accept_encoding = request.headers.get('Accept-Encoding', '')
+        headers = {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        }
+        if 'gzip' in accept_encoding:
+            headers['Content-Encoding'] = 'gzip'
+            compressed = gzip.compress(json_str.encode('utf-8'), compresslevel=6)
+            return web.Response(body=compressed, headers=headers, status=status)
+        return web.Response(text=json_str, headers=headers, status=status)
+
     # VALKYRIE MULTI-TENANT & AUTH API ENDPOINTS
     # =========================================================================
     db_inst = DatabaseManager()
@@ -16603,7 +16628,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "exchange_netflows": {k: dict(v) for k, v in list(getattr(market_data, 'exchange_netflows', {}).items()) if '/' in k} if market_data else {}
             }
 
-            return web.json_response({
+            return json_compressed_response(request, {
                 "balance": trader_manager.balance,
                 "initial_balance": 10000.0,
                 "free_balance": trader_manager.get_free_balance(),
@@ -16660,10 +16685,10 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                     "pid_locked_count": sum(1 for p in getattr(trader_manager, 'open_positions', {}).values() if p.get("pid_engaged", False)),
                     "emergency_alert": getattr(trader_manager, 'emergency_alert', None)
                 }
-            }, dumps=safe_json_dumps)
+            })
         except Exception as e:
             hist_full = trader_manager.history
-            return web.json_response({
+            return json_compressed_response(request, {
                 "balance": trader_manager.balance,
                 "initial_balance": 10000.0,
                 "free_balance": trader_manager.get_free_balance(),
@@ -16695,7 +16720,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "symbol_oi": {},
                 "system_health": {"is_perfect": False, "status_text": f"Hata: {e}"},
                 "macro_climate": {}
-            }, dumps=safe_json_dumps)
+            }, status=500)
 
     async def api_toggle_symbol(request):
         try:
