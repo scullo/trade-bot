@@ -16763,6 +16763,8 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
             } catch (err) {
                 console.error("openTradingViewModal error:", err);
             }
+        }
+
         function closeTvModal() {
             const modal = document.getElementById('tv-modal-overlay');
             if (modal) modal.style.display = 'none';
