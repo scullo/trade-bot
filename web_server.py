@@ -6480,7 +6480,6 @@ HTML_PAGE = """
             <div>Toplam <b id="funding-footer-count" style="color:#fff;">0</b> parite listeleniyor. <span id="funding-last-update-str" style="color:var(--cyan); margin-left:12px;"></span></div>
             <div style="color:#ef4444; font-weight:600;">🛡️ Squeeze Kuralı: Aşırı negatif fonlamalı coinlerde Short açılışları veto edilir, fitil süpürmeleri kasayı eritmez.</div>
         </div>
-    </div>
 
         <!-- =========================================================================
              B. GLOBAL LİKİDASYON RADARI & TASFİYE SÜPÜRME PANELİ (!forceOrder)
