@@ -19461,16 +19461,26 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             clean_s = symbol.replace("/USDT", "").replace(":USDT", "").replace("USDT", "").strip().upper()
             full_s = f"{clean_s}/USDT"
             
-            # market_data'dan 5M mum ve seviyeleri al
+            # market_data'dan 5M mum ve seviyeleri al (DataFrame boolean truth hatası önleyici güvenli tarama)
             df_5m = None
-            if market_data and hasattr(market_data, 'candles_5m'):
-                df_5m = market_data.candles_5m.get(full_s) or market_data.candles_5m.get(clean_s) or market_data.candles_5m.get(f"{clean_s}USDT")
+            if market_data and hasattr(market_data, 'candles_5m') and isinstance(market_data.candles_5m, dict):
+                for candidate_key in [full_s, clean_s, f"{clean_s}USDT", symbol]:
+                    cand = market_data.candles_5m.get(candidate_key)
+                    if cand is not None and isinstance(cand, pd.DataFrame) and not cand.empty:
+                        df_5m = cand
+                        break
+
                 if (df_5m is None or df_5m.empty) and hasattr(market_data, 'fetch_single_symbol'):
                     try:
                         await market_data.fetch_single_symbol(full_s)
-                        df_5m = market_data.candles_5m.get(full_s) or market_data.candles_5m.get(clean_s)
+                        for candidate_key in [full_s, clean_s]:
+                            cand = market_data.candles_5m.get(candidate_key)
+                            if cand is not None and isinstance(cand, pd.DataFrame) and not cand.empty:
+                                df_5m = cand
+                                break
                     except Exception:
                         pass
+
             
             cur_p = 0.0
             if df_5m is not None and not df_5m.empty:
