@@ -1340,6 +1340,7 @@ def calculate_deribit_gex(options_book: list, spot_price: float = None) -> dict:
             if raw_gamma is not None and float(raw_gamma) > 0:
                 gamma = float(raw_gamma)
             else:
+                denom = max(1e-6, sigma * np.sqrt(tau))
                 d1 = (np.log(spot_price / strike) + 0.5 * (sigma ** 2) * tau) / denom
                 gamma = (np.exp(-0.5 * (d1 ** 2)) / (spot_price * denom * np.sqrt(2.0 * np.pi)))
 

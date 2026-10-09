@@ -4684,6 +4684,14 @@ class StrategyEngine:
         oi_data = self.market_data.get_symbol_open_interest(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_open_interest')) else {}
         oi_status = oi_data.get('status', 'BALANCED')
         delta_oi_pct = float(oi_data.get('delta_oi_pct', 0.0))
+        # ─────────────────────────────────────────────────────────────────
+        # 🚀 AŞAMA 5 / 4.1: AGRESİF ALFA & LİKİDASYON SQUEEZE MOTORU (ÖNCELİK 4)
+        # Setup 15 (Short Squeeze Avı) ve Setup 16 (Long Cascade Dip Avı)
+        # Makro tasfiye patlamalarında ve V-dönüşlerinde en yüksek öncelikle değerlendirilir.
+        # ─────────────────────────────────────────────────────────────────
+        liq_sq_res = await self.evaluate_liquidation_squeeze_setups(symbol, current_candle, levels)
+        if liq_sq_res:
+            return
 
         # ─────────────────────────────────────────────────────────────────
         # SETUP 1: TAZE R4 BREAKOUT / OI BOĞA TAARRUZU LONG
