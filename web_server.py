@@ -16430,6 +16430,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "recent_rejections": list(getattr(strategy, "recent_rejections", []))[-50:] if strategy else [],
                 "setup_attempts": dict(getattr(strategy, "setup_attempts", {})) if strategy else {},
                 "system_health": sys_health,
+                "deribit_gex": getattr(market_data, 'deribit_gex_data', {}) if market_data else {},
                 "coinbase_lead_lag": dict(getattr(market_data, 'coinbase_lead_lag', {})) if market_data else {},
                 "oi_summary": dict(getattr(market_data, 'oi_summary', {})) if market_data else {},
                 "symbol_oi": dict(getattr(market_data, 'symbol_oi', {})) if market_data else {},

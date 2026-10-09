@@ -1601,7 +1601,10 @@ class StrategyEngine:
                     f"son 48 saatlik veride negatif alfa ürettiği için otonom olarak UYUTULDU (MUTED). "
                     f"Sermayeyi korumak için işlem açılmadı."
                 )
-                print(f">> [RED - COIN DNA SETUP UYUTULDU] {symbol}: {rej_msg}")
+                try:
+                    print(f">> [RED - COIN DNA SETUP UYUTULDU] {symbol}: {rej_msg}")
+                except Exception:
+                    pass
                 self.log_rejection(symbol, reason, rej_msg, setup_archetype="SETUP_MUTED_BY_ALPHA")
                 return {"error": "SETUP_MUTED_BY_ALPHA"}
 
@@ -2133,8 +2136,10 @@ class StrategyEngine:
         # 🛡️ ISINMA KORUMASI (WARM-UP GATE):
         # Canlı tahta derinliği (OBI) henüz akmamış, sıfır veya 35 saniyeden eski ise körleme işlem AÇILMAZ!
         if not is_obi_fresh:
-            rej_msg = f"🛡️ Isınma Koruması (Warm-up Gate): Canlı tahta derinliği (OBI) henüz oturmadı veya bayat ({age_sec:.1f}s önce güncellendi, B:{obi_bid_qty:.1f}, A:{obi_ask_qty:.1f}). Körleme işleme girilmedi."
-            print(f">> [RED - ISINMA KALKANI] {symbol}: {rej_msg}")
+            try:
+                print(f">> [RED - ISINMA KALKANI] {symbol}: {rej_msg}")
+            except Exception:
+                pass
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "OBI_WARMUP_GATE_BLOCKED"}
 
@@ -2702,14 +2707,30 @@ class StrategyEngine:
                 setup_archetype = "COUNTER_TREND_CEILING"
                 setup_archetype_label = "Tepe Reddi / Tavan (Mean Reversion)"
 
-        # 🐋 Stabil Kripto Borsa Cephane Confluence Ödülü (Erken Kontrol)
-        if ENABLE_AMMUNITION_CONFLUENCE and side == "LONG" and hasattr(self, 'market_data') and self.market_data:
+        # 🐋 Stabil Kripto Borsa Cephane, SSR & Tether Mint Confluence (3.2)
+        if hasattr(self, 'market_data') and self.market_data:
             try:
                 ammo_st = self.market_data.get_ammunition_status()
-                if ammo_st.get('bias') == 'BULLISH_FUEL':
+                if ENABLE_AMMUNITION_CONFLUENCE and side == "LONG" and ammo_st.get('bias') == 'BULLISH_FUEL':
                     if confluence_list is not None and isinstance(confluence_list, list):
                         if "Stabil_Cephane_Baskisi_Pozitif" not in confluence_list:
                             confluence_list.append("Stabil_Cephane_Baskisi_Pozitif")
+
+                # 3.2 SSR (Stablecoin Supply Ratio) Spot Alım Gücü
+                ssr_data = ammo_st.get('ssr', {})
+                if side == "LONG" and ssr_data.get('is_bullish_purchasing_power'):
+                    if confluence_list is not None and isinstance(confluence_list, list):
+                        if "SSR_Bullish_Purchasing_Power" not in confluence_list:
+                            confluence_list.append("SSR_Bullish_Purchasing_Power")
+                    reason += f" [🌊 SSR Spot Alım Gücü (SSR: {ssr_data.get('ssr', 0.0):.2f})]"
+
+                # 3.2 Tether Treasury >= $1B Taze Mint 4 Saatlik Boğa İvmesi
+                tether_st = ammo_st.get('tether_mint', {})
+                if side == "LONG" and tether_st.get('is_active'):
+                    if confluence_list is not None and isinstance(confluence_list, list):
+                        if "Tether_Treasury_$1B_Mint_Surge" not in confluence_list:
+                            confluence_list.append("Tether_Treasury_$1B_Mint_Surge")
+                    reason += f" [🏛️ Tether $1B+ Mint Boğa İvmesi ({tether_st.get('blockchain', 'TRON')})]"
             except Exception:
                 pass
 
@@ -2889,6 +2910,78 @@ class StrategyEngine:
                 print(f">> [RED - MADDE 9] {symbol}: Nötr coin, {trend_regime} trendinde SHORT kırılımı açamaz.")
                 self.log_rejection(symbol, reason, f"Piyasa {trend_regime} iken ters yöne SHORT açılması engellendi (Trend Kalkanı)")
                 return {"error": "MACRO_TREND_VIOLATION"}
+
+        # ── 🏛️ 3.1 CANLI DERIBIT OPSİYON GAMMA EXPOSURE (GEX) & GAMMA FLIP MOTORU ──
+        deribit_regime = "NEUTRAL"
+        deribit_btc_gex = 0.0
+        if hasattr(self, 'market_data') and self.market_data:
+            deribit_regime = str(self.market_data.get_deribit_gex_regime())
+            btc_gex_d = getattr(self.market_data, 'deribit_gex_data', {}).get('BTC', {})
+            deribit_btc_gex = float(btc_gex_d.get('net_gex', 0.0))
+
+        s_id_u = str(setup_id or '').upper()
+        r_u = str(reason or '').upper()
+        is_mean_rev_setup = (
+            setup_id in ["SETUP_3_S3_BOUNCE", "SETUP_4_R3_REJECTION", "SETUP_9_BELOW_NPOC_BOUNCE", "SETUP_10_ABOVE_NPOC_REJECTION", "SETUP_FAKEOUT_RECLAIM_LONG", "SETUP_FAKEOUT_RECLAIM_SHORT"]
+            or any(k in s_id_u for k in ["S3_BOUNCE", "R3_REJECTION", "NPOC", "FAKEOUT_RECLAIM"])
+            or any(k in r_u for k in ["S3 SEKME", "R3 REDDİ", "NPOC SEKME", "NPOC REDDİ", "FAKEOUT RECLAIM", "MEAN REVERSION"])
+            or trade_type == "SCALP"
+        )
+        is_breakout_act = (
+            trade_type == "BREAKOUT"
+            or setup_id in ["SETUP_1_R4_BREAKOUT", "SETUP_1_OI_LONG_EXPANSION", "SETUP_2_S4_BREAKDOWN", "SETUP_2_OI_SHORT_EXPANSION", "SETUP_6_MVAH_MACRO_BREAKOUT", "SETUP_8_MVAL_MACRO_BREAKDOWN", "SETUP_12_SUPPORT_BREAKDOWN"]
+            or any(k in s_id_u for k in ["BREAKOUT", "BREAKDOWN", "OI_LONG_EXPANSION", "OI_SHORT_EXPANSION"])
+            or any(k in r_u for k in ["BREAKOUT", "BREAKDOWN", "KIRILIM", "ÇÖKÜŞ"])
+        )
+
+        # 1. Pozitif Gamma (+GEX / Pinning Rejimi)
+        # Piyasa yapıcılar fiyata karşı alıp satarak volatiliteyi baskılar.
+        # Bot otomatik olarak S3/R3 Scalp ve nPOC Mean-Reversion işlemlerine ağırlık verir; Breakout işlemlerini kısar.
+        if deribit_regime == "POSITIVE_GAMMA_PIN" or deribit_btc_gex > 0:
+            if is_mean_rev_setup:
+                c_pin = "Deribit_+GEX_Pinning_Support" if side == "LONG" else "Deribit_+GEX_Pinning_Resistance"
+                if confluence_list is not None and isinstance(confluence_list, list):
+                    if c_pin not in confluence_list:
+                        confluence_list.append(c_pin)
+                reason += " [🧲 Deribit +GEX Pinning Mıknatıs]"
+            elif is_breakout_act:
+                local_margin_mult = min(local_margin_mult, 0.50)
+                reason += " [🛡️ Deribit +GEX Pinning Breakout Koruması (Tavan x0.50)]"
+
+        # 2. Negatif Gamma (-GEX / Explosion Rejimi)
+        # Piyasa yapıcılar yön yönünde delta-hedge yaparak fiyatı hızlandırır.
+        # Bot Mean-Reversion işlemlerini susturur; Breakout ve Momentum Trend işlemlerine tam güç verir.
+        elif deribit_regime == "NEGATIVE_GAMMA_EXPLOSION" or deribit_btc_gex < -10_000_000:
+            if is_mean_rev_setup:
+                rej_msg = (
+                    f"🛡️ Deribit -GEX Volatilite Patlaması Kalkanı: Deribit kurumsal opsiyon tahtasında Negatif Gamma (-GEX) aktif "
+                    f"(Net GEX: ${deribit_btc_gex/1e6:+.1f}M). Piyasa yapıcı delta-hedge'i seviyeleri ezip geçeceği için "
+                    f"Mean-Reversion ({setup_id or reason}) susturuldu (MUTED)."
+                )
+                try:
+                    print(f">> [RED - GEX PATLAMA MEAN REVERSION VETO] {symbol}: {rej_msg}")
+                except Exception:
+                    pass
+                self.log_rejection(symbol, reason, rej_msg, setup_archetype="GEX_EXPLOSION_MEAN_REVERSION_MUTED")
+                return {"error": "GEX_EXPLOSION_MEAN_REVERSION_MUTED", "reason": rej_msg}
+            elif is_breakout_act:
+                if confluence_list is not None and isinstance(confluence_list, list):
+                    if "Deribit_-GEX_Volatility_Explosion" not in confluence_list:
+                        confluence_list.append("Deribit_-GEX_Volatility_Explosion")
+                reason += " [🌋 Deribit -GEX Volatilite Patlaması]"
+                local_margin_mult = max(local_margin_mult, 1.0)
+
+        # 3. Gamma Flip Seviyesi (Dinamik S/R Seviyesi)
+        flip_lvl = float((snapshot_levels or {}).get('gamma_flip', 0.0))
+        if flip_lvl <= 0 and hasattr(self, 'market_data') and self.market_data:
+            flip_lvl = float(self.market_data.levels.get(symbol, {}).get('gamma_flip', 0.0))
+        if flip_lvl > 0:
+            if side == "LONG" and entry_price >= flip_lvl:
+                if confluence_list is not None and isinstance(confluence_list, list) and "Above_Gamma_Flip_Bullish_Zone" not in confluence_list:
+                    confluence_list.append("Above_Gamma_Flip_Bullish_Zone")
+            elif side == "SHORT" and entry_price < flip_lvl:
+                if confluence_list is not None and isinstance(confluence_list, list) and "Below_Gamma_Flip_Bearish_Zone" not in confluence_list:
+                    confluence_list.append("Below_Gamma_Flip_Bearish_Zone")
 
         # ── 8. DİNAMİK MARJİN & VOLATİLİTE PARİTESİ (RISK PARITY) ──
         # Her paritede potansiyel dolar riskini ~$1.50 - $2.50 seviyesinde eşitlemek için:

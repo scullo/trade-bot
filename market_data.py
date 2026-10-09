@@ -288,6 +288,15 @@ class MarketDataManager:
             'last_update': 0.0
         }
         self.stablecoin_history_deque = deque(maxlen=48)
+        self.ssr_history_deque = deque(maxlen=48)
+        self.tether_mint_status = {
+            'is_active': False,
+            'amount_usd': 0.0,
+            'blockchain': 'NONE',
+            'mint_ts': 0.0,
+            'expires_ts': 0.0,
+            'boost_reason': 'Henüz $1B+ taze Tether mint tespit edilmedi'
+        }
         self.whale_transactions_feed = deque(maxlen=50)
         self.block_trades_history = {}  # symbol -> deque((ts, notional, is_sell)) rolling 60s block orders
         self.whale_provider_status = {
@@ -1460,7 +1469,8 @@ class MarketDataManager:
                 "above_nvah": current_p * 1.02,
                 "below_nvah": current_p * 0.98,
                 "above_nval": current_p * 1.025,
-                "below_nval": current_p * 0.975
+                "below_nval": current_p * 0.975,
+                "gamma_flip": current_p
             }
             majors = {"BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "ADA/USDT"}
             if not hasattr(self, 'symbol_metrics'):
@@ -1562,6 +1572,20 @@ class MarketDataManager:
             if hasattr(self, '_session_cache'):
                 self._session_cache[symbol] = {'data': session_levels, 'ts': now_ts}
 
+        # === DERIBIT GAMMA FLIP SEVİYESİ (Kurumsal Sıfır-Gamma Pivotu) ===
+        clean_s = self._clean_symbol(symbol)
+        btc_gex_item = getattr(self, 'deribit_gex_data', {}).get('BTC', {})
+        btc_flip = float(btc_gex_item.get('gamma_flip_strike', 0.0))
+        btc_spot = float(self.current_prices.get('BTC/USDT', 0.0))
+        if 'BTC' in clean_s:
+            coin_gamma_flip = btc_flip if btc_flip > 0 else current_p
+        elif 'ETH' in clean_s:
+            eth_flip = float(getattr(self, 'deribit_gex_data', {}).get('ETH', {}).get('gamma_flip_strike', 0.0))
+            coin_gamma_flip = eth_flip if eth_flip > 0 else current_p
+        else:
+            coin_gamma_flip = (current_p * (btc_flip / btc_spot)) if (btc_spot > 0 and btc_flip > 0) else current_p
+        coin_gamma_flip = round(coin_gamma_flip, 4) if coin_gamma_flip > 10.0 else round(coin_gamma_flip, 6)
+
         self.levels[symbol] = {
             "camarilla": camarilla,
             "tepe_avwap": float(tepe_avwap),
@@ -1580,7 +1604,8 @@ class MarketDataManager:
             "pdl": float(session_levels.get("pdl", 0.0)),
             "pdc": float(session_levels.get("pdc", 0.0)),
             "asia_high": float(session_levels.get("asia_high", 0.0)),
-            "asia_low": float(session_levels.get("asia_low", 0.0))
+            "asia_low": float(session_levels.get("asia_low", 0.0)),
+            "gamma_flip": float(coin_gamma_flip)
         }
 
         # === DYNAMIC TELEMETRY & VOLUME METRICS ===
@@ -2297,7 +2322,7 @@ class MarketDataManager:
 
     def get_ammunition_status(self) -> dict:
         """Global borsa stabil kripto (USDT/USDC) yakıt ve cephane durumunu döndürür."""
-        return getattr(self, 'stablecoin_ammunition', {
+        base_ammo = getattr(self, 'stablecoin_ammunition', {
             'bias': 'NEUTRAL',
             'delta_24h_usd': 0.0,
             'delta_pct': 0.0,
@@ -2307,6 +2332,89 @@ class MarketDataManager:
             'binance_24h_inflows': 0.0,
             'last_update': 0.0
         })
+        # SSR ve Tether Mint durumlarını da cephane paketine dahil et
+        res = dict(base_ammo)
+        res['ssr'] = self.get_ssr_status()
+        res['tether_mint'] = self.get_tether_mint_status()
+        return res
+
+    def get_ssr_status(self) -> dict:
+        """
+        3.2 SSR (Stablecoin Supply Ratio) Hesaplayıcı:
+        SSR = BTC Market Cap / Stablecoin Market Cap
+        SSR 24 saatlik MA altına indiğinde spot alım gücü artışı tespit edilir.
+        """
+        btc_p = float(self.current_prices.get('BTC/USDT', 0.0))
+        if btc_p <= 0 and 'BTC/USDT' in getattr(self, 'candles_5m', {}) and not self.candles_5m['BTC/USDT'].empty:
+            btc_p = float(self.candles_5m['BTC/USDT']['close'].iloc[-1])
+        if btc_p <= 0:
+            btc_p = 65000.0
+        btc_mc = btc_p * 19_760_000.0  # Dolaşımdaki tahmini BTC arzı
+        stable_mc = float(self.stablecoin_ammunition.get('total_pegged_usd', 0.0))
+        if stable_mc <= 0:
+            stable_mc = 160_000_000_000.0  # Güvenli taban (~$160B)
+        now_ts = time.time()
+        ssr_val = btc_mc / stable_mc if stable_mc > 0 else 0.0
+        if ssr_val > 0:
+            if not hasattr(self, 'ssr_history_deque'):
+                self.ssr_history_deque = deque(maxlen=48)
+            self.ssr_history_deque.append((now_ts, ssr_val))
+
+        hist_vals = [v for ts, v in self.ssr_history_deque]
+        from indicators import calculate_ssr_oscillator
+        res = calculate_ssr_oscillator(btc_mc, stable_mc, hist_vals)
+        res['btc_market_cap'] = round(btc_mc, 2)
+        res['stablecoin_market_cap'] = round(stable_mc, 2)
+        return res
+
+    def record_tether_treasury_mint(self, amount_usd: float, blockchain: str = "TRON", tx_hash: str = None) -> dict:
+        """
+        3.2 Tether Mint Takibi:
+        TRON ve ETH ağlarında Tether Treasury taze >= 1 Milyar USDT ($1B) bastığında
+        4 saatlik makro boğa ivmesini aktif eder.
+        """
+        now_ts = time.time()
+        is_qualifying = float(amount_usd) >= 1_000_000_000.0
+        if is_qualifying:
+            self.tether_mint_status = {
+                'is_active': True,
+                'amount_usd': float(amount_usd),
+                'blockchain': str(blockchain).upper(),
+                'mint_ts': now_ts,
+                'expires_ts': now_ts + (4 * 3600),
+                'boost_reason': f"🏛️ Tether Treasury {str(blockchain).upper()} ağında taze ${float(amount_usd)/1e9:.2f}B bastı! 4 saatlik makro boğa ivmesi aktif."
+            }
+            # Balina akış beslemesine de kaydet
+            self.record_whale_transaction(
+                symbol="BTC/USDT",
+                amount_usd=float(amount_usd),
+                transfer_type="TREASURY_MINT",
+                tx_hash=tx_hash or f"tether_mint_{int(now_ts)}",
+                source="TETHER_TREASURY",
+                from_label="Tether Treasury",
+                to_label="Tether Reserves (Taze Cephane)",
+                blockchain=blockchain
+            )
+            try:
+                print(f">> [TETHER TREASURY MINT] {self.tether_mint_status['boost_reason']}")
+            except Exception:
+                pass
+        return self.get_tether_mint_status()
+
+    def get_tether_mint_status(self) -> dict:
+        """Tether Treasury taze mint ve 4 saatlik boğa ivmesi durumunu döndürür."""
+        now_ts = time.time()
+        st = getattr(self, 'tether_mint_status', {})
+        if not st:
+            return {'is_active': False, 'amount_usd': 0.0, 'blockchain': 'NONE', 'mint_ts': 0.0, 'expires_ts': 0.0, 'remaining_sec': 0}
+        expires = float(st.get('expires_ts', 0.0))
+        is_act = bool(st.get('is_active', False)) and (now_ts < expires)
+        rem = max(0.0, expires - now_ts) if is_act else 0.0
+        res = dict(st)
+        res['is_active'] = is_act
+        res['remaining_sec'] = round(rem, 1)
+        return res
+
 
     def get_recent_whale_alerts(self, limit: int = 15) -> list:
         """Son balina işlemlerini liste olarak döndürür."""
@@ -3609,34 +3717,84 @@ class MarketDataManager:
                     pass
                 await asyncio.sleep(15)  # 15 saniyede bir spot baz fiyatlarını tazele
 
-        # Worker 7: Kurumsal Deribit GEX (Gamma Exposure) Radarı
+        # Worker 7: Kurumsal Deribit GEX (Gamma Exposure) Radarı (WebSocket + REST Fallback)
         async def deribit_gex_worker():
-            print(">> [DERIBIT GEX RADARI] Kurumsal Opsiyon Gamma Radarı Başlatılıyor...")
+            print(">> [DERIBIT GEX RADARI] Kurumsal Opsiyon Gamma Radarı Başlatılıyor (wss://www.deribit.com/ws/api/v2)...")
             headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+            ws_url = "wss://www.deribit.com/ws/api/v2"
+
+            async def _fetch_deribit_rest(session, ccy):
+                url = f"https://www.deribit.com/api/v2/public/get_book_summary_by_currency?currency={ccy}&kind=option"
+                async with session.get(url, headers=headers) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        return data.get('result', [])
+                return []
+
+            async def _fetch_deribit_ws(ws, ccy, req_id):
+                msg = {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "method": "public/get_book_summary_by_currency",
+                    "params": {
+                        "currency": ccy,
+                        "kind": "option"
+                    }
+                }
+                await ws.send_str(json.dumps(msg))
+                t_end = time.time() + 8.0
+                while time.time() < t_end:
+                    resp_msg = await asyncio.wait_for(ws.receive(), timeout=6.0)
+                    if resp_msg.type == aiohttp.WSMsgType.TEXT:
+                        d = json.loads(resp_msg.data)
+                        if d.get("id") == req_id:
+                            return d.get("result", [])
+                    elif resp_msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
+                        break
+                return []
+
             while True:
                 try:
-                    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=12)) as session:
-                        for ccy in ['BTC', 'ETH']:
-                            url = f"https://www.deribit.com/api/v2/public/get_book_summary_by_currency?currency={ccy}&kind=option"
-                            try:
-                                async with session.get(url, headers=headers) as resp:
-                                    if resp.status == 200:
-                                        data = await resp.json()
-                                        book = data.get('result', [])
-                                        if book and isinstance(book, list):
-                                            from indicators import calculate_deribit_gex
-                                            gex_res = calculate_deribit_gex(book)
-                                            gex_res['last_update'] = time.time()
-                                            self.deribit_gex_data[ccy] = gex_res
-                            except Exception as ccy_err:
-                                print(f">> [DERIBIT GEX {ccy} HATA] {ccy_err}")
-                        self.deribit_gex_data['last_sync_ts'] = time.time()
-                        self.deribit_gex_data['is_live'] = True
-                        btc_res = self.deribit_gex_data.get('BTC', {})
-                        print(f">> [DERIBIT GEX GÜNCELLENDİ] BTC Rejim: {btc_res.get('gex_regime')} (Net: ${btc_res.get('net_gex', 0)/1e6:.1f}M, PCR: {btc_res.get('put_call_ratio'):.2f})")
+                    ws_success = False
+                    # 1. Deribit WebSocket Akışı Denemesi
+                    try:
+                        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=15)) as session:
+                            async with session.ws_connect(ws_url, heartbeat=15) as ws:
+                                for i, ccy in enumerate(['BTC', 'ETH'], start=2001):
+                                    book = await _fetch_deribit_ws(ws, ccy, i)
+                                    if book and isinstance(book, list):
+                                        from indicators import calculate_deribit_gex
+                                        gex_res = calculate_deribit_gex(book)
+                                        gex_res['last_update'] = time.time()
+                                        gex_res['source'] = 'WEBSOCKET'
+                                        self.deribit_gex_data[ccy] = gex_res
+                                        ws_success = True
+                    except Exception:
+                        pass
+
+                    # 2. WebSocket kurulamadıysa REST API Fallback
+                    if not ws_success:
+                        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=12)) as session:
+                            for ccy in ['BTC', 'ETH']:
+                                try:
+                                    book = await _fetch_deribit_rest(session, ccy)
+                                    if book and isinstance(book, list):
+                                        from indicators import calculate_deribit_gex
+                                        gex_res = calculate_deribit_gex(book)
+                                        gex_res['last_update'] = time.time()
+                                        gex_res['source'] = 'REST_FALLBACK'
+                                        self.deribit_gex_data[ccy] = gex_res
+                                except Exception as rest_err:
+                                    print(f">> [DERIBIT GEX {ccy} REST HATA] {rest_err}")
+
+                    self.deribit_gex_data['last_sync_ts'] = time.time()
+                    self.deribit_gex_data['is_live'] = True
+                    btc_res = self.deribit_gex_data.get('BTC', {})
+                    src_tag = btc_res.get('source', 'AUTO')
+                    print(f">> [DERIBIT GEX GÜNCELLENDİ] BTC Rejim: {btc_res.get('gex_regime')} (Net: ${btc_res.get('net_gex', 0)/1e6:.1f}M, Flip: ${btc_res.get('gamma_flip_strike', 0):,.0f}, PCR: {btc_res.get('put_call_ratio'):.2f}, Kaynak: {src_tag})")
                 except Exception as e:
                     print(f">> [DERIBIT GEX RADAR UYARI] {e} (Mevcut GEX önbelleği korunuyor)")
-                await asyncio.sleep(900)  # Her 15 dakikada bir güncelle
+                await asyncio.sleep(600)  # Her 10 dakikada bir güncelle
 
         # Worker 8: Çapraz Borsa Spot Öncüsü (Coinbase Pro Lead-Lag wss://ws-feed.exchange.coinbase.com)
         async def coinbase_lead_lag_worker():
@@ -3919,6 +4077,15 @@ class MarketDataManager:
                                         ammo_res['binance_24h_inflows'] = self.stablecoin_ammunition.get('binance_24h_inflows', 0.0)
                                         ammo_res['last_update'] = time.time()
                                         self.stablecoin_ammunition.update(ammo_res)
+
+                                        # 3.2 Tether Treasury >= $1B Mint Kontrolü
+                                        if len(recent_days) >= 2:
+                                            delta_usd = recent_days[-1] - recent_days[-2]
+                                            if delta_usd >= 1_000_000_000.0:
+                                                self.record_tether_treasury_mint(delta_usd, blockchain="TRON/ETH")
+
+                                        # 3.2 SSR Osilatörünü Güncelle
+                                        self.get_ssr_status()
                         except Exception:
                             pass
 

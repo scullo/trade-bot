@@ -1335,14 +1335,15 @@ def calculate_deribit_gex(options_book: list, spot_price: float = None) -> dict:
             except Exception:
                 tau = 30.0 / 365.25
 
-            # Black-Scholes d1 ve Gamma
-            denom = sigma * np.sqrt(tau)
-            if denom <= 0:
-                continue
-            d1 = (np.log(spot_price / strike) + 0.5 * (sigma ** 2) * tau) / denom
-            gamma = (np.exp(-0.5 * (d1 ** 2)) / (spot_price * denom * np.sqrt(2.0 * np.pi)))
+            # Deribit doğrudan Gamma veya Black-Scholes Gamma
+            raw_gamma = item.get('gamma')
+            if raw_gamma is not None and float(raw_gamma) > 0:
+                gamma = float(raw_gamma)
+            else:
+                d1 = (np.log(spot_price / strike) + 0.5 * (sigma ** 2) * tau) / denom
+                gamma = (np.exp(-0.5 * (d1 ** 2)) / (spot_price * denom * np.sqrt(2.0 * np.pi)))
 
-            # GEX (USD / %1 fiyat hareketi)
+            # GEX (USD / %1 fiyat hareketi) = Gamma * OI * S^2 * 0.01
             dollar_gamma = gamma * (spot_price ** 2) * oi * 0.01
 
             if strike not in strikes_gex:
@@ -2103,4 +2104,47 @@ def calculate_ammunition_momentum(stablecoin_history: list) -> dict:
         }
     except Exception:
         return default_res
+
+
+# =====================================================================
+# 19. SSR (STABLECOIN SUPPLY RATIO) OSİLATÖRÜ
+# =====================================================================
+def calculate_ssr_oscillator(btc_market_cap: float, stablecoin_market_cap: float, ssr_history: list = None) -> dict:
+    """
+    3.2 SSR (Stablecoin Supply Ratio) Osilatörü:
+    SSR = BTC Market Cap / Stablecoin Market Cap
+    SSR değeri son 24 saatlik MA altına indiğinde spot alım gücü artışı tespit edilir.
+    """
+    if stablecoin_market_cap <= 0 or btc_market_cap <= 0:
+        return {
+            'ssr': 0.0,
+            'ssr_ma24': 0.0,
+            'diff_pct': 0.0,
+            'is_bullish_purchasing_power': False,
+            'status': 'NEUTRAL_OR_DRAIN',
+            'desc': '⚪ SSR Hesaplanamadı (Yetersiz Piyasa Değeri)'
+        }
+    ssr = btc_market_cap / stablecoin_market_cap
+    hist = [float(x) for x in (ssr_history or []) if float(x) > 0]
+    if not hist:
+        hist = [ssr]
+    ma24 = float(np.mean(hist)) if hist else ssr
+    is_bullish = bool(ssr < ma24)
+    status = "BULLISH_PURCHASING_POWER" if is_bullish else "NEUTRAL_OR_DRAIN"
+    diff_pct = round(((ssr - ma24) / ma24) * 100.0, 2) if ma24 > 0 else 0.0
+    desc = (
+        f"🟢 SSR Boğa Alım Gücü (SSR: {ssr:.2f} < MA24: {ma24:.2f}, %{abs(diff_pct):.1f} İskonto): "
+        f"Stablecoin arzı BTC değerine kıyasla yüksek, kurumsal spot cephane devrede."
+        if is_bullish else
+        f"⚪ Normal/Drenaj SSR (SSR: {ssr:.2f} >= MA24: {ma24:.2f}): Standart piyasa likidite dengesi."
+    )
+    return {
+        'ssr': round(ssr, 4),
+        'ssr_ma24': round(ma24, 4),
+        'diff_pct': diff_pct,
+        'is_bullish_purchasing_power': is_bullish,
+        'status': status,
+        'desc': desc
+    }
+
 
