@@ -335,6 +335,18 @@ class AutonomousDNACalibrator:
                     whip = max(8.0, min(55.0, ((amp - net) / max(1e-5, amp)) * 100.0 * 0.45))
                     s.setdefault("wicks", []).append(whip)
 
+        # Post-Exit (Kapanış Sonrası Kaçan Dalga) Entegrasyonu
+        if self.shadow_engine and hasattr(self.shadow_engine, 'post_exit_history'):
+            for g in list(self.shadow_engine.post_exit_history):
+                g_sym_raw = g.get("symbol", "")
+                g_sym = g_sym_raw.replace("/USDT", "").replace("USDT", "")
+                if not g_sym or g_sym not in stats:
+                    continue
+                if g.get("verdict") == "ERKEN_CIKIS_KACAN_DALGA":
+                    stats[g_sym]["post_exit_premature_count"] = stats[g_sym].get("post_exit_premature_count", 0) + 1
+                    left_pct = float(g.get("left_on_table_pct", g.get("post_exit_mfe_pct", 0.0)) or 0.0)
+                    stats[g_sym]["post_exit_alpha_lost_usd"] = round(stats[g_sym].get("post_exit_alpha_lost_usd", 0.0) + (250.0 * 5.0 * (left_pct / 100.0)), 2)
+
         for sym, s in stats.items():
             tot = s["total"]
             s["sei"] = round((s["hero_count"] / tot) * 100.0, 1) if tot > 0 else 50.0
@@ -391,13 +403,17 @@ class AutonomousDNACalibrator:
                 candidate_reasons.append(f"Hero Oranı {s['hero_ratio']}x ve SEI %{s['sei']} -> Kalkanlar sıkı korumada (Marjin 1.25x)")
                 proposed = True
 
-            # Boyut 2: Erken Başa-Baş (BE) Nefes Payı
-            if s["premature_be_count"] >= 2:
+            # Boyut 2: Erken Başa-Baş (BE) Nefes Payı (Post-Exit Kaçan Dalga Destekli)
+            pe_premature = s.get("post_exit_premature_count", 0)
+            total_premature = s["premature_be_count"] + pe_premature
+            if total_premature >= 2:
                 cur_be = float(candidate_cfg.get("chandelier_be_threshold_pct", 0.8))
-                new_be = min(1.6, round(cur_be + 0.3, 1))
+                step = 0.4 if pe_premature >= 3 else 0.3
+                new_be = min(1.6, round(cur_be + step, 1))
                 if new_be > cur_be:
                     candidate_cfg["chandelier_be_threshold_pct"] = new_be
-                    candidate_reasons.append(f"{s['premature_be_count']} kez erken BE tuzağı -> BE %{cur_be} -> %{new_be}")
+                    extra_note = f" (+{pe_premature} post-exit kaçan dalga)" if pe_premature > 0 else ""
+                    candidate_reasons.append(f"{total_premature} kez erken BE tuzağı{extra_note} -> BE %{cur_be} -> %{new_be}")
                     proposed = True
                     if "KORU" in base_status:
                         base_status = "KORU + ERKEN BE"
@@ -487,6 +503,8 @@ class AutonomousDNACalibrator:
             candidate_cfg["forensic_commentary"] = commentary
 
             candidate_reason = " | ".join(candidate_reasons)
+            candidate_cfg["calibration_reason"] = candidate_reason
+            candidate_cfg["reasons"] = candidate_reasons
 
             if not proposed:
                 continue

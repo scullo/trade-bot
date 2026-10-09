@@ -92,6 +92,56 @@ class TestAutonomousDNACalibrator(unittest.TestCase):
         self.assertEqual(summary["cycle_frequency_hours"], 48)
         self.assertEqual(summary["total_coins"], 2)
 
+    def test_post_exit_premature_calibration(self):
+        # STRK için normal işlemler (BE kapanışları) ve post_exit_history ekle
+        self.mock_shadow.completed_trades.extend([
+            {
+                "symbol": "STRK/USDT",
+                "verdict": "SPOILER_SHIELD",
+                "impact_usd": 15.0,
+                "virtual_pnl_usd": 0.0,
+                "max_mfe_pct": 0.8,
+                "close_reason": "BREAKEVEN",
+                "notional_usd": 250.0
+            } for _ in range(5)
+        ])
+        # 3 adet post-exit kaçan dalga hayaleti
+        self.mock_shadow.post_exit_history = [
+            {
+                "symbol": "STRK/USDT",
+                "trade_id": f"pe_strk_{i}",
+                "verdict": "ERKEN_CIKIS_KACAN_DALGA",
+                "left_on_table_pct": 2.4,
+                "post_exit_adverse_pct": 0.2
+            } for i in range(3)
+        ]
+
+        # Başlangıç DNA'sına STRK ekle
+        with open(self.calib_file, "r", encoding="utf-8") as f:
+            current_dna = json.load(f)
+        current_dna["STRK"] = {
+            "scenario": "Dengeli",
+            "min_confluence": 3,
+            "chandelier_be_threshold_pct": 0.8,
+            "calibration_status": "DENGELİ"
+        }
+        with open(self.calib_file, "w", encoding="utf-8") as f:
+            json.dump(current_dna, f)
+
+        res = self.calibrator.run_cycle(force=True)
+        self.assertTrue(res["executed"])
+        self.assertIn("STRK", res["approved_coins"])
+
+        with open(self.calib_file, "r", encoding="utf-8") as f:
+            updated_dna = json.load(f)
+
+        strk_dna = updated_dna["STRK"]
+        # Post-exit kaçan dalga (3 adet >= 3) sebebiyle BE threshold 0.8 + 0.4 = 1.2 olmalı
+        self.assertGreater(strk_dna["chandelier_be_threshold_pct"], 0.8)
+        self.assertEqual(strk_dna["chandelier_be_threshold_pct"], 1.2)
+        self.assertTrue(any("post-exit" in r for r in strk_dna.get("reasons", [])))
+
 
 if __name__ == "__main__":
     unittest.main()
+
