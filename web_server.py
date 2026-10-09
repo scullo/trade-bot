@@ -16067,6 +16067,28 @@ function downloadExcelReport() {
                 const inv = d.inversion_summary || {};
 
                 if (peEl) {
+                    const recentGhostsHtml = (pe.recent_ghosts && pe.recent_ghosts.length > 0) ? `
+                        <div style="background:rgba(0,0,0,0.25); padding:8px 10px; border-radius:8px; grid-column:span 2;">
+                            <div style="font-size:10px; color:#94a3b8; margin-bottom:5px; display:flex; justify-content:space-between;">
+                                <span>Son Post-Exit Seyirleri</span>
+                                <span style="font-size:9px; color:#64748b;">(2 Saatlik Takip)</span>
+                            </div>
+                            <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                                ${pe.recent_ghosts.slice(-4).map(g => {
+                                    const isPremature = g.verdict === 'ERKEN_CIKIS_KACAN_DALGA';
+                                    const isSniper = g.verdict === 'SNIPER_TEPE_CIKISI' || g.verdict === 'KUSURSUZ_STOP_KORUMASI';
+                                    const col = isPremature ? '#f59e0b' : (isSniper ? '#10b981' : '#94a3b8');
+                                    const bg = isPremature ? 'rgba(245,158,11,0.12)' : (isSniper ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.05)');
+                                    const border = isPremature ? 'rgba(245,158,11,0.3)' : (isSniper ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.1)');
+                                    const lbl = isPremature ? '⚠️ Kaçan Dalga' : (isSniper ? (g.verdict === 'KUSURSUZ_STOP_KORUMASI' ? '🛡️ Doğru Stop' : '🎯 Sniper Çıkış') : '⚖️ Nötr Seyir');
+                                    const leftPct = g.left_on_table_pct || g.post_exit_mfe_pct || 0;
+                                    const pctStr = leftPct ? ` (+%${Number(leftPct).toFixed(1)})` : '';
+                                    return `<span style="font-size:9px; font-weight:700; padding:2px 6px; border-radius:4px; background:${bg}; color:${col}; border:1px solid ${border}; font-family:'JetBrains Mono';">${lbl}${pctStr}</span>`;
+                                }).join('')}
+                            </div>
+                        </div>
+                    ` : '';
+
                     peEl.innerHTML = `
                         <div style="background:rgba(0,0,0,0.25); padding:8px 10px; border-radius:8px;">
                             <div style="font-size:10px; color:#94a3b8; display:flex; justify-content:space-between; align-items:center;">
@@ -16083,6 +16105,7 @@ function downloadExcelReport() {
                             <div style="font-size:10px; color:#94a3b8;">Kusursuz Tepe Çıkışı (Sniper)</div>
                             <div style="font-size:13px; font-weight:700; color:#10b981; font-family:'JetBrains Mono';">${pe.sniper_exit_count || 0} Adet (Doğru Zamanda Çıkıldı)</div>
                         </div>
+                        ${recentGhostsHtml}
                     `;
                 }
 

@@ -286,5 +286,61 @@ class TestShadowDeepAudit(unittest.TestCase):
         self.assertEqual(new_pe.get("total_tracked"), pe.get("total_tracked"))
         self.assertEqual(new_pe.get("premature_exit_count"), pe.get("premature_exit_count"))
 
+    def test_08_phase4_excel_and_web_payload_verification(self):
+        """
+        🌐 Aşama 4 Doğrulaması:
+        1. Excel Sheet 6 (Çift Yönlü Karşı-Olgusal / Post-Exit) hem canlı engine ile hem de standalone geçmişle dolu üretilmeli.
+        2. get_coin_forensic_detail() çıktısında recent_ghosts listesi ve aktif izleme sayacı (active_tracking_count) doğrulanmalı.
+        """
+        # Aktif bir hayalet ekle
+        self.engine.post_exit_ghosts["ghost_live_1"] = {
+            "parent_id": "SHD_LIVE_1",
+            "trade_id": "SHD_LIVE_1",
+            "symbol": "STRK/USDT",
+            "side": "LONG",
+            "entry_price": 0.05,
+            "exit_price": 0.05,
+            "candles_tracked": 5,
+            "peak_high": 0.051,
+            "trough_low": 0.049,
+            "verdict": "TRACKING"
+        }
+
+        # STRK detayını al
+        detail = self.engine.get_coin_forensic_detail("STRK")
+        pe = detail.get("post_exit_summary", {})
+        self.assertEqual(pe.get("active_tracking_count"), 1, "Aktif izleme sayacı 1 olmalı")
+        self.assertIn("recent_ghosts", pe)
+        self.assertGreaterEqual(len(pe["recent_ghosts"]), 1)
+
+        # Excel raporu üretimi (engine ile)
+        summary = self.engine.get_summary()
+        coin_dna = self.engine.get_coin_dna_matrix()
+        shadow_hist = self.engine.get_recent_history(50)
+        shields = self.engine.get_shield_leaderboard()
+
+        buf = create_shadow_dna_excel_report(
+            shadow_summary=summary,
+            coin_dna=coin_dna,
+            shadow_history=shadow_hist,
+            shield_leaderboard=shields,
+            shadow_engine=self.engine
+        )
+        self.assertIsInstance(buf, io.BytesIO)
+        self.assertGreater(len(buf.getvalue()), 5000)
+
+        # Excel raporu üretimi (standalone / engine=None fallback ile)
+        buf_standalone = create_shadow_dna_excel_report(
+            shadow_summary=summary,
+            coin_dna=coin_dna,
+            shadow_history=shadow_hist,
+            shield_leaderboard=shields,
+            shadow_engine=None
+        )
+        self.assertIsInstance(buf_standalone, io.BytesIO)
+        self.assertGreater(len(buf_standalone.getvalue()), 5000)
+
+
 if __name__ == "__main__":
     unittest.main()
+

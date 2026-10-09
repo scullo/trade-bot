@@ -1745,8 +1745,41 @@ def create_shadow_dna_excel_report(
         ws6.write(5, c_i, h_txt, th_navy)
 
     pe_ghosts = []
-    if shadow_engine and hasattr(shadow_engine, 'post_exit_history'):
+    if shadow_engine and hasattr(shadow_engine, 'post_exit_history') and shadow_engine.post_exit_history:
         pe_ghosts = list(shadow_engine.post_exit_history)
+
+    # Standalone veya başlangıç kurtarma sigortası: shadow_history'den geriye dönük türet
+    if not pe_ghosts and shadow_history:
+        for t in shadow_history:
+            cr = str(t.get('close_reason', ''))
+            st = str(t.get('status', ''))
+            mfe = _safe_float(t.get('max_mfe_pct', t.get('max_mfe_roe', 0.0)))
+            mae = _safe_float(t.get('max_mae_pct', t.get('max_mae_roe', 0.0)))
+            px = _safe_float(t.get('exit_price', t.get('entry_price', 0.0)))
+            if px <= 0:
+                continue
+            side = str(t.get('side', 'LONG')).upper()
+            if 'BE' in st or 'BE' in cr or 'BREAKEVEN' in cr:
+                verd = 'ERKEN_CIKIS_KACAN_DALGA' if mfe >= 1.6 else 'STANDART'
+            elif 'TP' in cr or mfe >= 2.5:
+                verd = 'SNIPER_TEPE_CIKISI'
+            elif 'STOP' in cr or 'SL' in cr:
+                verd = 'KUSURSUZ_STOP_KORUMASI'
+            else:
+                verd = 'STANDART'
+            pe_ghosts.append({
+                'parent_id': t.get('id', t.get('parent_id', '-')),
+                'trade_id': t.get('id', t.get('trade_id', '-')),
+                'symbol': t.get('symbol', '-'),
+                'side': side,
+                'close_reason': cr or 'COMPLETED',
+                'exit_price': px,
+                'post_exit_high': round(px * (1.0 + (mfe / 100.0)), 4) if side == 'LONG' else round(px * (1.0 + (mae / 100.0)), 4),
+                'post_exit_low': round(px * (1.0 - (mae / 100.0)), 4) if side == 'LONG' else round(px * (1.0 - (mfe / 100.0)), 4),
+                'left_on_table_pct': round(mfe, 2),
+                'post_exit_adverse_pct': round(mae, 2),
+                'verdict': verd
+            })
 
     r6_idx = 6
     if not pe_ghosts:
@@ -1754,7 +1787,7 @@ def create_shadow_dna_excel_report(
         ws6.write(r6_idx, 1, "Henüz tamamlanmış 24-mum post-exit kaydı birikiyor...", cell_l)
         r6_idx += 2
     else:
-        for g in pe_ghosts[-50:]:
+        for g in pe_ghosts[-150:]:
             ws6.set_row(r6_idx, 20)
             verd = g.get('verdict', 'STANDART')
             v_badge = cell_badge_spoiler if verd == 'ERKEN_CIKIS_KACAN_DALGA' else (cell_badge_hero if verd in ('SNIPER_TEPE_CIKISI', 'KUSURSUZ_STOP_KORUMASI') else cell_badge_neutral)
