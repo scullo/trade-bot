@@ -4161,6 +4161,78 @@ HTML_PAGE = """
         </div>
     </div>
 
+    <!-- VALKYRIE CANLI ADLİ SNAPSHOT SEÇİM MODALI (A-Z ALFABETİK SIRALI) -->
+    <div id="forensic-manual-snapshot-modal-overlay" class="modal-overlay" style="display:none; z-index:10060;" onclick="if(event.target===this) closeManualSnapshotModal()">
+        <div class="modal-card" style="max-width:500px; width:94%; text-align:left; border:1px solid rgba(236,72,153,0.45); box-shadow:0 25px 60px rgba(0,0,0,0.9), 0 0 40px rgba(236,72,153,0.15); padding:24px; border-radius:14px; background:linear-gradient(180deg, #0e1628 0%, #090e1c 100%);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:36px; height:36px; border-radius:10px; background:rgba(236,72,153,0.15); border:1px solid #ec4899; display:flex; align-items:center; justify-content:center; font-size:18px;">
+                        📷
+                    </div>
+                    <div>
+                        <div style="font-size:15.5px; font-weight:800; color:#fff;">CANLI ADLİ SNAPSHOT ÜRETİCİ</div>
+                        <div style="font-size:11.5px; color:var(--text-muted);">1600x900 Mikroskobik Mum Grafiği & Kara Kutu HUD Kartı</div>
+                    </div>
+                </div>
+                <button class="tv-modal-close-btn" onclick="closeManualSnapshotModal()" title="Kapat (ESC)">✕</button>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:14px;">
+                <!-- PARİTE SEÇİMİ (A-Z SIRALI & ARAMA FİLTRELİ) -->
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <label style="font-size:12px; font-weight:700; color:#cbd5e1;">
+                            Parite Seçimi <span style="font-size:11px; color:var(--cyan); font-weight:600;">(A-Z Harf Sıralı)</span>:
+                        </label>
+                        <span id="manual-snapshot-count-badge" style="font-size:10.5px; color:#94a3b8; font-family:'JetBrains Mono',monospace;">100 Parite</span>
+                    </div>
+                    <div style="position:relative; margin-bottom:8px;">
+                        <input type="text" id="manual-snapshot-filter-input" placeholder="🔍 Parite ara (Örn: BTC, SOL, ETH, AVAX)..." oninput="filterManualSnapshotCoinList()" 
+                               style="width:100%; box-sizing:border-box; background:rgba(15,23,42,0.85); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:8px 12px 8px 34px; color:#fff; font-size:12.5px; font-family:'JetBrains Mono',monospace; outline:none;" />
+                        <span style="position:absolute; left:10px; top:8px; font-size:12.5px; color:#64748b;">🔍</span>
+                    </div>
+                    <select id="manual-snapshot-select" size="7" 
+                            style="width:100%; box-sizing:border-box; background:rgba(10,15,30,0.95); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:6px; color:#f1f5f9; font-size:12.5px; font-family:'JetBrains Mono',monospace; outline:none; cursor:pointer;">
+                        <!-- JS dinamik A-Z sıralı seçenekler -->
+                    </select>
+                </div>
+
+                <!-- İŞLEM YÖNÜ SEÇİMİ -->
+                <div>
+                    <label style="display:block; font-size:12px; font-weight:700; color:#cbd5e1; margin-bottom:6px;">
+                        İnceleme Yönü:
+                    </label>
+                    <div style="display:flex; gap:10px;">
+                        <label id="lbl-side-long" style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:8px; background:rgba(16,185,129,0.15); border:1.5px solid #10b981; border-radius:8px; cursor:pointer; color:#10b981; font-weight:800; font-size:12.5px; transition:all 0.15s ease;">
+                            <input type="radio" name="manual_snapshot_side" value="LONG" checked style="accent-color:#10b981;" onchange="updateManualSnapshotSideStyle()" />
+                            🟢 LONG (Alış)
+                        </label>
+                        <label id="lbl-side-short" style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:8px; cursor:pointer; color:#94a3b8; font-weight:800; font-size:12.5px; transition:all 0.15s ease;">
+                            <input type="radio" name="manual_snapshot_side" value="SHORT" style="accent-color:#f43f5e;" onchange="updateManualSnapshotSideStyle()" />
+                            🔴 SHORT (Satış)
+                        </label>
+                    </div>
+                </div>
+
+                <!-- DURUM VE HATA BİLDİRİM KUTUSU -->
+                <div id="manual-snapshot-msg" style="display:none; padding:10px 14px; border-radius:8px; font-size:12px; font-weight:600; line-height:1.4;">
+                </div>
+
+                <!-- AKSİYON BUTONLARI -->
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:4px;">
+                    <button type="button" onclick="closeManualSnapshotModal()" 
+                            style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#cbd5e1; padding:8px 16px; border-radius:8px; font-weight:700; font-size:12px; cursor:pointer;">
+                        Vazgeç
+                    </button>
+                    <button type="button" id="manual-snapshot-submit-btn" onclick="submitManualSnapshotForm()" 
+                            style="background:linear-gradient(135deg, #ec4899, #8b5cf6); border:none; color:#fff; padding:8px 20px; border-radius:8px; font-weight:800; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:8px; box-shadow:0 4px 15px rgba(236,72,153,0.35);">
+                        <span>📸 Snapshot Oluştur</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- =========================================================================
          SHADOW COIN FORENSIC DEEP-DIVE & CALIBRATION MODAL
          ========================================================================= -->
@@ -5733,7 +5805,7 @@ HTML_PAGE = """
                     <input type="text" id="forensic-search-input" placeholder="Parite veya setup ara..." oninput="debounceForensicSearch()" style="background:#0b1122; border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:7px 12px 7px 30px; font-size:11.5px; color:#fff; width:190px;" />
                     <span style="position:absolute; left:10px; top:8px; font-size:12px; color:#64748b;">🔍</span>
                 </div>
-                <button onclick="promptManualForensicSnapshot()" style="background:linear-gradient(135deg, rgba(236,72,153,0.2), rgba(168,85,247,0.2)); border:1.5px solid #ec4899; color:#fff; font-weight:800; font-size:11.5px; padding:7px 14px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                <button onclick="openManualSnapshotModal()" style="background:linear-gradient(135deg, rgba(236,72,153,0.2), rgba(168,85,247,0.2)); border:1.5px solid #ec4899; color:#fff; font-weight:800; font-size:11.5px; padding:7px 14px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px;">
                     📷 Canlı Snapshot Al
                 </button>
                 <button onclick="loadForensicGallery(1)" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#fff; font-size:11.5px; padding:7px 12px; border-radius:8px; cursor:pointer;" title="Galeriyi Yenile">
@@ -18271,26 +18343,230 @@ function downloadExcelReport() {
             });
         }
 
-        async function promptManualForensicSnapshot() {
-            const sym = prompt("Adli snapshot üretilecek pariteyi girin (Örn: BTC/USDT, ETH/USDT, SOL/USDT):", "BTC/USDT");
-            if (!sym) return;
+        const FORENSIC_SYMBOLS_DEFAULT = [
+            "AAVE/USDT", "ACE/USDT", "ADA/USDT", "ALGO/USDT", "APT/USDT", "ARB/USDT", "ASTER/USDT", "AVAX/USDT",
+            "BCH/USDT", "BICO/USDT", "BNB/USDT", "BONK/USDT", "BTC/USDT", "DASH/USDT", "DOGE/USDT", "DOT/USDT",
+            "DYM/USDT", "EDEN/USDT", "EIGEN/USDT", "ENA/USDT", "ETC/USDT", "ETH/USDT", "ETHFI/USDT", "FET/USDT",
+            "FIL/USDT", "FLOKI/USDT", "GALA/USDT", "GRT/USDT", "ICP/USDT", "IMX/USDT", "INJ/USDT", "IO/USDT",
+            "JASMY/USDT", "JTO/USDT", "JUP/USDT", "KAS/USDT", "LDO/USDT", "LINK/USDT", "LTC/USDT", "MANA/USDT",
+            "MEME/USDT", "MKR/USDT", "MOVR/USDT", "NEAR/USDT", "NEIRO/USDT", "NOT/USDT", "OM/USDT", "ONDO/USDT",
+            "ONG/USDT", "OP/USDT", "ORDI/USDT", "PELE/USDT", "PENDLE/USDT", "PENGU/USDT", "PEPE/USDT", "POL/USDT",
+            "POPCAT/USDT", "PUMP/USDT", "PYTH/USDT", "RENDER/USDT", "REZ/USDT", "RNDR/USDT", "RUNE/USDT", "SAND/USDT",
+            "SEI/USDT", "SHIB/USDT", "SOL/USDT", "STX/USDT", "SUI/USDT", "TAO/USDT", "THETA/USDT", "TIA/USDT",
+            "TON/USDT", "TRX/USDT", "TRUMP/USDT", "TURBO/USDT", "UNI/USDT", "VET/USDT", "VIRTUAL/USDT", "W/USDT",
+            "WIF/USDT", "WLD/USDT", "WLFI/USDT", "XLM/USDT", "XPL/USDT", "XRP/USDT", "ZEC/USDT", "ZRO/USDT"
+        ];
+
+        let manualSnapshotParitiesList = [];
+
+        function getAlphabeticalParitiesList() {
+            let list = [];
+            if (appState && appState.all_coins && appState.all_coins.length > 0) {
+                list = appState.all_coins.map(c => {
+                    let s = c.symbol || '';
+                    if (!s.includes('/USDT')) s = s.replace(':USDT', '') + '/USDT';
+                    return s.toUpperCase();
+                });
+            } else {
+                list = [...FORENSIC_SYMBOLS_DEFAULT];
+            }
+            const unique = Array.from(new Set(list));
+            unique.sort((a, b) => a.localeCompare(b));
+            return unique;
+        }
+
+        function populateManualSnapshotSelect(filterText = '') {
+            const sel = document.getElementById('manual-snapshot-select');
+            const badge = document.getElementById('manual-snapshot-count-badge');
+            if (!sel) return;
+
+            const q = (filterText || '').trim().toUpperCase();
+            const currentSelected = sel.value || 'BTC/USDT';
+
+            sel.innerHTML = '';
+            let matchCount = 0;
+
+            manualSnapshotParitiesList.forEach(sym => {
+                const cleanSym = sym.replace('/USDT', '');
+                if (!q || sym.includes(q) || cleanSym.includes(q)) {
+                    matchCount++;
+                    const opt = document.createElement('option');
+                    opt.value = sym;
+                    opt.textContent = `${sym}`;
+                    if (sym === currentSelected) {
+                        opt.selected = true;
+                    }
+                    sel.appendChild(opt);
+                }
+            });
+
+            if (sel.options.length > 0 && !sel.value) {
+                sel.selectedIndex = 0;
+            }
+
+            if (badge) {
+                badge.innerText = `${matchCount} Parite ${q ? 'Bulundu' : 'Mevcut'}`;
+            }
+        }
+
+        function filterManualSnapshotCoinList() {
+            const input = document.getElementById('manual-snapshot-filter-input');
+            populateManualSnapshotSelect(input ? input.value : '');
+        }
+
+        function updateManualSnapshotSideStyle() {
+            const longRadio = document.querySelector('input[name="manual_snapshot_side"][value="LONG"]');
+            const isLong = longRadio ? longRadio.checked : true;
+            const lblLong = document.getElementById('lbl-side-long');
+            const lblShort = document.getElementById('lbl-side-short');
+
+            if (lblLong && lblShort) {
+                if (isLong) {
+                    lblLong.style.background = 'rgba(16,185,129,0.15)';
+                    lblLong.style.borderColor = '#10b981';
+                    lblLong.style.color = '#10b981';
+
+                    lblShort.style.background = 'rgba(255,255,255,0.03)';
+                    lblShort.style.borderColor = 'rgba(255,255,255,0.1)';
+                    lblShort.style.color = '#94a3b8';
+                } else {
+                    lblShort.style.background = 'rgba(244,63,94,0.15)';
+                    lblShort.style.borderColor = '#f43f5e';
+                    lblShort.style.color = '#f43f5e';
+
+                    lblLong.style.background = 'rgba(255,255,255,0.03)';
+                    lblLong.style.borderColor = 'rgba(255,255,255,0.1)';
+                    lblLong.style.color = '#94a3b8';
+                }
+            }
+        }
+
+        function openManualSnapshotModal() {
+            const overlay = document.getElementById('forensic-manual-snapshot-modal-overlay');
+            if (!overlay) return;
+
+            manualSnapshotParitiesList = getAlphabeticalParitiesList();
+
+            const filterInput = document.getElementById('manual-snapshot-filter-input');
+            if (filterInput) filterInput.value = '';
+
+            populateManualSnapshotSelect('');
+
+            const sel = document.getElementById('manual-snapshot-select');
+            if (sel && manualSnapshotParitiesList.includes('BTC/USDT')) {
+                sel.value = 'BTC/USDT';
+            }
+
+            const msg = document.getElementById('manual-snapshot-msg');
+            if (msg) {
+                msg.style.display = 'none';
+                msg.innerHTML = '';
+            }
+
+            const btn = document.getElementById('manual-snapshot-submit-btn');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<span>📸 Snapshot Oluştur</span>';
+            }
+
+            updateManualSnapshotSideStyle();
+            overlay.style.display = 'flex';
+
+            if (filterInput) {
+                setTimeout(() => filterInput.focus(), 100);
+            }
+        }
+
+        function closeManualSnapshotModal() {
+            const overlay = document.getElementById('forensic-manual-snapshot-modal-overlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+
+        async function submitManualSnapshotForm() {
+            const sel = document.getElementById('manual-snapshot-select');
+            const sym = sel ? sel.value : null;
+            if (!sym) {
+                alert("Lütfen listeden bir parite seçin.");
+                return;
+            }
+
+            const sideRadio = document.querySelector('input[name="manual_snapshot_side"]:checked');
+            const side = sideRadio ? sideRadio.value : "LONG";
+
+            const btn = document.getElementById('manual-snapshot-submit-btn');
+            const msg = document.getElementById('manual-snapshot-msg');
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span>⏳ Çiziliyor...</span>';
+            }
+
+            if (msg) {
+                msg.style.display = 'block';
+                msg.style.background = 'rgba(0,242,254,0.08)';
+                msg.style.border = '1px solid rgba(0,242,254,0.3)';
+                msg.style.color = 'var(--cyan)';
+                msg.innerHTML = `⏳ <strong>#${sym}</strong> mum verileri ve seviyeleri alınıyor, 1600x900 infografik üretiliyor...`;
+            }
+
             try {
                 const res = await fetch('/api/forensic_trigger_manual', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({symbol: sym.trim().toUpperCase()})
+                    body: JSON.stringify({ symbol: sym.trim().toUpperCase(), side: side })
                 });
-                const d = await res.json();
-                if (d.status === 'ok' && d.snapshot) {
-                    alert(`Snapshot başarıyla üretildi: #${sym}`);
-                    loadForensicGallery(1);
-                    openForensicLightbox(d.snapshot.id);
+
+                let d = null;
+                const text = await res.text();
+                try {
+                    d = JSON.parse(text);
+                } catch(pe) {
+                    throw new Error(res.ok ? "Geçersiz sunucu yanıtı." : `Sunucu hatası (${res.status}): ${text.slice(0, 120) || 'Bağlantı yanıt vermedi'}`);
+                }
+
+                if (d && d.status === 'ok' && d.snapshot) {
+                    if (msg) {
+                        msg.style.background = 'rgba(16,185,129,0.12)';
+                        msg.style.border = '1px solid #10b981';
+                        msg.style.color = '#10b981';
+                        msg.innerHTML = `✓ <strong>#${sym}</strong> snapshot başarıyla üretildi!`;
+                    }
+                    setTimeout(() => {
+                        closeManualSnapshotModal();
+                        loadForensicGallery(1);
+                        openForensicLightbox(d.snapshot.id);
+                    }, 400);
                 } else {
-                    alert("Snapshot üretilemedi: " + (d.message || 'Bilinmeyen hata'));
+                    const errText = (d && d.message) ? d.message : "Bilinmeyen sunucu hatası.";
+                    if (msg) {
+                        msg.style.background = 'rgba(244,63,94,0.12)';
+                        msg.style.border = '1px solid #f43f5e';
+                        msg.style.color = '#f43f5e';
+                        msg.innerHTML = `⚠️ <strong>Hata:</strong> ${errText}`;
+                    } else {
+                        alert("Snapshot üretilemedi: " + errText);
+                    }
                 }
             } catch(e) {
-                alert("İstek hatası: " + e.message);
+                if (msg) {
+                    msg.style.background = 'rgba(244,63,94,0.12)';
+                    msg.style.border = '1px solid #f43f5e';
+                    msg.style.color = '#f43f5e';
+                    msg.innerHTML = `⚠️ <strong>Bağlantı Hatası:</strong> ${e.message}`;
+                } else {
+                    alert("İstek hatası: " + e.message);
+                }
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>📸 Snapshot Oluştur</span>';
+                }
             }
+        }
+
+        // Geriye dönük uyumluluk takma adı (alias)
+        function promptManualForensicSnapshot() {
+            openManualSnapshotModal();
         }
 
         async function openShadowCoinDetail(symbol) {
@@ -19471,12 +19747,23 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
     async def api_forensic_trigger_manual(request):
         try:
             from forensic_blackbox_manager import forensic_blackbox_manager
-            body = await request.json()
+            import aiohttp
+            
+            try:
+                body = await request.json()
+            except Exception:
+                body = {}
+                
             symbol = str(body.get("symbol", "BTC/USDT")).strip().upper()
+            if not symbol:
+                symbol = "BTC/USDT"
             clean_s = symbol.replace("/USDT", "").replace(":USDT", "").replace("USDT", "").strip().upper()
             full_s = f"{clean_s}/USDT"
+            side = str(body.get("side", "LONG")).strip().upper()
+            if side not in ["LONG", "SHORT"]:
+                side = "LONG"
             
-            # market_data'dan 5M mum ve seviyeleri al (DataFrame boolean truth hatası önleyici güvenli tarama)
+            # 1. market_data önbelleğinden 5M mum verisi ara
             df_5m = None
             if market_data and hasattr(market_data, 'candles_5m') and isinstance(market_data.candles_5m, dict):
                 for candidate_key in [full_s, clean_s, f"{clean_s}USDT", symbol]:
@@ -19485,29 +19772,65 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                         df_5m = cand
                         break
 
-                if (df_5m is None or df_5m.empty) and hasattr(market_data, 'fetch_single_symbol'):
-                    try:
-                        await market_data.fetch_single_symbol(full_s)
-                        for candidate_key in [full_s, clean_s]:
-                            cand = market_data.candles_5m.get(candidate_key)
-                            if cand is not None and isinstance(cand, pd.DataFrame) and not cand.empty:
-                                df_5m = cand
-                                break
-                    except Exception:
-                        pass
+            # 2. Önbellekte yoksa market_data.fetch_single_symbol dene (kısa zaman aşımı ile)
+            if (df_5m is None or df_5m.empty) and market_data and hasattr(market_data, 'fetch_single_symbol'):
+                try:
+                    await asyncio.wait_for(market_data.fetch_single_symbol(full_s), timeout=3.0)
+                    for candidate_key in [full_s, clean_s]:
+                        cand = market_data.candles_5m.get(candidate_key)
+                        if cand is not None and isinstance(cand, pd.DataFrame) and not cand.empty:
+                            df_5m = cand
+                            break
+                except Exception:
+                    pass
 
+            # 3. Hala yoksa doğrudan Binance FAPI & Vision acil durum çağrısı (Render coğrafi kısıt kalkanı)
+            if df_5m is None or df_5m.empty:
+                spot_clean = clean_s.replace('1000000', '').replace('1000', '')
+                fapi_urls = [
+                    f"https://fapi.binance.com/fapi/v1/klines?symbol={clean_s}USDT&interval=5m&limit=200",
+                    f"https://fapi.binance.com/fapi/v1/continuousKlines?pair={clean_s}USDT&contractType=PERPETUAL&interval=5m&limit=200",
+                    f"https://data-api.binance.vision/api/v3/klines?symbol={spot_clean}USDT&interval=5m&limit=200"
+                ]
+                try:
+                    async with aiohttp.ClientSession() as sess:
+                        for f_url in fapi_urls:
+                            try:
+                                async with sess.get(f_url, timeout=aiohttp.ClientTimeout(total=2.5)) as r:
+                                    if r.status == 200:
+                                        raw = await r.json()
+                                        if isinstance(raw, list) and len(raw) > 0:
+                                            df_cand = pd.DataFrame(raw, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'ct', 'qav', 'nt', 'tb', 'tq', 'ig'])
+                                            for col in ['open', 'high', 'low', 'close']:
+                                                df_cand[col] = pd.to_numeric(df_cand[col], errors='coerce').fillna(0.0)
+                                            for col in ['timestamp', 'volume']:
+                                                df_cand[col] = pd.to_numeric(df_cand[col], errors='coerce').fillna(0.0)
+                                            df_cand['quote_volume'] = pd.to_numeric(df_cand['qav'], errors='coerce').fillna(0.0)
+                                            df_5m = df_cand
+                                            if market_data and hasattr(market_data, 'candles_5m'):
+                                                market_data.candles_5m[full_s] = df_5m
+                                            break
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
+
+            # 4. Mum verisi hala alınamadıysa kullanıcıya bilgilendirici yanıt dön
+            if df_5m is None or df_5m.empty or len(df_5m) < 5:
+                return web.json_response({
+                    "status": "error",
+                    "message": f"{full_s} paritesine ait mum verisi borsadan alınamadı. Lütfen pariteyi kontrol edip tekrar deneyin."
+                }, status=400)
             
-            cur_p = 0.0
-            if df_5m is not None and not df_5m.empty:
-                cur_p = float(df_5m['close'].iloc[-1])
-            elif market_data and hasattr(market_data, 'get_last_price'):
+            cur_p = float(df_5m['close'].iloc[-1])
+            if cur_p <= 0.0 and market_data and hasattr(market_data, 'get_last_price'):
                 cur_p = float(market_data.get_last_price(full_s) or 0.0)
             
             now_str = datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S")
             record = {
                 "id": f"MANUAL_{clean_s}_{int(time.time())}",
                 "symbol": full_s,
-                "side": body.get("side", "LONG"),
+                "side": side,
                 "leverage": 5,
                 "entry_price": cur_p,
                 "exit_price": cur_p,
@@ -19520,12 +19843,20 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "close_reason": "MANUEL_ANLIK_SNAPSHOT_KONTROLÜ",
                 "setup_id": "SETUP_MANUAL_FORENSIC_INSPECTION",
                 "max_mfe_roe": 0.0,
-                "max_mae_roe": 0.0
+                "max_mae_roe": 0.0,
+                "confluence_list": [
+                    f"[✓] {clean_s} Manuel Adli Denetim",
+                    f"[✓] Son Referans Fiyat: {cur_p}",
+                    "[✓] Mikroskobik Mum ve CVD Taraması",
+                    "[✓] Kurumsal Camarilla / MAFE Analizi"
+                ]
             }
             
             lvl = {}
             if market_data and hasattr(market_data, 'get_camarilla_levels'):
                 lvl = market_data.get_camarilla_levels(full_s) or {}
+            if not lvl and market_data and hasattr(market_data, 'levels'):
+                lvl = market_data.levels.get(full_s) or market_data.levels.get(clean_s) or {}
 
             snap = await asyncio.to_thread(
                 forensic_blackbox_manager.process_closed_trade_sync,
@@ -19534,6 +19865,9 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 lvl,
                 False
             )
+            if not snap:
+                return web.json_response({"status": "error", "message": "Adli görsel üretilemedi."}, status=500)
+
             return web.json_response({"status": "ok", "snapshot": snap})
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=500)

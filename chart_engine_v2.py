@@ -174,7 +174,7 @@ class ForensicChartEngineV2:
         # ---------------------------------------------------------------------
         # 2. ŞABLON VE DÜZEN KURULUMU (1600 x 900 COMPOSITE)
         # ---------------------------------------------------------------------
-        fig = plt.figure(figsize=(16.0, 9.0), dpi=140)
+        fig = plt.figure(figsize=(16.0, 9.0), dpi=100)
         fig.patch.set_facecolor(self.COLOR_BG)
 
         # 3 Panel GridSpec:
@@ -547,12 +547,15 @@ class ForensicChartEngineV2:
             y_cursor -= 0.038
             ax_hud.text(0.06, y_cursor, f"Tavsiye: {_clean_str(advice, 44)}", color='#38bdf8', fontsize=7.2, fontweight='bold', zorder=5)
 
-        # Buffer'a kaydet
+        # Buffer'a kaydet (Bellek Sızıntısı Koruması)
         buf = io.BytesIO()
-        plt.savefig(buf, format='png', facecolor=fig.get_facecolor(), edgecolor='none', bbox_inches='tight')
-        plt.close(fig)
-        buf.seek(0)
-        return buf
+        try:
+            plt.savefig(buf, format='png', facecolor=fig.get_facecolor(), edgecolor='none', bbox_inches='tight')
+            buf.seek(0)
+            return buf
+        finally:
+            plt.close(fig)
+            plt.close('all')
 
 
 # Singleton motor
