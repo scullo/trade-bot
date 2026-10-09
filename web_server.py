@@ -4057,6 +4057,9 @@ HTML_PAGE = """
                     </div>
                 </div>
                 <div style="display:flex; align-items:center; gap:10px;">
+                    <button id="tel-forensic-btn" onclick="openForensicForCurrentTrade()" style="background:rgba(236,72,153,0.18); border:1.5px solid #ec4899; color:#fff; font-weight:800; font-size:12px; padding:6px 14px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 0 12px rgba(236,72,153,0.25);">
+                        🖼️ Kara Kutu Otopsi
+                    </button>
                     <button id="tel-chart-btn" class="btn-open-chart" style="background:linear-gradient(135deg, rgba(0,242,254,0.18), rgba(79,172,254,0.28)); border:1.5px solid var(--cyan); color:#fff; font-weight:800; font-size:12px; padding:6px 14px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 0 12px rgba(0,242,254,0.25);">
                         📈 Göstergeli Grafik
                     </button>
@@ -4066,6 +4069,94 @@ HTML_PAGE = """
 
             <div class="settings-body" id="tel-content" style="max-height:80vh; overflow-y:auto; padding:20px;">
                 <!-- DYNAMIC CONTENT -->
+            </div>
+        </div>
+    </div>
+
+    <!-- VALKYRIE GÖRSEL ADLİ KARA KUTU LIGHTBOX MODAL -->
+    <div id="forensic-lightbox-modal-overlay" class="modal-overlay" style="display:none; z-index:10050;" onclick="if(event.target===this) closeForensicLightbox()">
+        <div class="live-settings-card" style="max-width:1400px; width:96%; max-height:92vh; display:flex; flex-direction:column; overflow:hidden; border:1px solid rgba(236,72,153,0.35); box-shadow:0 0 40px rgba(0,0,0,0.85);">
+            <div class="tv-modal-header" style="border-bottom:1px solid var(--border); flex-shrink:0; background:rgba(12,18,34,0.95);">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div class="brand-logo-gem" style="width:36px; height:36px; background:rgba(236,72,153,0.15); border-color:#ec4899;">
+                        🖼️
+                    </div>
+                    <div>
+                        <div style="font-size:15px; font-weight:800; color:#fff;" id="forensic-modal-title">VALKYRIE GÖRSEL ADLİ OTOPSİ & KARA KUTU</div>
+                        <div style="font-size:11.5px; color:var(--text-muted);" id="forensic-modal-sub">1600x900 Mikroskobik Mum Grafiği, MAFE Koridoru ve AI Patoloji Teşhisi</div>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <!-- ZOOM BUTONLARI -->
+                    <div style="display:flex; background:rgba(255,255,255,0.05); border-radius:8px; padding:2px; border:1px solid rgba(255,255,255,0.1);">
+                        <button onclick="zoomForensicImage(0.85)" style="background:transparent; border:none; color:#cbd5e1; padding:4px 8px; font-size:12px; cursor:pointer;" title="Uzaklaştır">🔍-</button>
+                        <button onclick="resetForensicZoom()" style="background:transparent; border:none; color:var(--cyan); padding:4px 8px; font-size:11px; font-weight:800; cursor:pointer;" title="Sıfırla">%100</button>
+                        <button onclick="zoomForensicImage(1.2)" style="background:transparent; border:none; color:#cbd5e1; padding:4px 8px; font-size:12px; cursor:pointer;" title="Yakınlaştır">🔍+</button>
+                    </div>
+                    <button id="forensic-modal-star-btn" onclick="toggleCurrentModalStar()" style="background:rgba(251,197,49,0.12); border:1px solid #fbc531; color:#fbc531; font-weight:800; font-size:12px; padding:6px 12px; border-radius:8px; cursor:pointer;">
+                        ⭐ Hall of Fame
+                    </button>
+                    <button id="forensic-modal-download-btn" onclick="downloadCurrentForensicImage()" style="background:rgba(0,242,254,0.12); border:1px solid var(--cyan); color:var(--cyan); font-weight:800; font-size:12px; padding:6px 12px; border-radius:8px; cursor:pointer;">
+                        ⬇️ İndir (PNG)
+                    </button>
+                    <button class="tv-modal-close-btn" onclick="closeForensicLightbox()" title="Kapat (ESC)">✕</button>
+                </div>
+            </div>
+
+            <div style="display:flex; flex:1; overflow:hidden; background:#070b14;">
+                <!-- SOL ALAN: 1600x900 GÖRSEL ALANI (%72) -->
+                <div style="flex:1; overflow:auto; display:flex; justify-content:center; align-items:center; background:#04070f; padding:12px; position:relative;" id="forensic-img-container">
+                    <img id="forensic-lightbox-img" src="" alt="Forensic Snapshot" style="max-width:100%; max-height:100%; object-fit:contain; border-radius:8px; transition:transform 0.15s ease; box-shadow:0 8px 32px rgba(0,0,0,0.8);" />
+                    <div id="forensic-img-empty" style="display:none; text-align:center; color:#94a3b8;">
+                        <div style="font-size:36px; margin-bottom:12px;">🖼️</div>
+                        <div style="font-size:14px; font-weight:700;">Görsel Dosyası Bulunamadı veya Arşivlendi</div>
+                        <div style="font-size:12px; margin-top:6px;">Yalnızca JSON adli telemetrisi mevcut.</div>
+                    </div>
+                </div>
+
+                <!-- SAĞ ALAN: ADLİ TEŞHİS & AI RAPOR PANELİ (%28) -->
+                <div style="width:380px; flex-shrink:0; background:#090e1c; border-left:1px solid var(--border); overflow-y:auto; padding:18px; display:flex; flex-direction:column; gap:16px;">
+                    <!-- TEŞHİS ROZETİ VE SKOR -->
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px;">
+                        <div style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Ön Adli Teşhis</div>
+                        <div id="forensic-modal-diag-badge" style="display:inline-block; font-size:12px; font-weight:900; padding:4px 10px; border-radius:6px; margin-bottom:8px;">-</div>
+                        <div id="forensic-modal-diag-title" style="font-size:13.5px; font-weight:800; color:#fff; margin-bottom:6px;">-</div>
+                        <div style="font-size:11px; color:var(--text-muted);">Güven Skoru: <span id="forensic-modal-confidence" style="color:var(--cyan); font-weight:800;">-</span></div>
+                    </div>
+
+                    <!-- MİKROSKOBİK ADLİ BULGULAR -->
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px;">
+                        <div style="font-size:11px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">🔍 Mikroskobik Bulgular</div>
+                        <div id="forensic-modal-findings" style="font-size:12px; color:#e2e8f0; display:flex; flex-direction:column; gap:6px;">
+                            <!-- Dynamic Findings -->
+                        </div>
+                    </div>
+
+                    <!-- EYLEM TAVSİYESİ -->
+                    <div style="background:rgba(0,242,254,0.04); border:1px solid rgba(0,242,254,0.2); border-radius:12px; padding:14px;">
+                        <div style="font-size:11px; font-weight:800; color:var(--cyan); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">💡 İcraat / Düzeltme Tavsiyesi</div>
+                        <div id="forensic-modal-advice" style="font-size:12px; color:#f1f5f9; line-height:1.45;">-</div>
+                    </div>
+
+                    <!-- VISION LLM PROMPT KOPYALAYICI -->
+                    <div style="background:rgba(236,72,153,0.04); border:1px solid rgba(236,72,153,0.2); border-radius:12px; padding:14px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="font-size:11px; font-weight:800; color:#ec4899;">🤖 Vision LLM İstemi</span>
+                            <button onclick="copyForensicVisionPrompt()" style="background:rgba(236,72,153,0.15); border:1px solid #ec4899; color:#fff; font-size:10.5px; font-weight:800; padding:3px 8px; border-radius:5px; cursor:pointer;">📋 Kopyala</button>
+                        </div>
+                        <div style="font-size:11px; color:#94a3b8; line-height:1.4;">Gemini Vision / Claude 3.7 ile bu görseli mikroskobik inceletmek için hazır prompt.</div>
+                    </div>
+
+                    <!-- YÖNETİM BUTONLARI -->
+                    <div style="margin-top:auto; display:flex; gap:8px;">
+                        <button onclick="markCurrentSnapshotReviewed()" style="flex:1; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); color:#cbd5e1; padding:8px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;" title="İncelendi olarak işaretler ve PNG'yi silerek hafif JSON bırakır">
+                            ✓ İncelendi
+                        </button>
+                        <button onclick="deleteCurrentSnapshot()" style="flex:1; background:rgba(244,63,94,0.12); border:1px solid rgba(244,63,94,0.35); color:#f43f5e; padding:8px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;">
+                            🗑️ Sil
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -4676,6 +4767,12 @@ HTML_PAGE = """
                     <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg></span>
                     <span class="tab-btn-text">4. İşlem Geçmişi</span>
                     <span class="tab-badge-sub" id="nav-ledger-badge" style="background:rgba(251,197,49,0.15); color:#fbc531; border:1px solid rgba(251,197,49,0.3);">Adli Defter</span>
+                </button>
+
+                <button class="nav-tab-btn" id="tab-btn-forensic" onclick="switchMainTab('forensic')" title="4b. Görsel Adli Kara Kutu & Mikroskobik Mum Otopsisi">
+                    <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></span>
+                    <span class="tab-btn-text">4b. Kara Kutu Otopsi</span>
+                    <span class="tab-badge-sub" id="nav-forensic-badge" style="background:rgba(236,72,153,0.15); color:#ec4899; border:1px solid rgba(236,72,153,0.3);">Mum Otopsisi</span>
                 </button>
 
                 <button class="nav-tab-btn" id="tab-btn-persona" onclick="switchMainTab('persona')" title="5. Coin DNA & Persona Matrisi">
@@ -5554,6 +5651,106 @@ HTML_PAGE = """
 
         <!-- LEDGER SAYFALAMA KONTROLLERİ -->
         <div id="ledger-pagination-container" style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding:12px 18px; background:rgba(13, 18, 30, 0.85); border:1px solid rgba(255,255,255,0.08); border-radius:12px; flex-wrap:wrap; gap:12px;"></div>
+    </div>
+
+    <!-- =========================================================================
+         4b. SEKME: 🖼️ VALKYRIE GÖRSEL ADLİ KARA KUTU & MİKROSKOBİK MUM OTOPSİSİ
+         ========================================================================= -->
+    <div id="main-tab-content-forensic" class="main-tab-content" style="display:none;">
+        <!-- 6 KPI ADLİ KARA KUTU KOKPİT KARTLARI -->
+        <div class="cockpit-kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+            <div class="cockpit-kpi-card" style="border-top:3px solid #ec4899;">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">Toplam Kara Kutu</span>
+                    <span class="kpi-card-icon">🖼️</span>
+                </div>
+                <div class="kpi-card-value" id="forensic-kpi-total" style="color:#ec4899;">0</div>
+                <div class="kpi-card-sub" id="forensic-kpi-total-sub">1600x900 İnfografik Arşivi</div>
+            </div>
+
+            <div class="cockpit-kpi-card" style="border-top:3px solid #f43f5e;">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">🔴 Zarar Otopsileri</span>
+                    <span class="kpi-card-icon">💥</span>
+                </div>
+                <div class="kpi-card-value" id="forensic-kpi-losses" style="color:#f43f5e;">0</div>
+                <div class="kpi-card-sub">Post-Mortem Patoloji Raporu</div>
+            </div>
+
+            <div class="cockpit-kpi-card" style="border-top:3px solid #10b981;">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">🟢 Büyük Kazançlar</span>
+                    <span class="kpi-card-icon">👑</span>
+                </div>
+                <div class="kpi-card-value" id="forensic-kpi-runners" style="color:#10b981;">0</div>
+                <div class="kpi-card-sub">Outlier Runner (ROE ≥ %2.5)</div>
+            </div>
+
+            <div class="cockpit-kpi-card" style="border-top:3px solid #f59e0b;">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">⚠️ Sahte Kırılımlar</span>
+                    <span class="kpi-card-icon">🪤</span>
+                </div>
+                <div class="kpi-card-value" id="forensic-kpi-traps" style="color:#f59e0b;">0</div>
+                <div class="kpi-card-sub">Likidite ve Fitil Avı Tuzakları</div>
+            </div>
+
+            <div class="cockpit-kpi-card" style="border-top:3px solid #fbc531;">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">⭐ Hall of Fame</span>
+                    <span class="kpi-card-icon">⭐</span>
+                </div>
+                <div class="kpi-card-value" id="forensic-kpi-starred" style="color:#fbc531;">0</div>
+                <div class="kpi-card-sub">Kalıcı Saklanan Dersler</div>
+            </div>
+
+            <div class="cockpit-kpi-card" style="border-top:3px solid #38bdf8;">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">💾 Disk Kullanımı</span>
+                    <span class="kpi-card-icon">💿</span>
+                </div>
+                <div class="kpi-card-value" id="forensic-kpi-disk" style="color:#38bdf8;">0 MB</div>
+                <div class="kpi-card-sub">Akıllı 7 Günlük Yaşam Döngüsü</div>
+            </div>
+        </div>
+
+        <!-- HIZLI FİLTRE VE ARAMA TOOLBAR -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin:20px 0; background:rgba(13,18,30,0.85); padding:14px 18px; border-radius:12px; border:1px solid rgba(255,255,255,0.08);">
+            <!-- HIZLI FİLTRE BUTONLARI -->
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                <button class="nav-tab-btn active" id="btn-ff-all" onclick="setForensicFilter('ALL')" style="padding:6px 14px; font-size:11.5px; border-radius:8px;">⚪ Tümü</button>
+                <button class="nav-tab-btn" id="btn-ff-loss" onclick="setForensicFilter('LOSS')" style="padding:6px 14px; font-size:11.5px; border-radius:8px; border-color:rgba(244,63,94,0.4); color:#f43f5e;">🔴 Zararlar (SL)</button>
+                <button class="nav-tab-btn" id="btn-ff-win" onclick="setForensicFilter('WIN')" style="padding:6px 14px; font-size:11.5px; border-radius:8px; border-color:rgba(16,185,129,0.4); color:#10b981;">🟢 Runner Kazançlar</button>
+                <button class="nav-tab-btn" id="btn-ff-trap" onclick="setForensicFilter('TRAP')" style="padding:6px 14px; font-size:11.5px; border-radius:8px; border-color:rgba(245,158,11,0.4); color:#f59e0b;">⚠️ Fakeout / Tuzaklar</button>
+                <button class="nav-tab-btn" id="btn-ff-starred" onclick="setForensicFilter('STARRED')" style="padding:6px 14px; font-size:11.5px; border-radius:8px; border-color:rgba(251,197,49,0.4); color:#fbc531;">⭐ Hall of Fame</button>
+                <button class="nav-tab-btn" id="btn-ff-shadow" onclick="setForensicFilter('SHADOW')" style="padding:6px 14px; font-size:11.5px; border-radius:8px; border-color:rgba(168,85,247,0.4); color:#a855f7;">⚡ Gölge Dersler</button>
+                <button class="nav-tab-btn" id="btn-ff-real" onclick="setForensicFilter('REAL')" style="padding:6px 14px; font-size:11.5px; border-radius:8px; border-color:rgba(0,242,254,0.4); color:var(--cyan);">💼 Gerçek/Paper</button>
+            </div>
+
+            <!-- ARAMA VE MANUEL SNAPSHOT AKSİYONLARI -->
+            <div style="display:flex; gap:10px; align-items:center;">
+                <div style="position:relative;">
+                    <input type="text" id="forensic-search-input" placeholder="Parite veya setup ara..." oninput="debounceForensicSearch()" style="background:#0b1122; border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:7px 12px 7px 30px; font-size:11.5px; color:#fff; width:190px;" />
+                    <span style="position:absolute; left:10px; top:8px; font-size:12px; color:#64748b;">🔍</span>
+                </div>
+                <button onclick="promptManualForensicSnapshot()" style="background:linear-gradient(135deg, rgba(236,72,153,0.2), rgba(168,85,247,0.2)); border:1.5px solid #ec4899; color:#fff; font-weight:800; font-size:11.5px; padding:7px 14px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                    📷 Canlı Snapshot Al
+                </button>
+                <button onclick="loadForensicGallery(1)" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#fff; font-size:11.5px; padding:7px 12px; border-radius:8px; cursor:pointer;" title="Galeriyi Yenile">
+                    🔄
+                </button>
+            </div>
+        </div>
+
+        <!-- İNTERAKTİF GALERİ GRID KARTLARI -->
+        <div id="forensic-gallery-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:18px; margin-bottom:24px;">
+            <!-- DYNAMIC FORENSIC CARDS -->
+        </div>
+
+        <!-- SAYFALAMA KONTROLLERİ -->
+        <div id="forensic-pagination-container" style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px; background:rgba(13,18,30,0.85); border:1px solid rgba(255,255,255,0.08); border-radius:12px; margin-bottom:30px;">
+            <!-- DYNAMIC PAGINATION -->
+        </div>
     </div>
 
     <!-- =========================================================================
@@ -10550,6 +10747,7 @@ async function loadAdminMetrics() {
                 'positions': document.getElementById('tab-btn-positions'),
                 'radar': document.getElementById('tab-btn-radar'),
                 'ledger': document.getElementById('tab-btn-ledger'),
+                'forensic': document.getElementById('tab-btn-forensic'),
                 'persona': document.getElementById('tab-btn-persona'),
                 'shadow': document.getElementById('tab-btn-shadow'),
                 'evolution': document.getElementById('tab-btn-evolution'),
@@ -10565,6 +10763,7 @@ async function loadAdminMetrics() {
                 'positions': document.getElementById('main-tab-content-positions'),
                 'radar': document.getElementById('main-tab-content-radar'),
                 'ledger': document.getElementById('main-tab-content-ledger'),
+                'forensic': document.getElementById('main-tab-content-forensic'),
                 'persona': document.getElementById('main-tab-content-persona'),
                 'shadow': document.getElementById('main-tab-content-shadow'),
                 'evolution': document.getElementById('main-tab-content-evolution'),
@@ -10639,6 +10838,8 @@ async function loadAdminMetrics() {
                     }, 60);
                 } else if (tabName === 'ledger') {
                     renderHistoryTable();
+                } else if (tabName === 'forensic') {
+                    loadForensicGallery(1);
                 } else if (tabName === 'persona') {
                     renderPersonaMatrixView();
                 } else if (tabName === 'shadow') {
@@ -17259,6 +17460,10 @@ function downloadExcelReport() {
                     return;
                 }
 
+                window.currentInspectingTradeId = tradeId;
+                window.currentInspectingTradeSymbol = item.symbol;
+                window.currentInspectingTradeItem = item;
+
                 const modal = document.getElementById('telemetry-modal-overlay');
                 const title = document.getElementById('tel-title');
                 const sub = document.getElementById('tel-sub');
@@ -17613,6 +17818,470 @@ function downloadExcelReport() {
         function closeTelemetryModal() {
             const modal = document.getElementById('telemetry-modal-overlay');
             if (modal) modal.style.display = 'none';
+        }
+
+        // =========================================================================
+        // VALKYRIE GÖRSEL ADLİ KARA KUTU & MİKROSKOBİK MUM OTOPSİSİ (FRONTEND LOGIC)
+        // =========================================================================
+        let currentForensicPage = 1;
+        let currentForensicFilter = 'ALL';
+        let currentForensicSearch = '';
+        let currentViewingSnapshot = null;
+        let currentForensicZoom = 1.0;
+        let forensicSearchDebounceTimer = null;
+
+        async function openForensicForCurrentTrade() {
+            try {
+                const sym = window.currentInspectingTradeSymbol || (window.currentInspectingTradeItem && window.currentInspectingTradeItem.symbol);
+                if (!sym) {
+                    switchMainTab('forensic');
+                    return;
+                }
+                closeTelemetryModal();
+                switchMainTab('forensic');
+                setForensicFilter('ALL');
+                const searchInput = document.getElementById('forensic-search-input');
+                const cleanSym = sym.replace('/USDT', '');
+                if (searchInput) {
+                    searchInput.value = cleanSym;
+                    currentForensicSearch = cleanSym;
+                }
+                await loadForensicGallery(1, 'ALL', cleanSym);
+            } catch(e) {
+                console.error("openForensicForCurrentTrade error:", e);
+                switchMainTab('forensic');
+            }
+        }
+
+        function setForensicFilter(cat) {
+            currentForensicFilter = cat;
+            const btnMap = {
+                'ALL': 'btn-ff-all',
+                'LOSS': 'btn-ff-loss',
+                'WIN': 'btn-ff-win',
+                'TRAP': 'btn-ff-trap',
+                'STARRED': 'btn-ff-starred',
+                'SHADOW': 'btn-ff-shadow',
+                'REAL': 'btn-ff-real'
+            };
+            for (const k in btnMap) {
+                const el = document.getElementById(btnMap[k]);
+                if (el) {
+                    if (k === cat) el.classList.add('active');
+                    else el.classList.remove('active');
+                }
+            }
+            loadForensicGallery(1, cat, currentForensicSearch);
+        }
+
+        function debounceForensicSearch() {
+            clearTimeout(forensicSearchDebounceTimer);
+            forensicSearchDebounceTimer = setTimeout(() => {
+                const input = document.getElementById('forensic-search-input');
+                currentForensicSearch = input ? input.value.trim() : '';
+                loadForensicGallery(1, currentForensicFilter, currentForensicSearch);
+            }, 300);
+        }
+
+        async function loadForensicGallery(page = 1, category = null, search = null) {
+            currentForensicPage = page;
+            if (category !== null) currentForensicFilter = category;
+            if (search !== null) currentForensicSearch = search;
+
+            const grid = document.getElementById('forensic-gallery-grid');
+            if (!grid) return;
+
+            grid.innerHTML = `
+                <div style="grid-column:1/-1; text-align:center; padding:40px 20px; color:#94a3b8;">
+                    <div style="font-size:28px; animation:spin 1s linear infinite; display:inline-block;">⚡</div>
+                    <div style="margin-top:10px; font-weight:700; font-size:13px;">Adli Kara Kutu Arşivi Yükleniyor...</div>
+                </div>
+            `;
+
+            try {
+                const url = `/api/forensic_snapshots?category=${encodeURIComponent(currentForensicFilter)}&q=${encodeURIComponent(currentForensicSearch)}&page=${currentForensicPage}&page_size=24`;
+                const res = await fetch(url);
+                const data = await res.json();
+
+                // KPI güncelle
+                const stats = data.stats || {};
+                const kpiTotal = document.getElementById('forensic-kpi-total');
+                if (kpiTotal) kpiTotal.innerText = stats.total_count || 0;
+                const kpiLoss = document.getElementById('forensic-kpi-losses');
+                if (kpiLoss) kpiLoss.innerText = stats.loss_count || 0;
+                const kpiWin = document.getElementById('forensic-kpi-runners');
+                if (kpiWin) kpiWin.innerText = stats.win_count || 0;
+                const kpiTrap = document.getElementById('forensic-kpi-traps');
+                if (kpiTrap) kpiTrap.innerText = stats.trap_count || 0;
+                const kpiStar = document.getElementById('forensic-kpi-starred');
+                if (kpiStar) kpiStar.innerText = stats.starred_count || 0;
+                const kpiDisk = document.getElementById('forensic-kpi-disk');
+                if (kpiDisk) kpiDisk.innerText = `${stats.disk_mb || 0} MB`;
+
+                renderForensicCards(data.snapshots || []);
+                renderForensicPagination(data.total_items || 0, data.page || 1, data.page_size || 24, data.total_pages || 1);
+            } catch(err) {
+                console.error("loadForensicGallery error:", err);
+                grid.innerHTML = `
+                    <div style="grid-column:1/-1; text-align:center; padding:40px 20px; color:#f43f5e;">
+                        <div style="font-size:28px;">⚠️</div>
+                        <div style="margin-top:10px; font-weight:700; font-size:13px;">Kayıtlar yüklenirken hata oluştu: ${err.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderForensicCards(items) {
+            const grid = document.getElementById('forensic-gallery-grid');
+            if (!grid) return;
+
+            if (!items || items.length === 0) {
+                grid.innerHTML = `
+                    <div style="grid-column:1/-1; text-align:center; padding:60px 20px; background:rgba(13,18,30,0.4); border:1px dashed rgba(255,255,255,0.1); border-radius:16px; color:#94a3b8;">
+                        <div style="font-size:36px; margin-bottom:12px;">🖼️</div>
+                        <div style="font-size:15px; font-weight:800; color:#fff;">Bu Kriterde Kara Kutu Kaydı Bulunmuyor</div>
+                        <div style="font-size:12px; margin-top:6px; color:#64748b;">Yeni işlemler kapandıkça veya "Canlı Snapshot Al" butonunu kullandığınızda burada listelenecektir.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = items.map(item => {
+                const isProfit = Number(item.roe_pct || 0) > 0;
+                const pnlCol = isProfit ? '#10b981' : (Number(item.roe_pct || 0) < 0 ? '#f43f5e' : '#94a3b8');
+                const pnlBg = isProfit ? 'rgba(16,185,129,0.15)' : (Number(item.roe_pct || 0) < 0 ? 'rgba(244,63,94,0.15)' : 'rgba(255,255,255,0.06)');
+                const sideCol = item.side === 'LONG' ? '#10b981' : '#f43f5e';
+                const sideBg = item.side === 'LONG' ? 'rgba(16,185,129,0.15)' : 'rgba(244,63,94,0.15)';
+                const autopsy = item.autopsy || {};
+                const diagBadge = autopsy.diagnosis_badge || '⚖️ STANDART İCRAAT';
+                const diagCol = autopsy.diagnosis_color || '#38bdf8';
+                const starredClass = item.is_starred ? '⭐' : '☆';
+                const starredColor = item.is_starred ? '#fbc531' : '#64748b';
+
+                const imgHtml = item.has_image ? `
+                    <div style="position:relative; width:100%; aspect-ratio:16/9; background:#070b14; border-radius:10px 10px 0 0; overflow:hidden; cursor:pointer;" onclick="openForensicLightbox('${item.id}')">
+                        <img src="/api/forensic_snapshot_image?id=${encodeURIComponent(item.id)}" loading="lazy" style="width:100%; height:100%; object-fit:cover; transition:transform 0.2s ease;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'" />
+                        <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(11,17,34,0.85) 0%, transparent 60%); pointer-events:none;"></div>
+                        <div style="position:absolute; bottom:8px; left:10px; font-size:10px; font-weight:800; color:#38bdf8; background:rgba(0,0,0,0.6); padding:2px 8px; border-radius:4px; backdrop-filter:blur(4px);">
+                            🔍 HD BÜYÜT
+                        </div>
+                    </div>
+                ` : `
+                    <div style="position:relative; width:100%; aspect-ratio:16/9; background:#070b14; border-radius:10px 10px 0 0; display:flex; flex-direction:column; justify-content:center; align-items:center; color:#64748b; cursor:pointer;" onclick="openForensicLightbox('${item.id}')">
+                        <span style="font-size:24px;">📄</span>
+                        <span style="font-size:11px; margin-top:4px;">JSON Telemetrisi</span>
+                    </div>
+                `;
+
+                return `
+                    <div style="background:#0b1122; border:1px solid rgba(255,255,255,0.08); border-radius:12px; overflow:hidden; display:flex; flex-direction:column; transition:transform 0.15s, border-color 0.15s; box-shadow:0 4px 16px rgba(0,0,0,0.4);" onmouseover="this.style.borderColor='rgba(0,242,254,0.3)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'; this.style.transform='none'">
+                        ${imgHtml}
+                        <div style="padding:14px; display:flex; flex-direction:column; gap:10px; flex:1;">
+                            <!-- BAŞLIK & ROZETLER -->
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="font-size:14px; font-weight:900; color:#fff;">#${item.symbol}</span>
+                                    <span style="font-size:10px; font-weight:800; color:${sideCol}; background:${sideBg}; padding:2px 6px; border-radius:4px;">${item.side}</span>
+                                    <span style="font-size:9.5px; font-weight:700; color:#94a3b8; background:rgba(255,255,255,0.05); padding:2px 5px; border-radius:4px;">${item.trade_category || 'REAL'}</span>
+                                </div>
+                                <button onclick="toggleCardStar('${item.id}', event)" style="background:transparent; border:none; font-size:16px; cursor:pointer; color:${starredColor}; transition:transform 0.1s;" title="Hall of Fame'e Ekle/Çıkar" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
+                                    ${starredClass}
+                                </button>
+                            </div>
+
+                            <!-- PNL & ROE -->
+                            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
+                                <span style="font-size:11px; color:#94a3b8; font-weight:700;">Net PnL / ROE:</span>
+                                <span style="font-size:12.5px; font-weight:900; color:${pnlCol}; font-family:'JetBrains Mono',monospace;">
+                                    ${Number(item.net_pnl || 0) >= 0 ? '+$' : '-$'}${Math.abs(Number(item.net_pnl || 0)).toFixed(2)} (${Number(item.roe_pct || 0) >= 0 ? '+' : ''}${Number(item.roe_pct || 0).toFixed(1)}%)
+                                </span>
+                            </div>
+
+                            <!-- SETUP & SÜRE -->
+                            <div style="font-size:11px; color:#cbd5e1; display:flex; justify-content:space-between;">
+                                <span style="color:#94a3b8;">Setup:</span>
+                                <span style="font-weight:700; color:#fff; max-width:200px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${item.setup_id || 'SETUP_QUANT'}</span>
+                            </div>
+                            <div style="font-size:11px; color:#cbd5e1; display:flex; justify-content:space-between;">
+                                <span style="color:#94a3b8;">Süre / Mum:</span>
+                                <span style="font-weight:700; color:#38bdf8;">${item.duration || `${item.candle_count || 1} Mum`}</span>
+                            </div>
+
+                            <!-- AI TEŞHİS BADGE -->
+                            <div style="margin-top:2px;">
+                                <span style="display:inline-block; font-size:10.5px; font-weight:800; color:#fff; background:rgba(12,18,34,0.9); border:1px solid ${diagCol}; padding:3px 8px; border-radius:6px;">
+                                    ${diagBadge}
+                                </span>
+                            </div>
+
+                            <!-- ALT AKSİYONLAR -->
+                            <div style="margin-top:auto; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-size:10px; color:#64748b;">${item.created_at ? item.created_at.split(' ')[0] : ''}</span>
+                                <div style="display:flex; gap:6px;">
+                                    <button onclick="openForensicLightbox('${item.id}')" style="background:rgba(0,242,254,0.12); border:1px solid rgba(0,242,254,0.3); color:var(--cyan); padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer;">
+                                        🔍 İncele
+                                    </button>
+                                    <button onclick="deleteCardSnapshot('${item.id}', event)" style="background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.25); color:#f43f5e; padding:4px 8px; border-radius:6px; font-size:11px; cursor:pointer;" title="Sil">
+                                        🗑️
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderForensicPagination(total, page, pageSize, totalPages) {
+            const container = document.getElementById('forensic-pagination-container');
+            if (!container) return;
+
+            if (total === 0) {
+                container.innerHTML = `<span style="font-size:11.5px; color:#64748b;">Kayıt bulunamadı.</span>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <div style="font-size:11.5px; color:#94a3b8;">
+                    Toplam <strong style="color:#fff;">${total}</strong> adli kayıt (Sayfa ${page} / ${totalPages})
+                </div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <button onclick="loadForensicGallery(${page - 1})" ${page <= 1 ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : 'style="cursor:pointer;"'} class="nav-tab-btn" style="padding:5px 12px; font-size:11px;">
+                        ◀ Önceki
+                    </button>
+                    <span style="font-size:11.5px; font-weight:800; color:var(--cyan); padding:0 8px;">${page}</span>
+                    <button onclick="loadForensicGallery(${page + 1})" ${page >= totalPages ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : 'style="cursor:pointer;"'} class="nav-tab-btn" style="padding:5px 12px; font-size:11px;">
+                        Sonraki ▶
+                    </button>
+                </div>
+            `;
+        }
+
+        async function openForensicLightbox(snapshotId) {
+            try {
+                const res = await fetch(`/api/forensic_snapshots?category=ALL&page_size=1000`);
+                const data = await res.json();
+                const snap = (data.snapshots || []).find(s => s.id === snapshotId);
+                if (!snap) {
+                    alert("Kayıt bulunamadı: " + snapshotId);
+                    return;
+                }
+                currentViewingSnapshot = snap;
+                currentForensicZoom = 1.0;
+
+                const overlay = document.getElementById('forensic-lightbox-modal-overlay');
+                const title = document.getElementById('forensic-modal-title');
+                const sub = document.getElementById('forensic-modal-sub');
+                const img = document.getElementById('forensic-lightbox-img');
+                const imgEmpty = document.getElementById('forensic-img-empty');
+                const starBtn = document.getElementById('forensic-modal-star-btn');
+
+                title.innerText = `VALKYRIE GÖRSEL ADLİ OTOPSİ — #${snap.symbol} [${snap.side}]`;
+                sub.innerText = `İcraat: ${snap.close_reason || 'KAPANDI'} │ Net PnL: ${snap.net_pnl >= 0 ? '+$' : '-$'}${Math.abs(snap.net_pnl).toFixed(2)} (${snap.roe_pct >= 0 ? '+' : ''}${snap.roe_pct.toFixed(2)}% ROE)`;
+
+                if (snap.has_image) {
+                    img.src = `/api/forensic_snapshot_image?id=${encodeURIComponent(snap.id)}`;
+                    img.style.display = 'block';
+                    img.style.transform = 'scale(1)';
+                    if (imgEmpty) imgEmpty.style.display = 'none';
+                } else {
+                    img.style.display = 'none';
+                    if (imgEmpty) imgEmpty.style.display = 'block';
+                }
+
+                if (starBtn) {
+                    starBtn.innerText = snap.is_starred ? '★ Hall of Fame (Kayıtlı)' : '⭐ Hall of Fame';
+                    starBtn.style.color = snap.is_starred ? '#fbc531' : '#cbd5e1';
+                }
+
+                const autopsy = snap.autopsy || {};
+                const diagBadgeEl = document.getElementById('forensic-modal-diag-badge');
+                if (diagBadgeEl) {
+                    diagBadgeEl.innerText = autopsy.diagnosis_badge || '⚖️ STANDART İCRAAT';
+                    diagBadgeEl.style.color = '#fff';
+                    diagBadgeEl.style.background = autopsy.diagnosis_color || '#38bdf8';
+                }
+
+                const diagTitleEl = document.getElementById('forensic-modal-diag-title');
+                if (diagTitleEl) diagTitleEl.innerText = autopsy.diagnosis_title || 'Standart Kuant İcraatı';
+
+                const confEl = document.getElementById('forensic-modal-confidence');
+                if (confEl) confEl.innerText = `%${Math.round((autopsy.confidence_score || 0.85) * 100)}`;
+
+                const findingsEl = document.getElementById('forensic-modal-findings');
+                if (findingsEl) {
+                    const fList = autopsy.findings || ['İşlem normal risk yönetimi sınırlarında kapatıldı.'];
+                    findingsEl.innerHTML = fList.map(f => `<div style="display:flex; gap:6px;"><span style="color:#38bdf8;">•</span><span>${f}</span></div>`).join('');
+                }
+
+                const adviceEl = document.getElementById('forensic-modal-advice');
+                if (adviceEl) adviceEl.innerText = autopsy.actionable_advice || 'Teknik seviyelere ve para yönetimine sadık kalın.';
+
+                if (overlay) overlay.style.display = 'flex';
+            } catch(e) {
+                console.error("openForensicLightbox error:", e);
+            }
+        }
+
+        function closeForensicLightbox() {
+            const overlay = document.getElementById('forensic-lightbox-modal-overlay');
+            if (overlay) overlay.style.display = 'none';
+            currentViewingSnapshot = null;
+        }
+
+        function zoomForensicImage(factor) {
+            const img = document.getElementById('forensic-lightbox-img');
+            if (!img) return;
+            currentForensicZoom = Math.max(0.6, Math.min(3.0, currentForensicZoom * factor));
+            img.style.transform = `scale(${currentForensicZoom})`;
+        }
+
+        function resetForensicZoom() {
+            const img = document.getElementById('forensic-lightbox-img');
+            if (!img) return;
+            currentForensicZoom = 1.0;
+            img.style.transform = 'scale(1)';
+        }
+
+        async function toggleCurrentModalStar() {
+            if (!currentViewingSnapshot) return;
+            try {
+                const res = await fetch('/api/forensic_snapshot_action', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({action: 'star', id: currentViewingSnapshot.id})
+                });
+                const d = await res.json();
+                if (d.status === 'ok') {
+                    currentViewingSnapshot.is_starred = d.is_starred;
+                    const starBtn = document.getElementById('forensic-modal-star-btn');
+                    if (starBtn) {
+                        starBtn.innerText = d.is_starred ? '★ Hall of Fame (Kayıtlı)' : '⭐ Hall of Fame';
+                        starBtn.style.color = d.is_starred ? '#fbc531' : '#cbd5e1';
+                    }
+                    loadForensicGallery(currentForensicPage);
+                }
+            } catch(e) {
+                console.error("toggleCurrentModalStar error:", e);
+            }
+        }
+
+        async function toggleCardStar(snapId, event) {
+            if (event) event.stopPropagation();
+            try {
+                const res = await fetch('/api/forensic_snapshot_action', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({action: 'star', id: snapId})
+                });
+                const d = await res.json();
+                if (d.status === 'ok') {
+                    loadForensicGallery(currentForensicPage);
+                }
+            } catch(e) {
+                console.error("toggleCardStar error:", e);
+            }
+        }
+
+        async function deleteCardSnapshot(snapId, event) {
+            if (event) event.stopPropagation();
+            if (!confirm("Bu adli kaydı ve görselini kalıcı olarak silmek istediğinizden emin misiniz?")) return;
+            try {
+                const res = await fetch('/api/forensic_snapshot_action', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({action: 'delete', id: snapId})
+                });
+                const d = await res.json();
+                if (d.status === 'ok') {
+                    loadForensicGallery(currentForensicPage);
+                }
+            } catch(e) {
+                console.error("deleteCardSnapshot error:", e);
+            }
+        }
+
+        async function deleteCurrentSnapshot() {
+            if (!currentViewingSnapshot) return;
+            if (!confirm("Bu adli kaydı silmek istediğinizden emin misiniz?")) return;
+            try {
+                const res = await fetch('/api/forensic_snapshot_action', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({action: 'delete', id: currentViewingSnapshot.id})
+                });
+                const d = await res.json();
+                if (d.status === 'ok') {
+                    closeForensicLightbox();
+                    loadForensicGallery(currentForensicPage);
+                }
+            } catch(e) {
+                console.error("deleteCurrentSnapshot error:", e);
+            }
+        }
+
+        async function markCurrentSnapshotReviewed() {
+            if (!currentViewingSnapshot) return;
+            try {
+                const res = await fetch('/api/forensic_snapshot_action', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({action: 'review', id: currentViewingSnapshot.id})
+                });
+                const d = await res.json();
+                if (d.status === 'ok') {
+                    alert("İşlem 'İncelendi & Ders Alındı' olarak işaretlendi. Disk koruması için PNG silindi, 1 KB'lık özet saklandı.");
+                    closeForensicLightbox();
+                    loadForensicGallery(currentForensicPage);
+                }
+            } catch(e) {
+                console.error("markCurrentSnapshotReviewed error:", e);
+            }
+        }
+
+        function downloadCurrentForensicImage() {
+            if (!currentViewingSnapshot || !currentViewingSnapshot.has_image) {
+                alert("Görsel dosyası mevcut değil.");
+                return;
+            }
+            const a = document.createElement('a');
+            a.href = `/api/forensic_snapshot_image?id=${encodeURIComponent(currentViewingSnapshot.id)}`;
+            a.download = `${currentViewingSnapshot.id}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        function copyForensicVisionPrompt() {
+            if (!currentViewingSnapshot || !currentViewingSnapshot.autopsy) return;
+            const p = currentViewingSnapshot.autopsy.vision_prompt || "Adli görseli incele.";
+            navigator.clipboard.writeText(p).then(() => {
+                alert("Vision LLM istemi panoya kopyalandı! Gemini veya Claude'a yapıştırabilirsiniz.");
+            }).catch(e => {
+                prompt("İstem:", p);
+            });
+        }
+
+        async function promptManualForensicSnapshot() {
+            const sym = prompt("Adli snapshot üretilecek pariteyi girin (Örn: BTC/USDT, ETH/USDT, SOL/USDT):", "BTC/USDT");
+            if (!sym) return;
+            try {
+                const res = await fetch('/api/forensic_trigger_manual', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({symbol: sym.trim().toUpperCase()})
+                });
+                const d = await res.json();
+                if (d.status === 'ok' && d.snapshot) {
+                    alert(`Snapshot başarıyla üretildi: #${sym}`);
+                    loadForensicGallery(1);
+                    openForensicLightbox(d.snapshot.id);
+                } else {
+                    alert("Snapshot üretilemedi: " + (d.message || 'Bilinmeyen hata'));
+                }
+            } catch(e) {
+                alert("İstek hatası: " + e.message);
+            }
         }
 
         async function openShadowCoinDetail(symbol) {
@@ -18733,6 +19402,105 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                     results[name] = {"error": str(e)}
         return web.json_response(results)
 
+    async def api_forensic_snapshots(request):
+        try:
+            from forensic_blackbox_manager import forensic_blackbox_manager
+            category = request.query.get("category", "ALL")
+            search = request.query.get("q", "")
+            page = int(request.query.get("page", 1))
+            page_size = int(request.query.get("page_size", 24))
+            data = forensic_blackbox_manager.get_snapshots(filter_category=category, search=search, page=page, page_size=page_size)
+            return web.json_response(data)
+        except Exception as e:
+            return web.json_response({"status": "error", "message": str(e)}, status=500)
+
+    async def api_forensic_snapshot_image(request):
+        try:
+            from forensic_blackbox_manager import forensic_blackbox_manager
+            snap_id = request.query.get("id")
+            if not snap_id:
+                return web.Response(status=400, text="Missing snapshot id")
+            entry = next((item for item in forensic_blackbox_manager.catalog if item.get("id") == snap_id), None)
+            if not entry or not entry.get("png_path") or not os.path.exists(entry["png_path"]):
+                return web.Response(status=404, text="Image not found")
+            
+            with open(entry["png_path"], "rb") as f:
+                img_data = f.read()
+            return web.Response(body=img_data, content_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+        except Exception as e:
+            return web.Response(status=500, text=str(e))
+
+    async def api_forensic_snapshot_action(request):
+        try:
+            from forensic_blackbox_manager import forensic_blackbox_manager
+            body = await request.json()
+            action = body.get("action")
+            snap_id = body.get("id")
+            if not action or not snap_id:
+                return web.json_response({"status": "error", "message": "Missing action or id"}, status=400)
+            
+            if action == "star":
+                new_state = forensic_blackbox_manager.toggle_star(snap_id)
+                return web.json_response({"status": "ok", "action": "star", "is_starred": new_state})
+            elif action == "review":
+                success = forensic_blackbox_manager.mark_reviewed(snap_id)
+                return web.json_response({"status": "ok", "action": "review", "is_reviewed": success})
+            elif action == "delete":
+                success = forensic_blackbox_manager.delete_snapshot(snap_id)
+                return web.json_response({"status": "ok", "action": "delete", "deleted": success})
+            else:
+                return web.json_response({"status": "error", "message": f"Unknown action: {action}"}, status=400)
+        except Exception as e:
+            return web.json_response({"status": "error", "message": str(e)}, status=500)
+
+    async def api_forensic_trigger_manual(request):
+        try:
+            from forensic_blackbox_manager import forensic_blackbox_manager
+            body = await request.json()
+            symbol = body.get("symbol", "BTC/USDT")
+            clean_s = symbol.replace("/USDT", "").replace("USDT", "").strip().toUpperCase() if hasattr(symbol, 'toUpperCase') else symbol.replace("/USDT", "").replace("USDT", "").strip().upper()
+            full_s = f"{clean_s}/USDT"
+            
+            # market_data'dan 5M mum ve seviyeleri al
+            df_5m = None
+            if market_data and hasattr(market_data, 'candles_5m'):
+                df_5m = market_data.candles_5m.get(full_s) or market_data.candles_5m.get(f"{clean_s}USDT") or market_data.candles_5m.get(symbol)
+            
+            cur_p = 0.0
+            if df_5m is not None and not df_5m.empty:
+                cur_p = float(df_5m['close'].iloc[-1])
+            elif market_data and hasattr(market_data, 'get_last_price'):
+                cur_p = float(market_data.get_last_price(full_s) or 0.0)
+            
+            now_str = datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S")
+            record = {
+                "id": f"MANUAL_{clean_s}_{int(time.time())}",
+                "symbol": full_s,
+                "side": body.get("side", "LONG"),
+                "leverage": 5,
+                "entry_price": cur_p,
+                "exit_price": cur_p,
+                "net_pnl": 0.0,
+                "roe_pct": 0.0,
+                "entry_time": now_str,
+                "exit_time": now_str,
+                "duration": "Manuel Anlık İnceleme",
+                "candle_count": 1,
+                "close_reason": "MANUEL_ANLIK_SNAPSHOT_KONTROLÜ",
+                "setup_id": "SETUP_MANUAL_FORENSIC_INSPECTION",
+                "max_mfe_roe": 0.0,
+                "max_mae_roe": 0.0
+            }
+            
+            lvl = {}
+            if market_data and hasattr(market_data, 'get_camarilla_levels'):
+                lvl = market_data.get_camarilla_levels(full_s) or {}
+
+            snap = forensic_blackbox_manager.process_closed_trade_sync(record, df_5m=df_5m, levels=lvl, is_shadow=False)
+            return web.json_response({"status": "ok", "snapshot": snap})
+        except Exception as e:
+            return web.json_response({"status": "error", "message": str(e)}, status=500)
+
     app.router.add_get('/api/debug_fetch', api_debug_fetch)
 
     app.router.add_get('/api/live/status', api_live_status)
@@ -18759,6 +19527,10 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
     app.router.add_post('/api/set_active_symbols', api_set_active_symbols)
     app.router.add_post('/api/close_position_manual', api_close_position_manual)
     app.router.add_post('/api/admin/reset_trading_state', api_reset_trading_state)
+    app.router.add_get('/api/forensic_snapshots', api_forensic_snapshots)
+    app.router.add_get('/api/forensic_snapshot_image', api_forensic_snapshot_image)
+    app.router.add_post('/api/forensic_snapshot_action', api_forensic_snapshot_action)
+    app.router.add_post('/api/forensic_trigger_manual', api_forensic_trigger_manual)
     app.router.add_get('/api/stream', sse_handler)
     
     import os

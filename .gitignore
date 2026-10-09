@@ -11,3 +11,6 @@ ENV/
 .DS_Store
 _ARCHIVE_SCRATCH/
 Yeni Metin Belgesi*.txt
+forensic_blackbox/snapshots/
+forensic_blackbox/reports/
+

@@ -879,6 +879,26 @@ class StrategyEngine:
                     )
                 except Exception:
                     pass
+
+            # 🖼️ VALKYRIE GÖRSEL ADLİ KARA KUTU & MİKROSKOBİK MUM OTOPSİSİ
+            try:
+                from forensic_blackbox_manager import forensic_blackbox_manager
+                sym = str(res.get("symbol", ""))
+                df_5m = None
+                if hasattr(self, 'market_data') and self.market_data and hasattr(self.market_data, 'candles_5m'):
+                    df_5m = self.market_data.candles_5m.get(sym)
+                    if df_5m is None or (hasattr(df_5m, 'empty') and df_5m.empty):
+                        clean_s = sym.replace('/USDT', 'USDT')
+                        df_5m = self.market_data.candles_5m.get(clean_s)
+                levels_snap = res.get("snapshot_levels") or {}
+                forensic_blackbox_manager.enqueue_closed_trade(
+                    trade_record=res,
+                    df_5m=df_5m,
+                    levels=levels_snap,
+                    is_shadow=False
+                )
+            except Exception as fb_err:
+                pass
         return res
 
     async def _safe_open_position(self, *args, **kwargs):
@@ -972,7 +992,15 @@ class StrategyEngine:
         # 👻 Gölge İşlem Motoru Milisaniyelik Tick Takibi (Açılmayan sanal pozisyonları takip eder)
         if hasattr(self, "shadow_engine") and self.shadow_engine:
             try:
-                self.shadow_engine.update_tick(symbol, current_price)
+                closed_shadows = self.shadow_engine.update_tick(symbol, current_price)
+                if closed_shadows:
+                    for s_pos in closed_shadows:
+                        try:
+                            from forensic_blackbox_manager import forensic_blackbox_manager
+                            df_s = self.market_data.candles_5m.get(symbol) if hasattr(self, "market_data") and self.market_data else None
+                            forensic_blackbox_manager.enqueue_closed_trade(s_pos, df_s, levels=levels, is_shadow=True)
+                        except Exception:
+                            pass
             except Exception:
                 pass
 
@@ -4074,7 +4102,15 @@ class StrategyEngine:
         # 👻 Gölge İşlem Motoru 5M Mum Kapanış Takibi
         if hasattr(self, "shadow_engine") and self.shadow_engine:
             try:
-                self.shadow_engine.update_candle(symbol, current_candle)
+                closed_c_shadows = self.shadow_engine.update_candle(symbol, current_candle)
+                if closed_c_shadows:
+                    for s_pos in closed_c_shadows:
+                        try:
+                            from forensic_blackbox_manager import forensic_blackbox_manager
+                            df_s = self.market_data.candles_5m.get(symbol) if hasattr(self, "market_data") and self.market_data else None
+                            forensic_blackbox_manager.enqueue_closed_trade(s_pos, df_s, levels=levels, is_shadow=True)
+                        except Exception:
+                            pass
             except Exception:
                 pass
 
