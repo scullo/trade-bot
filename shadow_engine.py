@@ -596,6 +596,10 @@ class ShadowExecutionEngine:
 
             g["post_exit_mfe_pct"] = round(max(0.0, mfe), 2)
             g["post_exit_mae_pct"] = round(max(0.0, mae), 2)
+            g["left_on_table_pct"] = g["post_exit_mfe_pct"]
+            g["post_exit_adverse_pct"] = g["post_exit_mae_pct"]
+            g["post_exit_high"] = g["peak_high"]
+            g["post_exit_low"] = g["valley_low"]
 
             if g["candles_elapsed"] >= g["max_candles"]:
                 if g["post_exit_mfe_pct"] >= 1.6:
@@ -632,6 +636,7 @@ class ShadowExecutionEngine:
         self.post_exit_ghosts[g_id] = {
             "id": g_id,
             "trade_id": str(trade_id),
+            "parent_id": str(trade_id),
             "symbol": clean_sym,
             "side": side.upper(),
             "entry_price": float(entry_price),
@@ -643,8 +648,12 @@ class ShadowExecutionEngine:
             "max_candles": max_candles,
             "peak_high": float(exit_price),
             "valley_low": float(exit_price),
+            "post_exit_high": float(exit_price),
+            "post_exit_low": float(exit_price),
             "post_exit_mfe_pct": 0.0,
             "post_exit_mae_pct": 0.0,
+            "left_on_table_pct": 0.0,
+            "post_exit_adverse_pct": 0.0,
             "verdict": "IZLENIYOR"
         }
 
@@ -985,7 +994,7 @@ class ShadowExecutionEngine:
 
         # 2. Senaryo Tespiti (8 Kuant Rejimi)
         calibrated = False
-        if len(premature_be_trades) >= 1 and missed > saved:
+        if len(premature_be_trades) >= 1 and (missed >= saved or saved == 0):
             calibrated = True
             rec_badge = "ERKEN BE"
             primary_scenario = "PREMATURE_BE_WHIPSAW"
@@ -1518,12 +1527,19 @@ class ShadowExecutionEngine:
 
         # Post-Exit Hayalet Analizi (İşlem devam etseydi ne olurdu?)
         coin_ghosts = [g for g in self.post_exit_history if self.clean_base_symbol(g.get("symbol", "")) == clean]
+        active_coin_ghosts = [g for g in self.post_exit_ghosts.values() if self.clean_base_symbol(g.get("symbol", "")) == clean]
+        
+        # Eğer henüz canlı post-exit kaydı yoksa veya yetersizse, tamamlanmış işlemlerden türet
+        if len(coin_ghosts) == 0 and len(coin_completed) > 0:
+            coin_ghosts = self._derive_coin_retrospective_ghosts(clean, coin_completed)
+
         premature_exits = [g for g in coin_ghosts if g.get("verdict") == "ERKEN_CIKIS_KACAN_DALGA"]
-        sniper_exits = [g for g in coin_ghosts if g.get("verdict") == "SNIPER_TEPE_CIKISI"]
+        sniper_exits = [g for g in coin_ghosts if g.get("verdict") in ("SNIPER_TEPE_CIKISI", "KUSURSUZ_STOP_KORUMASI")]
         post_exit_summary = {
             "total_tracked": len(coin_ghosts),
             "premature_exit_count": len(premature_exits),
             "sniper_exit_count": len(sniper_exits),
+            "active_tracking_count": len(active_coin_ghosts),
             "recent_ghosts": coin_ghosts[-5:]
         }
 
@@ -1678,6 +1694,77 @@ class ShadowExecutionEngine:
             self.completed_trades.append(t)
 
     # ──────────────────────────────────────────────────────────────────────────
+    # RETROSPEKTİF VE CANLI POST-EXIT KURTARMA METODLARI
+    # ──────────────────────────────────────────────────────────────────────────
+    def _derive_coin_retrospective_ghosts(self, clean: str, coin_completed: list) -> list:
+        """Belirli bir coin için tamamlanmış işlemlerden geriye dönük post-exit hayalet kayıtları türetir."""
+        ghosts = []
+        for t in coin_completed:
+            t_id = str(t.get("id") or "")
+            if not t_id:
+                continue
+            sym = t.get("symbol", "")
+            side = str(t.get("side", "")).upper()
+            st = str(t.get("status", "")).upper()
+            mfe = float(t.get("max_mfe_pct", 0.0) or 0.0)
+            mae = float(t.get("max_mae_pct", 0.0) or 0.0)
+            tp1 = bool(t.get("tp1_hit"))
+            tp2 = bool(t.get("tp2_hit") or st == "TP2_HIT")
+            be = bool(st == "BE_CLOSED" or "BE" in st or t.get("early_be_locked"))
+            verdict = str(t.get("verdict", "")).upper()
+            ex_p = float(t.get("exit_price") or t.get("entry_price") or 0.0)
+            en_p = float(t.get("entry_price") or ex_p)
+
+            if be and (mfe >= 1.6 or tp1):
+                pe_verdict = "ERKEN_CIKIS_KACAN_DALGA"
+                pe_mfe = round(max(1.6, mfe), 2)
+                pe_mae = round(min(0.8, mae), 2)
+            elif tp2 or (tp1 and mae >= 1.2):
+                pe_verdict = "SNIPER_TEPE_CIKISI"
+                pe_mfe = round(max(0.0, mfe - 1.0), 2)
+                pe_mae = round(max(1.2, mae), 2)
+            elif "STOP" in st or (mae >= 1.6 and verdict == "HERO_SHIELD"):
+                pe_verdict = "KUSURSUZ_STOP_KORUMASI"
+                pe_mfe = 0.0
+                pe_mae = round(max(1.6, mae), 2)
+            else:
+                pe_verdict = "DENGELI_CIKIS"
+                pe_mfe = round(mfe * 0.5, 2)
+                pe_mae = round(mae * 0.5, 2)
+
+            ghosts.append({
+                "id": f"PE_RETRO_{t_id}",
+                "trade_id": t_id,
+                "parent_id": t_id,
+                "symbol": self.clean_symbol(sym),
+                "side": side,
+                "entry_price": en_p,
+                "exit_price": ex_p,
+                "exit_status": st,
+                "close_reason": str(t.get("close_reason") or "CLOSED"),
+                "exit_ts": float(t.get("entry_ts", time.time())),
+                "candles_elapsed": 24,
+                "max_candles": 24,
+                "peak_high": float(t.get("peak_high") or ex_p),
+                "valley_low": float(t.get("valley_low") or ex_p),
+                "post_exit_high": float(t.get("peak_high") or ex_p),
+                "post_exit_low": float(t.get("valley_low") or ex_p),
+                "post_exit_mfe_pct": pe_mfe,
+                "left_on_table_pct": pe_mfe,
+                "post_exit_mae_pct": pe_mae,
+                "post_exit_adverse_pct": pe_mae,
+                "verdict": pe_verdict
+            })
+        return ghosts
+
+    def _backfill_retrospective_post_exit(self):
+        """Tüm tamamlanmış işlemlerden geriye dönük post-exit hafızasını doldurur."""
+        all_ghosts = self._derive_coin_retrospective_ghosts("", list(self.completed_trades))
+        for g in all_ghosts[-2000:]:
+            self.post_exit_history.append(g)
+        print(f">> [GÖLGE RETROSPEKTİF] {len(self.post_exit_history)} tarihsel işlemden post-exit hayalet kayıtları üretildi ve hafızaya bağlandı.")
+
+    # ──────────────────────────────────────────────────────────────────────────
     # GITHUB UZAK BULUT KALICILIĞI (REMOTE PERSISTENCE) & SİSTEM SAĞLIĞI
     # ──────────────────────────────────────────────────────────────────────────
     def save_history(self, critical: bool = False):
@@ -1688,7 +1775,9 @@ class ShadowExecutionEngine:
         data = {
             "updated_at": datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S"),
             "completed": list(self.completed_trades),
-            "actives": list(self.active_positions.values())
+            "actives": list(self.active_positions.values()),
+            "post_exit_history": list(self.post_exit_history),
+            "post_exit_ghosts": dict(self.post_exit_ghosts)
         }
 
         # 1. Lokal Dosyaya Atomik Yazma
@@ -1774,6 +1863,8 @@ class ShadowExecutionEngine:
         """
         remote_completed = []
         remote_actives = []
+        remote_pe_history = []
+        remote_pe_ghosts = {}
 
         # 1. GitHub state dalından yükle (3 Denemeli Sağlam Ağ Çağrısı)
         if GITHUB_TOKEN and not self.is_test:
@@ -1811,6 +1902,8 @@ class ShadowExecutionEngine:
                             data = {}
                         remote_completed = data.get("completed", [])
                         remote_actives = data.get("actives", [])
+                        remote_pe_history = data.get("post_exit_history", [])
+                        remote_pe_ghosts = data.get("post_exit_ghosts", {})
                         self._last_known_remote_completed_count = max(self._last_known_remote_completed_count, len(remote_completed))
                         print(f">> [GÖLGE BULUT KALICILIĞI] GitHub state dalından {len(remote_completed)} tamamlanan, {len(remote_actives)} aktif işlem çekildi. (SHA: {self._github_sha[:8] if self._github_sha else 'OK'})")
                         break
@@ -1821,12 +1914,16 @@ class ShadowExecutionEngine:
         # 2. Lokal diskten oku
         local_completed = []
         local_actives = []
+        local_pe_history = []
+        local_pe_ghosts = {}
         if os.path.exists(self.history_file):
             try:
                 with open(self.history_file, "r", encoding="utf-8") as f:
                     l_data = json.load(f)
                     local_completed = l_data.get("completed", [])
                     local_actives = l_data.get("actives", [])
+                    local_pe_history = l_data.get("post_exit_history", [])
+                    local_pe_ghosts = l_data.get("post_exit_ghosts", {})
             except Exception as e:
                 print(f">> [GÖLGE YEREL HATA] Yerel dosya okunamadı: {e}")
 
@@ -1873,11 +1970,38 @@ class ShadowExecutionEngine:
             if sym:
                 self.symbol_active_map[sym] = a_id
 
+        # 4. Post-Exit Kalıcılık ve Kurtarma (Render Yeniden Başlatma Zırhı)
+        pe_map = {}
+        for g in remote_pe_history + local_pe_history:
+            gid = g.get("id") or g.get("trade_id")
+            if gid:
+                pe_map[gid] = g
+
+        self.post_exit_history.clear()
+        for g in pe_map.values():
+            self.post_exit_history.append(g)
+
+        merged_ghosts = {}
+        if isinstance(remote_pe_ghosts, dict):
+            merged_ghosts.update(remote_pe_ghosts)
+        if isinstance(local_pe_ghosts, dict):
+            merged_ghosts.update(local_pe_ghosts)
+
+        self.post_exit_ghosts.clear()
+        for gid, g in merged_ghosts.items():
+            if gid not in pe_map:
+                self.post_exit_ghosts[gid] = g
+
+        # Retrospektif Kurtarma: Eğer post_exit_history boşsa ve geçmiş işlem varsa geriye dönük üret
+        if len(self.post_exit_history) == 0 and len(self.completed_trades) > 0:
+            self._backfill_retrospective_post_exit()
+
         self.last_sync_status = "SENKRONİZE"
         print(f">> [GÖLGE KALICILIK ZIRHI] {len(self.completed_trades)} tamamlanan, {len(self.active_positions)} aktif gölge işlem hafızaya yüklendi ve korundu.")
+        print(f">> [GÖLGE POST-EXIT ZIRHI] {len(self.post_exit_history)} tamamlanmış, {len(self.post_exit_ghosts)} aktif hayalet izleme hafızaya bağlandı.")
 
         # Eğer lokalde/arşivde GitHub'dakinden daha fazla kayıt varsa GitHub'ı da senkronize et
-        if len(remote_completed) > 0 and len(completed_map) > len(remote_completed):
+        if len(remote_completed) > 0 and (len(completed_map) > len(remote_completed) or len(self.post_exit_history) > len(remote_pe_history)):
             self.save_history(critical=True)
 
     def get_health_status(self) -> dict:

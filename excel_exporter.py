@@ -1757,8 +1757,15 @@ def create_shadow_dna_excel_report(
         for g in pe_ghosts[-50:]:
             ws6.set_row(r6_idx, 20)
             verd = g.get('verdict', 'STANDART')
-            v_badge = cell_badge_spoiler if verd == 'ERKEN_CIKIS_KACAN_DALGA' else (cell_badge_hero if verd == 'SNIPER_TEPE_CIKISI' else cell_badge_neutral)
-            v_note = "Kapanıştan sonra kâr devam etti, erken çıkış sinyali." if verd == 'ERKEN_CIKIS_KACAN_DALGA' else ("Mükemmel tepe çıkışı, ardından sert geri çekilme yaşandı." if verd == 'SNIPER_TEPE_CIKISI' else "Normal piyasa salınımı.")
+            v_badge = cell_badge_spoiler if verd == 'ERKEN_CIKIS_KACAN_DALGA' else (cell_badge_hero if verd in ('SNIPER_TEPE_CIKISI', 'KUSURSUZ_STOP_KORUMASI') else cell_badge_neutral)
+            if verd == 'ERKEN_CIKIS_KACAN_DALGA':
+                v_note = "Kapanıştan sonra kâr devam etti, erken çıkış sinyali."
+            elif verd == 'SNIPER_TEPE_CIKISI':
+                v_note = "Mükemmel tepe çıkışı, ardından sert geri çekilme yaşandı."
+            elif verd == 'KUSURSUZ_STOP_KORUMASI':
+                v_note = "Zamanında stopla kasa derin düşüşten korundu."
+            else:
+                v_note = "Normal piyasa salınımı."
             
             ws6.write(r6_idx, 1, g.get('parent_id', '-'), cell_c)
             ws6.write(r6_idx, 2, g.get('symbol', '-'), cell_l)

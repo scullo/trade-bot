@@ -6,6 +6,10 @@ class TestShadowExecutionEngine(unittest.TestCase):
     def setUp(self):
         # Geçici hafıza test motoru
         self.engine = ShadowExecutionEngine(history_file="test_shadow_history.json", max_active=10, max_history=50)
+        self.engine.active_positions.clear()
+        self.engine.completed_trades.clear()
+        self.engine.post_exit_history.clear()
+        self.engine.post_exit_ghosts.clear()
 
     def tearDown(self):
         import os

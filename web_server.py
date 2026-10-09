@@ -16069,7 +16069,10 @@ function downloadExcelReport() {
                 if (peEl) {
                     peEl.innerHTML = `
                         <div style="background:rgba(0,0,0,0.25); padding:8px 10px; border-radius:8px;">
-                            <div style="font-size:10px; color:#94a3b8;">Takip Edilen Kapanış</div>
+                            <div style="font-size:10px; color:#94a3b8; display:flex; justify-content:space-between; align-items:center;">
+                                <span>Takip Edilen Kapanış</span>
+                                ${pe.active_tracking_count ? `<span style="color:#38bdf8; font-size:9.5px; font-weight:700;">⏳ ${pe.active_tracking_count} Canlı</span>` : ''}
+                            </div>
                             <div style="font-size:15px; font-weight:800; color:#fff; font-family:'JetBrains Mono';">${pe.total_tracked || 0} Pozisyon</div>
                         </div>
                         <div style="background:rgba(0,0,0,0.25); padding:8px 10px; border-radius:8px;">

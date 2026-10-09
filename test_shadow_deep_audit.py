@@ -217,6 +217,8 @@ class TestShadowDeepAudit(unittest.TestCase):
         self.engine.update_candle("AVAX/USDT", c1)
         
         pos_id = list(self.engine.active_positions.keys())[0]
+        self.engine.active_positions[pos_id]["early_be_locked"] = True
+        self.engine.active_positions[pos_id]["be_price"] = 20.0
         self.engine.active_positions[pos_id]["status"] = "BE_CLOSED"
         self.engine.active_positions[pos_id]["max_mfe_pct"] = 2.10
         # Simüle edilmiş BE kapanışı
@@ -225,6 +227,64 @@ class TestShadowDeepAudit(unittest.TestCase):
 
         detail = self.engine.get_coin_forensic_detail("AVAX")
         self.assertIn(detail["primary_scenario"], ["PREMATURE_BE_WHIPSAW", "ACCUMULATING_DATA", "SPOILER_OVER_RESTRICTIVE"])
+
+    def test_07_post_exit_persistence_and_retrospective_recovery(self):
+        """
+        👻 Post-Exit Kalıcılık ve Retrospektif Kurtarma Kanıtı:
+        1. Tamamlanmış işlemlerden geriye dönük post-exit hayaletlerinin türetilmesi.
+        2. get_coin_forensic_detail() fonksiyonunda post_exit_summary'nin asla 0 kalmaması.
+        3. save_history() ve load_history() döngüsünde post_exit verisinin kayıpsız korunması.
+        """
+        # 1. Sahte tamamlanmış işlemler oluştur
+        self.engine.completed_trades.append({
+            "id": "SHD_TEST_STRK_1",
+            "symbol": "STRK/USDT",
+            "side": "LONG",
+            "entry_price": 0.05,
+            "exit_price": 0.05,
+            "status": "BE_CLOSED",
+            "max_mfe_pct": 2.5,
+            "max_mae_pct": 0.3,
+            "tp1_hit": True,
+            "verdict": "SPOILER_SHIELD",
+            "close_reason": "Başa-Baş Stop"
+        })
+        self.engine.completed_trades.append({
+            "id": "SHD_TEST_STRK_2",
+            "symbol": "STRK/USDT",
+            "side": "SHORT",
+            "entry_price": 0.06,
+            "exit_price": 0.057,
+            "status": "TP2_HIT",
+            "max_mfe_pct": 5.0,
+            "max_mae_pct": 0.4,
+            "tp1_hit": True,
+            "tp2_hit": True,
+            "verdict": "HERO_SHIELD",
+            "close_reason": "TP2 Alındı"
+        })
+
+        # 2. Retrospektif çıkarımı çalıştır
+        self.engine.post_exit_history.clear()
+        self.engine._backfill_retrospective_post_exit()
+
+        self.assertGreater(len(self.engine.post_exit_history), 0)
+
+        # 3. get_coin_forensic_detail testi
+        detail = self.engine.get_coin_forensic_detail("STRK")
+        pe = detail.get("post_exit_summary", {})
+        self.assertGreater(pe.get("total_tracked", 0), 0)
+        self.assertGreater(pe.get("premature_exit_count", 0), 0)
+
+        # 4. Kalıcılık (save & load) testi
+        self.engine.save_history(critical=True)
+
+        new_engine = ShadowExecutionEngine(history_file=self.test_file)
+        self.assertGreater(len(new_engine.post_exit_history), 0)
+        new_detail = new_engine.get_coin_forensic_detail("STRK")
+        new_pe = new_detail.get("post_exit_summary", {})
+        self.assertEqual(new_pe.get("total_tracked"), pe.get("total_tracked"))
+        self.assertEqual(new_pe.get("premature_exit_count"), pe.get("premature_exit_count"))
 
 if __name__ == "__main__":
     unittest.main()
