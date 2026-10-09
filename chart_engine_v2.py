@@ -133,8 +133,8 @@ class ForensicChartEngineV2:
         timestamps = df_5m[time_col].values if time_col else list(range(len(df_5m)))
 
         if is_manual:
-            # Canlı radar incelemesinde son 42 mumu göster (Derin piyasa yapısı)
-            slice_len = min(42, len(df_5m))
+            # Canlı radar incelemesinde zengin geçmiş veri: Son 84 mum (7 saat)
+            slice_len = min(84, len(df_5m))
             slice_start = max(0, len(df_5m) - slice_len)
             slice_end = len(df_5m)
             local_entry_idx = (slice_end - slice_start) - 1
@@ -171,11 +171,11 @@ class ForensicChartEngineV2:
                 if exit_idx < entry_idx:
                     exit_idx = entry_idx + 1
 
-            slice_start = max(0, entry_idx - 14)
-            slice_end = min(len(df_5m), exit_idx + 10)
-            if slice_end - slice_start < 30:
-                slice_start = max(0, slice_end - 36)
-                slice_end = min(len(df_5m), slice_start + 36)
+            slice_start = max(0, entry_idx - 50)
+            slice_end = min(len(df_5m), exit_idx + 18)
+            if slice_end - slice_start < 72:
+                slice_start = max(0, slice_end - 80)
+                slice_end = min(len(df_5m), slice_start + 80)
 
             local_entry_idx = max(0, min(slice_end - slice_start - 1, entry_idx - slice_start))
             local_exit_idx = max(0, min(slice_end - slice_start - 1, exit_idx - slice_start))
@@ -214,15 +214,32 @@ class ForensicChartEngineV2:
                     cam[k] = v
 
         # ---------------------------------------------------------------------
+        # 3b. VWAP HESAPLAMA (SEANS / ROLLING VWAP + ANCHORED AVWAP)
+        # ---------------------------------------------------------------------
+        vol_arr = pd.to_numeric(display_df.get('volume', 1000.0), errors='coerce').fillna(1000.0).values
+        high_arr = pd.to_numeric(display_df['high'], errors='coerce').values
+        low_arr = pd.to_numeric(display_df['low'], errors='coerce').values
+        close_arr = pd.to_numeric(display_df['close'], errors='coerce').values
+        typ_arr = (high_arr + low_arr + close_arr) / 3.0
+
+        cum_vol = np.cumsum(vol_arr)
+        cum_vol[cum_vol == 0] = 1.0
+        vwap_series = np.cumsum(typ_arr * vol_arr) / cum_vol
+        cur_vwap = float(vwap_series[-1]) if len(vwap_series) > 0 else 0.0
+
+        tepe_avwap = float(levels.get('tepe_avwap', 0.0)) if levels else 0.0
+        dip_avwap = float(levels.get('dip_avwap', 0.0)) if levels else 0.0
+
+        # ---------------------------------------------------------------------
         # 4. ŞABLON VE DÜZEN KURULUMU (1600 x 900 COMPOSITE)
         # ---------------------------------------------------------------------
         fig = Figure(figsize=(16.0, 9.0), dpi=100)
         canvas = FigureCanvas(fig)
         fig.patch.set_facecolor(self.COLOR_BG)
 
-        # 3 Panel GridSpec: Sol %72 (Mum %78, CVD %22) │ Sağ %28 (HUD Telemetri)
-        gs = GridSpec(nrows=2, ncols=2, width_ratios=[0.72, 0.28], height_ratios=[0.78, 0.22],
-                      left=0.035, right=0.985, top=0.93, bottom=0.06, wspace=0.08, hspace=0.07)
+        # 3 Panel GridSpec: Sol %75 (Mum %83, CVD %17) │ Sağ %25 (HUD Telemetri)
+        gs = GridSpec(nrows=2, ncols=2, width_ratios=[0.75, 0.25], height_ratios=[0.83, 0.17],
+                      left=0.025, right=0.985, top=0.94, bottom=0.055, wspace=0.11, hspace=0.05)
 
         ax_chart = fig.add_subplot(gs[0, 0])
         ax_cvd = fig.add_subplot(gs[1, 0], sharex=ax_chart)
@@ -239,7 +256,7 @@ class ForensicChartEngineV2:
                 spine.set_linewidth(1.0)
 
         # ---------------------------------------------------------------------
-        # 5. DİNAMİK Y-EKSENİ ÖLÇEKLEME (CAMARILLA KORİDORUNU ASLA KIRPMAZ)
+        # 5. DİNAMİK Y-EKSENİ ÖLÇEKLEME (CAMARILLA & VWAP KORİDORU)
         # ---------------------------------------------------------------------
         min_y = float(display_df['low'].min())
         max_y = float(display_df['high'].max())
@@ -249,6 +266,12 @@ class ForensicChartEngineV2:
             scale_anchors.append(entry_price)
         if not is_manual and exit_price > 0:
             scale_anchors.append(exit_price)
+        if cur_vwap > 0:
+            scale_anchors.append(cur_vwap)
+        if tepe_avwap > 0 and tepe_avwap <= max_y * 1.15:
+            scale_anchors.append(tepe_avwap)
+        if dip_avwap > 0 and dip_avwap >= min_y * 0.85:
+            scale_anchors.append(dip_avwap)
 
         planned_stop = float(trade_record.get('hard_stop') or trade_record.get('soft_stop') or trade_record.get('planned_stop') or 0.0)
         tp1_val = float(trade_record.get('tp1') or trade_record.get('tp1_target') or 0.0)
@@ -291,7 +314,7 @@ class ForensicChartEngineV2:
         # ---------------------------------------------------------------------
         # 7. MİKROSKOBİK MUM GRAFİĞİ ÇİZİMİ (BLOOMBERG PRO AESTHETICS)
         # ---------------------------------------------------------------------
-        width = 0.65
+        width = 0.72
         for i, row in display_df.iterrows():
             o = float(row['open'])
             c = float(row['close'])
@@ -319,14 +342,21 @@ class ForensicChartEngineV2:
             else:
                 rect = patches.Rectangle(
                     (i - width/2, body_bottom), width, body_height,
-                    facecolor=body_face, edgecolor=body_edge, linewidth=0.9, alpha=0.96, zorder=4
+                    facecolor=body_face, edgecolor=body_edge, linewidth=0.85, alpha=0.96, zorder=4
                 )
                 ax_chart.add_patch(rect)
 
         # ---------------------------------------------------------------------
+        # 7b. SEANS VWAP EĞRİSİ ÇİZİMİ
+        # ---------------------------------------------------------------------
+        if len(vwap_series) == n_bars and cur_vwap > 0:
+            ax_chart.plot(range(n_bars), vwap_series, color='#38bdf8', linestyle='-', linewidth=1.7, alpha=0.90, label='VWAP', zorder=5)
+            ax_chart.text(n_bars - 0.4, cur_vwap, f" VWAP: {fmt_price(cur_vwap)}", color='#38bdf8', fontsize=7.2, fontweight='bold', va='center', zorder=7)
+
+        # ---------------------------------------------------------------------
         # 8. KURUMSAL SEVİYE ÖZET BİLGİ ROZETİ (SOL ÜST)
         # ---------------------------------------------------------------------
-        institutional_tag = f"■ PIVOT (P): {fmt_price(p_val)}   ■ mPOC: {fmt_price(mpoc_val)}" if mpoc_val > 0 else f"■ PIVOT (P): {fmt_price(p_val)}   ■ CAMARILLA KORİDORU"
+        institutional_tag = f"■ PIVOT (P): {fmt_price(p_val)}   ■ VWAP: {fmt_price(cur_vwap)}   ■ mPOC: {fmt_price(mpoc_val)}" if mpoc_val > 0 else f"■ PIVOT (P): {fmt_price(p_val)}   ■ VWAP: {fmt_price(cur_vwap)}"
         ax_chart.text(0.5, padded_max - y_span * 0.035, institutional_tag,
                       color='#cbd5e1', fontsize=7.8, fontweight='bold',
                       bbox=dict(boxstyle='round,pad=0.25', facecolor='#090d16', edgecolor='#334155', linewidth=0.8, alpha=0.90),
@@ -471,6 +501,12 @@ class ForensicChartEngineV2:
         add_lvl(levels.get('mval'), self.COLOR_CYAN, 'mVAL Taban', ':')
         add_lvl(levels.get('mvah'), self.COLOR_CYAN, 'mVAH Tavan', ':')
 
+        # Kurumsal AVWAP Seviyeleri (Tepe & Dip)
+        if tepe_avwap > 0:
+            add_lvl(tepe_avwap, self.COLOR_RED, 'Tepe AVWAP', '--')
+        if dip_avwap > 0:
+            add_lvl(dip_avwap, '#ffffff', 'Dip AVWAP', '--')
+
         if not is_manual:
             if planned_stop > 0:
                 add_lvl(planned_stop, self.COLOR_RED, 'STOP KORUMASI', ':', is_trade=True)
@@ -504,16 +540,49 @@ class ForensicChartEngineV2:
             al = 0.95 if is_tr else 0.45
             ax_chart.plot([0, n_bars - 0.2], [p_val, p_val], color=c, linestyle=st, linewidth=lw, alpha=al, zorder=4)
 
-            # Sağ marj hap rozeti
-            font_sz = 7.8 if is_tr else 7.1
+            # Rozeti çizginin sağ ucuna grafiğin İÇİNE yerleştir (TradingView Standardı - Fiyat Skalasıyla Asla Çakışmaz)
+            font_sz = 7.4 if is_tr else 6.8
             font_wt = 'bold'
-            bbox_kw = dict(boxstyle='round,pad=0.25', facecolor='#090d16', edgecolor=c, linewidth=1.2, alpha=0.96)
-            ax_chart.text(n_bars + 0.6, lbl_y, f"{lbl}: {fmt_price(p_val)}",
-                          color=c, fontsize=font_sz, fontweight=font_wt, va='center', bbox=bbox_kw, zorder=6)
+            bbox_kw = dict(boxstyle='round,pad=0.22', facecolor='#090d16', edgecolor=c, linewidth=1.1, alpha=0.96)
+            ax_chart.text(n_bars - 0.8, lbl_y, f"{lbl}: {fmt_price(p_val)}",
+                          color=c, fontsize=font_sz, fontweight=font_wt, va='center', ha='right', bbox=bbox_kw, zorder=6)
 
         ax_chart.set_ylim(padded_min, padded_max)
-        ax_chart.set_xlim(-0.8, n_bars + 15)
-        ax_chart.set_xticklabels([])
+        ax_chart.set_xlim(-0.8, n_bars + 3.0)
+        ax_chart.tick_params(axis='x', labelbottom=False, bottom=False)
+
+        # =====================================================================
+        # SAĞ FİYAT SKALASI (TRADINGVIEW / BINANCE STANDARDI)
+        # =====================================================================
+        def fmt_axis_price(val, pos=None):
+            if val is None or np.isnan(val) or val <= 0:
+                return ""
+            if val >= 1000:
+                return f"${val:,.0f}"
+            elif val >= 10:
+                return f"${val:.1f}"
+            elif val >= 1:
+                return f"${val:.2f}"
+            elif val >= 0.01:
+                return f"${val:.4f}"
+            else:
+                return f"${val:.6f}"
+
+        ax_chart.yaxis.tick_right()
+        ax_chart.yaxis.set_label_position("right")
+        ax_chart.tick_params(axis='y', colors='#94a3b8', labelsize=8.0, labelcolor='#e2e8f0', length=5, width=1.1, pad=5)
+        ax_chart.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(fmt_axis_price))
+
+        # Sağ Skala Üzerinde Anlık / Kapanış Fiyat Rozeti (TradingView Stili)
+        cur_active_price = entry_price if is_manual else exit_price
+        cur_p_color = self.COLOR_CYAN if is_manual else (self.COLOR_GREEN if is_profit else self.COLOR_RED)
+        if cur_active_price > 0:
+            ax_chart.text(
+                n_bars + 0.3, cur_active_price, f" ▶ {fmt_price(cur_active_price)} ",
+                color='#ffffff', fontsize=8.6, fontweight='bold', va='center', ha='left',
+                bbox=dict(boxstyle='square,pad=0.28', facecolor=cur_p_color, edgecolor='#ffffff', linewidth=0.8),
+                zorder=20
+            )
 
         # Üst Başlık Banner
         if is_manual:
@@ -555,14 +624,21 @@ class ForensicChartEngineV2:
                             color=self.COLOR_RED, alpha=0.18, zorder=2)
 
         ax_cvd.axhline(0, color=self.COLOR_GRID, linestyle='-', linewidth=0.8, zorder=2)
-        ax_cvd.set_ylabel("CVD Delta", color=self.COLOR_TEXT_MUTED, fontsize=8.0, fontweight='bold')
-        ax_cvd.tick_params(colors=self.COLOR_TEXT_MUTED, labelsize=7.5)
+        ax_cvd.yaxis.tick_right()
+        ax_cvd.yaxis.set_label_position("right")
+        ax_cvd.tick_params(axis='y', colors=self.COLOR_TEXT_MUTED, labelsize=7.2, pad=4)
+
+        # CVD Gösterge Başlık Rozeti (Sol Üst)
+        cvd_ylim = ax_cvd.get_ylim()
+        cvd_top_y = cvd_ylim[1] if cvd_ylim[1] != 0 else 1.0
+        ax_cvd.text(0.5, cvd_top_y, "■ KÜMÜLATİF HACİM DELTASI (CVD) │ NET TAKER AKIŞI",
+                    color=self.COLOR_TEXT_MUTED, fontsize=6.8, fontweight='bold', ha='left', va='top', zorder=6)
 
         # Alıcı / Satıcı Hakimiyeti Rozeti (CVD Paneli Sağ Üst)
         recent_delta = cvd_series[-1] - cvd_series[max(0, len(cvd_series) - 6)]
         dom_text = "ALICI BASKIN ▲" if recent_delta >= 0 else "SATICILI BASKIN ▼"
         dom_color = self.COLOR_GREEN if recent_delta >= 0 else self.COLOR_RED
-        ax_cvd.text(n_bars - 1, ax_cvd.get_ylim()[1] if ax_cvd.get_ylim()[1] != 0 else 1.0,
+        ax_cvd.text(n_bars - 1, cvd_top_y,
                     f" {dom_text} ", color=dom_color, fontsize=7.2, fontweight='bold', ha='right', va='top',
                     bbox=dict(boxstyle='round,pad=0.2', facecolor='#090d16', edgecolor=dom_color, linewidth=0.8, alpha=0.85),
                     zorder=6)
