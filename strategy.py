@@ -10,6 +10,7 @@ import json
 import math
 import time
 from datetime import datetime, timezone, timedelta
+import inspect
 import pandas as pd
 import numpy as np
 from indicators import (
@@ -786,12 +787,15 @@ class StrategyEngine:
         try:
             symbol = pos.get("symbol", "")
             df_5m = self.market_data.candles_5m.get(symbol) if self.market_data else None
-            await self.notifier.notify_position_opened(
+            free_bal = self.paper_trader.get_free_balance() if hasattr(self, 'paper_trader') and self.paper_trader else 1000.0
+            res = self.notifier.notify_position_opened(
                 pos=pos,
-                free_balance=self.paper_trader.get_free_balance(),
+                free_balance=free_bal,
                 df_5m=df_5m,
                 levels=levels
             )
+            if inspect.isawaitable(res):
+                await res
         except Exception as e:
             print(f">> [TELEGRAM BİLDİRİM AÇILIŞ HATASI] {pos.get('symbol')}: {e}")
 
@@ -801,12 +805,14 @@ class StrategyEngine:
         try:
             symbol = record.get("symbol", "")
             df_5m = self.market_data.candles_5m.get(symbol) if self.market_data else None
-            await self.notifier.notify_position_closed(
+            res = self.notifier.notify_position_closed(
                 record=record,
                 is_manual=is_manual,
                 df_5m=df_5m,
                 levels=levels
             )
+            if inspect.isawaitable(res):
+                await res
         except Exception as e:
             print(f">> [TELEGRAM BİLDİRİM KAPANIŞ HATASI] {record.get('symbol')}: {e}")
 
@@ -3786,13 +3792,16 @@ class StrategyEngine:
         )
 
         if isinstance(res, dict) and res.get("error") == "INSUFFICIENT_BALANCE":
-            await self.notifier.notify_insufficient_balance(
-                symbol=symbol,
-                side=side,
-                reason=reason,
-                required_margin=res["required_margin"],
-                current_balance=res["current_balance"]
-            )
+            if self.notifier and hasattr(self.notifier, 'notify_insufficient_balance'):
+                ret_n = self.notifier.notify_insufficient_balance(
+                    symbol=symbol,
+                    side=side,
+                    reason=reason,
+                    required_margin=res["required_margin"],
+                    current_balance=res["current_balance"]
+                )
+                if inspect.isawaitable(ret_n):
+                    await ret_n
             return
         elif res:
             if hasattr(self, 'failed_levels'):

@@ -30,6 +30,54 @@ from indicators import (
     get_tradingview_naked_lines, calculate_session_and_daily_levels,
     calculate_netflow_zscore, classify_whale_transfer, calculate_ammunition_momentum
 )
+import gc
+
+def downcast_candle_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    VDA-0.1: Tip İndirgeme (Downcasting):
+    - timestamp kolonu int64
+    - open, high, low, close, volume, qav vb. float32
+    DataFrame RAM ayak izini %50 azaltır.
+    """
+    if df is None or df.empty:
+        return df
+    try:
+        if 'timestamp' in df.columns:
+            df['timestamp'] = pd.to_numeric(df['timestamp'], errors='coerce').fillna(0).astype(np.int64)
+        float32_cols = ['open', 'high', 'low', 'close', 'volume', 'quote_volume', 'taker_base', 'taker_quote', 'qav']
+        for c in float32_cols:
+            if c in df.columns:
+                df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0.0).astype(np.float32)
+    except Exception:
+        pass
+    return df
+
+def update_rolling_candle_buffer(df: pd.DataFrame, candle_dict: dict, maxlen: int = 300) -> pd.DataFrame:
+    """
+    VDA-0.1: In-Place Rolling Buffer (pd.concat parçalanma engeli):
+    - Aynı mum için (ts == last_ts): Sıfır bellek ayırımıyla in-place at[] güncellemesi
+    - Yeni mum için (ts > last_ts): Eski satırları kaydırarak iloc[-299:] ile yeni satırı ekler.
+    """
+    if df is None or df.empty:
+        new_df = pd.DataFrame([candle_dict])
+        return downcast_candle_dataframe(new_df)
+    
+    last_ts = df['timestamp'].iloc[-1]
+    cur_ts = candle_dict.get('timestamp')
+    if cur_ts == last_ts:
+        last_idx = df.index[-1]
+        for k_col, v_val in candle_dict.items():
+            if k_col in df.columns:
+                df.at[last_idx, k_col] = v_val
+        return df
+    elif cur_ts is not None and cur_ts > last_ts:
+        if len(df) >= maxlen:
+            df = df.iloc[-(maxlen - 1):].reset_index(drop=True)
+        new_row = pd.DataFrame([candle_dict])
+        downcast_candle_dataframe(new_row)
+        df = pd.concat([df, new_row], ignore_index=True)
+        return df
+    return df
 
 # ──────────────────────────────────────────────────────────────────────────
 # 🏦 KURUMSAL VE BORSA SICAK/SOĞUK CÜZDAN BİLGİ BANKASI (AŞAMA 2 ON-CHAIN)
@@ -174,7 +222,7 @@ class MarketDataManager:
         }
 
         # 🇺🇸 Stage 3: Kurumsal Coinbase Prime vs. Binance Offshore CVD Ayrışması (Smart Money Delta)
-        self.coinbase_cvd_history = {asset: deque() for asset in self.coinbase_supported_assets}
+        self.coinbase_cvd_history = {asset: deque(maxlen=60) for asset in self.coinbase_supported_assets}
         self.smart_money_divergence = {}
 
         # ⚡ 1. BTC Ani Mikro-Şok Kalkanı Veri Yapıları (60s Flush / Spike Gate)
@@ -252,6 +300,11 @@ class MarketDataManager:
         self.on_tick_callback = None
         self.on_candle_close_callback = None
         self.last_candle_callback_ts = {}  # norm_s -> int(candle timestamp) mükerrer mum tetikleme önleyici
+
+        # VDA-0.1: JIT İndikatör Önbelleği (60s TTL)
+        self._vp_cache = {}      # symbol -> {'data': dict, 'ts': float}
+        self._naked_cache = {}   # symbol -> {'data': dict, 'ts': float}
+        self._session_cache = {} # symbol -> {'data': dict, 'ts': float}
 
         # 🌐 WebSocket Canlılık Heartbeat & Anti-Zombi Watchdog (Aegis Sentinel Entegrasyonu)
         self.last_stream_tick_time = 0.0
@@ -1242,6 +1295,7 @@ class MarketDataManager:
                                     t_1d['timestamp'] = t_1d['timestamp'].astype(float)
                                     t_1d['volume'] = t_1d['volume'].astype(float) / (mult if is_spot else 1.0)
                                     t_1d['quote_volume'] = t_1d['qav'].astype(float)
+                                    t_1d = downcast_candle_dataframe(t_1d)
                         
                         async with session.get(url_5m_v, timeout=aiohttp.ClientTimeout(total=4)) as r2:
                             if r2.status == 200:
@@ -1256,6 +1310,7 @@ class MarketDataManager:
                                     t_5m['timestamp'] = t_5m['timestamp'].astype(float)
                                     t_5m['volume'] = t_5m['volume'].astype(float) / (mult if is_spot else 1.0)
                                     t_5m['quote_volume'] = t_5m['qav'].astype(float)
+                                    t_5m = downcast_candle_dataframe(t_5m)
                         
                         if t_5m is not None and not t_5m.empty:
                             df_1d, df_5m = t_1d, t_5m
@@ -1284,7 +1339,7 @@ class MarketDataManager:
                     'ignore': 0
                 }
                 # Camarilla ve dünün seviyeleri için en az 2 satır üret
-                df_1d = pd.DataFrame([synth_row, synth_row])
+                df_1d = downcast_candle_dataframe(pd.DataFrame([synth_row, synth_row]))
 
             if df_1d is not None and df_5m is not None and not df_1d.empty and not df_5m.empty:
                 self.candles_1d[symbol] = df_1d
@@ -1409,17 +1464,34 @@ class MarketDataManager:
         except Exception:
             daily_avwap = float(current_p)
 
-        # === VOLUME PROFILE (Son 30 Günlük Makro Profil: mPOC, mVAH, mVAL) ===
-        if df_1d is not None and not df_1d.empty and len(df_1d) >= 5:
-            vp_df = df_1d.iloc[-min(30, len(df_1d)):]
+        now_ts = time.time()
+        # === VOLUME PROFILE (Son 30 Günlük Makro Profil: JIT 60s TTL Önbellek) ===
+        if symbol in getattr(self, '_vp_cache', {}) and (now_ts - self._vp_cache[symbol].get('ts', 0) < 60.0):
+            vp_result = self._vp_cache[symbol]['data']
         else:
-            vp_df = df_5m
-        vp_result = calculate_volume_profile(vp_df, num_rows=30, value_area_pct=0.68)
+            if df_1d is not None and not df_1d.empty and len(df_1d) >= 5:
+                vp_df = df_1d.iloc[-min(30, len(df_1d)):]
+            else:
+                vp_df = df_5m
+            vp_result = calculate_volume_profile(vp_df, num_rows=30, value_area_pct=0.68)
+            if hasattr(self, '_vp_cache'):
+                self._vp_cache[symbol] = {'data': vp_result, 'ts': now_ts}
 
-        # === NAKED LINES & KURUMSAL SEANS SEVİYELERİ ===
+        # === NAKED LINES & KURUMSAL SEANS SEVİYELERİ (JIT 60s TTL Önbellek) ===
         current_p = self.current_prices.get(symbol, float(df_5m['close'].iloc[-1]))
-        naked_lines = get_tradingview_naked_lines(df_5m, current_p)
-        session_levels = calculate_session_and_daily_levels(df_5m, df_1d)
+        if symbol in getattr(self, '_naked_cache', {}) and (now_ts - self._naked_cache[symbol].get('ts', 0) < 60.0):
+            naked_lines = self._naked_cache[symbol]['data']
+        else:
+            naked_lines = get_tradingview_naked_lines(df_5m, current_p)
+            if hasattr(self, '_naked_cache'):
+                self._naked_cache[symbol] = {'data': naked_lines, 'ts': now_ts}
+
+        if symbol in getattr(self, '_session_cache', {}) and (now_ts - self._session_cache[symbol].get('ts', 0) < 60.0):
+            session_levels = self._session_cache[symbol]['data']
+        else:
+            session_levels = calculate_session_and_daily_levels(df_5m, df_1d)
+            if hasattr(self, '_session_cache'):
+                self._session_cache[symbol] = {'data': session_levels, 'ts': now_ts}
 
         self.levels[symbol] = {
             "camarilla": camarilla,
@@ -2206,7 +2278,7 @@ class MarketDataManager:
         if not hasattr(self, 'block_trades_history'):
             self.block_trades_history = {}
         if clean_s not in self.block_trades_history:
-            self.block_trades_history[clean_s] = deque()
+            self.block_trades_history[clean_s] = deque(maxlen=60)
 
         dq = self.block_trades_history[clean_s]
         dq.append((trade_ts, float(amount_usd), bool(is_sell)))
@@ -2991,20 +3063,8 @@ class MarketDataManager:
                                     cur_candle['low'] = min(float(cur_candle.get('low', live_ws_p)), live_ws_p)
 
                             self.current_prices[s] = cur_candle['close']
-                            if s in self.candles_5m and not self.candles_5m[s].empty:
-                                last_ts = self.candles_5m[s]['timestamp'].iloc[-1]
-                                if cur_candle['timestamp'] == last_ts:
-                                    for k_col, v_val in cur_candle.items():
-                                        self.candles_5m[s].at[self.candles_5m[s].index[-1], k_col] = v_val
-                                elif cur_candle['timestamp'] > last_ts:
-                                    self.candles_5m[s] = pd.concat([self.candles_5m[s], pd.DataFrame([cur_candle])], ignore_index=True)
-                                self.candles_5m[s] = self.candles_5m[s].drop_duplicates(subset=['timestamp'], keep='last').reset_index(drop=True)
-                                if len(self.candles_5m[s]) > 300:
-                                    self.candles_5m[s] = self.candles_5m[s].iloc[-300:].reset_index(drop=True)
-                                self.recalculate_levels(s)
-                            else:
-                                self.candles_5m[s] = pd.DataFrame([cur_candle])
-                                self.recalculate_levels(s)
+                            self.candles_5m[s] = update_rolling_candle_buffer(self.candles_5m.get(s, pd.DataFrame()), cur_candle, maxlen=300)
+                            self.recalculate_levels(s)
                             if self.on_candle_close_callback and s in self.active_symbols:
                                 c_ts = cur_candle.get('timestamp', 0)
                                 if self.last_candle_callback_ts.get(s) != c_ts:
@@ -3283,19 +3343,8 @@ class MarketDataManager:
                                                 'taker_base': float(kline.get('V', 0.0)),
                                                 'taker_quote': float(kline.get('Q', 0.0))
                                             }
-                                            prev_candle = self.candles_5m[norm_s].iloc[-1].to_dict() if not self.candles_5m[norm_s].empty else new_candle
-                                            if not self.candles_5m[norm_s].empty:
-                                                last_ts = self.candles_5m[norm_s]['timestamp'].iloc[-1]
-                                                if new_candle['timestamp'] == last_ts:
-                                                    for k_col, v_val in new_candle.items():
-                                                        self.candles_5m[norm_s].at[self.candles_5m[norm_s].index[-1], k_col] = v_val
-                                                elif new_candle['timestamp'] > last_ts:
-                                                    self.candles_5m[norm_s] = pd.concat([self.candles_5m[norm_s], pd.DataFrame([new_candle])], ignore_index=True)
-                                            else:
-                                                self.candles_5m[norm_s] = pd.DataFrame([new_candle])
-                                            self.candles_5m[norm_s] = self.candles_5m[norm_s].drop_duplicates(subset=['timestamp'], keep='last').reset_index(drop=True)
-                                            if len(self.candles_5m[norm_s]) > 300:
-                                                self.candles_5m[norm_s] = self.candles_5m[norm_s].iloc[-300:].reset_index(drop=True)
+                                            prev_candle = self.candles_5m[norm_s].iloc[-1].to_dict() if (norm_s in self.candles_5m and not self.candles_5m[norm_s].empty) else new_candle
+                                            self.candles_5m[norm_s] = update_rolling_candle_buffer(self.candles_5m.get(norm_s, pd.DataFrame()), new_candle, maxlen=300)
                                             self.recalculate_levels(norm_s)
                                             if self.on_candle_close_callback and norm_s in self.active_symbols:
                                                 c_ts = new_candle.get('timestamp', 0)
@@ -3407,7 +3456,7 @@ class MarketDataManager:
                                         if not hasattr(self, 'symbol_liquidations_deque'):
                                             self.symbol_liquidations_deque = {}
                                         if norm_s not in self.symbol_liquidations_deque:
-                                            self.symbol_liquidations_deque[norm_s] = deque()
+                                            self.symbol_liquidations_deque[norm_s] = deque(maxlen=60)
                                         dq = self.symbol_liquidations_deque[norm_s]
                                         dq.append((now_ts, usd_size, is_long_liq))
 
@@ -3560,7 +3609,7 @@ class MarketDataManager:
                                                 sell_u = 0.0 if is_buy else size_usd
                                                 if not hasattr(self, 'coinbase_cvd_history'):
                                                     self.coinbase_cvd_history = {}
-                                                dq = self.coinbase_cvd_history.setdefault(base_asset, deque())
+                                                dq = self.coinbase_cvd_history.setdefault(base_asset, deque(maxlen=60))
                                                 dq.append((now_t, buy_u, sell_u))
                                                 cutoff_t = now_t - 60.0
                                                 while dq and dq[0][0] < cutoff_t:
@@ -4079,6 +4128,34 @@ class MarketDataManager:
 
                 await asyncio.sleep(25)  # Her 25 saniyede bir mempool ve transfer kontrolü
 
+        # Worker 12: 15 Dakikalık Periyodik Bellek Koruma ve GC Süpürmesi (Render Free Tier 512MB RAM Kalkanı)
+        async def memory_guard_worker():
+            while True:
+                await asyncio.sleep(900)  # Her 15 dakikada bir
+                try:
+                    import gc
+                    # 1. Ölü ve inaktif deque anahtarlarını süpür
+                    active_and_all = set(self.all_symbols) | set(self.active_symbols)
+                    for dq_map_name in ['symbol_liquidations_deque', 'block_trades_history', 'symbol_cvd_history', 'symbol_price_history']:
+                        dq_map = getattr(self, dq_map_name, None)
+                        if isinstance(dq_map, dict):
+                            for k in list(dq_map.keys()):
+                                if k not in active_and_all:
+                                    dq_map.pop(k, None)
+                    # 2. 60 saniyeden eski JIT indikatör önbelleklerini serbest bırak
+                    now_cur = time.time()
+                    for c_name in ['_vp_cache', '_naked_cache', '_session_cache']:
+                        c_map = getattr(self, c_name, None)
+                        if isinstance(c_map, dict):
+                            for k in list(c_map.keys()):
+                                if now_cur - c_map[k].get('ts', 0) > 60.0:
+                                    c_map.pop(k, None)
+                    # 3. Açık GC süpürmesi
+                    collected = gc.collect()
+                    print(f">> [BELLEK KORUMA ZIRHI] 15dk periyodik GC süpürmesi tamamlandı. {collected} sahipsiz nesne serbest bırakıldı.")
+                except Exception:
+                    pass
+
         # Her worker'ı crash-proof saran koruyucu (bir worker çökerse diğerlerini öldürmez, otomatik yeniden başlatır)
         async def resilient_worker(name, coro_fn, *args):
             backoff = 2
@@ -4105,6 +4182,7 @@ class MarketDataManager:
             resilient_worker("OpenInterestRadar", open_interest_worker),
             resilient_worker("WhaleNetflowRadar", whale_netflow_worker),
             resilient_worker("OnchainMempoolRadar", onchain_mempool_worker),
+            resilient_worker("MemoryGuard", memory_guard_worker),
         ] + [resilient_worker(f"KLine-Chunk-{i}", kline_worker, i, c) for i, c in enumerate(kline_chunks)] \
           + [resilient_worker(f"AggTrade-Chunk-{i}", aggtrade_worker, i, c) for i, c in enumerate(agg_chunks)]
 

@@ -1,7 +1,7 @@
 # test_capital_management.py - 10.000$ Kasa Dinamik Sermaye ve Pozisyon Yönetimi Testleri
 import unittest
 import asyncio
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, AsyncMock
 import config
 from paper_trader import PaperTrader
 from strategy import StrategyEngine
@@ -13,7 +13,7 @@ class TestCapitalManagement(unittest.TestCase):
         self.paper_trader.save_history = MagicMock()
         self.paper_trader.save_local_history = MagicMock()
         self.paper_trader._push_to_github = MagicMock()
-        self.notifier = MagicMock()
+        self.notifier = AsyncMock()
         async def fake_notify(*args, **kwargs):
             return True
         self.notifier.notify_trade_close = fake_notify

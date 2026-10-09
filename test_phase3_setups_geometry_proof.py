@@ -58,8 +58,7 @@ class TestPhase3SetupsGeometryProof(unittest.TestCase):
         self.mock_pt.open_positions = {}
         self.mock_pt.balance = 10000.0
         
-        self.mock_notifier = MagicMock()
-        self.mock_notifier.send_message = AsyncMock(return_value=True)
+        self.mock_notifier = AsyncMock()
 
         self.mock_md = MagicMock()
         self.mock_md.candles_5m = {

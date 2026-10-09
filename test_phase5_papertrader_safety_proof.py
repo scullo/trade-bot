@@ -71,9 +71,7 @@ class TestPhase5PaperTraderSafetyProof(unittest.TestCase):
         Yerel marjin çarpanının (local_margin_mult) pariteler arası
         birbirini ezmediği (Race Condition olmadığı) kanıtlanır.
         """
-        mock_notifier = MagicMock()
-        mock_notifier.send_message = AsyncMock(return_value=True)
-        mock_notifier.notify_insufficient_balance = AsyncMock(return_value=True)
+        mock_notifier = AsyncMock()
 
         symbols = [f"COIN{i}/USDT" for i in range(1, 11)]
 

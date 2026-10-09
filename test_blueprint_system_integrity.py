@@ -314,13 +314,13 @@ class TestBlueprintSystemIntegrity(unittest.TestCase):
     def test_07_candle_close_and_open_eval_integrity(self):
         """7. 5M Mum Kapanışı ve Pozisyon Açma Motorunun Değişken ve Kapsam Bütünlüğü Testi."""
         from strategy import StrategyEngine, SecurityVault
-        from unittest.mock import MagicMock
+        from unittest.mock import MagicMock, AsyncMock
 
         strat = StrategyEngine.__new__(StrategyEngine)
         strat.paper_trader = self.trader
         strat.market_data = self.market_data
         strat.vault = SecurityVault()
-        strat.notifier = MagicMock()
+        strat.notifier = AsyncMock()
         strat.failed_levels = {}
         strat.recent_rejections = []
         strat.setup_attempts = {}
