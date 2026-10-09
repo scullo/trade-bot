@@ -1202,6 +1202,75 @@ class MarketDataManager:
             'last_update_str': datetime.now().strftime('%H:%M:%S')
         }
 
+    def get_universe_log_return_zscore(self, symbol: str) -> dict:
+        """
+        Valkyrie V4.0 Öncelik 1.1: Canlı Popülasyon Log-Return Gaussian Z-Score Motoru.
+        Piyasa evrenindeki 100 paritenin son 15 dakikalık logaritmik getirilerini toplayarak
+        popülasyon ortalamasını (μ_RS) ve standart sapmasını (σ_RS) hesaplar:
+            Z_RS = (R_i - μ_RS) / σ_RS
+        Yalnızca ekstrem pozitif Gauss ayrışması (Z_RS >= +2.0σ, en üst %2.2) potansiyel bağımsız alfa sayılır.
+        """
+        now_ts = time.time()
+        cached_time = getattr(self, '_universe_returns_time', 0.0)
+        returns_map = getattr(self, '_universe_returns_map', {})
+
+        if (now_ts - cached_time) > 15.0 or not returns_map:
+            returns_map = {}
+            for s, df in getattr(self, 'candles_5m', {}).items():
+                if df is not None and not df.empty and 'close' in df.columns and len(df) >= 2:
+                    try:
+                        c_now = float(df['close'].iloc[-1])
+                        # Son 15 dakika: son 3 adet 5M mumu (close[-1] vs close[-4], veya min 2)
+                        lookback_idx = -4 if len(df) >= 4 else 0
+                        c_prev = float(df['close'].iloc[lookback_idx])
+                        if c_now > 0 and c_prev > 0:
+                            ret = float(np.log(c_now / c_prev))
+                            returns_map[s] = ret
+                    except Exception:
+                        continue
+            self._universe_returns_map = returns_map
+            self._universe_returns_time = now_ts
+
+        sym_ret = returns_map.get(symbol, None)
+        if sym_ret is None:
+            df_sym = getattr(self, 'candles_5m', {}).get(symbol, None)
+            if df_sym is not None and not df_sym.empty and 'close' in df_sym.columns and len(df_sym) >= 2:
+                try:
+                    c_now = float(df_sym['close'].iloc[-1])
+                    lookback_idx = -4 if len(df_sym) >= 4 else 0
+                    c_prev = float(df_sym['close'].iloc[lookback_idx])
+                    if c_now > 0 and c_prev > 0:
+                        sym_ret = float(np.log(c_now / c_prev))
+                        returns_map[symbol] = sym_ret
+                except Exception:
+                    sym_ret = 0.0
+            else:
+                sym_ret = 0.0
+
+        all_vals = list(returns_map.values())
+        if len(all_vals) >= 2:
+            mu = float(np.mean(all_vals))
+            sigma = float(np.std(all_vals))
+        else:
+            mu = float(all_vals[0]) if all_vals else 0.0
+            sigma = 0.0
+
+        if sigma > 1e-6 and sym_ret is not None:
+            z_score = float((sym_ret - mu) / sigma)
+        else:
+            z_score = 0.0
+
+        z_rounded = round(z_score, 2)
+        return {
+            "symbol": symbol,
+            "z_score": z_rounded,
+            "is_extreme_divergence": bool(z_rounded >= 2.0),
+            "symbol_log_return": round(sym_ret or 0.0, 5),
+            "mean_return": round(mu, 5),
+            "std_return": round(sigma, 5),
+            "universe_size": len(all_vals)
+        }
+
     async def sync_top_100_symbols(self):
         """Binance Vadeli (USDT-M) 24h hacim siralamasini kontrol eder, delist olan veya veri vermeyen pariteleri otomatik degistirir."""
         try:
@@ -1794,6 +1863,7 @@ class MarketDataManager:
             "avg_vol": float(avg_vol),
             "rs_vs_btc": float(rs_vs_btc),
             "dynamic_rs_score": float(dynamic_rs_score),
+            "rs_zscore": float(self.get_universe_log_return_zscore(symbol).get("z_score", 0.0)),
             "decoupling_status": str(decoupling_status),
             "hurst_exponent": float(hurst_val),
             "entropy_norm": float(entropy_norm),

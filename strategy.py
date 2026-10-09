@@ -2690,23 +2690,57 @@ class StrategyEngine:
                     if "Makro_Ayı_Trendi_Uyumu" not in confluence_list:
                         confluence_list.append("Makro_Ayı_Trendi_Uyumu")
             elif setup_archetype == "TREND_FOLLOWING_BULL":
-                # 🛡️ YENİ: Breakout LONG ayı makroda → korumalı marjin
+                # 🛡️ YENİ: Breakout LONG ayı makroda → korumalı marjin (Tavan 0.50x kelepçesi)
                 regime_alignment = "⚠️ KARŞI_TREND_BREAKOUT_LONG"
-                dyn_regime_margin_scale = 0.60
-                reason += f" [🛡️ Ayı Rejimi Breakout LONG Koruması (x0.60, 4S: %{btc_chg_4h:+.2f})]"
+                dyn_regime_margin_scale = 0.50
+                reason += f" [🛡️ Ayı Rejimi Breakout LONG Koruması (Tavan x0.50, 4S: %{btc_chg_4h:+.2f})]"
+                
+                # Gaussian Z-score & Coinbase confluence kontrolü
+                rs_z_info = self.market_data.get_universe_log_return_zscore(symbol) if (self.market_data and hasattr(self.market_data, 'get_universe_log_return_zscore')) else {}
+                z_rs = float(rs_z_info.get('z_score', sym_met.get('rs_zscore', 0.0)))
                 cvd_r_chk = float(cvd_data.get('ratio_60s', 50.0)) if ('cvd_data' in locals() and cvd_data) else 50.0
-                if dynamic_rs_score >= 0.30 and cvd_r_chk >= 58.0:
-                    dyn_regime_margin_scale = 0.75
+
+                cb_direction = str(cb_lead.get('direction', ''))
+                cb_lead_status = str(cb_lead.get('status', ''))
+                has_coinbase_smart_money = (
+                    cb_direction in ["COINBASE_LEAD_BULL", "BULLISH_LEAD"]
+                    or "COINBASE_LEAD_BULL" in cb_lead_status
+                    or "BOĞA" in cb_lead_status
+                    or (cb_spread_bps >= COINBASE_LEAD_SPREAD_BPS)
+                )
+
+                if z_rs >= 2.0 and has_coinbase_smart_money and cvd_r_chk >= 58.0:
+                    dyn_regime_margin_scale = 0.50
                     regime_alignment = "🚀 BREAKOUT_LONG_BAĞIMSIZ_ALFA"
-                    reason += f" [🚀 Direnen Breakout (RS: {dynamic_rs_score:+.2f}, CVD: %{cvd_r_chk:.0f})]"
+                    reason += f" [🚀 Direnen Breakout (+{z_rs:.2f}σ Gauss, Coinbase Bull, CVD: %{cvd_r_chk:.0f}) (Tavan x0.50)]"
             elif setup_archetype == "COUNTER_TREND_DIP":
                 cvd_r_chk = float(cvd_data.get('ratio_60s', 50.0)) if ('cvd_data' in locals() and cvd_data) else 50.0
-                has_independent_alpha = (dynamic_rs_score >= 0.25 and cvd_r_chk >= 55.0) or ("ALFA" in decoupling_status and cvd_r_chk >= 52.0)
+
+                # ── 🦅 VALKYRIE V4.0: GAUSSIAN Z-SCORE & COINBASE PRIME CONFLUENCE (MADDE 1.1) ──
+                rs_z_info = self.market_data.get_universe_log_return_zscore(symbol) if (self.market_data and hasattr(self.market_data, 'get_universe_log_return_zscore')) else {}
+                z_rs = float(rs_z_info.get('z_score', sym_met.get('rs_zscore', 0.0)))
+
+                cb_direction = str(cb_lead.get('direction', ''))
+                cb_lead_status = str(cb_lead.get('status', ''))
+                has_coinbase_smart_money = (
+                    cb_direction in ["COINBASE_LEAD_BULL", "BULLISH_LEAD"]
+                    or "COINBASE_LEAD_BULL" in cb_lead_status
+                    or "BOĞA" in cb_lead_status
+                    or (cb_spread_bps >= COINBASE_LEAD_SPREAD_BPS)
+                )
+
+                # Yalnızca Ekstrem Gauss Ayrışması (Z_RS >= +2.0σ) VE Coinbase Prime Alış Baskısı
+                has_independent_alpha = (z_rs >= 2.0 and has_coinbase_smart_money)
+
                 if has_independent_alpha:
                     regime_alignment = "🚀 BAĞIMSIZ_ALFA_AYRIŞMASI"
-                    reason += f" [🚀 Bağımsız Alfa: Direnen Long (RS: {dynamic_rs_score:+.2f}, CVD: %{cvd_r_chk:.0f})]"
+                    reason += f" [🚀 Bağımsız Alfa: Ekstrem Gauss (+{z_rs:.2f}σ) & Coinbase Prime Bull (CVD: %{cvd_r_chk:.0f})]"
                     if confluence_list is not None and isinstance(confluence_list, list):
-                        confluence_list.append("🚀_Bağımsız_Alfa_Ayrışması")
+                        confluence_list.append("🚀_Bağımsız_Alfa_Gauss_Z2")
+                        confluence_list.append("Coinbase_Prime_Smart_Money_Confluence")
+                    # 🛡️ Makro Ayı Tavan Marjin Kelepçesi: Tavan kesinlikle 0.50x (asla 1.0x tam kasa açılamaz)
+                    dyn_regime_margin_scale = 0.50
+                    reason += " [🛡️ Makro Ayı Tavan Marjin Kelepçesi (Max 0.50x)]"
                 else:
                     regime_alignment = "⚠️ KARŞI_TREND_DEFANSİF_LONG"
                     # Asgari gereken confluence barajını +1 artır (Örn: 2/4 -> 3/4 veya 3/4 -> 4/4)
@@ -2716,15 +2750,15 @@ class StrategyEngine:
                     if cur_conf_cnt < min_req_conf:
                         rej_msg = (
                             f"🛡️ Makro Ayı Düşüş Kalkanı: BTC düşüş trendindeyken (4S: %{btc_chg_4h:+.2f}, 1S: %{btc_chg_1h:+.2f}) "
-                            f"altcoin sekme Long'u için bağımsız alfa (RS: {dynamic_rs_score:+.2f} < 0.25, CVD: %{cvd_r_chk:.0f} < 55) "
-                            f"veya +1 ekstra teyit bulunamadı (Confluence: {cur_conf_cnt}/{min_req_conf}). Düşen bıçak engellendi."
+                            f"altcoin sekme Long'u için bağımsız alfa (Gauss Z-Score: {z_rs:+.2f}σ < +2.0σ veya Coinbase Prime Bull yok) "
+                            f"ve +1 ekstra teyit bulunamadı (Confluence: {cur_conf_cnt}/{min_req_conf}). Düşen bıçak engellendi."
                         )
                         print(f">> [RED - MAKRO AYI DÜŞÜŞ KALKANI] {symbol}: {rej_msg}")
                         self.log_rejection(
                             symbol, reason, rej_msg,
                             macro_regime=regime_clim, setup_archetype=setup_archetype,
                             regime_alignment=regime_alignment, btc_chg_4h=btc_chg_4h,
-                            btc_chg_1h=btc_chg_1h, dynamic_rs_score=dynamic_rs_score,
+                            btc_chg_1h=btc_chg_1h, dynamic_rs_score=z_rs,
                             cvd_ratio_60s=cvd_r_chk, hard_stop=hard_stop, tp1=tp1, tp2=tp2
                         )
                         return {"error": "MACRO_BEAR_COUNTER_TREND_LONG_BLOCKED"}
@@ -2732,6 +2766,10 @@ class StrategyEngine:
                         # 4/4 tam teyit var ancak düşen bıçak riskine karşı %50 korumalı marjin
                         dyn_regime_margin_scale = 0.50
                         reason += " [🛡️ Ayı Rejimi Korumalı Marjin (x0.50)]"
+
+            # 🛡️ Makro Ayı Tavan Marjin Kelepçesi: LONG pozisyonlarda dyn_regime_margin_scale ASLA 0.50'yi aşamaz!
+            if side == "LONG":
+                dyn_regime_margin_scale = min(dyn_regime_margin_scale, 0.50)
 
         elif is_macro_bull:
             if setup_archetype == "TREND_FOLLOWING_BULL":
@@ -5214,6 +5252,31 @@ class StrategyEngine:
                 self.log_rejection(symbol, "SETUP 9 nPOC Sekmesi", struct_reason)
                 return
 
+            # 🛡️ 1.2 SETUP 9 L2 ABSORPSİYON KALKANI (L2 Tahta Derinliği & Mikro-CVD Dönüşü)
+            # Kuant Kuralı: Seviyeye değme yetersizdir! Fiyat nPOC'a sadece temas etti diye dönüş varsayılamaz.
+            # 1. L2 Alıcı Duvarı Oranı (>= 1.40x): Anlık emir defterinde nPOC seviyesinin ±%0.3 derinliğindeki
+            #    Alış Likiditesi / Satış Likiditesi oranı en az 1.40 olmalıdır (kurumsal limit alış bloğu ispatı).
+            # 2. 60 Saniyelik Mikro-CVD Dönüşü (>= %52): Market satıcılarının agresif satışları emilmeli ve
+            #    son 60 saniyedeki taker alış oranı en az %52 seviyesine çıkmalıdır.
+            # Absorpsiyon teyidi gelmeyen hiçbir nPOC teması işleme dönüştürülmez!
+            ob_depth = self.market_data.get_orderbook_depth(symbol) if (self.market_data and hasattr(self.market_data, 'get_orderbook_depth')) else {}
+            bid_qty = float(ob_depth.get('bid_qty', 0.0))
+            ask_qty = float(ob_depth.get('ask_qty', 0.0))
+            l2_ratio = float(ob_depth.get('ratio', (bid_qty / max(0.0001, ask_qty)) if (bid_qty > 0 or ask_qty > 0) else 1.0))
+
+            cvd_data_npoc = self.market_data.get_symbol_cvd(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_symbol_cvd')) else {}
+            cvd_ratio_npoc = float(cvd_data_npoc.get('ratio_60s', 50.0))
+
+            if l2_ratio < 1.40 or cvd_ratio_npoc < 52.0:
+                rej_msg = (
+                    f"🛡️ Setup 9 L2 Absorpsiyon Kalkanı: nPOC (${support_npoc:.4f}) seviyesinde kurumsal emilim teyit edilemedi. "
+                    f"L2 Alıcı Duvarı Oranı: {l2_ratio:.2f}x (Asgari 1.40x gerekli), "
+                    f"60s Mikro-CVD Taker Alış: %{cvd_ratio_npoc:.1f} (Asgari %52.0 gerekli). Düşen bıçak engellendi."
+                )
+                print(f">> [RED - SETUP 9 L2 ABSORPSİYON] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, "SETUP 9 nPOC Sekmesi", rej_msg)
+                return
+
             # 🛡️ MAKRO VE TREND DÜŞÜŞÜ KALKANI: BTC düşerken veya genel dökülmede bıçak tutma engeli
             # Kalibrasyon: BTC 4S %-1.20 veya 1S %-0.75 gerçek satış baskısı eşiği
             # Eğer coinin kendisinde güçlü alıcı emilimi ve bağımsız alfa varsa (CVD >= 55% ve RS >= +0.25) sekmeye izin verilir
@@ -5320,7 +5383,7 @@ class StrategyEngine:
 
             target_name = "mVAL" if tp1_target == mval else ("S4" if tp1_target == s4 else ("AVWAP" if (tp1_target in [dip_avwap, tepe_avwap]) else ("mPOC" if tp1_target == mpoc else ("S3" if tp1_target == s3 else "Pivot P"))))
             reason_text = f"Aşağı nPOC (${support_npoc:.4f}) Sekmesi (İlk Hedef {target_name}: ${tp1_target:.4f})"
-            c_list = ["nPOC_Sweep", f"Target_{target_name}"]
+            c_list = ["nPOC_Sweep", f"Target_{target_name}", f"L2_Bid_Wall_{l2_ratio:.2f}x", f"Micro_CVD_{cvd_ratio_npoc:.1f}pct"]
             if daily_avwap > 0 and close_price > daily_avwap:
                 c_list.append("Daily_AVWAP_Bull")
 
