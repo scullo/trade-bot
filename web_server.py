@@ -3322,6 +3322,255 @@ HTML_PAGE = """
             padding: 50px 20px;
             color: #94a3b8;
         }
+
+        /* ═══════════════════════════════════════════════════════════════════════════
+           ⚡ VALKYRIE 6. SEKME: FONLAMA ORANI & SQUEEZE RADARI MASTER STYLES
+           ═══════════════════════════════════════════════════════════════════════════ */
+        .funding-master-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, rgba(20, 27, 45, 0.95), rgba(15, 23, 42, 0.95));
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            border-radius: 14px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .funding-title-box {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .funding-title-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .funding-title-text {
+            font-size: 18px;
+            font-weight: 800;
+            color: #ffffff;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.5px;
+        }
+        .funding-subtitle {
+            font-size: 12px;
+            color: #94a3b8;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .funding-badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 9px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .funding-actions-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .funding-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        .funding-kpi-card {
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.85), rgba(15, 23, 42, 0.95));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-top: 3px solid var(--kpi-accent, var(--cyan));
+            border-radius: 12px;
+            padding: 16px 18px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s ease;
+        }
+        .funding-kpi-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.16);
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+        }
+        .funding-kpi-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            font-weight: 800;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-family: 'JetBrains Mono', monospace;
+            margin-bottom: 8px;
+        }
+        .funding-kpi-val {
+            font-size: 24px;
+            font-weight: 900;
+            font-family: 'JetBrains Mono', monospace;
+            color: #ffffff;
+            margin-bottom: 4px;
+            line-height: 1.15;
+            font-variant-numeric: tabular-nums;
+        }
+        .funding-kpi-sub {
+            font-size: 11.5px;
+            color: #64748b;
+            line-height: 1.4;
+        }
+
+        .funding-dist-card {
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.85), rgba(15, 23, 42, 0.95));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        .funding-dist-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .funding-dist-track {
+            height: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            overflow: hidden;
+            display: flex;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .funding-dist-seg-squeeze {
+            background: linear-gradient(90deg, #ef4444, #f87171);
+            transition: width 0.4s ease;
+        }
+        .funding-dist-seg-balanced {
+            background: linear-gradient(90deg, #06b6d4, #10b981);
+            transition: width 0.4s ease;
+        }
+        .funding-dist-seg-overheat {
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+            transition: width 0.4s ease;
+        }
+        .funding-dist-legend {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 10px;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+        }
+
+        .funding-toolbar-card {
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.9), rgba(15, 23, 42, 0.95));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 14px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        }
+        .funding-quick-pills {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .funding-pill-btn {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .funding-pill-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        .funding-pill-btn.active {
+            background: rgba(0, 242, 254, 0.15);
+            border-color: var(--cyan);
+            color: var(--cyan);
+            box-shadow: 0 0 12px rgba(0, 242, 254, 0.25);
+        }
+
+        .funding-table-container {
+            background: rgba(13, 18, 30, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+        }
+        .funding-table-enhanced {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+        }
+        .funding-table-enhanced thead th {
+            background: rgba(255, 255, 255, 0.03);
+            color: #94a3b8;
+            padding: 12px 14px;
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            white-space: nowrap;
+        }
+        .funding-table-enhanced td {
+            padding: 11px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: #e2e8f0;
+            vertical-align: middle;
+        }
+        .funding-table-enhanced tr.funding-row-squeeze {
+            border-left: 3px solid #ef4444;
+            background: rgba(239, 68, 68, 0.02);
+            transition: background 0.15s ease;
+        }
+        .funding-table-enhanced tr.funding-row-squeeze:hover {
+            background: rgba(239, 68, 68, 0.06);
+        }
+        .funding-table-enhanced tr.funding-row-overheat {
+            border-left: 3px solid #f59e0b;
+            background: rgba(245, 158, 11, 0.02);
+            transition: background 0.15s ease;
+        }
+        .funding-table-enhanced tr.funding-row-overheat:hover {
+            background: rgba(245, 158, 11, 0.06);
+        }
+        .funding-table-enhanced tr.funding-row-balanced:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
     </style>
 </head>
 <body>
@@ -5709,104 +5958,187 @@ HTML_PAGE = """
          6. SEKME: ⚡ CANLI MİKRO PİYASA & FONLAMA / SQUEEZE RADARI (100 PARİTE)
          ========================================================================= -->
     <div id="main-tab-content-funding" class="main-tab-content" style="display:none;">
-        <!-- 4 KPI FONLAMA ÖZET KARTLARI -->
-        <div class="cockpit-kpi-grid">
-            <div class="cockpit-kpi-card" style="border-top:3px solid #38bdf8; display:flex; flex-direction:column; justify-content:space-between; padding:16px 18px;">
+        <!-- MASTER HEADER -->
+        <div class="funding-master-header">
+            <div class="funding-title-box">
+                <div class="funding-title-row">
+                    <span style="font-size:22px;">⚡</span>
+                    <span class="funding-title-text">VALKYRIE FONLAMA ORANI & SQUEEZE RADARI</span>
+                    <span class="funding-badge" style="background:rgba(0,242,254,0.12); color:var(--cyan); border:1px solid rgba(0,242,254,0.3);">
+                        <span style="width:6px; height:6px; background:var(--cyan); border-radius:50%; display:inline-block; box-shadow:0 0 6px var(--cyan);"></span>
+                        100 VADELİ SÖZLEŞME CANLI
+                    </span>
+                    <span id="funding-header-squeeze-alert" class="funding-badge" style="display:none; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4);">
+                        ⚠️ SQUEEZE TEHDİDİ AKTİF
+                    </span>
+                </div>
+                <div class="funding-subtitle">
+                    Yapay fitiller ve tasfiye süpürmelerine karşı bağıl fonlama sapması denetimi. Aşırı negatif fonlamada Short emirleri kilitlenir, kasanın yapay pompalarda erimesi önlenir.
+                </div>
+            </div>
+            <div class="funding-actions-row">
+                <span id="funding-last-sync-badge" class="funding-badge" style="background:rgba(255,255,255,0.04); color:#94a3b8; border:1px solid rgba(255,255,255,0.08);">
+                    ⏱️ Senkronize
+                </span>
+                <button class="btn-export-excel" onclick="window.location.href='/api/export_excel'" style="margin:0; padding:8px 16px; font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+                    <span>📊</span> Excel Raporu (.xlsx)
+                </button>
+            </div>
+        </div>
+
+        <!-- 5 KPI FONLAMA ÖZET KARTLARI -->
+        <div class="funding-kpi-grid">
+            <div class="funding-kpi-card" style="--kpi-accent:#38bdf8;">
                 <div>
-                    <div class="kpi-card-head">
-                        <span class="kpi-card-title">Piyasa Medyan Fonlama Oranı</span>
-                        <span class="kpi-card-icon">⚡</span>
+                    <div class="funding-kpi-head">
+                        <span>Piyasa Medyan Fonlama</span>
+                        <span style="font-size:14px;">⚡</span>
                     </div>
-                    <div class="kpi-card-val" id="funding-median-val" style="color:#38bdf8; font-size:24px;">+0.0100%</div>
+                    <div class="funding-kpi-val" id="funding-median-val" style="color:#38bdf8;">+0.0100%</div>
                 </div>
                 <div>
-                    <div class="kpi-card-sub">100 Paritenin Ortanca Ağırlığı (8h)</div>
-                    <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono'; margin-top:3px;">Dengeli Piyasa Bandı: -%0.02 ile +%0.05</div>
+                    <div class="funding-kpi-sub" id="funding-median-apr">Yıllık Bileşik: ~+10.95% APR</div>
+                    <div style="font-size:10.5px; color:#64748b; font-family:'JetBrains Mono'; margin-top:4px;">100 Parite Ortancası (8s)</div>
                 </div>
             </div>
 
-            <div class="cockpit-kpi-card" style="border-top:3px solid var(--red); display:flex; flex-direction:column; justify-content:space-between; padding:16px 18px;">
+            <div class="funding-kpi-card" style="--kpi-accent:#ef4444;">
                 <div>
-                    <div class="kpi-card-head">
-                        <span class="kpi-card-title">Short Squeeze Riski (Short Kilitli 🔒)</span>
-                        <span class="kpi-card-icon">⚠️</span>
+                    <div class="funding-kpi-head">
+                        <span style="color:#f87171;">Short Squeeze Riski</span>
+                        <span style="font-size:14px;">⚠️</span>
                     </div>
-                    <div class="kpi-card-val" id="funding-squeeze-count" style="color:var(--red); font-size:24px;">0 Parite</div>
+                    <div class="funding-kpi-val" id="funding-squeeze-count" style="color:#ef4444;">0 Parite</div>
                 </div>
                 <div>
-                    <div class="kpi-card-sub">&lt; -%0.0300 veya (Medyan - %0.0250) Bağıl Squeeze</div>
-                    <div style="font-size:11px; color:#f87171; font-family:'JetBrains Mono'; margin-top:3px;">Piyasa yapıcı avına karşı Short açılışları kilitlendi</div>
+                    <div class="funding-kpi-sub" style="color:#fca5a5;">Short Girişleri Veto Edildi 🔒</div>
+                    <div style="font-size:10.5px; color:#f87171; font-family:'JetBrains Mono'; margin-top:4px;">Eşik: &lt; -%0.0300 veya Bağıl Sapma</div>
                 </div>
             </div>
 
-            <div class="cockpit-kpi-card" style="border-top:3px solid #fbc531; display:flex; flex-direction:column; justify-content:space-between; padding:16px 18px;">
+            <div class="funding-kpi-card" style="--kpi-accent:#f59e0b;">
                 <div>
-                    <div class="kpi-card-head">
-                        <span class="kpi-card-title">Aşırı Şişkin Long (Long Kilitli 🔒)</span>
-                        <span class="kpi-card-icon">🔥</span>
+                    <div class="funding-kpi-head">
+                        <span style="color:#fbbf24;">Aşırı Long Şişkinliği</span>
+                        <span style="font-size:14px;">🔥</span>
                     </div>
-                    <div class="kpi-card-val" id="funding-overheat-count" style="color:#fbc531; font-size:24px;">0 Parite</div>
+                    <div class="funding-kpi-val" id="funding-overheat-count" style="color:#f59e0b;">0 Parite</div>
                 </div>
                 <div>
-                    <div class="kpi-card-sub">&gt; +%0.0600 veya (Medyan + %0.0500) Bağıl Şişkinlik</div>
-                    <div style="font-size:11px; color:#fde047; font-family:'JetBrains Mono'; margin-top:3px;">Tepe tuzağına karşı Long Breakout engellenir</div>
+                    <div class="funding-kpi-sub" style="color:#fde68a;">Long Breakout Yasaklandı 🔒</div>
+                    <div style="font-size:10.5px; color:#fbbf24; font-family:'JetBrains Mono'; margin-top:4px;">Eşik: &gt; +%0.0600 veya Tepe Şişkinliği</div>
                 </div>
             </div>
 
-            <div class="cockpit-kpi-card" style="border-top:3px solid var(--green); display:flex; flex-direction:column; justify-content:space-between; padding:16px 18px;">
+            <div class="funding-kpi-card" style="--kpi-accent:#a855f7;">
                 <div>
-                    <div class="kpi-card-head">
-                        <span class="kpi-card-title">Squeeze Koruma Kalkanı</span>
-                        <span class="kpi-card-icon">🛡️</span>
+                    <div class="funding-kpi-head">
+                        <span style="color:#c084fc;">Sonraki Takas Geri Sayım</span>
+                        <span style="font-size:14px;">⏳</span>
                     </div>
-                    <div class="kpi-card-val" id="funding-shield-status" style="color:var(--green); font-size:21px;">Otomatik Veto Aktif</div>
+                    <div class="funding-kpi-val" id="funding-settlement-countdown" style="color:#c084fc;">--:--:--</div>
                 </div>
                 <div>
-                    <div class="kpi-card-sub" id="funding-source-sub">Canlı Çoklu-Borsa Vadeli Senkronizasyonu</div>
-                    <div style="font-size:11px; color:#4ade80; font-family:'JetBrains Mono'; margin-top:3px;">Ters yönlü tasfiye tuzakları sıfırlandı</div>
+                    <div class="funding-kpi-sub" id="funding-settlement-time">Her 8 Saatte Bir (00:00 - 08:00 - 16:00 UTC)</div>
+                    <div style="font-size:10.5px; color:#94a3b8; font-family:'JetBrains Mono'; margin-top:4px;">Faiz / Fonlama Değişimi</div>
+                </div>
+            </div>
+
+            <div class="funding-kpi-card" style="--kpi-accent:#10b981;">
+                <div>
+                    <div class="funding-kpi-head">
+                        <span style="color:#34d399;">Squeeze Savunma Kalkanı</span>
+                        <span style="font-size:14px;">🛡️</span>
+                    </div>
+                    <div class="funding-kpi-val" id="funding-shield-status" style="color:#10b981; font-size:20px;">Veto Aktif</div>
+                </div>
+                <div>
+                    <div class="funding-kpi-sub" id="funding-source-sub">Çoklu-Borsa Vadeli Senkronizasyonu</div>
+                    <div style="font-size:10.5px; color:#4ade80; font-family:'JetBrains Mono'; margin-top:4px;">Yön Filtresi Otomatik Uygulanır</div>
                 </div>
             </div>
         </div>
 
-        <!-- FONLAMA FİLTRE VE ARAMA KARTI -->
-        <div class="history-full-box" style="margin-top:20px;">
-            <div class="history-top-controls" style="flex-wrap:wrap; gap:12px;">
-                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <button id="ffilter-btn-ALL" class="chart-tab-btn tab-active" onclick="setFundingFilter('ALL')">
-                        Tümü (<span id="ffilter-count-ALL">100</span>)
-                    </button>
-                    <button id="ffilter-btn-SQUEEZE" class="chart-tab-btn" onclick="setFundingFilter('SQUEEZE')" style="color:var(--red);">
-                        ⚠️ Short Squeeze Kalkanı (<span id="ffilter-count-SQUEEZE">0</span>)
-                    </button>
-                    <button id="ffilter-btn-OVERHEAT" class="chart-tab-btn" onclick="setFundingFilter('OVERHEAT')" style="color:#fbc531;">
-                        🔥 Aşırı Long (<span id="ffilter-count-OVERHEAT">0</span>)
-                    </button>
-                    <button id="ffilter-btn-BALANCED" class="chart-tab-btn" onclick="setFundingFilter('BALANCED')" style="color:var(--cyan);">
-                        🟢 Dengeli Bölge (<span id="ffilter-count-BALANCED">0</span>)
-                    </button>
+        <!-- DAĞILIM İZLEME ÇUBUĞU (DISTRIBUTION TRACK CARD) -->
+        <div class="funding-dist-card">
+            <div class="funding-dist-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:14px;">📊</span>
+                    <span style="font-size:13px; font-weight:800; color:#fff; font-family:'JetBrains Mono';">100 PARİTE FONLAMA DAĞILIM SPEKTRUMU</span>
                 </div>
-
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <input type="text" id="funding-search-input" placeholder="🔍 Parite Ara (Örn: ACE, ONG)..." oninput="onFundingSearchInput(this.value)" class="settings-input" style="padding:8px 12px; font-size:12.5px; border-radius:8px;" />
-                    <button class="btn-export-excel" onclick="window.location.href='/api/export_excel'" style="margin:0; padding:8px 14px; font-size:12.5px;">
-                        📊 Excel Raporunu İndir (.xlsx)
-                    </button>
+                <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';" id="funding-dist-ratio-text">
+                    Yükleniyor...
                 </div>
             </div>
+            <div class="funding-dist-track">
+                <div id="funding-dist-bar-squeeze" class="funding-dist-seg-squeeze" style="width: 3%;" title="Short Squeeze Riski"></div>
+                <div id="funding-dist-bar-balanced" class="funding-dist-seg-balanced" style="width: 97%;" title="Dengeli Bölge"></div>
+                <div id="funding-dist-bar-overheat" class="funding-dist-seg-overheat" style="width: 0%;" title="Aşırı Long Şişkinliği"></div>
+            </div>
+            <div class="funding-dist-legend">
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="width:10px; height:10px; background:#ef4444; border-radius:2px; display:inline-block;"></span>
+                    <span style="color:#f87171; font-weight:700;">Short Squeeze:</span>
+                    <span id="funding-dist-legend-squeeze" style="color:#fff;">0 (%0)</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="width:10px; height:10px; background:#06b6d4; border-radius:2px; display:inline-block;"></span>
+                    <span style="color:var(--cyan); font-weight:700;">Dengeli / Güvenli:</span>
+                    <span id="funding-dist-legend-balanced" style="color:#fff;">100 (%100)</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="width:10px; height:10px; background:#f59e0b; border-radius:2px; display:inline-block;"></span>
+                    <span style="color:#fbbf24; font-weight:700;">Aşırı Long Şişkin:</span>
+                    <span id="funding-dist-legend-overheat" style="color:#fff;">0 (%0)</span>
+                </div>
+            </div>
+        </div>
 
-            <!-- 100 COIN FONLAMA & SQUEEZE MATRİS TABLOSU -->
-            <div class="history-table-wrap" style="max-height: 600px; overflow-y:auto;">
-                <table class="history-table">
+        <!-- FONLAMA ARAÇ ÇUBUĞU (FILTERS & LIVE SEARCH) -->
+        <div class="funding-toolbar-card">
+            <div class="funding-quick-pills">
+                <button id="ffilter-btn-ALL" class="funding-pill-btn active" onclick="setFundingFilter('ALL')">
+                    <span>⭐</span> Tümü (<span id="ffilter-count-ALL">100</span>)
+                </button>
+                <button id="ffilter-btn-SQUEEZE" class="funding-pill-btn" onclick="setFundingFilter('SQUEEZE')">
+                    <span>⚠️</span> Short Squeeze (<span id="ffilter-count-SQUEEZE">0</span>)
+                </button>
+                <button id="ffilter-btn-OVERHEAT" class="funding-pill-btn" onclick="setFundingFilter('OVERHEAT')">
+                    <span>🔥</span> Aşırı Long (<span id="ffilter-count-OVERHEAT">0</span>)
+                </button>
+                <button id="ffilter-btn-BALANCED" class="funding-pill-btn" onclick="setFundingFilter('BALANCED')">
+                    <span>🟢</span> Dengeli (<span id="ffilter-count-BALANCED">0</span>)
+                </button>
+                <button id="ffilter-btn-NEGATIVE" class="funding-pill-btn" onclick="setFundingFilter('NEGATIVE')">
+                    <span>💎</span> Negatif Oranlar (<span id="ffilter-count-NEGATIVE">0</span>)
+                </button>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <div style="position:relative;">
+                    <input type="text" id="funding-search-input" placeholder="🔍 Parite Ara (Örn: MINA, SAND)..." oninput="onFundingSearchInput(this.value)" class="settings-input" style="padding:8px 32px 8px 12px; font-size:12.5px; border-radius:8px; width:220px;" />
+                    <span id="funding-search-clear" onclick="clearFundingSearch()" style="position:absolute; right:10px; top:8px; cursor:pointer; color:#64748b; display:none; font-weight:bold;">✕</span>
+                </div>
+                <button onclick="resetFundingFilters()" class="btn-refresh" style="padding:7px 12px; font-size:11.5px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:#94a3b8; cursor:pointer;" title="Filtreleri Sıfırla">
+                    🔄 Sıfırla
+                </button>
+            </div>
+        </div>
+
+        <!-- 100 COIN FONLAMA & SQUEEZE MATRİS TABLOSU -->
+        <div class="funding-table-container">
+            <div style="max-height: 600px; overflow-y:auto;">
+                <table class="funding-table-enhanced">
                     <thead>
-                        <tr style="background:rgba(255,255,255,0.03); color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.08);">
-                            <th style="padding:10px 14px; text-align:left; width:95px;">Parite</th>
-                            <th style="padding:10px 12px; text-align:center; width:135px;">Anlık Fonlama (%)</th>
-                            <th style="padding:10px 12px; text-align:center; width:150px;">Squeeze Teşhisi</th>
-                            <th style="padding:10px 12px; text-align:right; width:105px;">Mark Fiyatı</th>
-                            <th style="padding:10px 12px; text-align:center; width:135px;">Sonraki Ödeme</th>
-                            <th style="padding:10px 12px; text-align:left; width:220px;">🎯 İzin Verilen Yönler</th>
-                            <th style="padding:10px 12px; text-align:left; min-width:240px;">🛡️ Kalkan Emniyet Kuralı</th>
-                            <th style="padding:10px 14px; text-align:center; width:125px;">Aksiyon</th>
+                        <tr>
+                            <th style="text-align:left; width:120px;">Parite</th>
+                            <th style="text-align:center; width:140px;">Anlık Fonlama (8s)</th>
+                            <th style="text-align:center; width:170px;">Squeeze Teşhisi</th>
+                            <th style="text-align:right; width:110px;">Mark Fiyatı</th>
+                            <th style="text-align:center; width:130px;">Sonraki Takas</th>
+                            <th style="text-align:left; width:220px;">🎯 İzin Verilen Yön</th>
+                            <th style="text-align:left; min-width:260px;">🛡️ Motor Emniyet Kuralı</th>
+                            <th style="text-align:center; width:130px;">Aksiyon</th>
                         </tr>
                     </thead>
                     <tbody id="funding-table-body">
@@ -5818,12 +6150,13 @@ HTML_PAGE = """
                     </tbody>
                 </table>
             </div>
-
-            <div id="funding-table-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding:12px 18px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; font-family:'JetBrains Mono'; font-size:12px; color:#94a3b8;">
-                <div>Toplam <b id="funding-footer-count" style="color:#fff;">0</b> parite analiz edildi. <span id="funding-last-update-str" style="color:var(--cyan); margin-left:12px;"></span></div>
-                <div style="color:var(--red);">🛡️ Squeeze Kuralı: Aşırı negatif fonlamalı coinlerde Short emirleri engellenir, kasanın yapay fitillerde erimesi önlenir.</div>
-            </div>
         </div>
+
+        <div id="funding-table-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding:12px 18px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; font-family:'JetBrains Mono'; font-size:12px; color:#94a3b8; flex-wrap:wrap; gap:10px;">
+            <div>Toplam <b id="funding-footer-count" style="color:#fff;">0</b> parite listeleniyor. <span id="funding-last-update-str" style="color:var(--cyan); margin-left:12px;"></span></div>
+            <div style="color:#ef4444; font-weight:600;">🛡️ Squeeze Kuralı: Aşırı negatif fonlamalı coinlerde Short açılışları veto edilir, fitil süpürmeleri kasayı eritmez.</div>
+        </div>
+    </div>
 
         <!-- =========================================================================
              B. GLOBAL LİKİDASYON RADARI & TASFİYE SÜPÜRME PANELİ (!forceOrder)
@@ -8709,11 +9042,11 @@ async function loadAdminMetrics() {
 
         function setFundingFilter(filter) {
             fundingFilter = filter;
-            ['ALL', 'SQUEEZE', 'OVERHEAT', 'BALANCED'].forEach(f => {
+            ['ALL', 'SQUEEZE', 'OVERHEAT', 'BALANCED', 'NEGATIVE'].forEach(f => {
                 const btn = document.getElementById('ffilter-btn-' + f);
                 if (btn) {
-                    if (f === filter) btn.classList.add('tab-active');
-                    else btn.classList.remove('tab-active');
+                    if (f === filter) btn.classList.add('active');
+                    else btn.classList.remove('active');
                 }
             });
             renderFundingMatrixView();
@@ -8721,7 +9054,25 @@ async function loadAdminMetrics() {
 
         function onFundingSearchInput(val) {
             fundingSearchQuery = (val || '').trim().toUpperCase();
+            const clearBtn = document.getElementById('funding-search-clear');
+            if (clearBtn) {
+                clearBtn.style.display = fundingSearchQuery.length > 0 ? 'inline' : 'none';
+            }
             renderFundingMatrixView();
+        }
+
+        function clearFundingSearch() {
+            const input = document.getElementById('funding-search-input');
+            if (input) input.value = '';
+            fundingSearchQuery = '';
+            const clearBtn = document.getElementById('funding-search-clear');
+            if (clearBtn) clearBtn.style.display = 'none';
+            renderFundingMatrixView();
+        }
+
+        function resetFundingFilters() {
+            clearFundingSearch();
+            setFundingFilter('ALL');
         }
 
         function updateFundingBadge() {
@@ -8731,9 +9082,9 @@ async function loadAdminMetrics() {
             const sqCount = summary.short_squeeze_count || 0;
             if (sqCount > 0) {
                 badge.innerText = `${sqCount} ⚠️ Squeeze`;
-                badge.style.background = 'rgba(255,107,107,0.18)';
-                badge.style.color = 'var(--red)';
-                badge.style.border = '1px solid rgba(255,107,107,0.4)';
+                badge.style.background = 'rgba(239,68,68,0.18)';
+                badge.style.color = '#ef4444';
+                badge.style.border = '1px solid rgba(239,68,68,0.4)';
             } else {
                 badge.innerText = `0 Squeeze`;
                 badge.style.background = 'rgba(0,242,254,0.12)';
@@ -8748,33 +9099,90 @@ async function loadAdminMetrics() {
                 const summary = fData.summary || {};
                 const rates = fData.rates || {};
                 const symbols = Object.keys(rates);
+                const totalCount = symbols.length;
 
                 const medianPct = summary.median_rate_pct != null ? summary.median_rate_pct : 0.0100;
                 const sqCount = summary.short_squeeze_count || 0;
                 const ohCount = summary.long_overheated_count || 0;
-                const balCount = summary.balanced_count || symbols.length;
+                const balCount = summary.balanced_count || Math.max(0, totalCount - sqCount - ohCount);
 
-                // Update KPI cards
+                let negCount = 0;
+                let sampleCountdown = '--:--:--';
+                symbols.forEach(s => {
+                    const r = rates[s];
+                    if (r && r.rate_pct < 0) negCount++;
+                    if (r && r.next_funding_countdown && sampleCountdown === '--:--:--') {
+                        sampleCountdown = r.next_funding_countdown;
+                    }
+                });
+
+                // 1. Update KPI cards
                 const elMedian = document.getElementById('funding-median-val');
+                const elMedianApr = document.getElementById('funding-median-apr');
                 const elSqueeze = document.getElementById('funding-squeeze-count');
                 const elOverheat = document.getElementById('funding-overheat-count');
+                const elCountdown = document.getElementById('funding-settlement-countdown');
+                const elShield = document.getElementById('funding-shield-status');
+
                 if (elMedian) elMedian.innerText = `${medianPct >= 0 ? '+' : ''}${medianPct.toFixed(4)}%`;
+                if (elMedianApr) {
+                    const apr = medianPct * 3 * 365;
+                    elMedianApr.innerText = `Yıllık Bileşik: ~${apr >= 0 ? '+' : ''}${apr.toFixed(2)}% APR`;
+                }
                 if (elSqueeze) elSqueeze.innerText = `${sqCount} Parite`;
                 if (elOverheat) elOverheat.innerText = `${ohCount} Parite`;
+                if (elCountdown) elCountdown.innerText = sampleCountdown;
+                if (elShield) {
+                    elShield.innerText = sqCount > 0 ? `🛡️ ${sqCount} Short Kilitli` : '✅ Sistem Dengeli';
+                    elShield.style.color = sqCount > 0 ? '#ef4444' : '#10b981';
+                }
 
-                // Update filter pills counts
+                // Header alert
+                const alertBadge = document.getElementById('funding-header-squeeze-alert');
+                if (alertBadge) {
+                    alertBadge.style.display = sqCount > 0 ? 'inline-flex' : 'none';
+                    if (sqCount > 0) alertBadge.innerHTML = `⚠️ ${sqCount} COIN SHORT SQUEEZE TEHDİDİNDE`;
+                }
+
+                // 2. Update Distribution Bar & Legend
+                const safeTotal = totalCount > 0 ? totalCount : 1;
+                let sqPct = totalCount > 0 ? ((sqCount / safeTotal) * 100) : 0;
+                let ohPct = totalCount > 0 ? ((ohCount / safeTotal) * 100) : 0;
+                let balPct = 100 - sqPct - ohPct;
+                if (balPct < 0) balPct = 0;
+
+                const barSq = document.getElementById('funding-dist-bar-squeeze');
+                const barBal = document.getElementById('funding-dist-bar-balanced');
+                const barOh = document.getElementById('funding-dist-bar-overheat');
+                if (barSq) barSq.style.width = `${sqPct.toFixed(1)}%`;
+                if (barBal) barBal.style.width = `${balPct.toFixed(1)}%`;
+                if (barOh) barOh.style.width = `${ohPct.toFixed(1)}%`;
+
+                const legSq = document.getElementById('funding-dist-legend-squeeze');
+                const legBal = document.getElementById('funding-dist-legend-balanced');
+                const legOh = document.getElementById('funding-dist-legend-overheat');
+                if (legSq) legSq.innerText = `${sqCount} (%${sqPct.toFixed(1)})`;
+                if (legBal) legBal.innerText = `${balCount} (%${balPct.toFixed(1)})`;
+                if (legOh) legOh.innerText = `${ohCount} (%${ohPct.toFixed(1)})`;
+
+                const distRatio = document.getElementById('funding-dist-ratio-text');
+                if (distRatio) {
+                    distRatio.innerText = `Ortanca: ${medianPct >= 0 ? '+' : ''}${medianPct.toFixed(4)}% | Negatif Oran: ${negCount}/${totalCount}`;
+                }
+
+                // 3. Update filter pill counts
                 const fAll = document.getElementById('ffilter-count-ALL');
                 const fSq = document.getElementById('ffilter-count-SQUEEZE');
                 const fOh = document.getElementById('ffilter-count-OVERHEAT');
                 const fBal = document.getElementById('ffilter-count-BALANCED');
-                if (fAll) fAll.innerText = symbols.length;
+                const fNeg = document.getElementById('ffilter-count-NEGATIVE');
+                if (fAll) fAll.innerText = totalCount;
                 if (fSq) fSq.innerText = sqCount;
                 if (fOh) fOh.innerText = ohCount;
                 if (fBal) fBal.innerText = balCount;
+                if (fNeg) fNeg.innerText = negCount;
 
                 const footerCount = document.getElementById('funding-footer-count');
-                if (footerCount) footerCount.innerText = symbols.length;
-
                 const elSrc = document.getElementById('funding-source-sub');
                 if (elSrc && summary.source) {
                     elSrc.innerText = `Canlı ${summary.source} Senkronizasyonu`;
@@ -8785,22 +9193,29 @@ async function loadAdminMetrics() {
                     elUpd.innerText = `• Son Senkronizasyon: ${summary.last_update_str} (${summary.source || 'Canlı'})`;
                 }
 
+                const syncBadge = document.getElementById('funding-last-sync-badge');
+                if (syncBadge && summary.last_update_str) {
+                    syncBadge.innerText = `⏱️ ${summary.last_update_str}`;
+                }
+
                 updateFundingBadge();
 
                 const tbody = document.getElementById('funding-table-body');
                 if (!tbody) return;
 
-                if (symbols.length === 0) {
+                if (totalCount === 0) {
                     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 40px; color:#94a3b8;">Henüz canlı fonlama verisi yüklenmedi.</td></tr>`;
                     return;
                 }
 
-                // Filter
+                // 4. Filtering logic
                 let filtered = symbols.filter(s => {
                     const item = rates[s];
+                    if (!item) return false;
                     if (fundingFilter === 'SQUEEZE' && item.squeeze_status !== 'SHORT_SQUEEZE_RISK') return false;
                     if (fundingFilter === 'OVERHEAT' && item.squeeze_status !== 'LONG_OVERHEATED') return false;
                     if (fundingFilter === 'BALANCED' && item.squeeze_status !== 'BALANCED') return false;
+                    if (fundingFilter === 'NEGATIVE' && item.rate_pct >= 0) return false;
 
                     if (fundingSearchQuery) {
                         const q = fundingSearchQuery.toUpperCase();
@@ -8812,7 +9227,9 @@ async function loadAdminMetrics() {
                     return true;
                 });
 
-                // Sort: SQUEEZE first, then OVERHEAT, then ascending rate (most negative first)
+                if (footerCount) footerCount.innerText = `${filtered.length} / ${totalCount}`;
+
+                // 5. Sorting: SQUEEZE first, then OVERHEAT, then ascending rate (most negative first)
                 filtered.sort((a, b) => {
                     const itemA = rates[a];
                     const itemB = rates[b];
@@ -8835,8 +9252,11 @@ async function loadAdminMetrics() {
                     const isSqueeze = item.squeeze_status === 'SHORT_SQUEEZE_RISK';
                     const isOverheat = item.squeeze_status === 'LONG_OVERHEATED';
 
-                    // Rate color
-                    const rateColor = item.rate_pct < 0 ? 'var(--red)' : (item.rate_pct > 0.03 ? '#fbc531' : 'var(--cyan)');
+                    const rowClass = isSqueeze ? 'funding-row-squeeze' : (isOverheat ? 'funding-row-overheat' : 'funding-row-balanced');
+
+                    // Rate color & visual styling
+                    const rateColor = item.rate_pct < 0 ? '#ef4444' : (item.rate_pct > 0.03 ? '#f59e0b' : '#38bdf8');
+                    const apr = item.rate_pct * 3 * 365;
 
                     // Status badge
                     let statusBadge = '';
@@ -8844,53 +9264,53 @@ async function loadAdminMetrics() {
                     let ruleDesc = '';
 
                     if (isSqueeze) {
-                        statusBadge = `<span style="background:rgba(255,107,107,0.18); color:var(--red); border:1px solid rgba(255,107,107,0.45); padding:4px 10px; border-radius:6px; font-weight:800; font-size:11.5px; font-family:'JetBrains Mono';">⚠️ Short Squeeze Riski</span>`;
-                        dirBadge = `<span style="color:#4ade80; font-weight:800; font-family:'JetBrains Mono'; font-size:11.5px;">🟢 YALNIZCA LONG <span style="color:var(--red); font-weight:900;">(Short Kilitli 🔒)</span></span>`;
-                        ruleDesc = `<span style="color:var(--red); font-size:11.5px;">🛡️ Aşırı eksi fonlama; MM yukarı sıkıştırır. Short emirleri motor seviyesinde engellenir.</span>`;
+                        statusBadge = `<span style="background:rgba(239,68,68,0.18); color:#ef4444; border:1px solid rgba(239,68,68,0.45); padding:4px 10px; border-radius:6px; font-weight:800; font-size:11px; font-family:'JetBrains Mono'; display:inline-flex; align-items:center; gap:4px;">⚠️ SHORT SQUEEZE</span>`;
+                        dirBadge = `<span style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); color:#34d399; padding:4px 10px; border-radius:6px; font-weight:800; font-family:'JetBrains Mono'; font-size:11px; display:inline-flex; align-items:center; gap:5px;">🟢 YALNIZCA LONG <span style="color:#ef4444; font-weight:900;">(Short 🔒)</span></span>`;
+                        ruleDesc = `<span style="color:#f87171; font-size:11.5px; line-height:1.4;">🛡️ Aşırı eksi fonlama; MM yukarı fitille süpürür. Short emirleri motor seviyesinde engellendi.</span>`;
                     } else if (isOverheat) {
-                        statusBadge = `<span style="background:rgba(251,197,49,0.18); color:#fbc531; border:1px solid rgba(251,197,49,0.45); padding:4px 10px; border-radius:6px; font-weight:800; font-size:11.5px; font-family:'JetBrains Mono';">🔥 Aşırı Long Şişkinliği</span>`;
-                        dirBadge = `<span style="color:#f87171; font-weight:800; font-family:'JetBrains Mono'; font-size:11.5px;">🔴 YALNIZCA SHORT <span style="color:#fbc531; font-weight:900;">(Long Breakout Yasak 🔒)</span></span>`;
-                        ruleDesc = `<span style="color:#fbc531; font-size:11.5px;">🛡️ Aşırı pozitif fonlama; tepe tuzağı riski sebebiyle Long Breakout engellenir.</span>`;
+                        statusBadge = `<span style="background:rgba(245,158,11,0.18); color:#fbbf24; border:1px solid rgba(245,158,11,0.45); padding:4px 10px; border-radius:6px; font-weight:800; font-size:11px; font-family:'JetBrains Mono'; display:inline-flex; align-items:center; gap:4px;">🔥 AŞIRI LONG ŞİŞKİN</span>`;
+                        dirBadge = `<span style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#f87171; padding:4px 10px; border-radius:6px; font-weight:800; font-family:'JetBrains Mono'; font-size:11px; display:inline-flex; align-items:center; gap:5px;">🔴 YALNIZCA SHORT <span style="color:#fbbf24; font-weight:900;">(Long Breakout 🔒)</span></span>`;
+                        ruleDesc = `<span style="color:#fbbf24; font-size:11.5px; line-height:1.4;">🛡️ Aşırı pozitif fonlama; tepe tuzağı riski sebebiyle Long Breakout engellenir.</span>`;
                     } else {
-                        statusBadge = `<span style="background:rgba(0,242,254,0.08); color:var(--cyan); border:1px solid rgba(0,242,254,0.22); padding:4px 10px; border-radius:6px; font-weight:700; font-size:11.5px; font-family:'JetBrains Mono';">🟢 Güvenli / Dengeli</span>`;
-                        dirBadge = `<span style="color:#e2e8f0; font-weight:700; font-family:'JetBrains Mono'; font-size:11.5px;">🔄 Long & Short Serbest</span>`;
-                        ruleDesc = `<span style="color:#94a3b8; font-size:11.5px;">Standart kurumsal Camarilla & nPOC pusu kuralları devrede.</span>`;
+                        statusBadge = `<span style="background:rgba(6,182,212,0.1); color:#22d3ee; border:1px solid rgba(6,182,212,0.25); padding:4px 10px; border-radius:6px; font-weight:700; font-size:11px; font-family:'JetBrains Mono';">🟢 GÜVENLİ / DENGELİ</span>`;
+                        dirBadge = `<span style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; padding:4px 10px; border-radius:6px; font-weight:700; font-family:'JetBrains Mono'; font-size:11px;">🔄 Long & Short Serbest</span>`;
+                        ruleDesc = `<span style="color:#94a3b8; font-size:11.5px; line-height:1.4;">Standart kurumsal Camarilla & nPOC pusu kuralları devrede.</span>`;
                     }
 
                     const markPriceStr = item.mark_price ? '$' + (typeof formatSmartPrice === 'function' ? formatSmartPrice(item.mark_price) : Number(item.mark_price).toFixed(item.mark_price < 1 ? 4 : 2)) : '-';
 
                     html += `
-                    <tr style="border-bottom:1px solid rgba(255,255,255,0.04); transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
-                        <td style="padding:10px 14px; vertical-align:middle; text-align:left;">
-                            <div style="display:flex; align-items:baseline; gap:3px;">
+                    <tr class="${rowClass}">
+                        <td style="padding:11px 14px; vertical-align:middle; text-align:left;">
+                            <div style="display:flex; align-items:baseline; gap:4px;">
                                 <span style="color:#ffffff; font-weight:800; font-size:13.5px; font-family:'JetBrains Mono';">${symClean}</span>
                                 <span style="font-size:10.5px; color:#64748b; font-weight:600; font-family:'JetBrains Mono';">/USDT</span>
                             </div>
                         </td>
-                        <td style="padding:10px 12px; vertical-align:middle; text-align:center;">
-                            <div style="color:${rateColor}; font-weight:900; font-family:'JetBrains Mono'; font-size:13px; font-variant-numeric:tabular-nums;">
+                        <td style="padding:11px 12px; vertical-align:middle; text-align:center;">
+                            <div style="color:${rateColor}; font-weight:900; font-family:'JetBrains Mono'; font-size:13.5px; font-variant-numeric:tabular-nums;">
                                 ${item.rate_pct >= 0 ? '+' : ''}${item.rate_pct.toFixed(4)}%
                             </div>
                             <div style="font-size:10px; color:#94a3b8; font-weight:600; margin-top:2px; font-family:'JetBrains Mono'; font-variant-numeric:tabular-nums;">
-                                Yıllık: <b style="color:${(item.rate_pct * 3 * 365) >= 0 ? 'var(--cyan)' : 'var(--red)'};">${((item.rate_pct * 3 * 365) >= 0 ? '+' : '') + (item.rate_pct * 3 * 365).toFixed(1)}% APR</b>
+                                Yıllık: <b style="color:${apr >= 0 ? '#38bdf8' : '#ef4444'};">${(apr >= 0 ? '+' : '') + apr.toFixed(1)}% APR</b>
                             </div>
                         </td>
-                        <td style="padding:10px 12px; vertical-align:middle; text-align:center;">
+                        <td style="padding:11px 12px; vertical-align:middle; text-align:center;">
                             ${statusBadge}
                         </td>
-                        <td style="padding:10px 12px; vertical-align:middle; text-align:right; font-family:'JetBrains Mono'; color:#cbd5e1; font-weight:700; font-variant-numeric:tabular-nums; font-size:12.5px;">
+                        <td style="padding:11px 12px; vertical-align:middle; text-align:right; font-family:'JetBrains Mono'; color:#cbd5e1; font-weight:700; font-variant-numeric:tabular-nums; font-size:12.5px;">
                             ${markPriceStr}
                         </td>
-                        <td style="padding:10px 12px; vertical-align:middle; text-align:center; font-family:'JetBrains Mono'; color:#94a3b8; font-size:11.5px; font-variant-numeric:tabular-nums;">
+                        <td style="padding:11px 12px; vertical-align:middle; text-align:center; font-family:'JetBrains Mono'; color:#94a3b8; font-size:11.5px; font-variant-numeric:tabular-nums;">
                             ⏳ ${item.next_funding_countdown || '--:--'}
                         </td>
-                        <td style="padding:10px 12px; vertical-align:middle; text-align:left;">
+                        <td style="padding:11px 12px; vertical-align:middle; text-align:left;">
                             ${dirBadge}
                         </td>
-                        <td style="padding:10px 12px; vertical-align:middle; text-align:left; font-size:11.5px; line-height:1.4;">
+                        <td style="padding:11px 12px; vertical-align:middle; text-align:left;">
                             ${ruleDesc}
                         </td>
-                        <td style="padding:10px 14px; vertical-align:middle; text-align:center; white-space:nowrap;">
+                        <td style="padding:11px 14px; vertical-align:middle; text-align:center; white-space:nowrap;">
                             <div style="display:flex; gap:6px; justify-content:center; align-items:center;">
                                 <button onclick="openTradingViewModal('${symClean}')" style="background:rgba(0,242,254,0.08); border:1px solid rgba(0,242,254,0.3); color:#38bdf8; padding:5px 9px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='rgba(0,242,254,0.2)'" onmouseout="this.style.background='rgba(0,242,254,0.08)'" title="${symClean} Canlı Grafik">
                                     📈 Grafik
