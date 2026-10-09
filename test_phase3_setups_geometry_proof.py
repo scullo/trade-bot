@@ -129,6 +129,8 @@ class TestPhase3SetupsGeometryProof(unittest.TestCase):
         self.engine.symbol_daily_loss_count = {}
         self.engine.touch_tracker = {}
         self.engine.shadow_engine = None
+        self.engine.calibrated_coin_dna = {}
+        self.engine.dna_baseline = {}
 
     def test_01_vda_18_structural_stop_protected_from_swing_stop(self):
         """VDA-18: _handle_open içinde caller_hard_stop swing_stop tarafından ezilemez."""

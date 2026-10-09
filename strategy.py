@@ -136,13 +136,13 @@ class StrategyEngine:
         """Paritenin canlı kalibrasyon sözlüğünde GEVŞET liginde olup olmadığını döndürür."""
         clean = symbol.replace('/USDT', '').replace(':USDT', '').replace('USDT', '').replace('/', '').upper()
         cfg = getattr(self, 'calibrated_coin_dna', {}).get(clean) or {}
-        return str(cfg.get('calibration_status', '')).strip() == 'GEVŞET'
+        return 'GEVŞET' in str(cfg.get('calibration_status', '')).upper()
 
     def is_koru_coin(self, symbol: str) -> bool:
         """Paritenin canlı kalibrasyon sözlüğünde KORU liginde olup olmadığını döndürür."""
         clean = symbol.replace('/USDT', '').replace(':USDT', '').replace('USDT', '').replace('/', '').upper()
         cfg = getattr(self, 'calibrated_coin_dna', {}).get(clean) or {}
-        return str(cfg.get('calibration_status', '')).strip() == 'KORU'
+        return 'KORU' in str(cfg.get('calibration_status', '')).upper()
 
     def get_effective_slot_count(self, open_positions: dict) -> float:
         """

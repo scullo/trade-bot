@@ -229,8 +229,8 @@ class AutonomousDNACalibrator:
             recent_paper_trades = list(getattr(self.strategy, 'trade_history', []) or [])
 
         # 2. Gölge İşlemler
-        completed_shadow = list(getattr(self.shadow_engine, "completed_trades", [])) if self.shadow_engine else []
-        if not completed_shadow:
+        completed_shadow = list(getattr(self.shadow_engine, "completed_trades", [])) if self.shadow_engine is not None else []
+        if self.shadow_engine is None and not completed_shadow:
             history_file = os.path.join(os.path.dirname(__file__), "shadow_trades_history.json")
             if os.path.exists(history_file):
                 try:
@@ -425,8 +425,8 @@ class AutonomousDNACalibrator:
             return {"executed": False, "reason": "Mevcut coin DNA tablosu bulunamadı."}
 
         # 2. Gölge İşlemleri Çek
-        completed_trades = list(getattr(self.shadow_engine, "completed_trades", [])) if self.shadow_engine else []
-        if not completed_trades:
+        completed_trades = list(getattr(self.shadow_engine, "completed_trades", [])) if self.shadow_engine is not None else []
+        if self.shadow_engine is None and not completed_trades:
             history_file = os.path.join(os.path.dirname(__file__), "shadow_trades_history.json")
             if os.path.exists(history_file):
                 try:

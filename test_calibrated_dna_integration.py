@@ -33,14 +33,14 @@ class TestCalibratedDNAIntegration(unittest.TestCase):
         """get_coin_dynamic_persona fonksiyonunun kalibre edilmiş DNA değerlerini doğru enjekte ettiğini doğrula."""
         # GEVŞET Paritesi Testi
         p_sei = self.strategy.get_coin_dynamic_persona('SEI/USDT')
-        self.assertEqual(p_sei.get('calibration_status'), 'GEVŞET')
+        self.assertTrue('GEVŞET' in p_sei.get('calibration_status', ''))
         self.assertEqual(p_sei.get('min_confluence'), 2)
         self.assertEqual(p_sei.get('dynamic_margin_scale'), 0.5)
         self.assertEqual(p_sei.get('persona_class'), 'GEVSET_OPPORTUNITY')
 
         # KORU Paritesi Testi
         p_rune = self.strategy.get_coin_dynamic_persona('RUNE/USDT')
-        self.assertEqual(p_rune.get('calibration_status'), 'KORU')
+        self.assertTrue('KORU' in p_rune.get('calibration_status', ''))
         self.assertEqual(p_rune.get('min_confluence'), 3)
         self.assertEqual(p_rune.get('dynamic_margin_scale'), 1.25)
 

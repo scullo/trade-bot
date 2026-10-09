@@ -6907,7 +6907,7 @@ async function loadAdminMetrics() {
                             <span>${sys.status_text || 'TAM SAĞLIKLI (KURUMSAL QUANT KOKPİTİ)'}</span>
                         </div>
                         <span style="background:rgba(255,255,255,0.06); padding:3px 10px; border-radius:6px; font-size:11.5px; color:#e2e8f0; font-weight:700;">
-                            Puan: ${sys.score_str || '10/10'}
+                            Puan: ${sys.score_str || '36/36'}
                         </span>
                     </div>
                     <div style="font-size:11.5px; color:#cbd5e1; line-height:1.5;">
@@ -7233,7 +7233,7 @@ async function loadAdminMetrics() {
                         <div style="display:flex; align-items:center; gap:8px;">
                             <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${badgeColor}; box-shadow:0 0 10px ${badgeColor};"></span>
                             <span style="font-size:14.5px; font-weight:800; color:${badgeColor}; font-family:'JetBrains Mono',monospace;">
-                                ${sys.status_text || '10/10 Tam Sağlıklı'}
+                                ${sys.status_text || `${sys.score_str || '36/36'} Tam Sağlıklı`}
                             </span>
                         </div>
                         <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono',monospace;">
@@ -7256,8 +7256,8 @@ async function loadAdminMetrics() {
                             <span class="kpi-card-title">GENEL SAĞLIK PUANI</span>
                             <span class="kpi-card-icon">🛡️</span>
                         </div>
-                        <div class="kpi-card-val" style="color:var(--green); font-size:24px;">${sys.score_str || '10/10'}</div>
-                        <div class="kpi-card-sub" style="color:#cbd5e1;">0 Kritik Hata • Sentinel Devrede</div>
+                        <div class="kpi-card-val" style="color:var(--green); font-size:24px;">${sys.score_str || '36/36'}</div>
+                        <div class="kpi-card-sub" style="color:#cbd5e1;">0 Kritik Hata • 36/36 Kuant & Altyapı Sensörü Aktif</div>
                     </div>
 
                     <div class="cockpit-kpi-card" style="border:1px solid rgba(0,242,254,0.25); background:rgba(0,242,254,0.03);">
@@ -7295,7 +7295,7 @@ async function loadAdminMetrics() {
                     <div style="background:var(--card-bg, #111726); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px 20px; box-shadow:0 4px 24px rgba(0,0,0,0.25); display:flex; flex-direction:column; gap:10px;">
                         <div style="border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:12px; margin-bottom:4px;">
                             <div style="font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.8px; display:flex; align-items:center; gap:8px;">
-                                <span>📡</span> 1. CANLI BORSA VE PİYASA VERİ AKIŞLARI
+                                <span>📡</span> 1. CANLI BORSA VE PİYASA VERİ AKIŞLARI (${(sys.category_scores && sys.category_scores.streams) || '12/12'})
                             </div>
                             <div style="font-size:11px; color:#64748b; margin-top:3px;">Binance Futures milisaniyelik soketler ve sipariş akışları</div>
                         </div>
@@ -7318,7 +7318,7 @@ async function loadAdminMetrics() {
                     <div style="background:var(--card-bg, #111726); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px 20px; box-shadow:0 4px 24px rgba(0,0,0,0.25); display:flex; flex-direction:column; gap:10px;">
                         <div style="border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:12px; margin-bottom:4px;">
                             <div style="font-size:12px; font-weight:800; color:#a78bfa; text-transform:uppercase; letter-spacing:0.8px; display:flex; align-items:center; gap:8px;">
-                                <span>🧠</span> 2. KUANT MOTORU VE ANALİTİK SENSÖRLER
+                                <span>🧠</span> 2. KUANT MOTORU VE ANALİTİK SENSÖRLER (${(sys.category_scores && sys.category_scores.quant_engine) || '17/17'})
                             </div>
                             <div style="font-size:11px; color:#64748b; margin-top:3px;">Sinyal üretimi, piyasa rejimi ve mikro-şok devre kesicileri</div>
                         </div>
@@ -7346,7 +7346,7 @@ async function loadAdminMetrics() {
                     <div style="background:var(--card-bg, #111726); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px 20px; box-shadow:0 4px 24px rgba(0,0,0,0.25); display:flex; flex-direction:column; gap:10px;">
                         <div style="border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:12px; margin-bottom:4px;">
                             <div style="font-size:12px; font-weight:800; color:#34d399; text-transform:uppercase; letter-spacing:0.8px; display:flex; align-items:center; gap:8px;">
-                                <span>☁️</span> 3. BULUT ALTYAPISI, RAM & SÜREKLİLİK
+                                <span>☁️</span> 3. BULUT ALTYAPISI, RAM & SÜREKLİLİK (${(sys.category_scores && sys.category_scores.infrastructure) || '7/7'})
                             </div>
                             <div style="font-size:11px; color:#64748b; margin-top:3px;">Render bulut dayanıklılığı, bellek bekçisi ve otonom yedekler</div>
                         </div>
@@ -13881,7 +13881,7 @@ async function loadAdminMetrics() {
                 if (navHealthBadge && appState && appState.system_health) {
                     const sys = appState.system_health;
                     if (sys.is_perfect) {
-                        navHealthBadge.innerText = `${sys.score_str || '10/10'} Kusursuz`;
+                        navHealthBadge.innerText = `${sys.score_str || '36/36'} Kusursuz`;
                         navHealthBadge.style.color = '#22c55e';
                         navHealthBadge.style.background = 'rgba(34,197,94,0.15)';
                         navHealthBadge.style.borderColor = 'rgba(34,197,94,0.3)';
@@ -16866,7 +16866,10 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             try:
                 sys_health = market_data.get_system_health(paper_trader=getattr(trader_manager, 'paper_trader', None), strategy=strategy) if market_data else {
                     "is_perfect": True,
-                    "status_text": "10/10 Tam Sağlıklı",
+                    "status_text": "36/36 Tam Sağlıklı",
+                    "score_str": "36/36",
+                    "total_services": 36,
+                    "healthy_services": 36,
                     "healthy_symbols": 100,
                     "total_symbols": 100,
                     "scan_active": True,

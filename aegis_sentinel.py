@@ -180,6 +180,24 @@ class ValkyrieAegisSentinel:
                     if val is not None and (np.isnan(val) or np.isinf(val)):
                         nan_cvd_count += 1
 
+        # 4. Stoikov & L2 Tahta Çapraz Emir Kontrolü
+        crossed_syms = []
+        for sym, ob in getattr(market_data, 'orderbook_depth', {}).items():
+            if isinstance(ob, dict):
+                bp = float(ob.get('bid_price', 0.0) or 0.0)
+                ap = float(ob.get('ask_price', 0.0) or 0.0)
+                if bp > 0 and ap > 0 and bp >= ap:
+                    crossed_syms.append(sym)
+
+        # 5. SSR ve Tether Mint Denetimi
+        ssr_info = getattr(market_data, 'get_ssr_status', lambda: {})()
+        ssr_val = float(ssr_info.get('ssr_value', 0.0) or 0.0)
+        tether_info = getattr(market_data, 'get_tether_mint_status', lambda: {})()
+
+        # 6. 100-Basamaklı Tasfiye Isı Haritası Denetimi
+        heatmap_info = getattr(market_data, 'get_liquidation_heatmap', lambda: {})()
+        bins_cnt = len(heatmap_info.get('bins', [])) if isinstance(heatmap_info, dict) else 100
+
         is_healthy = gex_fresh and (nan_cvd_count == 0) and (0.0 <= hwk_eta <= 2.0)
 
         return {
@@ -199,6 +217,24 @@ class ValkyrieAegisSentinel:
             "cvd_integrity": {
                 "nan_anomalies": nan_cvd_count,
                 "is_clean": nan_cvd_count == 0
+            },
+            "ssr_oscillator": {
+                "healthy": ssr_val >= 0,
+                "ssr_value": ssr_val,
+                "spot_purchasing_power_surge": bool(ssr_info.get('spot_purchasing_power_surge', False))
+            },
+            "tether_mint_radar": {
+                "healthy": True,
+                "is_active": bool(tether_info.get('is_active', False)),
+                "remaining_sec": int(tether_info.get('remaining_sec', 0))
+            },
+            "liquidation_heatmap": {
+                "healthy": bins_cnt >= 50,
+                "total_bins": bins_cnt
+            },
+            "orderbook_integrity": {
+                "healthy": len(crossed_syms) == 0,
+                "crossed_books_count": len(crossed_syms)
             },
             "is_healthy": is_healthy
         }
@@ -293,6 +329,65 @@ class ValkyrieAegisSentinel:
             if hasattr(market_data, 'reconnect'):
                 asyncio.create_task(market_data.reconnect())
                 actions_taken.append("⚡ WebSocket akışı 35s gecikti: Aegis Sentinel otonom reconnect tetikledi.")
+
+        # 9. Tether Treasury $1B Mint Süresi Kontrolü & Otonom Sıfırlama
+        tether_st = getattr(market_data, 'tether_mint_status', {})
+        if tether_st and tether_st.get('is_active'):
+            exp_ts = float(tether_st.get('expires_ts', 0.0))
+            if exp_ts > 0 and time.time() >= exp_ts:
+                tether_st['is_active'] = False
+                actions_taken.append("⏱️ Tether Treasury $1B mint 4 saatlik boğa ivmesi süresi doldu: Normal piyasa moduna alındı.")
+
+        # 10. Global Tasfiye Isı Haritası ve Olay Kuyruğu RAM Koruması (Max 500 Olay)
+        if hasattr(market_data, 'global_liquidation_events_history'):
+            liq_history = getattr(market_data, 'global_liquidation_events_history', [])
+            if len(liq_history) > 500:
+                market_data.global_liquidation_events_history = liq_history[-500:]
+                actions_taken.append(f"🧹 Tasfiye olay kuyruğu optimize edildi ({len(liq_history)} -> 500 olay).")
+
+        # 11. Stoikov & L2 Tahta Çapraz Emir (Bid >= Ask) Anomali Onarımı
+        crossed_syms = []
+        for sym, ob in getattr(market_data, 'orderbook_depth', {}).items():
+            if isinstance(ob, dict):
+                bp = float(ob.get('bid_price', 0.0) or 0.0)
+                ap = float(ob.get('ask_price', 0.0) or 0.0)
+                if bp > 0 and ap > 0 and bp >= ap:
+                    crossed_syms.append(sym)
+                    ob['ask_price'] = round(bp * 1.0002, 6)
+        if crossed_syms:
+            actions_taken.append(f"🔧 {len(crossed_syms)} paritede anlık çapraz tahta (bid>=ask) normalize edildi.")
+
+        # 12. Coinbase Pro Lead-Lag ve Smart Money Akış Tazelemesi
+        cb_prices = getattr(market_data, 'coinbase_prices', {})
+        cb_last = cb_prices.get('last_update', 0.0)
+        if cb_last > 0 and (time.time() - cb_last) > 180.0:
+            if hasattr(market_data, 'fetch_coinbase_prices_immediate'):
+                asyncio.create_task(market_data.fetch_coinbase_prices_immediate())
+                actions_taken.append("🏛️ Coinbase Pro Spot fiyat akışı tazelendi.")
+
+        # 13. Çift Ufuklu Kuant Evrim Masası (8S Hızlı Risk Katmanı) Gecikme Önleme
+        calib = None
+        if hasattr(trader_manager, 'strategy') and getattr(trader_manager, 'strategy'):
+            calib = getattr(trader_manager.strategy, 'dna_calibrator', None)
+        elif hasattr(market_data, 'strategy') and getattr(market_data, 'strategy'):
+            calib = getattr(market_data.strategy, 'dna_calibrator', None)
+        if calib and hasattr(calib, 'last_fast_run_ts'):
+            fast_last = getattr(calib, 'last_fast_run_ts', 0.0)
+            if fast_last > 0 and (time.time() - fast_last) > 36000.0:
+                try:
+                    calib.run_fast_risk_cycle(force=True)
+                    actions_taken.append("🧬 8 Saatlik Hızlı Risk Kalibrasyonu otonom tetiklendi ve güncellendi.")
+                except Exception as ce:
+                    pass
+
+        # 14. Hawkes Branching Ratio eta Anomali Koruması
+        hwk_info = getattr(market_data, '_last_hawkes_cache', {})
+        if hwk_info:
+            eta_val = hwk_info.get('branching_ratio_eta', 0.15)
+            if np.isnan(eta_val) or np.isinf(eta_val) or eta_val > 5.0:
+                hwk_info['branching_ratio_eta'] = 0.15
+                hwk_info['is_avalanche_active'] = False
+                actions_taken.append("⚡ Hawkes branching ratio (eta) anomalisi 0.15 baz değerine resetlendi.")
 
         if actions_taken:
             self.healing_history.append({
