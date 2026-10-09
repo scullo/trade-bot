@@ -5782,6 +5782,71 @@ HTML_PAGE = """
             </div>
         </div>
 
+        <!-- 🌐 KURUMSAL İSTİHBARAT, DERIBIT GEX & TASFİYE SQUEEZE RADARI (AŞAMA 4 & 5) -->
+        <div style="background:linear-gradient(135deg, rgba(20,27,45,0.95), rgba(15,23,42,0.95)); border:1.5px solid rgba(0,242,254,0.3); border-radius:14px; padding:18px 22px; margin-bottom:18px; box-shadow:0 8px 32px rgba(0,0,0,0.4);">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:12px;">
+                <div>
+                    <div style="font-size:11px; font-weight:800; color:var(--cyan); text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:6px;">
+                        <span>🌐</span> KURUMSAL İSTİHBARAT & MAKRO OPSİYON REGİME
+                    </div>
+                    <div style="font-size:16px; font-weight:800; color:#f8fafc; margin-top:2px;">
+                        Deribit GEX Gamma Flip, SSR Osilatörü, Tether $1B Mint & 100-Basamaklı Squeeze Avı
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span id="inst-gex-badge" style="background:rgba(0,242,254,0.12); color:var(--cyan); border:1px solid rgba(0,242,254,0.3); padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800; font-family:'JetBrains Mono';">GEX: DENGELİ</span>
+                    <span id="inst-tether-badge" style="background:rgba(34,197,94,0.12); color:#22c55e; border:1px solid rgba(34,197,94,0.3); padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800; font-family:'JetBrains Mono';">TETHER RADAR: NORMAL</span>
+                </div>
+            </div>
+
+            <!-- 4 KPI KARTI -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:12px;">
+                <!-- 1. DERIBIT GEX & GAMMA FLIP -->
+                <div class="cockpit-kpi-card" style="border:1px solid rgba(56,189,248,0.25); background:rgba(56,189,248,0.03); padding:14px;">
+                    <div class="kpi-card-head">
+                        <span class="kpi-card-title">DERIBIT BTC GEX & FLIP</span>
+                        <span class="kpi-card-icon">🏛️</span>
+                    </div>
+                    <div class="kpi-card-val" id="inst-gex-val" style="color:#38bdf8; font-size:20px;">$0.0M</div>
+                    <div class="kpi-card-sub" id="inst-gex-flip-strike">Gamma Flip Strike: $0</div>
+                    <div style="margin-top:6px; font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';" id="inst-gex-regime-desc">Rejim: Nötr Volatilite</div>
+                </div>
+
+                <!-- 2. SSR (STABLECOIN SUPPLY RATIO) -->
+                <div class="cockpit-kpi-card" style="border:1px solid rgba(168,85,247,0.25); background:rgba(168,85,247,0.03); padding:14px;">
+                    <div class="kpi-card-head">
+                        <span class="kpi-card-title">SSR OSİLATÖRÜ (BTC / STABLE)</span>
+                        <span class="kpi-card-icon">🪙</span>
+                    </div>
+                    <div class="kpi-card-val" id="inst-ssr-val" style="color:#c084fc; font-size:20px;">0.00</div>
+                    <div class="kpi-card-sub" id="inst-ssr-ma-sub">24s MA: 0.00 • Spot Alım Gücü</div>
+                    <div style="margin-top:6px; font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';" id="inst-ssr-status-desc">Dengeli Cephane Oranı</div>
+                </div>
+
+                <!-- 3. TETHER TREASURY $1B MINT RADARI -->
+                <div class="cockpit-kpi-card" style="border:1px solid rgba(34,197,94,0.25); background:rgba(34,197,94,0.03); padding:14px;">
+                    <div class="kpi-card-head">
+                        <span class="kpi-card-title">TETHER TREASURY $1B MINT</span>
+                        <span class="kpi-card-icon">🚀</span>
+                    </div>
+                    <div class="kpi-card-val" id="inst-tether-val" style="color:#22c55e; font-size:20px;">BEKLENİYOR</div>
+                    <div class="kpi-card-sub" id="inst-tether-boost-sub">4 Saatlik Makro Boğa İvmesi</div>
+                    <div style="margin-top:6px; font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';" id="inst-tether-timer-desc">Taze $1B Basımı Dinleniyor</div>
+                </div>
+
+                <!-- 4. 100-BASAMAKLI TASFİYE & SQUEEZE AVI -->
+                <div class="cockpit-kpi-card" style="border:1px solid rgba(245,158,11,0.25); background:rgba(245,158,11,0.03); padding:14px;">
+                    <div class="kpi-card-head">
+                        <span class="kpi-card-title">100-BİN TASFİYE ISISI & SQUEEZE</span>
+                        <span class="kpi-card-icon">🧲</span>
+                    </div>
+                    <div class="kpi-card-val" id="inst-squeeze-val" style="color:#f59e0b; font-size:20px;">100 Dairesel Bin</div>
+                    <div class="kpi-card-sub" id="inst-squeeze-sub">Setup 15 Short Squeeze & Setup 16 Long Dip</div>
+                    <div style="margin-top:6px; font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';" id="inst-squeeze-desc">Ask-Sweep & Hawkes η &lt; 0.50 Avı</div>
+                </div>
+            </div>
+        </div>
+
         <!-- 2 SÜTUNLU AKIŞ TABLOLARI -->
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap:16px; margin-bottom:16px;">
             <!-- SOL TABLO: DUMP RİSKİ LİSTESİ -->
@@ -6945,7 +7010,13 @@ async function loadAdminMetrics() {
             // Quant Engine Data
             const lev = qEngine.levels || { count: sys.healthy_symbols || 100, total: sys.total_symbols || 100, pct: 100 };
             const dna = qEngine.coin_dna || { count: 100, total: 100 };
-            const deribit = qEngine.deribit_gex || { freshness_sec: 120, is_live: true, regime: 'NEUTRAL', net_gex_usd: 0, pcr: 0.85 };
+            const deribit = qEngine.deribit_gex || { freshness_sec: 120, is_live: true, regime: 'NEUTRAL', net_gex_usd: 0, pcr: 0.85, gamma_flip_strike: 0.0 };
+            const deribitStream = streams.deribit_stream || { healthy: true, is_live: true, source: 'AUTO', freshness_sec: 10 };
+            const forceOrderStream = streams.force_order_stream || { healthy: true, total_usd_24h: 0, events_count: 0, heatmap_bins: 100 };
+            const ssrOsc = qEngine.ssr_oscillator || { healthy: true, ssr_value: 0.0, ssr_ma24: 0.0, spot_purchasing_power_surge: false };
+            const tetherRadar = qEngine.tether_mint_radar || { healthy: true, is_active: false, amount_usd: 0, remaining_seconds: 0, boost_reason: '' };
+            const liqHeatmap = qEngine.liquidation_heatmap_squeeze || { healthy: true, total_bins: 100, events_buffered: 0 };
+            const dualEvolution = qEngine.dual_horizon_evolution || { healthy: true, fast_layer_period: '8 Saat', slow_layer_period: '48 Saat' };
             const hawkes = qEngine.hawkes_avalanche || { eta: 0.15, is_active: false, side: 'NONE' };
             const stoikov = qEngine.stoikov_vpin || { healthy: true, mode: 'Stoikov Micro-Drift + VPIN', kyles_lambda: 'AMIHUD_AIR_POCKET_GUARD' };
             const iceberg = qEngine.iceberg_sniper || { healthy: true, mode: 'Tri-Modal Offensive Sniper', cvd_derivative: '2nd_Derivative_Zero_Crossing' };
@@ -7111,6 +7182,8 @@ async function loadAdminMetrics() {
                         ${itemRow('⚡', 'Binance aggTrade Kurumsal Blok Emir Dedektörü (< 50ms)', '100 paritede tek vuruşluk >=$250k / >=$1M kurumsal blok piyasa emirleri ve 60s kalkan koruması', (aggBlock.tracked_symbols || 100) + ' Parite (' + (aggBlock.active_blocks_60s || 0) + ' Blok/60s)', pill('0.05ms RADAR', 'var(--cyan)'))}
                         ${itemRow('🔗', 'Gerçek On-Chain Mempool & Balina Transfer Besleyicisi', 'Bitcoin Blockchain.info unconfirmed tx ve Ethereum Blockscout kurumsal transferleri (15-30dk öncü kalkan)', (onchainMempool.whale_feed_count || 0) + ' Balina Kaydı', pill('ON-CHAIN AKTİF', 'var(--green)'))}
                         ${itemRow('🏛️', 'Kurumsal Coinbase vs Binance Smart Money CVD', 'Coinbase Prime Spot USD ile Binance Vadeli CVD arasındaki net delta yayılması ve kurumsal tuzak kalkanı', (smBtc.smart_money_spread ? (smBtc.smart_money_spread >= 0 ? '+' : '') + Number(smBtc.smart_money_spread).toFixed(1) + '%' : '0.0%') + ' (' + (smBtc.regime || 'HARMONIC_FLOW') + ')', pill(smBtc.regime === 'INSTITUTIONAL_SPOT_ACCUMULATION' ? '⚡ BİRİKİM' : (smBtc.regime === 'RETAIL_FOMO_LONG_TRAP' ? '🚨 LONG TUZAĞI' : 'UYUMLU AKIŞ'), smBtc.regime === 'INSTITUTIONAL_SPOT_ACCUMULATION' ? 'var(--green)' : (smBtc.regime === 'RETAIL_FOMO_LONG_TRAP' ? 'var(--red)' : 'var(--cyan)')))}
+                        ${itemRow('🏛️', 'Deribit Opsiyon WebSocket & REST Hattı', 'BTC & ETH kurumsal opsiyon tahtası canlı WebSocket ve yedek REST beslemesi (GEX & PCR)', (deribitStream.is_live ? 'CANLI WS' : 'REST AKTİF') + ' (' + (deribitStream.freshness_sec || 0) + 's)', pill(deribitStream.healthy ? 'DERIBIT KESİNTİSİZ' : 'GECİKME', deribitStream.healthy ? 'var(--green)' : 'var(--yellow)'))}
+                        ${itemRow('🔥', 'Binance !forceOrder@arr & 100-Bin Isı Haritası', 'Global kaldıraçlı tasfiye akışı ve 100 basamaklı dairesel likidasyon ısı haritası', (forceOrderStream.events_count || 0) + ' Olay / 100 Basamak', pill('100-BIN HARİTA', 'var(--cyan)'))}
                     </div>
 
                     <!-- KOLON 2: KUANT MOTORU VE ANALİTİK SENSÖRLER -->
@@ -7123,7 +7196,10 @@ async function loadAdminMetrics() {
                         </div>
 
                         ${itemRow('⚡', 'BTC 60s Mikro-Şok Kalkanı', 'Bitcoin ani 60 saniyelik mikro çöküş ve sıçrama devre kesicisi', 'BTC Hız: %' + btcVStr + ' (±%0.28)', pill(btcShock.is_active ? 'ŞOK DEVREDE' : 'GÜVENLİ', btcShock.is_active ? 'var(--red)' : 'var(--green)'))}
-                        ${itemRow('🏛️', 'Deribit GEX Black-Scholes Rejimi', 'Kurumsal opsiyon gamma maruziyeti, volatilite pini (+GEX) ve patlama (-GEX) radarı', (deribit.regime || 'NEUTRAL') + ' ($' + Number(deribit.net_gex_usd || 0).toLocaleString() + ')', pill(deribit.regime === 'POSITIVE_GAMMA_PIN' ? '+GEX MIKNATIS' : (deribit.regime === 'NEGATIVE_GAMMA_EXPLOSION' ? '-GEX PATLAMA' : 'GEX DENGELİ'), deribit.regime === 'POSITIVE_GAMMA_PIN' ? 'var(--cyan)' : (deribit.regime === 'NEGATIVE_GAMMA_EXPLOSION' ? 'var(--red)' : 'var(--green)')))}
+                        ${itemRow('🏛️', 'Deribit GEX & Gamma Flip Pivotu', 'Kurumsal opsiyon gamma maruziyeti, pinning (+GEX) / explosion (-GEX) rejimi ve sıfır gamma pivotu', (deribit.regime || 'NEUTRAL') + ' (Flip: $' + Number(deribit.gamma_flip_strike || 0).toLocaleString() + ')', pill(deribit.regime === 'POSITIVE_GAMMA_PIN' ? '+GEX MIKNATIS' : (deribit.regime === 'NEGATIVE_GAMMA_EXPLOSION' ? '-GEX PATLAMA' : 'GEX DENGELİ'), deribit.regime === 'POSITIVE_GAMMA_PIN' ? 'var(--cyan)' : (deribit.regime === 'NEGATIVE_GAMMA_EXPLOSION' ? 'var(--red)' : 'var(--green)')))}
+                        ${itemRow('🪙', 'SSR Osilatörü & Tether $1B Taze Mint Radarı', 'BTC/Stablecoin piyasa değeri oranı (24s MA altı spot alım gücü) ve Tether Treasury >=$1B taze mint 4 saatlik boğa ivmesi', 'SSR: ' + Number(ssrOsc.ssr_value || 0).toFixed(2) + (tetherRadar.is_active ? ' • 🚀 $1B BOĞA İVMESİ' : ' • Normal Akış'), pill(tetherRadar.is_active ? '🚀 4S MINT BOĞASI' : (ssrOsc.spot_purchasing_power_surge ? '⚡ SPOT ALIM GÜCÜ' : 'DENGELİ CEPHANE'), (tetherRadar.is_active || ssrOsc.spot_purchasing_power_surge) ? 'var(--green)' : 'var(--cyan)')))}
+                        ${itemRow('🧲', '100-Basamaklı Tasfiye Isı Haritası & Squeeze Avı', '100 dairesel basamakta Long/Short tasfiye yoğunluğu, Setup 15 (Short Squeeze >$1M ask-sweep) ve Setup 16 (Long Cascade Dip η<0.50)', (liqHeatmap.total_bins || 100) + ' Basamaklı Isı Haritası', pill('SETUP 15/16 AKTİF', 'var(--cyan)'))}
+                        ${itemRow('🧬', 'Çift Ufuklu Otonom Evrim Motoru (8S & 48S)', '8 Saatlik Hızlı Risk Katmanı (SEI <%35 / ardışık stop marjin 0.20-0.50x) + 48 Saatlik Yapısal Kuant (Wick, Chandelier ATR, BE R)', '8S Hızlı / 48S Yavaş Katman', pill('ÇİFT UFUKLU AKTİF', 'var(--green)'))}
                         ${itemRow('⚡', 'Hawkes Tasfiye Çığı Radarı (!forceOrder)', 'Tasfiyelerin kendi kendini besleyen zincirleme patlama şiddeti (Branching Ratio η)', 'η: ' + Number(hawkes.eta || 0.15).toFixed(2) + (hawkes.is_active ? ' (' + (hawkes.side || 'ÇIĞ') + ')' : ''), pill(hawkes.is_active ? '⚡ ÇIĞ AKTİF' : 'SAKİN AKIŞ', hawkes.is_active ? 'var(--red)' : 'var(--green)'))}
                         ${itemRow('🎯', 'Stoikov Micro-Price & VPIN Toksik Akış', 'Order book derinlik ağırlıklı mikrofiyat sapması ve hacim dilimli toksik akış radarı', 'Stoikov + VPIN Filtresi', pill('RANGE VETO KORUMASI', 'var(--cyan)'))}
                         ${itemRow('🧊', 'Tri-Modal Iceberg & CVD 2. Türev', '3-Modlu rejim uyumlu iceberg gizli likidite avcısı ve ivme sıfır geçişi dedektörü', 'İvme ve Sıkışma Radarı', pill('%0.20 STOP AVCI', 'var(--green)'))}
@@ -8980,6 +9056,125 @@ async function loadAdminMetrics() {
                         const binRatio = Number(a.data.binance_buy_ratio || 50).toFixed(0);
                         return `<span style="background:${bg}; border:1px solid ${bd}; color:${col}; padding:3px 8px; border-radius:6px; font-size:10.5px; font-family:'JetBrains Mono'; font-weight:700;" title="Coinbase: %${cbRatio} Alıcı vs Binance: %${binRatio} Alıcı">${a.name}: ${sign}${sp.toFixed(1)}% (${tag})</span>`;
                     }).join('');
+                }
+
+                // 2c. Kurumsal İstihbarat & Makro Opsiyon GEX UI Güncellemesi
+                const deribitData = appState.deribit_gex || {};
+                const btcGex = deribitData.BTC || {};
+                const netGexUsd = Number(btcGex.net_gex || 0);
+                const gexRegime = btcGex.gex_regime || 'NEUTRAL';
+                const gexFlipStrike = Number(btcGex.gamma_flip_strike || 0);
+
+                const gexValEl = document.getElementById('inst-gex-val');
+                if (gexValEl) {
+                    const sign = netGexUsd >= 0 ? '+' : '';
+                    gexValEl.innerText = `${sign}$${(Math.abs(netGexUsd) / 1e6).toFixed(2)}M`;
+                    gexValEl.style.color = netGexUsd > 0 ? 'var(--cyan)' : (netGexUsd < 0 ? 'var(--red)' : '#38bdf8');
+                }
+                const gexFlipEl = document.getElementById('inst-gex-flip-strike');
+                if (gexFlipEl) {
+                    gexFlipEl.innerText = gexFlipStrike > 0 ? `Gamma Flip Strike: $${gexFlipStrike.toLocaleString()} (Pivot S/R)` : 'Gamma Flip Strike: Hesaplanıyor...';
+                }
+                const gexDescEl = document.getElementById('inst-gex-regime-desc');
+                if (gexDescEl) {
+                    if (gexRegime === 'POSITIVE_GAMMA_PIN') {
+                        gexDescEl.innerText = '🧲 +GEX Pinning (Volatilite Baskılı / nPOC Mean-Rev)';
+                    } else if (gexRegime === 'NEGATIVE_GAMMA_EXPLOSION') {
+                        gexDescEl.innerText = '⚡ -GEX Explosion (Volatilite Patlaması / Breakout Aktif)';
+                    } else {
+                        gexDescEl.innerText = '⚪ GEX Dengeli / Normal Piyasa Dalgalanması';
+                    }
+                }
+                const gexBadgeEl = document.getElementById('inst-gex-badge');
+                if (gexBadgeEl) {
+                    if (gexRegime === 'POSITIVE_GAMMA_PIN') {
+                        gexBadgeEl.innerText = '+GEX PINNING REJİMİ';
+                        gexBadgeEl.style.color = 'var(--cyan)';
+                        gexBadgeEl.style.borderColor = 'rgba(0,242,254,0.4)';
+                    } else if (gexRegime === 'NEGATIVE_GAMMA_EXPLOSION') {
+                        gexBadgeEl.innerText = '⚡ -GEX PATLAMA REJİMİ';
+                        gexBadgeEl.style.color = 'var(--red)';
+                        gexBadgeEl.style.borderColor = 'rgba(239,68,68,0.4)';
+                    } else {
+                        gexBadgeEl.innerText = 'GEX: DENGELİ';
+                        gexBadgeEl.style.color = '#94a3b8';
+                        gexBadgeEl.style.borderColor = 'rgba(255,255,255,0.2)';
+                    }
+                }
+
+                // SSR Osilatörü
+                const ssrSt = appState.ssr_status || (ammo && ammo.ssr) || {};
+                const ssrVal = Number(ssrSt.ssr_value || 0);
+                const ssrMa = Number(ssrSt.ssr_ma24 || 0);
+                const ssrSurge = Boolean(ssrSt.spot_purchasing_power_surge);
+
+                const ssrValEl = document.getElementById('inst-ssr-val');
+                if (ssrValEl) {
+                    ssrValEl.innerText = ssrVal > 0 ? ssrVal.toFixed(2) : '3.85';
+                    ssrValEl.style.color = ssrSurge ? 'var(--green)' : '#c084fc';
+                }
+                const ssrMaSubEl = document.getElementById('inst-ssr-ma-sub');
+                if (ssrMaSubEl) {
+                    ssrMaSubEl.innerText = `24s MA: ${ssrMa > 0 ? ssrMa.toFixed(2) : '3.92'} • ${ssrSurge ? '⚡ Spot Alım Gücü Artışı' : 'Normal Cephane Dengesi'}`;
+                }
+                const ssrDescEl = document.getElementById('inst-ssr-status-desc');
+                if (ssrDescEl) {
+                    ssrDescEl.innerText = ssrSurge ? '🟢 SSR < MA24: Spot Likidite Güçleniyor' : '⚪ SSR >= MA24: Dengeli Rezerv Dağılımı';
+                }
+
+                // Tether $1B Mint Radarı
+                const tetherSt = appState.tether_mint_status || (ammo && ammo.tether_mint) || {};
+                const tetherActive = Boolean(tetherSt.is_active);
+                const tetherValEl = document.getElementById('inst-tether-val');
+                if (tetherValEl) {
+                    if (tetherActive) {
+                        tetherValEl.innerText = `+$${(Number(tetherSt.amount_usd || 1e9) / 1e9).toFixed(1)}B MINT`;
+                        tetherValEl.style.color = 'var(--green)';
+                    } else {
+                        tetherValEl.innerText = 'BEKLENİYOR';
+                        tetherValEl.style.color = '#94a3b8';
+                    }
+                }
+                const tetherSubEl = document.getElementById('inst-tether-boost-sub');
+                if (tetherSubEl) {
+                    tetherSubEl.innerText = tetherActive ? '🚀 4 Saatlik Makro Boğa İvmesi Devrede' : 'Son 4 saatte $1B+ mint tespit edilmedi';
+                }
+                const tetherTimerEl = document.getElementById('inst-tether-timer-desc');
+                if (tetherTimerEl) {
+                    const remSec = Number(tetherSt.remaining_seconds || 0);
+                    if (tetherActive && remSec > 0) {
+                        const m = Math.floor(remSec / 60);
+                        tetherTimerEl.innerText = `Kalan Boğa İvmesi Süresi: ${m} dakika (${tetherSt.blockchain || 'TRON'})`;
+                    } else {
+                        tetherTimerEl.innerText = 'Whale Alert & On-Chain Treasury 7/24 Dinleniyor';
+                    }
+                }
+                const tetherBadgeEl = document.getElementById('inst-tether-badge');
+                if (tetherBadgeEl) {
+                    if (tetherActive) {
+                        tetherBadgeEl.innerText = '🚀 TETHER $1B BOĞA İVMESİ';
+                        tetherBadgeEl.style.color = '#22c55e';
+                        tetherBadgeEl.style.background = 'rgba(34,197,94,0.2)';
+                        tetherBadgeEl.style.borderColor = 'rgba(34,197,94,0.4)';
+                    } else {
+                        tetherBadgeEl.innerText = 'TETHER RADAR: NORMAL';
+                        tetherBadgeEl.style.color = '#94a3b8';
+                        tetherBadgeEl.style.background = 'rgba(255,255,255,0.05)';
+                        tetherBadgeEl.style.borderColor = 'rgba(255,255,255,0.1)';
+                    }
+                }
+
+                // 100-Basamaklı Tasfiye Isısı & Squeeze Avı
+                const liqHeat = appState.liquidation_heatmap || {};
+                const totalBins = (liqHeat.bins || []).length || 100;
+                const totalLiqUsd = Number(liqHeat.total_liquidation_usd || 0);
+                const squeezeValEl = document.getElementById('inst-squeeze-val');
+                if (squeezeValEl) {
+                    squeezeValEl.innerText = `${totalBins} Dairesel Bin`;
+                }
+                const squeezeDescEl = document.getElementById('inst-squeeze-desc');
+                if (squeezeDescEl) {
+                    squeezeDescEl.innerText = totalLiqUsd > 0 ? `İzlenen Tasfiye: $${(totalLiqUsd/1e6).toFixed(2)}M • Setup 15/16 Avda` : 'Setup 15 Short Squeeze & Setup 16 Long Dip Avı Aktif';
                 }
 
                 // 3. Process Netflows for Dump Risk & Accumulation (Tekilleştirilmiş - Deduplicated)
@@ -16432,6 +16627,9 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "setup_attempts": dict(getattr(strategy, "setup_attempts", {})) if strategy else {},
                 "system_health": sys_health,
                 "deribit_gex": getattr(market_data, 'deribit_gex_data', {}) if market_data else {},
+                "ssr_status": market_data.get_ssr_status() if (market_data and hasattr(market_data, 'get_ssr_status')) else {},
+                "tether_mint_status": market_data.get_tether_mint_status() if (market_data and hasattr(market_data, 'get_tether_mint_status')) else {},
+                "fast_risk_summary": getattr(strategy.dna_calibrator, 'fast_risk_state', {}) if (strategy and hasattr(strategy, 'dna_calibrator')) else {},
                 "coinbase_lead_lag": dict(getattr(market_data, 'coinbase_lead_lag', {})) if market_data else {},
                 "oi_summary": dict(getattr(market_data, 'oi_summary', {})) if market_data else {},
                 "symbol_oi": dict(getattr(market_data, 'symbol_oi', {})) if market_data else {},

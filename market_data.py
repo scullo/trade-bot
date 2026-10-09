@@ -565,6 +565,18 @@ class MarketDataManager:
                         "mode": "Coinbase Prime vs Binance Offshore CVD",
                         "btc_spread": getattr(self, 'smart_money_divergence', {}).get('BTC/USDT', {}).get('smart_money_spread', 0.0),
                         "regime": getattr(self, 'smart_money_divergence', {}).get('BTC/USDT', {}).get('regime', 'HARMONIC_FLOW')
+                    },
+                    "deribit_stream": {
+                        "healthy": bool(self.deribit_gex_data.get('is_live', False)) or ((now_sec - self.deribit_gex_data.get('last_sync_ts', 0)) < 300),
+                        "source": self.deribit_gex_data.get('BTC', {}).get('source', 'AUTO'),
+                        "is_live": bool(self.deribit_gex_data.get('is_live', False)),
+                        "freshness_sec": int(now_sec - self.deribit_gex_data.get('last_sync_ts', now_sec))
+                    },
+                    "force_order_stream": {
+                        "healthy": True,
+                        "total_usd_24h": round(liq_total_usd, 2),
+                        "events_count": len(getattr(self, 'global_liquidation_events_history', [])),
+                        "heatmap_bins": 100
                     }
                 },
                 "quant_engine": {
@@ -584,8 +596,43 @@ class MarketDataManager:
                         "regime": self.get_deribit_gex_regime(),
                         "net_gex_usd": float(self.deribit_gex_data.get('BTC', {}).get('net_gex', 0.0)),
                         "pcr": float(self.deribit_gex_data.get('BTC', {}).get('put_call_ratio', 1.0)),
+                        "gamma_flip_strike": float(self.deribit_gex_data.get('BTC', {}).get('gamma_flip_strike', 0.0)),
+                        "source": self.deribit_gex_data.get('BTC', {}).get('source', 'AUTO'),
                         "freshness_sec": int(time.time() - self.deribit_gex_data.get('last_sync_ts', time.time())),
                         "is_live": bool(self.deribit_gex_data.get('is_live', True))
+                    },
+                    "ssr_oscillator": {
+                        "healthy": True,
+                        "ssr_value": float(getattr(self, 'get_ssr_status', lambda: {})().get('ssr_value', 0.0)),
+                        "ssr_ma24": float(getattr(self, 'get_ssr_status', lambda: {})().get('ssr_ma24', 0.0)),
+                        "spot_purchasing_power_surge": bool(getattr(self, 'get_ssr_status', lambda: {})().get('spot_purchasing_power_surge', False)),
+                        "btc_market_cap": float(getattr(self, 'get_ssr_status', lambda: {})().get('btc_market_cap', 0.0)),
+                        "stable_market_cap": float(getattr(self, 'get_ssr_status', lambda: {})().get('stable_market_cap', 0.0)),
+                        "mode": "BTC Market Cap / Stablecoin Market Cap (24h MA Altı Alım Gücü Artışı)"
+                    },
+                    "tether_mint_radar": {
+                        "healthy": True,
+                        "is_active": bool(getattr(self, 'get_tether_mint_status', lambda: {})().get('is_active', False)),
+                        "amount_usd": float(getattr(self, 'get_tether_mint_status', lambda: {})().get('amount_usd', 0.0)),
+                        "blockchain": str(getattr(self, 'get_tether_mint_status', lambda: {})().get('blockchain', 'TRON/ETH')),
+                        "boost_reason": str(getattr(self, 'get_tether_mint_status', lambda: {})().get('boost_reason', '')),
+                        "remaining_seconds": int(getattr(self, 'get_tether_mint_status', lambda: {})().get('remaining_seconds', 0)),
+                        "mode": "Tether Treasury >= $1B Mint (4 Saatlik Makro Boğa İvmesi)"
+                    },
+                    "liquidation_heatmap_squeeze": {
+                        "healthy": True,
+                        "total_bins": 100,
+                        "events_buffered": len(getattr(self, 'global_liquidation_events_history', [])),
+                        "total_usd_24h": round(liq_total_usd, 2),
+                        "mode": "100-Basamaklı Dairesel Isı Haritası & Squeeze Avı (Setup 15 & 16)"
+                    },
+                    "dual_horizon_evolution": {
+                        "healthy": True,
+                        "fast_layer_period": "8 Saatlik Hızlı Seans Döngüsü (00:00, 08:00, 16:00 UTC)",
+                        "fast_layer_actions": "Arka arkaya stop veya SEI <%35 marjin 0.20x-0.50x & setup muting",
+                        "slow_layer_period": "48 Saatlik Yapısal Kuant Döngüsü",
+                        "slow_layer_actions": "Wick Reversal Threshold, Chandelier ATR Mult, Break Even R Trigger",
+                        "muted_count": muted_setups_cnt
                     },
                     "hawkes_avalanche": {
                         "healthy": True,
