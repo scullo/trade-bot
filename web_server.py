@@ -16422,6 +16422,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "liquidation_summary": liq_summary,
                 "recent_liquidations": recent_liqs,
                 "symbol_liquidations": symbol_liqs,
+                "liquidation_heatmap": market_data.get_liquidation_heatmap() if (market_data and hasattr(market_data, 'get_liquidation_heatmap')) else {},
                 "cvd_summary": cvd_summary,
                 "symbol_cvd": symbol_cvd,
                 "whale_radar": whale_radar,

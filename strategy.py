@@ -6004,6 +6004,57 @@ class StrategyEngine:
                         return
 
         # ─────────────────────────────────────────────────────────────────
+        # 🚀 AŞAMA 5 / 4.1: SETUP 15: SHORT SQUEEZE AVI (SHORT SQUEEZE HUNT LONG)
+        # Kısa süre içerisinde >$1,000,000 tutarında Short tasfiye edildiğinde ve
+        # L2 derinlik tahtasında ask tarafı süpürüldüğünde balina momentumuna eşlik eden anlık Squeeze Long işlemi tetiklenir.
+        # ─────────────────────────────────────────────────────────────────
+        short_liq_120s = 0.0
+        if self.market_data and hasattr(self.market_data, 'get_recent_liquidation_volume'):
+            vol_info = self.market_data.get_recent_liquidation_volume(symbol, lookback_sec=120.0)
+            short_liq_120s = float(vol_info.get('short_usd', 0.0))
+        elif self.market_data and hasattr(self.market_data, 'get_symbol_liquidation_stats'):
+            stat_info = self.market_data.get_symbol_liquidation_stats(symbol)
+            short_liq_120s = float(stat_info.get('short_usd', 0.0))
+
+        if short_liq_120s < 1_000_000 and self.market_data and hasattr(self.market_data, 'get_recent_liquidation_volume'):
+            macro_vol = self.market_data.get_recent_liquidation_volume(None, lookback_sec=120.0)
+            macro_short = float(macro_vol.get('short_usd', 0.0))
+            if macro_short >= 1_000_000 and (vol_surge >= 1.2 or coin_rs_score >= 0.0):
+                short_liq_120s = macro_short
+
+        if short_liq_120s >= 1_000_000:
+            obi_data_15 = self.market_data.get_orderbook_depth(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_orderbook_depth')) else {}
+            obi_r_15 = float(obi_data_15.get('ratio', 1.0))
+            obi_wall_15 = str(obi_data_15.get('wall_side', ''))
+            ask_swept_15 = (obi_r_15 >= 1.15 or obi_wall_15 in ["BID_SUPPORT", "BID_WALL"] or float(obi_data_15.get('bid_qty', 0)) > float(obi_data_15.get('ask_qty', 0)))
+
+            if ask_swept_15:
+                coin_atr_15 = self.get_symbol_atr_pct(symbol)
+                dyn_stop_pct_15 = max(0.0060, min(0.0150, coin_atr_15 * 0.35))
+                hard_stop_15 = close_price * (1.0 - dyn_stop_pct_15)
+                soft_stop_15 = close_price * (1.0 - max(0.0050, dyn_stop_pct_15 * 0.85))
+                tp1_target_15 = close_price * (1.0 + dyn_stop_pct_15 * 2.0)
+                tp2_target_15 = close_price * (1.0 + dyn_stop_pct_15 * 3.5)
+
+                c_list15_sq = [
+                    "Short_Squeeze_Liquidation_Cascade",
+                    "Ask_Depth_Swept",
+                    "Whale_Squeeze_Momentum"
+                ]
+                if short_liq_120s >= 2_000_000:
+                    c_list15_sq.append("Mega_Short_Squeeze_>$2M")
+
+                await self._handle_open(
+                    symbol=symbol, side="LONG", entry_price=close_price,
+                    reason=f"Short Squeeze Avı (Setup 15): >${short_liq_120s/1e6:.2f}M Short Tasfiyesi + L2 Satıcı Tahtası Süpürüldü",
+                    soft_stop=soft_stop_15, hard_stop=hard_stop_15,
+                    tp1=tp1_target_15, tp2=tp2_target_15, trade_type="MOMENTUM",
+                    snapshot_levels=levels, setup_id="SETUP_15_SHORT_SQUEEZE_HUNT",
+                    confluence_list=c_list15_sq
+                )
+                return
+
+        # ─────────────────────────────────────────────────────────────────
         # SETUP 15: AVWAP RECLAIM & mVAH BOĞA KIRILIMI RETEST LONG (Macro Absorption Flip)
         # Fiyat Tepe AVWAP veya mVAH direncini aşmış olup, geri çekilmede bu seviyeyi destek olarak doğrular
         # ─────────────────────────────────────────────────────────────────
@@ -6060,6 +6111,61 @@ class StrategyEngine:
                             confluence_list=c_list15
                         )
                         return
+
+        # ─────────────────────────────────────────────────────────────────
+        # 🚀 AŞAMA 5 / 4.1: SETUP 16: LONG CASCADE DIP AVI (V-SHAPE REVERSAL LONG)
+        # Sert dump esnasında Longlar panikle patlatılırken Hawkes Süreci çatallanma oranı (η < 0.50)
+        # sakinleştiğinde ve ilk L2 alıcı bloğu oturduğunda V-dönüşü Long işlemi açılır.
+        # ─────────────────────────────────────────────────────────────────
+        long_liq_180s = 0.0
+        if self.market_data and hasattr(self.market_data, 'get_recent_liquidation_volume'):
+            vol_info_16 = self.market_data.get_recent_liquidation_volume(symbol, lookback_sec=180.0)
+            long_liq_180s = float(vol_info_16.get('long_usd', 0.0))
+        elif self.market_data and hasattr(self.market_data, 'get_symbol_liquidation_stats'):
+            stat_info_16 = self.market_data.get_symbol_liquidation_stats(symbol)
+            long_liq_180s = float(stat_info_16.get('long_usd', 0.0))
+
+        is_dump_environment = (
+            long_liq_180s >= 500_000
+            or (current_candle.get('low', close_price) <= current_candle.get('open', close_price) * 0.985)
+            or (macro.get("btc_chg_1h", 0.0) <= -0.50 and long_liq_180s >= 100_000)
+        )
+
+        if is_dump_environment:
+            hawkes_data_16 = self.market_data.get_hawkes_avalanche(symbol) if (self.market_data and hasattr(self.market_data, 'get_hawkes_avalanche')) else {}
+            hawkes_eta_16 = float(hawkes_data_16.get('branching_ratio_eta', hawkes_data_16.get('macro_hawkes_eta', 0.15)))
+            hawkes_calm_16 = (hawkes_eta_16 < 0.50) or bool(hawkes_data_16.get('is_avalanche_exhausted', False)) or (not hawkes_data_16.get('is_avalanche_active', False))
+
+            obi_data_dip = self.market_data.get_orderbook_depth(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_orderbook_depth')) else {}
+            obi_r_dip = float(obi_data_dip.get('ratio', 1.0))
+            obi_wall_dip = str(obi_data_dip.get('wall_side', ''))
+            buyer_block_seated = (obi_r_dip >= 1.25 or obi_wall_dip in ["BID_SUPPORT", "BID_WALL"] or float(obi_data_dip.get('bid_qty', 0)) > float(obi_data_dip.get('ask_qty', 0) * 1.20))
+
+            if hawkes_calm_16 and buyer_block_seated:
+                coin_atr_16 = self.get_symbol_atr_pct(symbol)
+                dyn_stop_pct_16 = max(0.0060, min(0.0150, coin_atr_16 * 0.35))
+                c_low_16 = current_candle.get('low', close_price)
+                hard_stop_16 = min(c_low_16 * 0.997, close_price * (1.0 - dyn_stop_pct_16))
+                soft_stop_16 = min(c_low_16, close_price * (1.0 - max(0.0050, dyn_stop_pct_16 * 0.85)))
+                tp1_target_16 = close_price * (1.0 + dyn_stop_pct_16 * 2.2)
+                tp2_target_16 = close_price * (1.0 + dyn_stop_pct_16 * 4.0)
+
+                c_list16_dip = [
+                    "Long_Cascade_Exhaustion",
+                    f"Hawkes_Eta_Calm_{hawkes_eta_16:.2f}_<0.50",
+                    "L2_Buyer_Block_Established",
+                    "V_Shape_Reversal"
+                ]
+
+                await self._handle_open(
+                    symbol=symbol, side="LONG", entry_price=close_price,
+                    reason=f"Long Cascade Dip Avı (Setup 16): Hawkes Çığı Sakinleşti (eta={hawkes_eta_16:.2f} < 0.50) + İlk L2 Alıcı Bloğu Oturdu",
+                    soft_stop=soft_stop_16, hard_stop=hard_stop_16,
+                    tp1=tp1_target_16, tp2=tp2_target_16, trade_type="REVERSAL",
+                    snapshot_levels=levels, setup_id="SETUP_16_LONG_CASCADE_DIP_HUNT",
+                    confluence_list=c_list16_dip
+                )
+                return
 
         # ─────────────────────────────────────────────────────────────────
         # SETUP 16: R3 DİRENÇ AŞIMI & RETEST BOĞA DEVAMI LONG (R3 Support Flip)
@@ -6146,3 +6252,121 @@ class StrategyEngine:
                         confluence_list=c_list16
                     )
                     return
+
+    async def evaluate_liquidation_squeeze_setups(self, symbol: str, current_candle: dict = None, levels: dict = None):
+        """
+        4.1 Global Tasfiye Isı Haritası & Squeeze Avı Motoru:
+        - Setup 15: Short Squeeze Avı (> $1,000,000 Short tasfiyesi + L2 ask süpürme)
+        - Setup 16: Long Cascade Dip Avı (Long dump tasfiye + Hawkes η < 0.50 + L2 alıcı bloğu)
+        """
+        if not current_candle:
+            if self.market_data and hasattr(self.market_data, 'candles_5m') and symbol in self.market_data.candles_5m:
+                df = self.market_data.candles_5m[symbol]
+                if isinstance(df, pd.DataFrame) and not df.empty:
+                    current_candle = df.iloc[-1].to_dict()
+        if not current_candle:
+            return None
+        close_price = float(current_candle.get('close', 0.0))
+        if close_price <= 0:
+            return None
+        levels = levels or (getattr(self.market_data, 'levels', {}).get(symbol, {}) if self.market_data else {})
+
+        # 1. SETUP 15: SHORT SQUEEZE AVI
+        short_liq_120s = 0.0
+        if self.market_data and hasattr(self.market_data, 'get_recent_liquidation_volume'):
+            vol_info = self.market_data.get_recent_liquidation_volume(symbol, lookback_sec=120.0)
+            short_liq_120s = float(vol_info.get('short_usd', 0.0))
+        elif self.market_data and hasattr(self.market_data, 'get_symbol_liquidation_stats'):
+            stat_info = self.market_data.get_symbol_liquidation_stats(symbol)
+            short_liq_120s = float(stat_info.get('short_usd', 0.0))
+
+        if short_liq_120s < 1_000_000 and self.market_data and hasattr(self.market_data, 'get_recent_liquidation_volume'):
+            macro_vol = self.market_data.get_recent_liquidation_volume(None, lookback_sec=120.0)
+            macro_short = float(macro_vol.get('short_usd', 0.0))
+            if macro_short >= 1_000_000:
+                short_liq_120s = macro_short
+
+        if short_liq_120s >= 1_000_000:
+            obi_data_15 = self.market_data.get_orderbook_depth(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_orderbook_depth')) else {}
+            obi_r_15 = float(obi_data_15.get('ratio', 1.0))
+            obi_wall_15 = str(obi_data_15.get('wall_side', ''))
+            ask_swept_15 = (obi_r_15 >= 1.15 or obi_wall_15 in ["BID_SUPPORT", "BID_WALL"] or float(obi_data_15.get('bid_qty', 0)) > float(obi_data_15.get('ask_qty', 0)))
+
+            if ask_swept_15:
+                coin_atr_15 = self.get_symbol_atr_pct(symbol)
+                dyn_stop_pct_15 = max(0.0060, min(0.0150, coin_atr_15 * 0.35))
+                hard_stop_15 = close_price * (1.0 - dyn_stop_pct_15)
+                soft_stop_15 = close_price * (1.0 - max(0.0050, dyn_stop_pct_15 * 0.85))
+                tp1_target_15 = close_price * (1.0 + dyn_stop_pct_15 * 2.0)
+                tp2_target_15 = close_price * (1.0 + dyn_stop_pct_15 * 3.5)
+
+                c_list15_sq = [
+                    "Short_Squeeze_Liquidation_Cascade",
+                    "Ask_Depth_Swept",
+                    "Whale_Squeeze_Momentum"
+                ]
+                if short_liq_120s >= 2_000_000:
+                    c_list15_sq.append("Mega_Short_Squeeze_>$2M")
+
+                return await self._handle_open(
+                    symbol=symbol, side="LONG", entry_price=close_price,
+                    reason=f"Short Squeeze Avı (Setup 15): >${short_liq_120s/1e6:.2f}M Short Tasfiyesi + L2 Satıcı Tahtası Süpürüldü",
+                    soft_stop=soft_stop_15, hard_stop=hard_stop_15,
+                    tp1=tp1_target_15, tp2=tp2_target_15, trade_type="MOMENTUM",
+                    snapshot_levels=levels, setup_id="SETUP_15_SHORT_SQUEEZE_HUNT",
+                    confluence_list=c_list15_sq
+                )
+
+        # 2. SETUP 16: LONG CASCADE DIP AVI
+        long_liq_180s = 0.0
+        if self.market_data and hasattr(self.market_data, 'get_recent_liquidation_volume'):
+            vol_info_16 = self.market_data.get_recent_liquidation_volume(symbol, lookback_sec=180.0)
+            long_liq_180s = float(vol_info_16.get('long_usd', 0.0))
+        elif self.market_data and hasattr(self.market_data, 'get_symbol_liquidation_stats'):
+            stat_info_16 = self.market_data.get_symbol_liquidation_stats(symbol)
+            long_liq_180s = float(stat_info_16.get('long_usd', 0.0))
+
+        macro = self.get_macro_climate() if hasattr(self, 'get_macro_climate') else {}
+        is_dump_environment = (
+            long_liq_180s >= 500_000
+            or (current_candle.get('low', close_price) <= current_candle.get('open', close_price) * 0.985)
+            or (macro.get("btc_chg_1h", 0.0) <= -0.50 and long_liq_180s >= 100_000)
+        )
+
+        if is_dump_environment:
+            hawkes_data_16 = self.market_data.get_hawkes_avalanche(symbol) if (self.market_data and hasattr(self.market_data, 'get_hawkes_avalanche')) else {}
+            hawkes_eta_16 = float(hawkes_data_16.get('branching_ratio_eta', hawkes_data_16.get('macro_hawkes_eta', 0.15)))
+            hawkes_calm_16 = (hawkes_eta_16 < 0.50) or bool(hawkes_data_16.get('is_avalanche_exhausted', False)) or (not hawkes_data_16.get('is_avalanche_active', False))
+
+            obi_data_dip = self.market_data.get_orderbook_depth(symbol) or {} if (self.market_data and hasattr(self.market_data, 'get_orderbook_depth')) else {}
+            obi_r_dip = float(obi_data_dip.get('ratio', 1.0))
+            obi_wall_dip = str(obi_data_dip.get('wall_side', ''))
+            buyer_block_seated = (obi_r_dip >= 1.25 or obi_wall_dip in ["BID_SUPPORT", "BID_WALL"] or float(obi_data_dip.get('bid_qty', 0)) > float(obi_data_dip.get('ask_qty', 0) * 1.20))
+
+            if hawkes_calm_16 and buyer_block_seated:
+                coin_atr_16 = self.get_symbol_atr_pct(symbol)
+                dyn_stop_pct_16 = max(0.0060, min(0.0150, coin_atr_16 * 0.35))
+                c_low_16 = current_candle.get('low', close_price)
+                hard_stop_16 = min(c_low_16 * 0.997, close_price * (1.0 - dyn_stop_pct_16))
+                soft_stop_16 = min(c_low_16, close_price * (1.0 - max(0.0050, dyn_stop_pct_16 * 0.85)))
+                tp1_target_16 = close_price * (1.0 + dyn_stop_pct_16 * 2.2)
+                tp2_target_16 = close_price * (1.0 + dyn_stop_pct_16 * 4.0)
+
+                c_list16_dip = [
+                    "Long_Cascade_Exhaustion",
+                    f"Hawkes_Eta_Calm_{hawkes_eta_16:.2f}_<0.50",
+                    "L2_Buyer_Block_Established",
+                    "V_Shape_Reversal"
+                ]
+
+                return await self._handle_open(
+                    symbol=symbol, side="LONG", entry_price=close_price,
+                    reason=f"Long Cascade Dip Avı (Setup 16): Hawkes Çığı Sakinleşti (eta={hawkes_eta_16:.2f} < 0.50) + İlk L2 Alıcı Bloğu Oturdu",
+                    soft_stop=soft_stop_16, hard_stop=hard_stop_16,
+                    tp1=tp1_target_16, tp2=tp2_target_16, trade_type="REVERSAL",
+                    snapshot_levels=levels, setup_id="SETUP_16_LONG_CASCADE_DIP_HUNT",
+                    confluence_list=c_list16_dip
+                )
+
+        return None
+

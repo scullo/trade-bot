@@ -141,8 +141,10 @@ class ShadowExecutionEngine:
             "SETUP_14_ASIA_SWEEP_LONG",
             "SETUP_14_PIVOT_SUPPORT_FLIP",
             "SETUP_14_AVWAP_SUPPORT",
+            "SETUP_15_SHORT_SQUEEZE_HUNT",
             "SETUP_15_AVWAP_MVAH_RECLAIM",
             "SETUP_15_AVWAP_RECLAIM",
+            "SETUP_16_LONG_CASCADE_DIP_HUNT",
             "SETUP_16_R3_SUPPORT_FLIP",
             "SETUP_16_R3_FLIP",
             "SETUP_16_FAKEOUT_RECLAIM_LONG",
@@ -1320,13 +1322,17 @@ class ShadowExecutionEngine:
         if not s:
             return "SETUP_DİĞER"
 
-        # 16. SETUP 16: R3 DİRENÇ AŞIMI & RETEST BOĞA DEVAMI LONG (R3 Support Flip)
+        # 16. SETUP 16: LONG CASCADE DIP AVI / R3 SUPPORT FLIP (LONG)
+        if "LONG_CASCADE" in s or "CASCADE_DIP" in s or "LONG CASCADE" in s:
+            return "SETUP_16_LONG_CASCADE_DIP_HUNT"
         if "SETUP 16" in s or "SETUP_16" in s or "R3_SUPPORT_FLIP" in s or "R3 SUPPORT FLIP" in s or "R3 FLIP" in s:
             return "SETUP_16_R3_SUPPORT_FLIP"
         if "SETUP_FAKEOUT_RECLAIM_LONG" in s or "FAKEOUT_RECLAIM_LONG" in s or ("FAKEOUT" in s and "LONG" in s) or ("AYI TUZAĞI" in s and "LONG" in s) or ("BEAR TRAP" in s and "LONG" in s) or "SETUP_16_FAKEOUT_RECLAIM_LONG" in s:
             return "SETUP_16_R3_SUPPORT_FLIP"
 
-        # 15. SETUP 15: AVWAP RECLAIM & mVAH BOĞA KIRILIMI RETEST LONG (Macro Absorption Flip)
+        # 15. SETUP 15: SHORT SQUEEZE AVI / AVWAP RECLAIM
+        if "SHORT_SQUEEZE" in s or "SQUEEZE_HUNT" in s or "SHORT SQUEEZE" in s or "SQUEEZE AVI" in s:
+            return "SETUP_15_SHORT_SQUEEZE_HUNT"
         if "SETUP_15_PDH_SWEEP_RECLAIM_SHORT" in s or ("PDH_SWEEP" in s and "SHORT" in s):
             return "SETUP_15_PDH_SWEEP_RECLAIM_SHORT"
         if "SETUP 15" in s or "SETUP_15" in s or "AVWAP_MVAH_RECLAIM" in s or "AVWAP_RECLAIM" in s or ("AVWAP" in s and "MVAH" in s) or ("AVWAP" in s and "RECLAIM" in s) or "PDH_SWEEP" in s:

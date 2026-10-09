@@ -159,6 +159,10 @@ class MarketDataManager:
         self.recent_liquidations = deque(maxlen=60)
         self.symbol_liquidations_deque = {}  # norm_s -> deque of (timestamp, usd_size, is_long_liq)
         self.symbol_liquidations_15m = {}
+        # 4.1 Global Tasfiye Isı Haritası (100 Basamaklı Dairesel Isı Haritası)
+        self.liquidation_heatmap = {}
+        self.liquidation_events_history = {}  # norm_s -> deque(maxlen=100)
+        self.global_liquidation_events_history = deque(maxlen=100)
         self.global_liquidation_stats = {
             'total_usd_24h': 0.0,
             'long_usd_24h': 0.0,
@@ -934,6 +938,135 @@ class MarketDataManager:
             'is_hot': total >= 25000,
             'last_update': data.get('last_update', 0)
         }
+
+    def record_liquidation_event(self, symbol: str, price: float, usd_size: float, is_long_liq: bool, timestamp: float = None) -> dict:
+        """
+        4.1 Canlı veya test tasfiye olayını sisteme kaydeder,
+        100 basamaklı dairesel ısı haritasını ve 15dk/120s sayaçlarını günceller.
+        """
+        now_ts = float(timestamp if timestamp is not None else time.time())
+        norm_s = self._clean_symbol(symbol) if hasattr(self, '_clean_symbol') else symbol
+        if '/USDT' not in norm_s and not norm_s.endswith('USDT'):
+            norm_s = f"{norm_s}/USDT"
+
+        ev = {
+            'symbol': norm_s,
+            'price': float(price),
+            'usd_size': float(usd_size),
+            'is_long_liq': bool(is_long_liq),
+            'side': 'LONG' if is_long_liq else 'SHORT',
+            'timestamp': now_ts
+        }
+        if not hasattr(self, 'recent_liquidations'):
+            self.recent_liquidations = deque(maxlen=60)
+        self.recent_liquidations.append(ev)
+
+        if not hasattr(self, 'symbol_liquidations_deque'):
+            self.symbol_liquidations_deque = {}
+        if norm_s not in self.symbol_liquidations_deque:
+            self.symbol_liquidations_deque[norm_s] = deque(maxlen=60)
+        self.symbol_liquidations_deque[norm_s].append((now_ts, usd_size, is_long_liq))
+
+        # 4.1 100 Basamaklı Dairesel Isı Haritası Tamponu
+        if not hasattr(self, 'liquidation_events_history'):
+            self.liquidation_events_history = {}
+        if norm_s not in self.liquidation_events_history:
+            self.liquidation_events_history[norm_s] = deque(maxlen=100)
+        self.liquidation_events_history[norm_s].append(ev)
+
+        if not hasattr(self, 'global_liquidation_events_history'):
+            self.global_liquidation_events_history = deque(maxlen=100)
+        self.global_liquidation_events_history.append(ev)
+
+        # Global sayaç
+        if hasattr(self, 'global_liquidation_stats'):
+            self.global_liquidation_stats['total_usd_24h'] = self.global_liquidation_stats.get('total_usd_24h', 0.0) + usd_size
+            if is_long_liq:
+                self.global_liquidation_stats['long_usd_24h'] = self.global_liquidation_stats.get('long_usd_24h', 0.0) + usd_size
+            else:
+                self.global_liquidation_stats['short_usd_24h'] = self.global_liquidation_stats.get('short_usd_24h', 0.0) + usd_size
+
+        return ev
+
+    def get_liquidation_heatmap(self, symbol: str = None) -> dict:
+        """
+        4.1 Fiyat seviyelerine göre biriken kümülatif Long/Short tasfiye yoğunluklarını
+        100 basamaklı dairesel bir ısı haritasında döndürür.
+        """
+        from indicators import calculate_liquidation_heatmap
+        now_ts = time.time()
+        if symbol:
+            norm_s = self._clean_symbol(symbol) if hasattr(self, '_clean_symbol') else symbol
+            if '/USDT' not in norm_s and not norm_s.endswith('USDT'):
+                norm_s = f"{norm_s}/USDT"
+            cur_p = 0.0
+            if hasattr(self, 'candles_5m') and symbol in self.candles_5m and not self.candles_5m[symbol].empty:
+                cur_p = float(self.candles_5m[symbol]['close'].iloc[-1])
+            elif hasattr(self, 'candles_5m') and norm_s in self.candles_5m and not self.candles_5m[norm_s].empty:
+                cur_p = float(self.candles_5m[norm_s]['close'].iloc[-1])
+            events = list(self.liquidation_events_history.get(norm_s, [])) if hasattr(self, 'liquidation_events_history') else []
+            if not events and hasattr(self, 'liquidation_events_history'):
+                events = list(self.liquidation_events_history.get(symbol, []))
+            if not events and hasattr(self, 'symbol_liquidations_deque') and (norm_s in self.symbol_liquidations_deque or symbol in self.symbol_liquidations_deque):
+                dq = self.symbol_liquidations_deque.get(norm_s) or self.symbol_liquidations_deque.get(symbol, [])
+                events = [{'price': cur_p or 100.0, 'usd_size': item[1], 'is_long_liq': item[2], 'timestamp': item[0]} for item in dq]
+            return calculate_liquidation_heatmap(events, current_price=cur_p, num_bins=100, lookback_sec=1800.0, current_time=now_ts)
+        else:
+            events = list(getattr(self, 'global_liquidation_events_history', []))
+            cur_p = 0.0
+            if hasattr(self, 'candles_5m') and 'BTC/USDT' in self.candles_5m and not self.candles_5m['BTC/USDT'].empty:
+                cur_p = float(self.candles_5m['BTC/USDT']['close'].iloc[-1])
+            return calculate_liquidation_heatmap(events, current_price=cur_p, num_bins=100, lookback_sec=1800.0, current_time=now_ts)
+
+    def get_recent_liquidation_volume(self, symbol: str = None, lookback_sec: float = 120.0) -> dict:
+        """
+        Son lookback_sec (varsayılan 120s) içindeki kümülatif Long ve Short tasfiye tutarını döndürür.
+        """
+        now_ts = time.time()
+        cutoff = now_ts - lookback_sec
+        events = []
+        if symbol:
+            norm_s = self._clean_symbol(symbol) if hasattr(self, '_clean_symbol') else symbol
+            if '/USDT' not in norm_s and not norm_s.endswith('USDT'):
+                norm_s = f"{norm_s}/USDT"
+            events = list(self.liquidation_events_history.get(norm_s, [])) if hasattr(self, 'liquidation_events_history') else []
+            if not events and hasattr(self, 'liquidation_events_history'):
+                events = list(self.liquidation_events_history.get(symbol, []))
+            if not events and hasattr(self, 'symbol_liquidations_deque') and (norm_s in self.symbol_liquidations_deque or symbol in self.symbol_liquidations_deque):
+                dq = self.symbol_liquidations_deque.get(norm_s) or self.symbol_liquidations_deque.get(symbol, [])
+                l_usd = sum(item[1] for item in dq if item[2] and item[0] >= cutoff)
+                s_usd = sum(item[1] for item in dq if not item[2] and item[0] >= cutoff)
+                return {
+                    'symbol': symbol,
+                    'long_usd': round(l_usd, 2),
+                    'short_usd': round(s_usd, 2),
+                    'total_usd': round(l_usd + s_usd, 2),
+                    'dominant_side': 'LONG' if l_usd >= s_usd else 'SHORT'
+                }
+        else:
+            events = list(getattr(self, 'global_liquidation_events_history', []))
+            if not events and hasattr(self, 'recent_liquidations'):
+                events = list(self.recent_liquidations)
+
+        l_usd = 0.0
+        s_usd = 0.0
+        for ev in events:
+            t = float(ev.get('timestamp', 0.0))
+            if t >= cutoff:
+                usd = float(ev.get('usd_size', 0.0))
+                if ev.get('is_long_liq', True):
+                    l_usd += usd
+                else:
+                    s_usd += usd
+
+        return {
+            'symbol': symbol or 'GLOBAL',
+            'long_usd': round(l_usd, 2),
+            'short_usd': round(s_usd, 2),
+            'total_usd': round(l_usd + s_usd, 2),
+            'dominant_side': 'LONG' if l_usd >= s_usd else 'SHORT'
+        }
+
 
     def get_global_liquidation_summary(self) -> dict:
         now_ts = time.time()
@@ -3629,6 +3762,15 @@ class MarketDataManager:
                                             'is_long_liq': is_long_liq
                                         }
                                         self.recent_liquidations.append(event)
+                                        # 4.1 100 Basamaklı Dairesel Isı Haritası Tamponu
+                                        if not hasattr(self, 'liquidation_events_history'):
+                                            self.liquidation_events_history = {}
+                                        if norm_s not in self.liquidation_events_history:
+                                            self.liquidation_events_history[norm_s] = deque(maxlen=100)
+                                        self.liquidation_events_history[norm_s].append(event)
+                                        if not hasattr(self, 'global_liquidation_events_history'):
+                                            self.global_liquidation_events_history = deque(maxlen=100)
+                                        self.global_liquidation_events_history.append(event)
 
                                         # 15 Dakikalık Parite Bazlı Kayan Pencere (Gerçek 900s deque pruning)
                                         if not hasattr(self, 'symbol_liquidations_deque'):

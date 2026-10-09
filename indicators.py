@@ -2148,3 +2148,130 @@ def calculate_ssr_oscillator(btc_market_cap: float, stablecoin_market_cap: float
     }
 
 
+def calculate_liquidation_heatmap(
+    events: list,
+    current_price: float = None,
+    num_bins: int = 100,
+    lookback_sec: float = 1800.0,
+    current_time: float = None
+) -> dict:
+    """
+    4.1 GLOBAL TASFİYE ISI HARİTASI (LIQUIDATION HEATMAP):
+    - Fiyat seviyelerine göre biriken kümülatif Long/Short tasfiye yoğunluklarını
+      100 basamaklı dairesel bir ısı haritasında hesaplar.
+    - events: List of dicts {'price': float, 'usd_size': float, 'is_long_liq': bool, 'timestamp': float}
+    """
+    now_ts = float(current_time if current_time is not None else time.time())
+    cutoff = now_ts - lookback_sec
+
+    valid_events = []
+    prices = []
+    short_120s = 0.0
+    long_120s = 0.0
+
+    for ev in (events or []):
+        if not isinstance(ev, dict):
+            continue
+        t = float(ev.get('timestamp', 0.0))
+        p = float(ev.get('price', 0.0))
+        usd = float(ev.get('usd_size', 0.0))
+        is_long = bool(ev.get('is_long_liq', True))
+        if p <= 0 or usd <= 0:
+            continue
+        if t >= cutoff and t <= now_ts:
+            valid_events.append((p, usd, is_long, t))
+            prices.append(p)
+            if (now_ts - t) <= 120.0:
+                if is_long:
+                    long_120s += usd
+                else:
+                    short_120s += usd
+
+    ref_price = float(current_price) if (current_price and current_price > 0) else (prices[-1] if prices else 100.0)
+    if prices:
+        min_p = min(min(prices), ref_price * 0.985)
+        max_p = max(max(prices), ref_price * 1.015)
+    else:
+        min_p = ref_price * 0.95
+        max_p = ref_price * 1.05
+
+    if max_p <= min_p:
+        max_p = min_p * 1.02
+
+    bin_width = (max_p - min_p) / float(num_bins)
+
+    bins = []
+    for i in range(num_bins):
+        p_low = min_p + i * bin_width
+        p_high = p_low + bin_width
+        p_mid = (p_low + p_high) / 2.0
+        bins.append({
+            'bin_idx': i,
+            'price_low': round(p_low, 6),
+            'price_high': round(p_high, 6),
+            'price_mid': round(p_mid, 6),
+            'long_usd': 0.0,
+            'short_usd': 0.0,
+            'total_usd': 0.0,
+            'intensity_pct': 0.0,
+            'count': 0,
+            'last_update': 0.0
+        })
+
+    total_long_all = 0.0
+    total_short_all = 0.0
+
+    for p, usd, is_long, t in valid_events:
+        idx = int((p - min_p) / bin_width)
+        idx = max(0, min(num_bins - 1, idx))
+        b = bins[idx]
+        b['count'] += 1
+        b['last_update'] = max(b['last_update'], t)
+        if is_long:
+            b['long_usd'] += usd
+            total_long_all += usd
+        else:
+            b['short_usd'] += usd
+            total_short_all += usd
+        b['total_usd'] = round(b['long_usd'] + b['short_usd'], 2)
+
+    total_all = total_long_all + total_short_all
+    peak_bin_usd = max((b['total_usd'] for b in bins), default=1.0)
+    if peak_bin_usd <= 0:
+        peak_bin_usd = 1.0
+
+    max_short_usd = 0.0
+    max_short_cluster_p = ref_price
+    max_long_usd = 0.0
+    max_long_cluster_p = ref_price
+
+    for b in bins:
+        b['intensity_pct'] = round((b['total_usd'] / peak_bin_usd) * 100.0, 1)
+        b['long_usd'] = round(b['long_usd'], 2)
+        b['short_usd'] = round(b['short_usd'], 2)
+        if b['short_usd'] > max_short_usd:
+            max_short_usd = b['short_usd']
+            max_short_cluster_p = b['price_mid']
+        if b['long_usd'] > max_long_usd:
+            max_long_usd = b['long_usd']
+            max_long_cluster_p = b['price_mid']
+
+    return {
+        'num_bins': num_bins,
+        'min_price': round(min_p, 6),
+        'max_price': round(max_p, 6),
+        'bin_width': round(bin_width, 6),
+        'total_long_usd': round(total_long_all, 2),
+        'total_short_usd': round(total_short_all, 2),
+        'total_usd': round(total_all, 2),
+        'recent_short_liq_120s': round(short_120s, 2),
+        'recent_long_liq_120s': round(long_120s, 2),
+        'max_short_cluster_price': round(max_short_cluster_p, 6),
+        'max_short_cluster_usd': round(max_short_usd, 2),
+        'max_long_cluster_price': round(max_long_cluster_p, 6),
+        'max_long_cluster_usd': round(max_long_usd, 2),
+        'bins': bins
+    }
+
+
+
