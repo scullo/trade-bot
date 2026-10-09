@@ -4018,6 +4018,9 @@ HTML_PAGE = """
                     </div>
                 </div>
                 <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <button class="btn-forensic-snapshot" onclick="triggerForensicFromModal(currentActiveChartSym)" title="Bu Parite İçin 1600x900 Adli Kara Kutu Görseli Üret" style="background:rgba(236,72,153,0.18); border:1.5px solid #ec4899; color:#fff; font-weight:800; font-size:12px; padding:5px 12px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 0 10px rgba(236,72,153,0.25); font-family:'JetBrains Mono';">
+                        📷 1600x900 Adli Kara Kutu
+                    </button>
                     <button class="btn-copy-pine" onclick="copyPineScriptCode()" title="TradingView Pine Script v6 Kodunu Kopyala">
                         📋 Pine Script Kopyala
                     </button>
@@ -16383,14 +16386,14 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                     width: container.clientWidth || 850,
                     height: container.clientHeight || 520,
                     layout: {
-                        background: { color: '#0b0e14' },
-                        textColor: '#cbd5e1',
+                        background: { color: '#070b14' },
+                        textColor: '#94a3b8',
                         fontSize: 11,
                         fontFamily: "'JetBrains Mono', monospace",
                     },
                     grid: {
-                        vertLines: { color: 'rgba(255, 255, 255, 0.04)' },
-                        horzLines: { color: 'rgba(255, 255, 255, 0.04)' },
+                        vertLines: { color: 'rgba(255, 255, 255, 0.03)' },
+                        horzLines: { color: 'rgba(255, 255, 255, 0.03)' },
                     },
                     crosshair: {
                         mode: LightweightCharts.CrosshairMode.Normal,
@@ -16398,10 +16401,10 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                     timeScale: {
                         timeVisible: true,
                         secondsVisible: false,
-                        borderColor: '#1e2638',
+                        borderColor: '#1e293b',
                     },
                     rightPriceScale: {
-                        borderColor: '#1e2638',
+                        borderColor: '#1e293b',
                     }
                 });
                 nativeChartObj = chart;
@@ -16414,13 +16417,15 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 else if (samplePrice < 1) { chartPrecision = 4; chartMinMove = 0.0001; }
                 else if (samplePrice < 10) { chartPrecision = 3; chartMinMove = 0.001; }
 
-                // 1. Candlestick Serisi
+                // 1. Candlestick Serisi (Bloomberg Zümrüt / Yakut Paleti)
                 const candleSeries = chart.addCandlestickSeries({
-                    upColor: '#0ecb81',
-                    downColor: '#ff4757',
-                    borderVisible: false,
-                    wickUpColor: '#0ecb81',
-                    wickDownColor: '#ff4757',
+                    upColor: '#10b981',
+                    downColor: '#ef4444',
+                    borderVisible: true,
+                    borderColor: '#10b981',
+                    downBorderColor: '#ef4444',
+                    wickUpColor: '#10b981',
+                    wickDownColor: '#ef4444',
                     priceFormat: {
                         type: 'price',
                         precision: chartPrecision,
@@ -16433,8 +16438,8 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 // 2. AVWAP Çizgileri (Tepe Kırmızı, Dip Beyaz)
                 if (data.avwap_high && data.avwap_high.length > 0) {
                     const avHighSeries = chart.addLineSeries({
-                        color: '#ff4757',
-                        lineWidth: 2,
+                        color: '#ef4444',
+                        lineWidth: 1.5,
                         title: 'Tepe AVWAP',
                         priceLineVisible: false,
                         priceFormat: {
@@ -16449,7 +16454,7 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 if (data.avwap_low && data.avwap_low.length > 0) {
                     const avLowSeries = chart.addLineSeries({
                         color: '#ffffff',
-                        lineWidth: 2,
+                        lineWidth: 1.5,
                         title: 'Dip AVWAP',
                         priceLineVisible: false,
                         priceFormat: {
@@ -16461,67 +16466,52 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                     avLowSeries.setData(data.avwap_low);
                 }
 
-                // 3. Fiyat Çizgileri (Camarilla, Volume Profile, Naked Lines)
+                // 3. Fiyat Çizgileri (Camarilla & Volume Profile Hiyerarşisi)
                 const levels = data.levels || {};
                 const cam = levels.camarilla || {};
 
-                // Update sidebar levels directly from candles API response
-                const sidebarTbl = document.querySelector('#tv-sidebar-content .levels-table');
-                if (sidebarTbl && cam && cam.R4) {
-                    function fmtLvl(val) {
-                        if (!val || isNaN(val) || Number(val) <= 0) return '-';
-                        const n = Number(val);
-                        if (n >= 1000) return n.toFixed(2);
-                        if (n >= 1) return n.toFixed(4);
-                        if (n >= 0.01) return n.toFixed(5);
-                        return n.toFixed(6);
-                    }
-                    sidebarTbl.innerHTML = `
-                        <tr><td class="lvl-lbl">R5 (Zirve Hedef)</td><td class="lvl-num" style="color:var(--yellow)">${fmtLvl(cam.R5)}</td></tr>
-                        <tr><td class="lvl-lbl">R4 (Breakout Tetik)</td><td class="lvl-num" style="color:#ffa726; font-weight:800">${fmtLvl(cam.R4)}</td></tr>
-                        <tr><td class="lvl-lbl">Tepe AVWAP (Kırmızı)</td><td class="lvl-num" style="color:var(--red); font-weight:800">${fmtLvl(levels.tepe_avwap)}</td></tr>
-                        <tr><td class="lvl-lbl">mVAH (Aylık Tavan)</td><td class="lvl-num" style="color:var(--cyan); font-weight:800">${fmtLvl(levels.mvah)}</td></tr>
-                        <tr><td class="lvl-lbl">Yukarı nPOC (Hedef)</td><td class="lvl-num" style="color:#f0f6fc; font-weight:700">${fmtLvl(levels.above_npoc)}</td></tr>
-                        <tr><td class="lvl-lbl">Naked VAH (Geçmiş Direnç)</td><td class="lvl-num" style="color:var(--cyan); font-weight:700">${fmtLvl(levels.above_nvah)}</td></tr>
-                        <tr><td class="lvl-lbl">R3 (Direnç)</td><td class="lvl-num">${fmtLvl(cam.R3)}</td></tr>
-                        <tr><td class="lvl-lbl">Pivot (P)</td><td class="lvl-num" style="color:#fff; font-weight:800">${fmtLvl(cam.P)}</td></tr>
-                        <tr><td class="lvl-lbl">mPOC (Aylık Hacim)</td><td class="lvl-num" style="color:var(--purple); font-weight:800">${fmtLvl(levels.mpoc)}</td></tr>
-                        <tr><td class="lvl-lbl">S3 (Destek)</td><td class="lvl-num">${fmtLvl(cam.S3)}</td></tr>
-                        <tr><td class="lvl-lbl">Aşağı nPOC (Hedef)</td><td class="lvl-num" style="color:#f0f6fc; font-weight:700">${fmtLvl(levels.below_npoc)}</td></tr>
-                        <tr><td class="lvl-lbl">Naked VAL (Geçmiş Destek)</td><td class="lvl-num" style="color:var(--blue); font-weight:700">${fmtLvl(levels.below_nval)}</td></tr>
-                        <tr><td class="lvl-lbl">Dip AVWAP (Beyaz)</td><td class="lvl-num" style="color:#fff; font-weight:800">${fmtLvl(levels.dip_avwap)}</td></tr>
-                        <tr><td class="lvl-lbl">S4 (Breakdown Tetik)</td><td class="lvl-num" style="color:var(--green); font-weight:800">${fmtLvl(cam.S4)}</td></tr>
-                        <tr><td class="lvl-lbl">mVAL (Aylık Taban)</td><td class="lvl-num" style="color:var(--blue)">${fmtLvl(levels.mval)}</td></tr>
-                    `;
+                // Sağ sidebar'ı güncel mum ve seviyeler ile senkronize et
+                const intel = (typeof generateDetailedIntelligence === 'function') 
+                    ? generateDetailedIntelligence(cleanSym + '/USDT', samplePrice, cam, levels) 
+                    : { tag: 'KURUMSAL RADAR', color: '#00f2fe', statusText: 'Seviyeler haritalandı.', actionPlan: 'Pusu korunuyor.' };
+                if (typeof renderTvSidebarCards === 'function') {
+                    renderTvSidebarCards(cleanSym, samplePrice, cam, levels, intel, true, 1.0, 1.0, true, 1.2);
                 }
 
-                function addPriceLine(price, color, title, lineStyle) {
+                function addPriceLine(price, color, title, lineStyle, lineWidth) {
                     if (!price || isNaN(price) || Number(price) <= 0) return;
                     candleSeries.createPriceLine({
                         price: Number(price),
                         color: color,
-                        lineWidth: 2,
+                        lineWidth: lineWidth || 1,
                         lineStyle: lineStyle !== undefined ? lineStyle : LightweightCharts.LineStyle.Solid,
                         axisLabelVisible: true,
                         title: title,
                     });
                 }
 
-                addPriceLine(cam.R5, '#fbc531', 'R5 (Zirve Hedef)', LightweightCharts.LineStyle.Dashed);
-                addPriceLine(cam.R4, '#ffa726', 'R4 (Breakout Tetik)', LightweightCharts.LineStyle.Solid);
-                addPriceLine(levels.tepe_avwap, '#ff4757', 'Tepe AVWAP', LightweightCharts.LineStyle.Solid);
-                addPriceLine(levels.mvah, '#00f2fe', 'mVAH (1 Ay Tavan)', LightweightCharts.LineStyle.Dashed);
-                addPriceLine(levels.above_npoc, '#f0f6fc', 'Yukarı nPOC (Hedef)', LightweightCharts.LineStyle.Dotted);
-                addPriceLine(levels.above_nvah, '#00e5ff', 'Naked VAH (Geçmiş Direnç)', LightweightCharts.LineStyle.Dashed);
-                addPriceLine(cam.R3, '#fb8c00', 'R3 (Direnç)', LightweightCharts.LineStyle.Dotted);
-                addPriceLine(cam.P, '#ffffff', 'Pivot (P)', LightweightCharts.LineStyle.Solid);
-                addPriceLine(levels.mpoc, '#d500f9', 'mPOC (1 Ay Hacim)', LightweightCharts.LineStyle.Solid);
-                addPriceLine(cam.S3, '#fb8c00', 'S3 (Destek)', LightweightCharts.LineStyle.Dotted);
-                addPriceLine(levels.below_npoc, '#f0f6fc', 'Aşağı nPOC (Hedef)', LightweightCharts.LineStyle.Dotted);
-                addPriceLine(levels.below_nval, '#2979ff', 'Naked VAL (Geçmiş Destek)', LightweightCharts.LineStyle.Dashed);
-                addPriceLine(levels.dip_avwap, '#ffffff', 'Dip AVWAP', LightweightCharts.LineStyle.Solid);
-                addPriceLine(cam.S4, '#0ecb81', 'S4 (Breakdown Tetik)', LightweightCharts.LineStyle.Solid);
-                addPriceLine(levels.mval, '#00f2fe', 'mVAL (1 Ay Taban)', LightweightCharts.LineStyle.Dashed);
+                // 1. Kademe: Ana Kırılım & Kurumsal Denge Hatları (2px Solid)
+                addPriceLine(cam.R4, '#fb923c', 'R4 Breakout', LightweightCharts.LineStyle.Solid, 2);
+                addPriceLine(cam.P, '#f8fafc', 'Pivot P', LightweightCharts.LineStyle.Solid, 2);
+                addPriceLine(cam.S4, '#10b981', 'S4 Breakdown', LightweightCharts.LineStyle.Solid, 2);
+                addPriceLine(levels.mpoc, '#c084fc', 'mPOC Hacim', LightweightCharts.LineStyle.Solid, 2);
+
+                // 2. Kademe: Taktiksel Hedef ve İkincil Seviyeler (1px Kesikli/Noktalı)
+                addPriceLine(cam.R5, '#eab308', 'R5 Hedef', LightweightCharts.LineStyle.Dashed, 1);
+                addPriceLine(cam.R3, '#f59e0b', 'R3 Direnç', LightweightCharts.LineStyle.Dotted, 1);
+                addPriceLine(cam.S3, '#f59e0b', 'S3 Destek', LightweightCharts.LineStyle.Dotted, 1);
+                addPriceLine(cam.S5, '#38bdf8', 'S5 Hedef', LightweightCharts.LineStyle.Dashed, 1);
+
+                // 3. Kademe: Hacim Profili Tavan/Taban & Bakir Seviyeler
+                addPriceLine(levels.mvah, '#00f2fe', 'mVAH Tavan', LightweightCharts.LineStyle.Dotted, 1);
+                addPriceLine(levels.mval, '#00f2fe', 'mVAL Taban', LightweightCharts.LineStyle.Dotted, 1);
+                addPriceLine(levels.above_npoc, '#cbd5e1', 'Bakir nPOC', LightweightCharts.LineStyle.Dotted, 1);
+                addPriceLine(levels.below_npoc, '#cbd5e1', 'Aşağı nPOC', LightweightCharts.LineStyle.Dotted, 1);
+
+                // 4. Kademe: Canlı Fiyat Lazer Kılavuzu
+                if (samplePrice > 0) {
+                    addPriceLine(samplePrice, '#00f2fe', 'CANLI FİYAT', LightweightCharts.LineStyle.LargeDashed, 1);
+                }
 
                 chart.timeScale().fitContent();
 
@@ -16589,6 +16579,146 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
             });
         }
 
+        function renderTvSidebarCards(cleanSym, price, cam, levels, intel, isVolOk, volSurge, minVolSurge, isTop80, atrPct) {
+            const sidebar = document.getElementById('tv-sidebar-content');
+            if (!sidebar) return;
+
+            cam = cam || {};
+            levels = levels || {};
+            intel = intel || {};
+            price = Number(price) || 0;
+            const pVal = Number(cam.P) || 0;
+            const r4Val = Number(cam.R4) || 0;
+            const s4Val = Number(cam.S4) || 0;
+            const mpocVal = Number(levels.mpoc) || 0;
+
+            function fmtLvl(val) {
+                if (!val || isNaN(val) || Number(val) <= 0) return '-';
+                const n = Number(val);
+                if (n >= 1000) return n.toFixed(2);
+                if (n >= 1) return n.toFixed(4);
+                if (n >= 0.01) return n.toFixed(5);
+                return n.toFixed(6);
+            }
+
+            let regimeBadge = 'DENGELİ (Pivot Bölgesi)';
+            let regimeColor = '#ffffff';
+            if (r4Val > 0 && price >= r4Val) {
+                regimeBadge = 'R4 BREAKOUT / BOĞA İVMESİ';
+                regimeColor = '#fb923c';
+            } else if (s4Val > 0 && price <= s4Val) {
+                regimeBadge = 'S4 BREAKDOWN / AYI BASKISI';
+                regimeColor = '#10b981';
+            } else if (pVal > 0 && price > pVal) {
+                regimeBadge = 'PIVOT ÜSTÜ (ILIMLI BOĞA)';
+                regimeColor = '#38bdf8';
+            } else if (pVal > 0 && price < pVal) {
+                regimeBadge = 'PIVOT ALTI (ILIMLI AYI)';
+                regimeColor = '#f59e0b';
+            }
+
+            sidebar.innerHTML = `
+                <!-- 1. CANLI FİYAT VE PİYASA DERİNLİĞİ KARTI -->
+                <div style="background:#070c18; padding:12px 14px; border-radius:12px; border:1px solid #1e293b; box-shadow:0 4px 12px rgba(0,0,0,0.4);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:12px; color:#94a3b8; font-weight:800; font-family:'JetBrains Mono';">#${cleanSym}/USDT CANLI</span>
+                        <span style="font-size:10px; font-weight:800; padding:2px 7px; border-radius:4px; background:${isVolOk ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)'}; color:${isVolOk ? '#10b981' : '#f59e0b'}; border:1px solid ${isVolOk ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)'};">
+                            HACİM: ${Number(volSurge || 1.0).toFixed(2)}x
+                        </span>
+                    </div>
+                    <div style="font-size:24px; font-weight:900; color:#ffffff; font-family:'JetBrains Mono', monospace; margin:4px 0 6px 0; letter-spacing:0.5px;">
+                        $${fmtLvl(price)}
+                    </div>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; font-size:10px; font-family:'JetBrains Mono',monospace;">
+                        <span style="background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; color:#38bdf8; border:1px solid rgba(56,189,248,0.2);">
+                            ${isTop80 ? '✓ Likit Parite' : '⚠️ Sığ Tahta'}
+                        </span>
+                        <span style="background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; color:#c084fc; border:1px solid rgba(192,132,252,0.2);">
+                            ATR: %${Number(atrPct || 1.2).toFixed(2)}
+                        </span>
+                        <span style="background:rgba(0,0,0,0.4); padding:2px 6px; border-radius:4px; color:${regimeColor}; border:1px solid ${regimeColor}40; font-weight:700;">
+                            ${regimeBadge}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- 2. BOT STRATEJİK EYLEM PLANI (INTEL) -->
+                <div style="background:#090e1c; padding:12px 14px; border-radius:12px; border:1px solid rgba(0,242,254,0.2); box-shadow:0 4px 12px rgba(0,0,0,0.3);">
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                        <span style="color:${intel.color || '#00f2fe'}; font-size:11px;">●</span>
+                        <span style="font-size:11px; font-weight:800; color:${intel.color || '#00f2fe'}; font-family:'JetBrains Mono'; text-transform:uppercase;">${intel.tag || 'KURUMSAL RADAR'}</span>
+                    </div>
+                    <div style="font-size:11.5px; color:#cbd5e1; line-height:1.45; font-weight:500;">
+                        ${intel.statusText || 'Parite kurumsal denge koridorunda işlem görüyor.'}
+                    </div>
+                    <div style="margin-top:8px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.08); font-size:11.5px; color:#38bdf8; line-height:1.45;">
+                        <strong style="color:#ffffff;">Plan:</strong> ${intel.actionPlan || 'R4 veya S4 seviyelerine kadar sabırla pusu korunmalı.'}
+                    </div>
+                </div>
+
+                <!-- 3. DÜZENLİ 2-SÜTUNLU TAKTİKSEL SEVİYE MATRİSİ -->
+                <div style="background:#070c18; padding:12px 14px; border-radius:12px; border:1px solid #1e293b;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="font-size:11px; font-weight:800; color:#cbd5e1; font-family:'JetBrains Mono';">📊 KURUMSAL SEVİYE MATRİSİ</span>
+                        <span style="font-size:9.5px; color:#64748b; font-family:'JetBrains Mono';">CAMARILLA & VP</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-family:'JetBrains Mono', monospace; font-size:11px;">
+                        <!-- DİRENÇLER (YUKARI) -->
+                        <div style="background:rgba(239,68,68,0.05); padding:8px; border-radius:8px; border:1px solid rgba(239,68,68,0.18);">
+                            <div style="font-size:10px; color:#ef4444; font-weight:800; margin-bottom:5px;">▲ DİRENÇ & HEDEF</div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="color:#94a3b8;">R5 Hedef:</span><span style="color:#eab308; font-weight:700;">${fmtLvl(cam.R5)}</span></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="color:#fb923c; font-weight:800;">R4 Breakout:</span><span style="color:#fb923c; font-weight:800;">${fmtLvl(cam.R4)}</span></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="color:#94a3b8;">mVAH Tavan:</span><span style="color:#00f2fe; font-weight:700;">${fmtLvl(levels.mvah)}</span></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="color:#94a3b8;">R3 Direnç:</span><span style="color:#f59e0b; font-weight:700;">${fmtLvl(cam.R3)}</span></div>
+                            <div style="display:flex; justify-content:space-between;"><span style="color:#94a3b8;">Tepe AVWAP:</span><span style="color:#ef4444; font-weight:700;">${fmtLvl(levels.tepe_avwap)}</span></div>
+                        </div>
+                        <!-- DESTEKLER (AŞAĞI) -->
+                        <div style="background:rgba(16,185,129,0.05); padding:8px; border-radius:8px; border:1px solid rgba(16,185,129,0.18);">
+                            <div style="font-size:10px; color:#10b981; font-weight:800; margin-bottom:5px;">▼ DESTEK & SAVUNMA</div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="color:#ffffff; font-weight:800;">Pivot (P):</span><span style="color:#ffffff; font-weight:800;">${fmtLvl(cam.P)}</span></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="color:#c084fc; font-weight:800;">mPOC Hacim:</span><span style="color:#c084fc; font-weight:800;">${fmtLvl(levels.mpoc)}</span></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="color:#94a3b8;">S3 Destek:</span><span style="color:#f59e0b; font-weight:700;">${fmtLvl(cam.S3)}</span></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="color:#10b981; font-weight:800;">S4 Breakdown:</span><span style="color:#10b981; font-weight:800;">${fmtLvl(cam.S4)}</span></div>
+                            <div style="display:flex; justify-content:space-between;"><span style="color:#94a3b8;">Dip AVWAP:</span><span style="color:#ffffff; font-weight:700;">${fmtLvl(levels.dip_avwap)}</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. HIZLI ADLİ OTOPSİ VE KARA KUTU BUTONU -->
+                <button onclick="triggerForensicFromModal('${cleanSym}')" style="width:100%; padding:10px 14px; background:linear-gradient(135deg, rgba(236,72,153,0.18), rgba(168,85,247,0.25)); border:1.5px solid #ec4899; color:#ffffff; font-weight:800; font-size:12px; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.15s ease; box-shadow:0 4px 14px rgba(236,72,153,0.25); font-family:'JetBrains Mono';" onmouseover="this.style.background='rgba(236,72,153,0.35)'" onmouseout="this.style.background='linear-gradient(135deg, rgba(236,72,153,0.18), rgba(168,85,247,0.25))'" title="${cleanSym} için 1600x900 Adli Görsel Üret">
+                    📷 1600x900 Adli Kara Kutu Görseli Al
+                </button>
+            `;
+        }
+
+        window.triggerForensicFromModal = async function(cleanSym) {
+            if (!cleanSym) return;
+            cleanSym = cleanSym.replace('/USDT', '').replace('USDT', '').trim();
+            closeTvModal();
+            const tabBtns = document.querySelectorAll('.nav-btn, .tab-btn, button[onclick*="forensic"]');
+            for (const b of tabBtns) {
+                if (b.innerText && (b.innerText.includes('Kara Kutu') || b.innerText.includes('Adli'))) {
+                    b.click();
+                    break;
+                }
+            }
+            try {
+                const fullS = cleanSym + '/USDT';
+                const res = await fetch('/api/forensic_trigger_manual', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ symbol: fullS, side: 'LONG' })
+                });
+                const d = await res.json();
+                if (d && d.status === 'ok' && d.snapshot) {
+                    if (typeof loadForensicGallery === 'function') loadForensicGallery(1);
+                    if (typeof openForensicLightbox === 'function') openForensicLightbox(d.snapshot.id);
+                }
+            } catch (e) {
+                console.error("triggerForensicFromModal error:", e);
+            }
+        };
+
         function openTradingViewModal(cleanSym) {
             try {
                 if (!cleanSym) return;
@@ -16626,68 +16756,13 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 const tvSymbol = `BINANCE:${tvBase}USDT.P`;
                 document.getElementById('tv-external-link').href = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tvSymbol)}`;
 
-                function fmtLvl(val) {
-                    if (!val || isNaN(val) || Number(val) <= 0) return '-';
-                    const n = Number(val);
-                    if (n >= 1000) return n.toFixed(2);
-                    if (n >= 1) return n.toFixed(4);
-                    if (n >= 0.01) return n.toFixed(5);
-                    return n.toFixed(6);
-                }
-
-                document.getElementById('tv-sidebar-content').innerHTML = `
-                    <div style="background:var(--card-bg); padding:12px 14px; border-radius:12px; border:1px solid var(--border);">
-                        <div style="font-size:11px; color:var(--text-muted); font-weight:800; text-transform:uppercase;">CANLI PİYASA FİYATI</div>
-                        <div style="font-size:22px; font-weight:800; color:#fff; font-family:'JetBrains Mono', monospace; margin-top:2px;">
-                            $${fmtLvl(price)}
-                        </div>
-                        <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; font-size:10.5px; font-family:'JetBrains Mono',monospace;">
-                            <span style="background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:4px; border:1px solid ${isVolOk ? 'rgba(16,185,129,0.35)' : 'rgba(245,158,11,0.35)'}; color:${isVolOk ? '#10b981' : '#f59e0b'}; font-weight:700;">
-                                ⚡ Hacim: ${volSurge.toFixed(2)}x (Min ${minVolSurge.toFixed(1)}x)
-                            </span>
-                            <span style="background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:${isTop80 ? '#38bdf8' : '#94a3b8'};">
-                                📊 ${isTop80 ? '✓ Top %80' : '⚠️ Top %20 Altı'}
-                            </span>
-                            <span style="background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:#c084fc;">
-                                🌊 ATR: %${atrPct.toFixed(2)}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="analysis-box" style="margin:0;">
-                        <div class="analysis-title" style="color:${intel.color}"><span>●</span> ${intel.tag}</div>
-                        <div style="font-size:12.5px; line-height:1.5;">${intel.statusText}</div>
-                    </div>
-                    <div class="action-plan-box" style="margin:0;">
-                        <div class="action-plan-title">🎯 BOT PUSU & EYLEM PLANI</div>
-                        <div style="font-size:12.5px; line-height:1.5;">${intel.actionPlan}</div>
-                    </div>
-                    <div style="font-size:12px; font-weight:800; color:#cbd5e1; margin-top:4px;">📊 KİLİT SEVİYE & LİKİDİTE RADARI</div>
-                    <table class="levels-table" style="font-size:11.5px;">
-                        <tr><td class="lvl-lbl">R5 (Zirve Hedef)</td><td class="lvl-num" style="color:var(--yellow)">${fmtLvl(cam.R5)}</td></tr>
-                        <tr><td class="lvl-lbl">R4 (Breakout Tetik)</td><td class="lvl-num" style="color:#ffa726; font-weight:800">${fmtLvl(cam.R4)}</td></tr>
-                        <tr><td class="lvl-lbl">Tepe AVWAP (Kırmızı)</td><td class="lvl-num" style="color:var(--red); font-weight:800">${fmtLvl(levels.tepe_avwap)}</td></tr>
-                        <tr><td class="lvl-lbl">mVAH (Aylık Tavan)</td><td class="lvl-num" style="color:var(--cyan); font-weight:800">${fmtLvl(levels.mvah)}</td></tr>
-                        <tr><td class="lvl-lbl">Yukarı nPOC (Hedef)</td><td class="lvl-num" style="color:#f0f6fc; font-weight:700">${fmtLvl(levels.above_npoc)}</td></tr>
-                        <tr><td class="lvl-lbl">Naked VAH (Geçmiş Direnç)</td><td class="lvl-num" style="color:var(--cyan); font-weight:700">${fmtLvl(levels.above_nvah)}</td></tr>
-                        <tr><td class="lvl-lbl">R3 (Direnç)</td><td class="lvl-num">${fmtLvl(cam.R3)}</td></tr>
-                        <tr><td class="lvl-lbl">Pivot (P)</td><td class="lvl-num" style="color:#fff; font-weight:800">${fmtLvl(cam.P)}</td></tr>
-                        <tr><td class="lvl-lbl">mPOC (Aylık Hacim)</td><td class="lvl-num" style="color:var(--purple); font-weight:800">${fmtLvl(levels.mpoc)}</td></tr>
-                        <tr><td class="lvl-lbl">S3 (Destek)</td><td class="lvl-num">${fmtLvl(cam.S3)}</td></tr>
-                        <tr><td class="lvl-lbl">Aşağı nPOC (Hedef)</td><td class="lvl-num" style="color:#f0f6fc; font-weight:700">${fmtLvl(levels.below_npoc)}</td></tr>
-                        <tr><td class="lvl-lbl">Naked VAL (Geçmiş Destek)</td><td class="lvl-num" style="color:var(--blue); font-weight:700">${fmtLvl(levels.below_nval)}</td></tr>
-                        <tr><td class="lvl-lbl">Dip AVWAP (Beyaz)</td><td class="lvl-num" style="color:#fff; font-weight:800">${fmtLvl(levels.dip_avwap)}</td></tr>
-                        <tr><td class="lvl-lbl">S4 (Breakdown Tetik)</td><td class="lvl-num" style="color:var(--green); font-weight:800">${fmtLvl(cam.S4)}</td></tr>
-                        <tr><td class="lvl-lbl">mVAL (Aylık Taban)</td><td class="lvl-num" style="color:var(--blue)">${fmtLvl(levels.mval)}</td></tr>
-                    </table>
-                `;
+                renderTvSidebarCards(cleanSym, price, cam, levels, intel, isVolOk, volSurge, minVolSurge, isTop80, atrPct);
 
                 modal.style.display = 'flex';
                 switchChartTab(activeTab);
             } catch (err) {
                 console.error("openTradingViewModal error:", err);
             }
-        }
-
         function closeTvModal() {
             const modal = document.getElementById('tv-modal-overlay');
             if (modal) modal.style.display = 'none';
