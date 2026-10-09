@@ -3064,6 +3064,264 @@ HTML_PAGE = """
             justify-content: space-between;
         }
 
+        /* 📜 VALKYRIE ADLİ DEFTER & İŞLEM GEÇMİŞİ (FORENSIC LEDGER) */
+        .ledger-master-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(10, 15, 29, 0.95) 100%);
+            border: 1px solid rgba(0, 242, 254, 0.18);
+            border-radius: 16px;
+            padding: 18px 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .ledger-title-box { display: flex; flex-direction: column; gap: 4px; }
+        .ledger-title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .ledger-title-text {
+            font-size: 19px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            color: #ffffff;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            text-shadow: 0 2px 10px rgba(0, 242, 254, 0.25);
+        }
+        .ledger-badge {
+            font-size: 11px;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 3px 9px;
+            border-radius: 6px;
+            letter-spacing: 0.3px;
+        }
+        .ledger-subtitle {
+            font-size: 12.5px;
+            color: #94a3b8;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .ledger-actions-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+        /* 5'Lİ FORENSIC KPI METRİK KOKPİTİ */
+        .ledger-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .ledger-kpi-card {
+            background: rgba(13, 18, 30, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 14px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+        .ledger-kpi-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(0, 242, 254, 0.3);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+        .ledger-kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--kpi-accent, #00f2fe), transparent);
+        }
+        .ledger-kpi-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            font-weight: 800;
+            color: #94a3b8;
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .ledger-kpi-val {
+            font-size: 22px;
+            font-weight: 900;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: -0.5px;
+            color: #ffffff;
+        }
+        .ledger-kpi-sub {
+            font-size: 11.5px;
+            color: #64748b;
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* SETUP PERFORMANS MATRİSİ MODERNİZASYONU */
+        .setup-matrix-box {
+            background: rgba(13, 18, 30, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+        }
+        .setup-matrix-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .setup-progress-track {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 6px 0 2px 0;
+        }
+        .setup-progress-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.4s ease;
+        }
+
+        /* TOOLBAR & SEARCH CONTROLS */
+        .ledger-toolbar-card {
+            background: rgba(13, 18, 30, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 14px 18px;
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .ledger-quick-pills {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .ledger-pill-btn {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+            font-weight: 700;
+            padding: 5px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+        .ledger-pill-btn:hover {
+            color: #ffffff;
+            border-color: rgba(0, 242, 254, 0.4);
+            background: rgba(0, 242, 254, 0.06);
+        }
+        .ledger-pill-btn.active {
+            background: rgba(0, 242, 254, 0.15);
+            border-color: var(--cyan);
+            color: var(--cyan);
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.25);
+        }
+        .ledger-filter-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .ledger-search-box {
+            position: relative;
+            display: flex;
+            align-items: center;
+            flex: 1;
+            min-width: 240px;
+            max-width: 380px;
+        }
+        .ledger-search-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #ffffff;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12.5px;
+            padding: 8px 34px 8px 12px;
+            border-radius: 8px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        .ledger-search-input:focus {
+            border-color: var(--cyan);
+            box-shadow: 0 0 12px rgba(0, 242, 254, 0.2);
+        }
+        .ledger-search-clear {
+            position: absolute;
+            right: 10px;
+            color: #64748b;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        /* FORENSIC TABLE STYLING */
+        .forensic-table-container {
+            background: rgba(10, 15, 29, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+        }
+        .trade-table-enhanced {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12.5px;
+        }
+        .trade-table-enhanced th {
+            background: #090d16;
+            color: #94a3b8;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            padding: 13px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            text-align: left;
+            white-space: nowrap;
+        }
+        .trade-table-enhanced td {
+            padding: 11px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: #e2e8f0;
+            vertical-align: middle;
+        }
+        .trade-table-enhanced tr.trade-row-win {
+            border-left: 3px solid #10b981;
+            transition: background 0.15s ease;
+        }
+        .trade-table-enhanced tr.trade-row-win:hover {
+            background: rgba(16, 185, 129, 0.04);
+        }
+        .trade-table-enhanced tr.trade-row-loss {
+            border-left: 3px solid #f43f5e;
+            transition: background 0.15s ease;
+        }
+        .trade-table-enhanced tr.trade-row-loss:hover {
+            background: rgba(244, 63, 94, 0.04);
+        }
+        .forensic-empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: #94a3b8;
+        }
     </style>
 </head>
 <body>
@@ -4041,6 +4299,7 @@ HTML_PAGE = """
                 <button class="nav-tab-btn" id="tab-btn-ledger" onclick="switchMainTab('ledger')" title="4. İşlem Geçmişi (Adli Defter)">
                     <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg></span>
                     <span class="tab-btn-text">4. İşlem Geçmişi</span>
+                    <span class="tab-badge-sub" id="nav-ledger-badge" style="background:rgba(251,197,49,0.15); color:#fbc531; border:1px solid rgba(251,197,49,0.3);">Adli Defter</span>
                 </button>
 
                 <button class="nav-tab-btn" id="tab-btn-persona" onclick="switchMainTab('persona')" title="5. Coin DNA & Persona Matrisi">
@@ -4713,26 +4972,134 @@ HTML_PAGE = """
     </div>
 
     <!-- =========================================================================
-         4. SEKME: İŞLEM GEÇMİŞİ
+         4. SEKME: İŞLEM GEÇMİŞİ & ADLİ DEFTER (FORENSIC LEDGER)
          ========================================================================= -->
     <div id="main-tab-content-ledger" class="main-tab-content">
-        <div class="history-full-box">
-            <!-- 📊 SETUP PERFORMANS MATRİSİ -->
-            <div style="margin-bottom:18px;">
-                <div style="font-size:12px; font-weight:800; color:var(--cyan); text-transform:uppercase; letter-spacing:0.8px; font-family:'JetBrains Mono'; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
-                    <span>📊</span> KURULUM BAZLI STRATEJİ PERFORMANSI (16 SETUP MATRİSİ)
+        <!-- 📜 VALKYRIE ADLİ DEFTER & İŞLEM GEÇMİŞİ HERO BAŞLIK -->
+        <div class="ledger-master-header">
+            <div class="ledger-title-box">
+                <div class="ledger-title-row">
+                    <span class="radar-live-blip" style="background:#00f2fe; box-shadow:0 0 10px #00f2fe;"></span>
+                    <span class="ledger-title-text">📜 VALKYRIE ADLİ DEFTER &amp; İŞLEM GEÇMİŞİ</span>
+                    <span class="ledger-badge" id="ledger-live-badge" style="background:rgba(0,242,254,0.15); color:var(--cyan); border:1px solid rgba(0,242,254,0.3);">🟢 BLOKZİNCİR KALICILIK AKTİF</span>
+                    <span class="ledger-badge" id="ledger-total-badge" style="background:rgba(255,255,255,0.06); color:#cbd5e1; border:1px solid rgba(255,255,255,0.12);">0 İŞLEM</span>
                 </div>
-                <div class="setup-matrix-grid" id="ledger-setup-matrix-container">
-                    <!-- Dynamically populated by renderSetupPerformanceMatrix() -->
+                <div class="ledger-subtitle">Milisaniyelik Adli İnceleme, PnL/ROE Telemetrisi, Kuant Setup Analizi &amp; 1R Beklenti Skoru</div>
+            </div>
+            <div class="ledger-actions-row">
+                <button class="btn-export" onclick="downloadExcelReport()" title="Pasta grafikleri, KPI kartları ve renklendirilmiş sekmeleriyle profesyonel Excel raporu indir">
+                    📊 Excel İndir (.xlsx)
+                </button>
+                <button class="btn-export" onclick="downloadCSVReport()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18); box-shadow:none;" title="CSV tablosu indir">
+                    📄 CSV İndir
+                </button>
+                <button class="btn-export" onclick="resetLedgerFilters()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); box-shadow:none;" title="Tüm filtreleri sıfırla">
+                    🔄 Sıfırla
+                </button>
+            </div>
+        </div>
+
+        <!-- 📊 5'Lİ FORENSIC KPI METRİK KOKPİTİ -->
+        <div class="ledger-kpi-grid" id="ledger-kpi-container">
+            <!-- Kutu 1: Gerçekleşen Net PnL -->
+            <div class="ledger-kpi-card" style="--kpi-accent:#00f2fe;">
+                <div class="ledger-kpi-head">
+                    <span>💵 GERÇEKLEŞEN NET PnL</span>
+                    <span style="font-size:13px;">💎</span>
+                </div>
+                <div class="ledger-kpi-val" id="ledger-kpi-pnl">$0.00</div>
+                <div class="ledger-kpi-sub" id="ledger-kpi-pnl-sub">
+                    <span style="color:#00f2fe;">●</span> Toplam Kâr / Zarar Bakiyesi
                 </div>
             </div>
 
-            <div class="history-top-controls">
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <div class="panel-title" style="margin:0;">📜 İşlem Geçmişi</div>
-                    <span style="font-size:13px; background:var(--card-bg); padding:4px 10px; border-radius:8px; font-family:'JetBrains Mono'" id="history-total-count">0 İşlem</span>
+            <!-- Kutu 2: Kazanma Oranı (Win Rate) & PF -->
+            <div class="ledger-kpi-card" style="--kpi-accent:#10b981;">
+                <div class="ledger-kpi-head">
+                    <span>🎯 KAZANMA ORANI (WIN RATE)</span>
+                    <span style="font-size:13px;">🏆</span>
                 </div>
-                
+                <div class="ledger-kpi-val" id="ledger-kpi-winrate" style="color:#10b981;">%0.0</div>
+                <div class="ledger-kpi-sub" id="ledger-kpi-winrate-sub">
+                    0K / 0Z • Profit Factor: 0.00
+                </div>
+            </div>
+
+            <!-- Kutu 3: Ortalama R-Katı (1R Beklenti) -->
+            <div class="ledger-kpi-card" style="--kpi-accent:#a855f7;">
+                <div class="ledger-kpi-head">
+                    <span>📐 ORTALAMA R-KATI (1R)</span>
+                    <span style="font-size:13px;">⚡</span>
+                </div>
+                <div class="ledger-kpi-val" id="ledger-kpi-avgr" style="color:#c084fc;">0.00R</div>
+                <div class="ledger-kpi-sub" id="ledger-kpi-avgr-sub">
+                    Kuant Beklenti Değeri (Expectancy)
+                </div>
+            </div>
+
+            <!-- Kutu 4: Toplam Borsa Komisyonu & Masraf -->
+            <div class="ledger-kpi-card" style="--kpi-accent:#f59e0b;">
+                <div class="ledger-kpi-head">
+                    <span>🏦 BORSA KOMİSYONU &amp; MASRAF</span>
+                    <span style="font-size:13px;">💳</span>
+                </div>
+                <div class="ledger-kpi-val" id="ledger-kpi-fees" style="color:#f59e0b;">$0.00</div>
+                <div class="ledger-kpi-sub" id="ledger-kpi-fees-sub">
+                    Ödenen Maker/Taker Komisyonu
+                </div>
+            </div>
+
+            <!-- Kutu 5: Lider Kuant Kurulumu -->
+            <div class="ledger-kpi-card" style="--kpi-accent:#38bdf8;">
+                <div class="ledger-kpi-head">
+                    <span>👑 LİDER KUANT KURULUMU</span>
+                    <span style="font-size:13px;">⭐</span>
+                </div>
+                <div class="ledger-kpi-val" id="ledger-kpi-topsetup" style="font-size:17px; color:#38bdf8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Taranıyor...</div>
+                <div class="ledger-kpi-sub" id="ledger-kpi-topsetup-sub">
+                    En Yüksek Getiri Sağlayan Setup
+                </div>
+            </div>
+        </div>
+
+        <!-- 📊 KURULUM BAZLI STRATEJİ PERFORMANSI (16 SETUP MATRİSİ) -->
+        <div class="setup-matrix-box">
+            <div class="setup-matrix-title-row">
+                <div style="font-size:12px; font-weight:800; color:var(--cyan); text-transform:uppercase; letter-spacing:0.8px; font-family:'JetBrains Mono'; display:flex; align-items:center; gap:6px;">
+                    <span>📊</span> 16 KANONİK STRATEJİ PERFORMANS MATRİSİ &amp; ETKİLEŞİMLİ FİLTRE
+                </div>
+                <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">
+                    Karta tıklayarak tabloyu o kuruluma göre filtreleyebilirsiniz.
+                </div>
+            </div>
+            <div class="setup-matrix-grid" id="ledger-setup-matrix-container">
+                <!-- Dynamically populated by renderSetupPerformanceMatrix() -->
+            </div>
+        </div>
+
+        <!-- 🎛️ FİLTRE, ARAMA VE KONTROL KARTI -->
+        <div class="ledger-toolbar-card">
+            <!-- Hızlı Filtre Hapları (Quick Pills) -->
+            <div class="ledger-quick-pills">
+                <span style="font-size:11px; font-weight:800; color:#64748b; font-family:'JetBrains Mono'; margin-right:4px;">HIZLI FİLTRE:</span>
+                <button class="ledger-pill-btn active" id="l-pill-all" onclick="quickFilterStatus('ALL')">⭐ Tümü</button>
+                <button class="ledger-pill-btn" id="l-pill-win" onclick="quickFilterStatus('WIN')">🟢 Kârlı İşlemler</button>
+                <button class="ledger-pill-btn" id="l-pill-loss" onclick="quickFilterStatus('LOSS')">🔴 Zararlı İşlemler</button>
+                <button class="ledger-pill-btn" id="l-pill-cambo" onclick="quickFilterSetup('CAM_BO')">⚡ Breakout</button>
+                <button class="ledger-pill-btn" id="l-pill-npoc" onclick="quickFilterSetup('NPOC')">🔵 nPOC Likidite</button>
+                <button class="ledger-pill-btn" id="l-pill-retest" onclick="quickFilterSetup('RETEST')">🔁 Retest &amp; Flip</button>
+                <button class="ledger-pill-btn" id="l-pill-reclaim" onclick="quickFilterSetup('RECLAIM')">🪤 Fakeout Reclaim</button>
+            </div>
+
+            <!-- Canlı Arama ve Detaylı Filtre Seçimleri -->
+            <div class="ledger-filter-row">
+                <!-- Arama Kutusu -->
+                <div class="ledger-search-box">
+                    <input type="text" id="filter-search-input" class="ledger-search-input" placeholder="🔍 Parite, Kurulum, ID veya Çıkış Nedeni Ara..." oninput="onLedgerFilterChange()" autocomplete="off" />
+                    <span class="ledger-search-clear" onclick="clearLedgerSearch()" id="ledger-search-clear-btn" style="display:none;" title="Aramayı Temizle">✕</span>
+                </div>
+
+                <!-- Dropdown Filtreler -->
                 <div class="filter-group">
                     <select class="filter-select" id="filter-symbol" onchange="onLedgerFilterChange()">
                         <option value="ALL">Tüm Pariteler</option>
@@ -4740,37 +5107,30 @@ HTML_PAGE = """
 
                     <select class="filter-select" id="filter-setup" onchange="onLedgerFilterChange()">
                         <option value="ALL">🎯 Tüm Stratejiler (18 Setup)</option>
-                        
-                        <optgroup label="🔵 LİKİDİTE & nPOC">
+                        <optgroup label="🔵 LİKİDİTE &amp; nPOC">
                             <option value="NPOC">🔵 nPOC Likidite Sekmesi / Reddi (Setup 9, 10)</option>
                         </optgroup>
-                        
-                        <optgroup label="🔁 DESTEK & DİRENÇ RETEST / FLIP">
-                            <option value="RETEST">🔁 Tüm Retest & Flip Kurulumları (Setup 5-16)</option>
-                            <option value="FLIP_AVWAP">〰️ Dip/Tepe AVWAP & mVAH Reclaim (Setup 15)</option>
+                        <optgroup label="🔁 DESTEK &amp; DİRENÇ RETEST / FLIP">
+                            <option value="RETEST">🔁 Tüm Retest &amp; Flip Kurulumları (Setup 5-16)</option>
+                            <option value="FLIP_AVWAP">〰️ Dip/Tepe AVWAP &amp; mVAH Reclaim (Setup 15)</option>
                             <option value="FLIP_CAM">🛡️ Camarilla S3/R3/S4/R4 Flip (Setup 5, 7, 13, 16)</option>
-                            <option value="FLIP_PIVOT">⚖️ Pivot P & mPOC Flip / Retest (Setup 11, 14)</option>
+                            <option value="FLIP_PIVOT">⚖️ Pivot P &amp; mPOC Flip / Retest (Setup 11, 14)</option>
                         </optgroup>
-                        
                         <optgroup label="⚡ CAMARILLA KIRILIMLARI (BREAKOUT)">
                             <option value="CAM_BO">⚡ Camarilla S4 / R4 Breakout (Setup 1, 2)</option>
                             <option value="BREAKDOWN">🚨 Destek Çöküşü / Breakdown (Setup 12)</option>
                         </optgroup>
-                        
                         <optgroup label="🛡️ BANT İÇİ DÖNÜŞ (BOUNCE / REJECTION)">
                             <option value="CAM_BOUNCE">🛡️ Camarilla S3 Sekmesi / R3 Reddi (Setup 3, 4)</option>
                         </optgroup>
-                        
                         <optgroup label="🟣 MAKRO HACİM ALANI">
                             <option value="MACRO">🟣 mVAL / mVAH Makro Kırılımı (Setup 6, 8)</option>
                         </optgroup>
-                        
                         <optgroup label="🪤 TUZAK İNTİKAMI (REFORM 4)">
                             <option value="RECLAIM">🪤 Fakeout Reclaim (Boğa / Ayı Tuzağı İntikamı)</option>
                         </optgroup>
-
                         <optgroup label="🎯 DİĞER ÖZEL STRATEJİLER">
-                            <option value="SCALP">🎯 Diğer Scalp / Iceberg & L2 Derinlik</option>
+                            <option value="SCALP">🎯 Diğer Scalp / Iceberg &amp; L2 Derinlik</option>
                         </optgroup>
                     </select>
 
@@ -4779,52 +5139,45 @@ HTML_PAGE = """
                         <option value="WIN">🟢 Kârlı İşlemler</option>
                         <option value="LOSS">🔴 Zararlı İşlemler</option>
                     </select>
-
-                    <button class="btn-export" onclick="resetLedgerFilters()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); box-shadow:none; padding:7px 12px;" title="Tüm filtreleri varsayılana sıfırla">
-                        🔄 Sıfırla
-                    </button>
-                    <button class="btn-export" onclick="downloadExcelReport()" title="Pasta grafikleri, KPI kartları ve renklendirilmiş sekmeleriyle Excel raporu indir">
-                        📊 Excel İndir (.xlsx)
-                    </button>
-                    <button class="btn-export" onclick="downloadCSVReport()" style="background:rgba(255,255,255,0.08); border:1px solid var(--border-light); box-shadow:none;" title="CSV tablosu indir">
-                        📄 CSV İndir
-                    </button>
                 </div>
             </div>
+        </div>
 
+        <!-- 📑 ADLİ DEFTER TABLOSU -->
+        <div class="forensic-table-container">
             <div style="overflow-x:auto;">
-                <table class="trade-table">
+                <table class="trade-table-enhanced">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Kapanış Tarihi (TSİ)</th>
-                            <th>Süre</th>
-                            <th>Parite</th>
-                            <th>Yön & Kaldıraç</th>
-                            <th>Giriş Fiyatı</th>
-                            <th>Çıkış Fiyatı</th>
-                            <th>Net Kâr ($)</th>
-                            <th>ROE (%)</th>
-                            <th>R-Katı (1R)</th>
-                            <th>Zirve Kâr (MFE)</th>
-                            <th>🎯 Giriş Stratejisi</th>
-                            <th>🚪 Kapanış Nedeni</th>
-                            <th>🔬 Adli İnceleme</th>
+                            <th style="width:70px;">İşlem ID</th>
+                            <th style="width:130px;">Kapanış Tarihi</th>
+                            <th style="width:75px;">Süre</th>
+                            <th style="width:100px;">Parite</th>
+                            <th style="width:105px;">Yön &amp; Kaldıraç</th>
+                            <th style="width:105px;">Giriş Fiyatı</th>
+                            <th style="width:105px;">Çıkış Fiyatı</th>
+                            <th style="width:95px; text-align:right;">Net Kâr ($)</th>
+                            <th style="width:85px; text-align:right;">ROE (%)</th>
+                            <th style="width:75px; text-align:center;">1R Katı</th>
+                            <th style="width:115px; text-align:center;">Zirve Kâr (MFE)</th>
+                            <th style="width:160px;">🎯 Giriş Stratejisi</th>
+                            <th style="width:160px;">🚪 Kapanış Nedeni</th>
+                            <th style="width:130px; text-align:center;">🔬 Adli İnceleme</th>
                         </tr>
                     </thead>
                     <tbody id="trade-table-body">
                         <tr>
-                            <td colspan="14" style="text-align:center; padding: 40px; color:#94a3b8;">
-                                Kayıtlı işlem geçmişi bulunmuyor.
+                            <td colspan="14" class="forensic-empty-state">
+                                🏛️ Kayıtlı işlem geçmişi bulunmuyor.
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
-
-            <!-- LEDGER 20-ITEM PAGINATION STRIP -->
-            <div id="ledger-pagination-container" style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding:12px 18px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; flex-wrap:wrap; gap:12px;"></div>
         </div>
+
+        <!-- LEDGER SAYFALAMA KONTROLLERİ -->
+        <div id="ledger-pagination-container" style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding:12px 18px; background:rgba(13, 18, 30, 0.85); border:1px solid rgba(255,255,255,0.08); border-radius:12px; flex-wrap:wrap; gap:12px;"></div>
     </div>
 
     <!-- =========================================================================
@@ -12888,11 +13241,172 @@ async function loadAdminMetrics() {
             const symEl = document.getElementById('filter-symbol');
             const setupEl = document.getElementById('filter-setup');
             const statusEl = document.getElementById('filter-status');
+            const searchEl = document.getElementById('filter-search-input');
+            const searchClearBtn = document.getElementById('ledger-search-clear-btn');
             if (symEl) symEl.value = 'ALL';
             if (setupEl) setupEl.value = 'ALL';
             if (statusEl) statusEl.value = 'ALL';
+            if (searchEl) searchEl.value = '';
+            if (searchClearBtn) searchClearBtn.style.display = 'none';
+
+            document.querySelectorAll('.ledger-quick-pills .ledger-pill-btn').forEach(b => b.classList.remove('active'));
+            const allPill = document.getElementById('l-pill-all');
+            if (allPill) allPill.classList.add('active');
+
             if (typeof onLedgerFilterChange === 'function') {
                 onLedgerFilterChange();
+            }
+        }
+
+        function quickFilterStatus(status) {
+            const stEl = document.getElementById('filter-status');
+            if (stEl) stEl.value = status;
+            document.querySelectorAll('.ledger-quick-pills .ledger-pill-btn').forEach(b => b.classList.remove('active'));
+            const map = { 'ALL': 'l-pill-all', 'WIN': 'l-pill-win', 'LOSS': 'l-pill-loss' };
+            if (map[status]) {
+                const pEl = document.getElementById(map[status]);
+                if (pEl) pEl.classList.add('active');
+            }
+            if (typeof onLedgerFilterChange === 'function') {
+                onLedgerFilterChange();
+            }
+        }
+
+        function clearLedgerSearch() {
+            const inEl = document.getElementById('filter-search-input');
+            if (inEl) inEl.value = '';
+            const clBtn = document.getElementById('ledger-search-clear-btn');
+            if (clBtn) clBtn.style.display = 'none';
+            if (typeof onLedgerFilterChange === 'function') {
+                onLedgerFilterChange();
+            }
+        }
+
+        function updateForensicLedgerKPIs() {
+            try {
+                const hList = (appState && appState.history) || [];
+                const summary = (appState && appState.history_summary) || {};
+
+                let totalNetPnl = 0.0;
+                let totalFees = 0.0;
+                let totalTrades = hList.length;
+                let wins = 0;
+                let losses = 0;
+                let winPnlSum = 0.0;
+                let lossPnlSum = 0.0;
+                let rSum = 0.0;
+                let rCount = 0;
+
+                if (summary && summary.total_trades !== undefined && summary.total_trades > 0) {
+                    totalNetPnl = Number(summary.total_realized_pnl || 0.0);
+                    totalFees = Number(summary.total_fees || 0.0);
+                    totalTrades = Number(summary.total_trades || 0);
+                    wins = Number(summary.wins || 0);
+                    losses = Number(summary.losses || 0);
+                    winPnlSum = Number(summary.win_pnl_sum || 0.0);
+                    lossPnlSum = Number(summary.loss_pnl_sum || 0.0);
+                } else {
+                    hList.forEach(t => {
+                        const pnl = Number(t.net_pnl || 0.0);
+                        const fee = Number(t.fees || t.commission || 0.0);
+                        totalNetPnl += pnl;
+                        totalFees += fee;
+                        if (pnl >= 0) { wins++; winPnlSum += pnl; }
+                        else { losses++; lossPnlSum += Math.abs(pnl); }
+                    });
+                }
+
+                const setupStats = {};
+                hList.forEach(t => {
+                    const roe = Number(t.roe_pct || 0.0);
+                    const netPnl = Number(t.net_pnl || 0.0);
+                    const risk = Number(t.initial_risk_usdt || 0.0);
+                    let r = t.realized_r !== undefined ? Number(t.realized_r) : (risk > 0 ? (netPnl / risk) : (roe >= 0 ? +(roe / 2).toFixed(1) : -1.0));
+                    rSum += r;
+                    rCount++;
+
+                    const sKey = classifyTradeSetup(t);
+                    if (!setupStats[sKey]) setupStats[sKey] = { pnl: 0, wins: 0, total: 0 };
+                    setupStats[sKey].pnl += netPnl;
+                    setupStats[sKey].total++;
+                    if (netPnl >= 0) setupStats[sKey].wins++;
+                });
+
+                const avgR = rCount > 0 ? (rSum / rCount) : 0.0;
+                const winRate = totalTrades > 0 ? ((wins / totalTrades) * 100).toFixed(1) : '0.0';
+                const pf = lossPnlSum > 0 ? (winPnlSum / lossPnlSum).toFixed(2) : (wins > 0 ? '∞' : '0.00');
+
+                let topSetupName = 'Pusu Modunda';
+                let bestPnl = -999999;
+                for (const k in setupStats) {
+                    if (setupStats[k].pnl > bestPnl && setupStats[k].total > 0) {
+                        bestPnl = setupStats[k].pnl;
+                        const sMap = {
+                            'NPOC': '🔵 nPOC Likidite', 'RETEST': '🔁 Retest & Flip', 'CAM_BO': '⚡ S4/R4 Breakout',
+                            'BREAKDOWN': '🚨 Destek Çöküşü', 'CAM_BOUNCE': '🛡️ Camarilla Bant', 'MACRO': '🟣 Macro mVAL/mVAH',
+                            'RECLAIM': '🪤 Fakeout Reclaim', 'SCALP': '🎯 L2 Scalp'
+                        };
+                        topSetupName = sMap[k] || k;
+                    }
+                }
+                if (totalTrades === 0) topSetupName = 'Sinyal Bekleniyor';
+
+                const pnlEl = document.getElementById('ledger-kpi-pnl');
+                const pnlSubEl = document.getElementById('ledger-kpi-pnl-sub');
+                if (pnlEl) {
+                    pnlEl.innerText = `${totalNetPnl >= 0 ? '+' : ''}$${totalNetPnl.toFixed(2)}`;
+                    pnlEl.style.color = totalNetPnl >= 0 ? '#10b981' : '#f43f5e';
+                }
+                if (pnlSubEl) {
+                    pnlSubEl.innerHTML = `<span style="color:${totalNetPnl >= 0 ? '#10b981' : '#f43f5e'};">●</span> ${totalNetPnl >= 0 ? 'Net Kâr Pozisyonunda' : 'Kontrollü Risk Alanında'}`;
+                }
+
+                const wrEl = document.getElementById('ledger-kpi-winrate');
+                const wrSubEl = document.getElementById('ledger-kpi-winrate-sub');
+                if (wrEl) {
+                    wrEl.innerText = `%${winRate}`;
+                    wrEl.style.color = Number(winRate) >= 50 ? '#10b981' : (totalTrades === 0 ? '#94a3b8' : '#f59e0b');
+                }
+                if (wrSubEl) {
+                    wrSubEl.innerText = `${wins} Kazanç / ${losses} Kayıp • PF: ${pf}`;
+                }
+
+                const rEl = document.getElementById('ledger-kpi-avgr');
+                const rSubEl = document.getElementById('ledger-kpi-avgr-sub');
+                if (rEl) {
+                    rEl.innerText = `${avgR >= 0 ? '+' : ''}${avgR.toFixed(2)}R`;
+                    rEl.style.color = avgR >= 0 ? '#10b981' : '#f43f5e';
+                }
+                if (rSubEl) {
+                    rSubEl.innerText = `1R Başına Kuant Beklentisi`;
+                }
+
+                const feesEl = document.getElementById('ledger-kpi-fees');
+                const feesSubEl = document.getElementById('ledger-kpi-fees-sub');
+                if (feesEl) {
+                    feesEl.innerText = `$${totalFees.toFixed(2)}`;
+                }
+                if (feesSubEl) {
+                    feesSubEl.innerText = `${totalTrades} İşlemde Borsa Kesintisi`;
+                }
+
+                const topEl = document.getElementById('ledger-kpi-topsetup');
+                const topSubEl = document.getElementById('ledger-kpi-topsetup-sub');
+                if (topEl) {
+                    topEl.innerText = topSetupName;
+                }
+                if (topSubEl) {
+                    topSubEl.innerText = bestPnl > -999999 ? `Net: ${bestPnl >= 0 ? '+' : ''}$${bestPnl.toFixed(2)}` : 'En Çok Kazandıran Strateji';
+                }
+
+                const badgeEl = document.getElementById('ledger-total-badge');
+                if (badgeEl) badgeEl.innerText = `${totalTrades} İŞLEM`;
+
+                const navBadge = document.getElementById('nav-ledger-badge');
+                if (navBadge) navBadge.innerText = `${totalTrades} İşlem`;
+
+            } catch (err) {
+                console.error("updateForensicLedgerKPIs error:", err);
             }
         }
 
@@ -12944,8 +13458,11 @@ async function loadAdminMetrics() {
                             <div class="setup-card-pnl" style="color:${pnlColor};">
                                 ${s.pnl >= 0 ? '+' : '-'}$${Math.abs(s.pnl).toFixed(2)}
                             </div>
+                            <div class="setup-progress-track">
+                                <div class="setup-progress-fill" style="width:${winRate}%; background:${Number(winRate) >= 50 ? 'linear-gradient(90deg, #10b981, #34d399)' : (total > 0 ? 'linear-gradient(90deg, #f43f5e, #fb7185)' : '#64748b')};"></div>
+                            </div>
                             <div class="setup-card-stats">
-                                <span>Win Rate: <b style="color:${Number(winRate) >= 50 ? 'var(--green)' : '#94a3b8'};">%${winRate}</b></span>
+                                <span>Win: <b style="color:${Number(winRate) >= 50 ? 'var(--green)' : '#94a3b8'};">%${winRate}</b></span>
                                 <span>${s.wins}K / ${s.losses}Z ${isActive ? '• <b style="color:var(--cyan)">FİLTRELİ</b>' : ''}</span>
                             </div>
                         </div>
@@ -13896,6 +14413,11 @@ async function loadAdminMetrics() {
                         navHealthBadge.style.background = 'rgba(245,158,11,0.15)';
                         navHealthBadge.style.borderColor = 'rgba(245,158,11,0.3)';
                     }
+                }
+                const navLedgerBadge = document.getElementById('nav-ledger-badge');
+                if (navLedgerBadge && appState) {
+                    const histCount = (appState.history || []).length;
+                    navLedgerBadge.innerText = `${histCount} İşlem`;
                 }
             } catch (e) {
                 console.error("updateNavBadges error:", e);
@@ -15435,10 +15957,11 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 if (totalCountEl) totalCountEl.innerText = `${totalTrades} Toplam İşlem (Son 150 Gösteriliyor)`;
                 
                 try { updateFinancialSummary(); } catch(e) {}
+                try { updateForensicLedgerKPIs(); } catch(e) {}
                 try { renderSetupPerformanceMatrix(); } catch(e) {}
 
                 if (hList.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="14" style="text-align:center; padding: 40px; color:#94a3b8;">Kayıtlı işlem geçmişi bulunmuyor.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="14" class="forensic-empty-state"><div style="font-size:32px; margin-bottom:8px;">🏛️</div><div style="font-size:15px; font-weight:800; color:#fff;">Kayıtlı Adli İşlem Geçmişi Bulunmuyor</div><div style="font-size:12.5px; color:#64748b; margin-top:4px;">Sistem canlı piyasa verilerini tarıyor; tamamlanan her işlem milisaniyelik telemetrisiyle anında listelenecektir.</div></td></tr>`;
                     const pagCont = document.getElementById('ledger-pagination-container');
                     if (pagCont) pagCont.innerHTML = '';
                     return;
@@ -15448,10 +15971,14 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 const symFilterEl = document.getElementById('filter-symbol');
                 const setupFilterEl = document.getElementById('filter-setup');
                 const statusFilterEl = document.getElementById('filter-status');
+                const searchInputEl = document.getElementById('filter-search-input');
+                const searchClearBtn = document.getElementById('ledger-search-clear-btn');
 
                 const symFilter = symFilterEl ? symFilterEl.value : 'ALL';
                 const setupFilter = setupFilterEl ? setupFilterEl.value : 'ALL';
                 const statusFilter = statusFilterEl ? statusFilterEl.value : 'ALL';
+                const searchQ = (searchInputEl ? searchInputEl.value : '').trim().toLowerCase();
+                if (searchClearBtn) searchClearBtn.style.display = searchQ ? 'block' : 'none';
 
                 if (symFilterEl) {
                     const curSelected = symFilterEl.value || 'ALL';
@@ -15484,6 +16011,11 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
 
                     if (!matchSetupFilter(item, setupFilter)) return false;
 
+                    if (searchQ) {
+                        const rowTarget = `${item.id || ''} ${item.symbol || ''} ${item.trade_type || ''} ${item.setup_id || ''} ${item.reason || ''} ${item.close_reason || ''} ${item.side || ''}`.toLowerCase();
+                        if (!rowTarget.includes(searchQ)) return false;
+                    }
+
                     return true;
                 });
 
@@ -15493,7 +16025,7 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 if (ledgerCurrentPage < 1) ledgerCurrentPage = 1;
 
                 if (totalFilteredCount === 0) {
-                    tbody.innerHTML = `<tr><td colspan="14" style="text-align:center; padding: 40px; color:#94a3b8; font-size:14px;">Seçilen filtre kriterlerine uygun işlem kaydı bulunamadı.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="14" class="forensic-empty-state"><div style="font-size:32px; margin-bottom:8px;">🔍</div><div style="font-size:15px; font-weight:800; color:#fff;">Filtre Kriterlerine Uygun İşlem Kaydı Bulunamadı</div><div style="font-size:12.5px; color:#64748b; margin-top:4px;">Arama terimini veya filtre seçimlerini sıfırlayarak tüm adli defteri görüntüleyebilirsiniz.</div></td></tr>`;
                     const pagCont = document.getElementById('ledger-pagination-container');
                     if (pagCont) pagCont.innerHTML = '';
                     return;
@@ -15536,33 +16068,34 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                     else if (cr.includes('Sert') || cr.includes('Stop')) exitBadgeClass = 'badge-hard';
 
                     const rMult = h.realized_r !== undefined ? h.realized_r : (roePct >= 0 ? +(roePct / 2).toFixed(1) : -1.0);
-                    const mfe = Number(h.mfe_roe !== undefined ? h.mfe_roe : Math.max(0, roePct));
-                    const mae = Number(h.mae_roe !== undefined ? h.mae_roe : (roePct < 0 ? Math.abs(roePct) : 0.0));
+                    const mfe = Number(h.max_mfe_roe !== undefined ? h.max_mfe_roe : (h.mfe_roe !== undefined ? h.mfe_roe : Math.max(0, roePct)));
+                    const mae = Number(h.max_mae_roe !== undefined ? h.max_mae_roe : (h.mae_roe !== undefined ? h.mae_roe : (roePct < 0 ? Math.abs(roePct) : 0.0)));
+                    const rowClass = isWin ? 'trade-row-win' : 'trade-row-loss';
 
                     tableHtml += `
-                    <tr>
-                        <td><b style="color:var(--yellow)">${h.id || '-'}</b></td>
+                    <tr class="${rowClass}">
+                        <td><span style="background:rgba(255,255,255,0.05); padding:3px 7px; border-radius:6px; color:#e2e8f0; font-family:'JetBrains Mono'; font-size:11.5px; border:1px solid rgba(255,255,255,0.08); font-weight:700;">#${h.id || '-'}</span></td>
                         <td style="color:#cbd5e1; font-size:12px; white-space:nowrap;">${exitTime}</td>
-                        <td style="color:#94a3b8; font-size:12px; white-space:nowrap;">⏱️ ${duration}</td>
+                        <td style="color:#94a3b8; font-size:12px; white-space:nowrap;"><span style="background:rgba(0,242,254,0.06); padding:2px 6px; border-radius:4px; border:1px solid rgba(0,242,254,0.15); color:#38bdf8;">⏱️ ${duration}</span></td>
                         <td><b style="color:#ffffff; font-size:13.5px; cursor:pointer;" onclick="openTradingViewModal('${symClean}')" title="${symClean} Göstergeli Grafiğini Aç">${symClean}</b></td>
                         <td><span class="pos-badge ${side === 'LONG' ? 'pos-long' : 'pos-short'}" style="font-size:11px; padding:2px 8px;">${(Number(lev) >= 7 ? '💎 ' : (Number(lev) <= 3 ? '🛡️ ' : ''))}${lev}x ${side}</span></td>
-                        <td>$${formatSmartPrice(entryP)}</td>
-                        <td>$${formatSmartPrice(exitP)}</td>
-                        <td>
-                            <span class="history-pnl-pill ${isWin ? 'pnl-win' : 'pnl-loss'}">
+                        <td style="font-family:'JetBrains Mono';">$${formatSmartPrice(entryP)}</td>
+                        <td style="font-family:'JetBrains Mono';">$${formatSmartPrice(exitP)}</td>
+                        <td style="text-align:right;">
+                            <span class="history-pnl-pill ${isWin ? 'pnl-win' : 'pnl-loss'}" style="font-size:12.5px; font-weight:800;">
                                 ${netPnl >= 0 ? '+' : '-'}$${Math.abs(netPnl).toFixed(2)}
                             </span>
                         </td>
-                        <td>
-                            <span class="history-roe-pill ${isWin ? 'roe-win' : 'roe-loss'}">
+                        <td style="text-align:right;">
+                            <span class="history-roe-pill ${isWin ? 'roe-win' : 'roe-loss'}" style="font-size:12px; font-weight:700;">
                                 ${roePct >= 0 ? '+' : ''}${roePct.toFixed(2)}%
                             </span>
                         </td>
-                        <td style="color:${rMult >= 0 ? 'var(--green)' : 'var(--red)'}; font-weight:800; font-family:'JetBrains Mono'">
+                        <td style="text-align:center; color:${rMult >= 0 ? 'var(--green)' : 'var(--red)'}; font-weight:800; font-family:'JetBrains Mono'">
                             ${rMult >= 0 ? '+' : ''}${rMult}R
                         </td>
-                        <td style="color:#38bdf8; font-size:12px;" title="MFE: Görülen Zirve Kâr (+%${mfe.toFixed(1)}) | MAE: Maks Çekilme (-%${mae.toFixed(1)})">
-                            +${mfe.toFixed(1)}% <span style="color:#64748b; font-size:10.5px;">(-${mae.toFixed(1)}%)</span>
+                        <td style="text-align:center; color:#38bdf8; font-size:12px;" title="MFE: Görülen Zirve Kâr (+%${mfe.toFixed(1)}) | MAE: Maks Çekilme (-%${mae.toFixed(1)})">
+                            <span style="color:#34d399; font-weight:700;">+${mfe.toFixed(1)}%</span> <span style="color:#64748b; font-size:10.5px;">(-${mae.toFixed(1)}%)</span>
                         </td>
                         <td>
                             <span class="badge-setup ${setupBadgeClass}" title="${r}">
@@ -15574,8 +16107,8 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                                 ${cr}
                             </span>
                         </td>
-                        <td style="white-space:nowrap;">
-                            <button onclick="openTelemetryModal('${h.id}')" style="background:rgba(0,242,254,0.12); border:1px solid rgba(0,242,254,0.35); color:var(--cyan); padding:4px 9px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.15s ease;" onmouseover="this.style.background='var(--cyan)'; this.style.color='#000';" onmouseout="this.style.background='rgba(0,242,254,0.12)'; this.style.color='var(--cyan)';" title="İşlem Detayını İncele">
+                        <td style="white-space:nowrap; text-align:center;">
+                            <button onclick="openTelemetryModal('${h.id}')" style="background:rgba(0,242,254,0.12); border:1px solid rgba(0,242,254,0.35); color:var(--cyan); padding:4px 9px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer; transition:all 0.15s ease;" onmouseover="this.style.background='var(--cyan)'; this.style.color='#000';" onmouseout="this.style.background='rgba(0,242,254,0.12)'; this.style.color='var(--cyan)';" title="İşlem Detayını ve Adli Telemetrisini İncele">
                                 🔬 İncele
                             </button>
                             <button onclick="openTradingViewModal('${symClean}')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#cbd5e1; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; margin-left:4px; transition:all 0.15s ease;" onmouseover="this.style.background='rgba(0,242,254,0.15)'; this.style.color='#00f2fe';" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.color='#cbd5e1';" title="${symClean} Göstergeli Grafiğini Aç">
