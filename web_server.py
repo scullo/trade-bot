@@ -16715,8 +16715,14 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             elif not calib.notifier and notifier:
                 calib.notifier = notifier
 
+            layer = request.query.get("layer", "all")
             loop = asyncio.get_event_loop()
-            res = await loop.run_in_executor(None, lambda: calib.run_cycle(force=True))
+            if layer == "fast":
+                res = await loop.run_in_executor(None, lambda: calib.run_fast_risk_cycle(force=True))
+            elif layer == "slow":
+                res = await loop.run_in_executor(None, lambda: calib.run_slow_structural_cycle(force=True))
+            else:
+                res = await loop.run_in_executor(None, lambda: calib.run_cycle(force=True))
             if res.get("executed") and res.get("changes_applied", 0) > 0 and strategy:
                 strategy.calibrated_coin_dna = calib._load_current_calibrated_dna()
             return web.json_response({

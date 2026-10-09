@@ -103,7 +103,7 @@ async def main():
     # Telegram /kasa ve kasa İnteraktif Komut Dinleyicisini Başlat
     asyncio.create_task(notifier.start_command_listener(trader_manager, market_data=market_data))
 
-    # 🧬 48 Saatlik Otonom Kuant Kalibratörü Watchdog'u (Her 1 saatte bir kontrol eder)
+    # 🧬 Çift Ufuklu Otonom Kuant Kalibratörü Watchdog'u (8S Hızlı Risk + 48S Yapısal Kuant)
     async def autonomous_calibration_watchdog():
         await asyncio.sleep(60)  # Başlangıçta 1 dakika ısınma
         while True:
@@ -113,13 +113,23 @@ async def main():
                     if not calib.notifier:
                         calib.notifier = notifier
                     loop = asyncio.get_event_loop()
-                    res = await loop.run_in_executor(None, lambda: calib.run_cycle(force=False))
-                    if res.get("executed") and res.get("changes_applied", 0) > 0:
-                        strategy.calibrated_coin_dna = calib._load_current_calibrated_dna()
-                        print(f">> [OTONOM KALİBRASYON BAŞARILI] {res.get('changes_applied')} parite optimize edildi ve doğrulandı.")
+
+                    # 1. 8 Saatlik Hızlı Risk Döngüsü (Fast Risk Layer)
+                    if hasattr(calib, "should_run_fast_risk") and calib.should_run_fast_risk():
+                        fast_res = await loop.run_in_executor(None, lambda: calib.run_fast_risk_cycle(force=False))
+                        if fast_res.get("executed") and fast_res.get("changes_applied", 0) > 0:
+                            strategy.calibrated_coin_dna = calib._load_current_calibrated_dna()
+                            print(f">> [8S HIZLI RİSK DÖNGÜSÜ] {fast_res.get('changes_applied')} paritede marjin kelepçesi/setup muting güncellendi.")
+
+                    # 2. 48 Saatlik Yapısal Kuant Döngüsü (Slow Structural Layer)
+                    if hasattr(calib, "should_run_structural") and calib.should_run_structural():
+                        struct_res = await loop.run_in_executor(None, lambda: calib.run_slow_structural_cycle(force=False))
+                        if struct_res.get("executed") and struct_res.get("changes_applied", 0) > 0:
+                            strategy.calibrated_coin_dna = calib._load_current_calibrated_dna()
+                            print(f">> [48S YAPISAL KUANT DÖNGÜSÜ] {struct_res.get('changes_applied')} parite optimize edildi ve doğrulandı.")
             except Exception as e:
                 print(f">> [OTONOM KALİBRASYON DÖNGÜ HATA] {e}")
-            await asyncio.sleep(3600)  # 1 saatte bir döngü kontrolü
+            await asyncio.sleep(900)  # Her 15 dakikada bir kontrol (seans geçişlerini yakalar)
 
     asyncio.create_task(autonomous_calibration_watchdog())
 

@@ -28,13 +28,19 @@ except Exception:
     GITHUB_REPO = os.environ.get("GITHUB_REPO", "scullo/trade-bot")
     GITHUB_BRANCH = os.environ.get("GITHUB_STATE_BRANCH", "state")
 
-CALIBRATION_CYCLE_SECONDS = 48 * 3600  # 48 Saatlik Kuant Evrim Döngüsü
-MIN_SHADOW_TRADES_FOR_CALIB = 5        # İstatistiksel güven için asgari işlem sayısı
+FAST_RISK_CYCLE_SECONDS = 8 * 3600          # 8 Saatlik Hızlı Risk Döngüsü (Fast Risk Layer)
+SLOW_STRUCTURAL_CYCLE_SECONDS = 48 * 3600    # 48 Saatlik Yapısal Kuant Döngüsü (Slow Structural Layer)
+CALIBRATION_CYCLE_SECONDS = SLOW_STRUCTURAL_CYCLE_SECONDS  # Geriye dönük uyumluluk
+MIN_SHADOW_TRADES_FOR_CALIB = 5              # İstatistiksel güven için asgari işlem sayısı
 
 
 class AutonomousDNACalibrator:
     """
-    48 Saatlik Otonom Kuant Kalibratörü ve Simülasyon Denetçisi.
+    🦅 VALKYRIE V4.0: ÇİFT UFUKLU OTONOM KUANT EVRİMİ (SELF-HEALING)
+    - 2.1 Hızlı Risk Katmanı (Fast Risk Layer): 8 Saatlik döngü (00:00, 08:00, 16:00 UTC)
+      Yalnızca sermaye marjini (0.20x - 0.50x) ve toksik setup susturma (muted_setups).
+    - 2.2 Yapısal Kuant Katmanı (Slow Structural Layer): 48 Saatlik döngü
+      Geometrik & istatistiki gösterge katsayıları (wick_reversal, chandelier_atr, break_even_trigger_r).
     """
 
     def __init__(
@@ -53,9 +59,11 @@ class AutonomousDNACalibrator:
         self.notifier = notifier
         self.is_test = "test" in os.path.basename(self.calibrated_dna_file).lower()
 
-        # Kalibrasyon denetim defteri
+        # Kalibrasyon denetim defteri ve zaman damgaları
         self.audit_history: List[dict] = []
         self.last_calibration_ts: float = 0.0
+        self.last_structural_ts: float = 0.0
+        self.last_fast_risk_ts: float = 0.0
         self.load_audit_history()
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -69,6 +77,8 @@ class AutonomousDNACalibrator:
                     data = json.load(f)
                     self.audit_history = data.get("history", [])
                     self.last_calibration_ts = float(data.get("last_calibration_ts", 0.0))
+                    self.last_structural_ts = float(data.get("last_structural_ts", self.last_calibration_ts))
+                    self.last_fast_risk_ts = float(data.get("last_fast_risk_ts", 0.0))
             except Exception as e:
                 print(f">> [OTONOM KALİBRASYON] Denetim geçmişi yüklenirken hata: {e}")
 
@@ -89,6 +99,8 @@ class AutonomousDNACalibrator:
                         data = json.loads(content_str)
                         self.audit_history = data.get("history", [])
                         self.last_calibration_ts = float(data.get("last_calibration_ts", 0.0))
+                        self.last_structural_ts = float(data.get("last_structural_ts", self.last_calibration_ts))
+                        self.last_fast_risk_ts = float(data.get("last_fast_risk_ts", 0.0))
             except Exception:
                 pass
 
@@ -97,6 +109,8 @@ class AutonomousDNACalibrator:
         data = {
             "updated_at": datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S"),
             "last_calibration_ts": self.last_calibration_ts,
+            "last_structural_ts": self.last_structural_ts,
+            "last_fast_risk_ts": self.last_fast_risk_ts,
             "total_cycles_run": len(self.audit_history),
             "history": self.audit_history[-100:]  # Son 100 kalibrasyon kaydı
         }
@@ -154,7 +168,7 @@ class AutonomousDNACalibrator:
     # OTONOM EVRİM DÖNGÜSÜ KONTROLÜ
     # ──────────────────────────────────────────────────────────────────────────
     def should_run(self, force: bool = False) -> bool:
-        """48 saatlik periyodun dolup dolmadığını denetler."""
+        """48 saatlik yapısal periyodun dolup dolmadığını denetler (Geriye dönük uyumluluk)."""
         if force:
             return True
         now_ts = time.time()
@@ -163,6 +177,225 @@ class AutonomousDNACalibrator:
             trades_count = len(getattr(self.shadow_engine, "completed_trades", [])) if self.shadow_engine else 0
             return trades_count >= 50
         return (now_ts - self.last_calibration_ts) >= CALIBRATION_CYCLE_SECONDS
+
+    def should_run_structural(self, force: bool = False) -> bool:
+        """48 saatlik yapısal kuant periyodunun dolup dolmadığını denetler."""
+        return self.should_run(force=force)
+
+    def should_run_fast_risk(self, force: bool = False) -> bool:
+        """8 saatlik hızlı seans risk periyodunun dolup dolmadığını denetler (00:00, 08:00, 16:00 UTC)."""
+        if force:
+            return True
+        now_ts = time.time()
+        if self.last_fast_risk_ts == 0.0:
+            return True
+        return (now_ts - self.last_fast_risk_ts) >= FAST_RISK_CYCLE_SECONDS
+
+    def run_fast_risk_cycle(self, force: bool = False) -> dict:
+        """
+        🦅 2.1 8 SAATLİK HIZLI RİSK DÖNGÜSÜ (FAST RISK LAYER)
+        - Çalışma Periyodu: Her 8 saatte bir (00:00, 08:00, 16:00 UTC seansları).
+        - Etki Alanı: Parametreleri bozmaz. Sadece sermaye marjini ve setup susturma üzerinde çalışır.
+        - Mekanizma: 
+          * Son 8 saatte bir coin arka arkaya stop oluyorsa veya gölge motorunda SEI < %35 ise
+            o coinin dinamik marjini anında 0.20x - 0.50x bandına çekilir.
+          * O coinde zarar üreten setup o parite için muted_setups listesine alınarak geçici olarak susturulur.
+          * Böylece piyasa testereye döndüğünde bot 48 saat boyunca aynı coinde tam marjinle kan kaybetmez.
+        """
+        now_ts = time.time()
+        now_dt = datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S")
+
+        if not self.should_run_fast_risk(force=force):
+            remaining_hours = max(0.0, round((FAST_RISK_CYCLE_SECONDS - (now_ts - self.last_fast_risk_ts)) / 3600.0, 1))
+            return {
+                "executed": False,
+                "reason": f"Hızlı risk döngüsü süresi henüz dolmadı. Kalan: {remaining_hours} saat.",
+                "last_run": datetime.fromtimestamp(self.last_fast_risk_ts, timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S") if self.last_fast_risk_ts else "YOK",
+                "next_run_hours": remaining_hours
+            }
+
+        current_dna = self._load_current_calibrated_dna()
+        if not current_dna:
+            return {"executed": False, "reason": "Mevcut coin DNA tablosu bulunamadı."}
+
+        window_cutoff = now_ts - FAST_RISK_CYCLE_SECONDS
+
+        # 1. Canlı/Paper Trader İşlemleri
+        recent_paper_trades = []
+        if self.strategy and hasattr(self.strategy, 'paper_trader') and self.strategy.paper_trader:
+            pt = self.strategy.paper_trader
+            recent_paper_trades = list(getattr(pt, 'trades', []) or [])
+        elif self.strategy and hasattr(self.strategy, 'trade_history'):
+            recent_paper_trades = list(getattr(self.strategy, 'trade_history', []) or [])
+
+        # 2. Gölge İşlemler
+        completed_shadow = list(getattr(self.shadow_engine, "completed_trades", [])) if self.shadow_engine else []
+        if not completed_shadow:
+            history_file = os.path.join(os.path.dirname(__file__), "shadow_trades_history.json")
+            if os.path.exists(history_file):
+                try:
+                    with open(history_file, "r", encoding="utf-8") as f:
+                        completed_shadow = json.load(f).get("completed", [])
+                except Exception:
+                    pass
+
+        def _extract_timestamp(t):
+            for k in ("exit_timestamp", "timestamp_ts", "exit_time", "timestamp"):
+                val = t.get(k)
+                if val is not None:
+                    if isinstance(val, (int, float)):
+                        return float(val)
+                    if isinstance(val, str):
+                        try:
+                            return float(val)
+                        except ValueError:
+                            try:
+                                dt = datetime.strptime(val.split('.')[0], "%Y-%m-%d %H:%M:%S")
+                                return dt.timestamp()
+                            except Exception:
+                                pass
+            return 0.0
+
+        # Taranacak sembol havuzu
+        symbols_to_check = set(current_dna.keys())
+        for t in (completed_shadow + recent_paper_trades):
+            raw_s = str(t.get("symbol", "")).replace("/USDT", "").replace("USDT", "").replace("/", "").upper()
+            if raw_s:
+                symbols_to_check.add(raw_s)
+
+        modified_coins = {}
+
+        for sym in symbols_to_check:
+            cur_cfg = current_dna.get(sym, {
+                "scenario": "Dengeli",
+                "min_confluence": 3,
+                "dynamic_margin_scale": 1.0,
+                "calibration_status": "DENGELİ",
+                "muted_setups": []
+            })
+
+            # Bu sembole ait son 8 saatlik işlemler
+            sym_shadow = [
+                t for t in completed_shadow
+                if str(t.get("symbol", "")).replace("/USDT", "").replace("USDT", "").replace("/", "").upper() == sym
+                and (_extract_timestamp(t) >= window_cutoff or (_extract_timestamp(t) == 0.0 and self.is_test))
+            ]
+            sym_paper = [
+                t for t in recent_paper_trades
+                if str(t.get("symbol", "")).replace("/USDT", "").replace("USDT", "").replace("/", "").upper() == sym
+                and (_extract_timestamp(t) >= window_cutoff or (_extract_timestamp(t) == 0.0 and self.is_test))
+            ]
+
+            # 1. Ardışık Stop Sayacı:
+            all_sym_recent = sorted(
+                sym_paper + sym_shadow,
+                key=_extract_timestamp,
+                reverse=True
+            )
+            consecutive_stops = 0
+            for t in all_sym_recent:
+                pnl = float(t.get("pnl", t.get("virtual_pnl_usd", 0.0)))
+                reason_txt = str(t.get("close_reason", t.get("verdict", ""))).upper()
+                if pnl < 0 or "STOP" in reason_txt:
+                    consecutive_stops += 1
+                else:
+                    break
+
+            # 2. Gölge Motorunda SEI Skoru
+            sei_score = 50.0
+            if sym_shadow:
+                tot_s = len(sym_shadow)
+                hero_s = sum(1 for t in sym_shadow if t.get("verdict") == "HERO_SHIELD")
+                sei_score = round((hero_s / tot_s) * 100.0, 1)
+
+            min_trades_req = 1 if self.is_test else 2
+            trigger_stop = (consecutive_stops >= 2)
+            trigger_sei = (len(sym_shadow) >= min_trades_req and sei_score < 35.0)
+
+            if trigger_stop or trigger_sei:
+                new_cfg = dict(cur_cfg)
+                # Dinamik marjini anında 0.20x - 0.50x bandına çek
+                if sei_score < 20.0 or consecutive_stops >= 3:
+                    target_scale = 0.20
+                else:
+                    target_scale = 0.35
+                target_scale = max(0.20, min(0.50, target_scale))
+                new_cfg["dynamic_margin_scale"] = target_scale
+
+                # O coinde zarar üreten setup'ı muted_setups listesine ekle
+                cur_muted = list(new_cfg.get("muted_setups", []))
+                toxic_setups = set()
+                try:
+                    from shadow_engine import ShadowExecutionEngine
+                    extractor = ShadowExecutionEngine.extract_canonical_setup
+                except Exception:
+                    extractor = lambda x: x
+
+                for t in (sym_shadow + sym_paper):
+                    pnl = float(t.get("pnl", t.get("virtual_pnl_usd", 0.0)))
+                    verdict = str(t.get("verdict", "")).upper()
+                    if pnl < 0 or verdict == "HERO_SHIELD":
+                        s_name = str(t.get("setup", ""))
+                        if s_name:
+                            canon = extractor(s_name)
+                            if canon and canon != "SETUP_DİĞER":
+                                toxic_setups.add(canon)
+                            else:
+                                toxic_setups.add(s_name)
+
+                for ts in toxic_setups:
+                    if ts not in cur_muted:
+                        cur_muted.append(ts)
+                new_cfg["muted_setups"] = cur_muted
+
+                new_cfg["fast_risk_active"] = True
+                new_cfg["fast_risk_triggered_at"] = now_dt
+                new_cfg["fast_risk_reason"] = (
+                    f"8S Hızlı Risk: {'Arka arkaya stop (' + str(consecutive_stops) + 'x)' if trigger_stop else ''}"
+                    f"{' ve ' if (trigger_stop and trigger_sei) else ''}"
+                    f"{'SEI %' + str(sei_score) + ' < %35' if trigger_sei else ''} -> "
+                    f"Marjin {target_scale:.2f}x, {len(toxic_setups)} setup susturuldu."
+                )
+                modified_coins[sym] = new_cfg
+
+        changes_applied = len(modified_coins)
+        if changes_applied > 0:
+            updated_dna = dict(current_dna)
+            for s_sym, s_cfg in modified_coins.items():
+                updated_dna[s_sym] = s_cfg
+            self._save_calibrated_dna(updated_dna)
+
+            if self.strategy:
+                if hasattr(self.strategy, "calibrated_coin_dna"):
+                    self.strategy.calibrated_coin_dna = updated_dna
+                if hasattr(self.strategy, "_calibrated_dna"):
+                    self.strategy._calibrated_dna = updated_dna
+                print(f">> [8S HIZLI RİSK DÖNGÜSÜ] {changes_applied} paritede sermaye riski ve setup muting devreye alındı!")
+
+        fast_risk_record = {
+            "cycle_id": f"FAST_8H_{int(now_ts)}",
+            "cycle_type": "FAST_RISK_8H",
+            "timestamp": now_dt,
+            "coins_mitigated": list(modified_coins.keys()),
+            "changes_applied": changes_applied,
+            "details": {sym: {"margin_scale": cfg["dynamic_margin_scale"], "muted": cfg["muted_setups"]} for sym, cfg in modified_coins.items()}
+        }
+        self.audit_history.append(fast_risk_record)
+        self.last_fast_risk_ts = now_ts
+        self.save_audit_history()
+
+        return {
+            "executed": True,
+            "cycle_type": "FAST_RISK_8H",
+            "timestamp": now_dt,
+            "changes_applied": changes_applied,
+            "coins_mitigated": list(modified_coins.keys()),
+            "cycle_id": fast_risk_record["cycle_id"]
+        }
+
+    def run_slow_structural_cycle(self, force: bool = False) -> dict:
+        """48 Saatlik Yapısal Kuant Kalibrasyon Döngüsünü İcra Eder (2.2 Slow Structural Layer)."""
+        return self.run_cycle(force=force)
 
     def run_cycle(self, force: bool = False) -> dict:
         """
@@ -249,10 +482,12 @@ class AutonomousDNACalibrator:
                 "macro_hero_saved_count": len(macro_hero_trades),
                 "macro_saved_loss_usd": round(macro_saved_usd, 2)
             },
+            "cycle_type": "SLOW_STRUCTURAL_48H",
             "overall_proof": "BAŞARILI - İÇSEL MATEMATİKSEL KANIT TEYİTLİ" if changes_applied > 0 else "DEĞİŞİKLİK GEREKMEDİ"
         }
         self.audit_history.append(cycle_record)
         self.last_calibration_ts = now_ts
+        self.last_structural_ts = now_ts
         self.save_audit_history()
 
         # 8. VIP Telegram Bildirimi (Yalnızca değişiklik varsa ve kısa özet olarak)
@@ -422,6 +657,16 @@ class AutonomousDNACalibrator:
                     else:
                         base_status = "ERKEN BE"
 
+            # 🦅 2.2 YAPISAL PARAMETRE: break_even_trigger_r (Kar realizasyonu ve başabaş koruma seviyeleri)
+            cur_be_r = float(candidate_cfg.get("break_even_trigger_r", 1.0))
+            new_be_r = 1.6 if pe_premature >= 3 else (1.4 if total_premature >= 2 else 1.0)
+            if abs(new_be_r - cur_be_r) >= 0.2:
+                candidate_cfg["break_even_trigger_r"] = new_be_r
+                candidate_reasons.append(f"48S Başa-baş R Optimizasyonu -> BE {new_be_r}R")
+                proposed = True
+            else:
+                candidate_cfg["break_even_trigger_r"] = cur_be_r
+
             candidate_cfg["calibration_status"] = base_status
 
             # Boyut 3: Stop-Loss ATR Çarpanı (5M mumda %0.85 üstü yüksek volatiltedir)
@@ -435,18 +680,39 @@ class AutonomousDNACalibrator:
                 candidate_reasons.append(f"Düşük Volatilite (%{avg_atr} ATR) -> Stop 1.2x ATR Sıkılaştırıldı")
                 proposed = True
 
-            # Boyut 4: Sahte Fitil (Fakeout) Toleransı
-            cur_fakeout = float(candidate_cfg.get("fakeout_wick_threshold", 13.5))
-            if avg_wick >= 18.0:
-                new_fakeout = round(max(20.0, avg_wick + 3.0), 1)
-                if abs(new_fakeout - cur_fakeout) >= 1.0:
-                    candidate_cfg["fakeout_wick_threshold"] = new_fakeout
-                    candidate_reasons.append(f"Yüksek Fitil (%{avg_wick}) -> Fitil Toleransı %{new_fakeout}")
-                    proposed = True
-            elif avg_wick <= 10.0 and cur_fakeout > 8.0:
-                candidate_cfg["fakeout_wick_threshold"] = 8.0
-                candidate_reasons.append(f"Düşük Fitil (%{avg_wick}) -> Fitil Toleransı %8.0")
+            # 🦅 2.2 YAPISAL PARAMETRE: chandelier_atr_mult (48 Saatlik Gerçekleşen Oynaklığa / RV Göre)
+            cur_chand_mult = float(candidate_cfg.get("chandelier_atr_mult", 2.0))
+            if avg_atr >= 0.85:
+                new_chand_mult = 2.8
+            elif avg_atr <= 0.40 and s["total"] >= 5:
+                new_chand_mult = 1.6
+            else:
+                new_chand_mult = 2.0
+
+            if abs(new_chand_mult - cur_chand_mult) >= 0.2:
+                candidate_cfg["chandelier_atr_mult"] = new_chand_mult
+                candidate_reasons.append(f"48S Gerçekleşen Oynaklık (ATR %{avg_atr:.2f}) -> chandelier_atr_mult {new_chand_mult}x")
                 proposed = True
+            else:
+                candidate_cfg["chandelier_atr_mult"] = cur_chand_mult
+
+            # 🦅 2.2 YAPISAL PARAMETRE: wick_reversal_threshold & fakeout_wick_threshold (48 Saatlik İğne Boyu Ortalaması)
+            cur_wick_rev = float(candidate_cfg.get("wick_reversal_threshold") or candidate_cfg.get("fakeout_wick_threshold", 13.5))
+            if avg_wick >= 18.0:
+                new_wick_rev = round(max(20.0, avg_wick + 3.0), 1)
+            elif avg_wick <= 10.0 and cur_wick_rev > 8.0:
+                new_wick_rev = 8.0
+            else:
+                new_wick_rev = round(avg_wick, 1)
+
+            if abs(new_wick_rev - cur_wick_rev) >= 0.5:
+                candidate_cfg["wick_reversal_threshold"] = new_wick_rev
+                candidate_cfg["fakeout_wick_threshold"] = new_wick_rev
+                candidate_reasons.append(f"48S İğne Ort. (%{avg_wick}) -> wick_reversal_threshold %{new_wick_rev}")
+                proposed = True
+            else:
+                candidate_cfg["wick_reversal_threshold"] = cur_wick_rev
+                candidate_cfg["fakeout_wick_threshold"] = cur_wick_rev
 
             # Boyut 5: İzin Verilen Strateji Rejimi
             if avg_wick >= 22.0 or (s["spoiler_ratio"] >= 2.0 and s["sei"] < 40.0):
@@ -708,11 +974,15 @@ class AutonomousDNACalibrator:
             print(f">> [OTONOM KALİBRASYON] Telegram bildirimi iletilemedi: {e}")
 
     def get_dashboard_summary(self) -> dict:
-        """Dashboard Kuant Evrim Masası için tam teşhis verisi."""
+        """Dashboard Kuant Evrim Masası için tam teşhis verisi (Çift Ufuklu Evrim Destekli)."""
         now_ts = time.time()
-        elapsed = now_ts - self.last_calibration_ts if self.last_calibration_ts > 0 else 0.0
-        remaining_hours = max(0.0, round((CALIBRATION_CYCLE_SECONDS - elapsed) / 3600.0, 1))
-        next_cycle_ts = (self.last_calibration_ts + CALIBRATION_CYCLE_SECONDS) if self.last_calibration_ts > 0 else (now_ts + CALIBRATION_CYCLE_SECONDS)
+        elapsed_slow = now_ts - self.last_calibration_ts if self.last_calibration_ts > 0 else 0.0
+        remaining_slow_hours = max(0.0, round((CALIBRATION_CYCLE_SECONDS - elapsed_slow) / 3600.0, 1))
+        next_slow_ts = (self.last_calibration_ts + CALIBRATION_CYCLE_SECONDS) if self.last_calibration_ts > 0 else (now_ts + CALIBRATION_CYCLE_SECONDS)
+
+        elapsed_fast = now_ts - self.last_fast_risk_ts if self.last_fast_risk_ts > 0 else 0.0
+        remaining_fast_hours = max(0.0, round((FAST_RISK_CYCLE_SECONDS - elapsed_fast) / 3600.0, 1))
+        next_fast_ts = (self.last_fast_risk_ts + FAST_RISK_CYCLE_SECONDS) if self.last_fast_risk_ts > 0 else (now_ts + FAST_RISK_CYCLE_SECONDS)
 
         current_dna = self._load_current_calibrated_dna()
         counts = {"KORU": 0, "GEVŞET": 0, "ERKEN BE": 0, "DENGELİ": 0}
@@ -724,10 +994,17 @@ class AutonomousDNACalibrator:
 
         return {
             "cycle_frequency_hours": 48,
+            "fast_risk_frequency_hours": 8,
+            "slow_structural_frequency_hours": 48,
             "last_calibration_ts": self.last_calibration_ts,
+            "last_structural_ts": self.last_structural_ts,
+            "last_fast_risk_ts": self.last_fast_risk_ts,
             "last_calibration_dt": datetime.fromtimestamp(self.last_calibration_ts, timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S") if self.last_calibration_ts > 0 else "İLK ÇALIŞMA BEKLENİYOR",
-            "next_cycle_in_hours": remaining_hours,
-            "next_cycle_ts": next_cycle_ts,
+            "last_fast_risk_dt": datetime.fromtimestamp(self.last_fast_risk_ts, timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S") if self.last_fast_risk_ts > 0 else "İLK ÇALIŞMA BEKLENİYOR",
+            "next_cycle_in_hours": remaining_slow_hours,
+            "next_fast_risk_in_hours": remaining_fast_hours,
+            "next_cycle_ts": next_slow_ts,
+            "next_fast_risk_ts": next_fast_ts,
             "server_time_ts": now_ts,
             "total_cycles_executed": len(self.audit_history),
             "status_distribution": counts,

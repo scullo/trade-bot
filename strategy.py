@@ -104,10 +104,29 @@ class StrategyEngine:
         # 🧬 48 Saatlik Otonom Kuant Kalibratörü ve Simülasyon Doğrulayıcısı
         self.dna_calibrator = AutonomousDNACalibrator(shadow_engine=self.shadow_engine, strategy=self) if AutonomousDNACalibrator else None
 
-    def run_autonomous_calibration(self, force: bool = False) -> dict:
-        """48 saatlik otonom kuant evrim döngüsünü tetikler ve kanıtlanan kuralları canlıya alır."""
+    def run_autonomous_calibration(self, force: bool = False, layer: str = "all") -> dict:
+        """
+        🦅 VALKYRIE V4.0: ÇİFT UFUKLU OTONOM KUANT EVRİM DÖNGÜSÜ
+        - layer='fast': 8 Saatlik Hızlı Risk Katmanı (Marjin kelepçesi + toxic setup muting)
+        - layer='slow': 48 Saatlik Yapısal Kuant Katmanı (wick, chandelier, breakeven optimizasyonu)
+        - layer='all': Her iki katmanı sırayla yürütür.
+        """
         if hasattr(self, 'dna_calibrator') and self.dna_calibrator:
-            res = self.dna_calibrator.run_cycle(force=force)
+            res = {}
+            if layer == "fast":
+                res = self.dna_calibrator.run_fast_risk_cycle(force=force)
+            elif layer == "slow":
+                res = self.dna_calibrator.run_slow_structural_cycle(force=force)
+            else:
+                fast_res = self.dna_calibrator.run_fast_risk_cycle(force=force)
+                slow_res = self.dna_calibrator.run_slow_structural_cycle(force=force)
+                res = {
+                    "executed": fast_res.get("executed", False) or slow_res.get("executed", False),
+                    "fast_risk": fast_res,
+                    "slow_structural": slow_res,
+                    "changes_applied": fast_res.get("changes_applied", 0) + slow_res.get("changes_applied", 0),
+                    "approved_coins": slow_res.get("approved_coins", [])
+                }
             if res.get("executed") and res.get("changes_applied", 0) > 0:
                 self.calibrated_coin_dna = self.dna_calibrator._load_current_calibrated_dna()
             return res
@@ -543,7 +562,11 @@ class StrategyEngine:
             res["calibration_status"] = calib_status
             res["min_confluence"] = int(calib_cfg.get("min_confluence", 2 if "GEVŞET" in calib_status else 3))
             res["dynamic_margin_scale"] = float(calib_cfg.get("dynamic_margin_scale", 0.5 if "GEVŞET" in calib_status else (1.25 if "KORU" in calib_status else 1.0)))
-            res["fakeout_wick_threshold"] = float(calib_cfg.get("fakeout_wick_threshold", 13.5))
+            # 🦅 2.2 YAPISAL KUANT PARAMETRELERİ (Çift Ufuklu Evrim Entegrasyonu)
+            res["wick_reversal_threshold"] = float(calib_cfg.get("wick_reversal_threshold") or calib_cfg.get("fakeout_wick_threshold", 13.5))
+            res["fakeout_wick_threshold"] = res["wick_reversal_threshold"]
+            res["chandelier_atr_mult"] = float(calib_cfg.get("chandelier_atr_mult", 2.0))
+            res["break_even_trigger_r"] = float(calib_cfg.get("break_even_trigger_r", 1.0))
             res["chandelier_be_threshold_pct"] = float(calib_cfg.get("chandelier_be_threshold_pct", 0.8))
             res["stop_loss_atr_mult"] = float(calib_cfg.get("stop_atr_multiplier") or calib_cfg.get("stop_loss_atr_mult", 1.0))
             res["stop_atr_multiplier"] = res["stop_loss_atr_mult"]
@@ -582,6 +605,10 @@ class StrategyEngine:
             res["calibration_status"] = "DENGELİ"
             res["min_confluence"] = 3
             res["dynamic_margin_scale"] = 1.0
+            res["wick_reversal_threshold"] = 13.5
+            res["fakeout_wick_threshold"] = 13.5
+            res["chandelier_atr_mult"] = 2.0
+            res["break_even_trigger_r"] = 1.0
             res["stop_loss_atr_mult"] = 1.0
             res["stop_atr_multiplier"] = 1.0
             res["allowed_strategy_regime"] = "ALL"
@@ -974,8 +1001,15 @@ class StrategyEngine:
         # ── 0b. CHANDELIER ANLIK TICK ERKEN BREAKEVEN KİLİDİ ──
         if ENABLE_CHANDELIER_EARLY_BE_LOCK and not pos.get("is_half_closed", False):
             coin_p = self.get_coin_persona(symbol)
-            be_threshold_pct = float(pos.get("chandelier_be_threshold_pct") or coin_p.get("chandelier_be_threshold_pct", CHANDELIER_EARLY_BE_THRESHOLD_PCT))
-            be_threshold = be_threshold_pct / 100.0
+            be_trigger_r = float(pos.get("break_even_trigger_r") or coin_p.get("break_even_trigger_r", 0.0))
+            hard_stop_val = float(pos.get("hard_stop") or 0.0)
+            if be_trigger_r > 0 and hard_stop_val > 0 and entry_p > 0:
+                r_dist = abs(entry_p - hard_stop_val) / entry_p
+                be_threshold = max(0.0040, min(0.0250, r_dist * be_trigger_r))
+                be_threshold_pct = be_threshold * 100.0
+            else:
+                be_threshold_pct = float(pos.get("chandelier_be_threshold_pct") or coin_p.get("chandelier_be_threshold_pct", CHANDELIER_EARLY_BE_THRESHOLD_PCT))
+                be_threshold = be_threshold_pct / 100.0
             cur_price_pct = (current_price - entry_p) / entry_p if side == "LONG" else (entry_p - current_price) / entry_p
             if cur_price_pct >= be_threshold:
                 fee_buffer = (float(COMMISSION_RATE) * 2.0) + 0.0002  # Dinamik giriş-çıkış komisyon tamponu + slipaj koruması
@@ -1375,7 +1409,10 @@ class StrategyEngine:
         open_positions = getattr(self.paper_trader, 'open_positions', {})
         current_open_cnt = len(open_positions)
         effective_open_cnt = self.get_effective_slot_count(open_positions)
-        current_balance = getattr(self.paper_trader, 'balance', 10000.0)
+        try:
+            current_balance = float(getattr(self.paper_trader, 'balance', 10000.0))
+        except Exception:
+            current_balance = 10000.0
         total_open_margin = sum(float(p.get("margin", 0.0)) for p in open_positions.values())
         max_margin_budget = current_balance * (MAX_PORTFOLIO_MARGIN_PCT / 100.0)
 
@@ -4141,8 +4178,15 @@ class StrategyEngine:
                 # Eğer pozisyon lehimize >= +%0.80 (+%4 ROE) kâr görmüşse, stop seviyesi derhal 'Giriş + Komisyon Tamponu'na kilitlenir!
                 if ENABLE_CHANDELIER_EARLY_BE_LOCK and not is_half:
                     coin_p = self.get_coin_persona(symbol)
-                    be_threshold_pct = float(pos.get("chandelier_be_threshold_pct") or coin_p.get("chandelier_be_threshold_pct", CHANDELIER_EARLY_BE_THRESHOLD_PCT))
-                    be_threshold = be_threshold_pct / 100.0
+                    be_trigger_r = float(pos.get("break_even_trigger_r") or coin_p.get("break_even_trigger_r", 0.0))
+                    hard_stop_val = float(pos.get("hard_stop") or 0.0)
+                    if be_trigger_r > 0 and hard_stop_val > 0 and entry_p > 0:
+                        r_dist = abs(entry_p - hard_stop_val) / entry_p
+                        be_threshold = max(0.0040, min(0.0250, r_dist * be_trigger_r))
+                        be_threshold_pct = be_threshold * 100.0
+                    else:
+                        be_threshold_pct = float(pos.get("chandelier_be_threshold_pct") or coin_p.get("chandelier_be_threshold_pct", CHANDELIER_EARLY_BE_THRESHOLD_PCT))
+                        be_threshold = be_threshold_pct / 100.0
                     if price_pct >= be_threshold:
                         fee_buffer = (float(COMMISSION_RATE) * 2.0) + 0.0002  # Dinamik giriş-çıkış komisyon tamponu + slipaj koruması
                         be_price = entry_p * (1.0 + fee_buffer) if side == "LONG" else entry_p * (1.0 - fee_buffer)
