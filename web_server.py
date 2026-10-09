@@ -17269,11 +17269,12 @@ function downloadExcelReport() {
                 const cleanSym = (item.symbol || '').replace('/USDT', '').replace('USDT', '').trim();
                 const isWin = Number(item.net_pnl || 0.0) >= 0;
                 const netPnlVal = Number(item.net_pnl || 0.0);
-                const roePctVal = Number(item.roe_pct || 0.0);
+                const roePct = Number(item.roe_pct || 0.0);
+                const roePctVal = roePct;
                 const feesVal = Number(item.fees || 0.0);
                 const rMult = item.realized_r !== undefined ? item.realized_r : (roePctVal >= 0 ? +(roePctVal / 2).toFixed(1) : -1.0);
                 const mfeVal = Number(item.mfe_roe !== undefined ? item.mfe_roe : Math.max(0, roePctVal));
-                const maeVal = Number(item.mae_roe !== undefined ? item.mae_roe : (roePct < 0 ? Math.abs(roePct) : 0.0));
+                const maeVal = Number(item.mae_roe !== undefined ? item.mae_roe : (roePctVal < 0 ? Math.abs(roePctVal) : 0.0));
                 const effVal = Number(item.exit_efficiency_pct !== undefined ? item.exit_efficiency_pct : (isWin ? 90.0 : 0.0));
 
                 title.innerHTML = `
