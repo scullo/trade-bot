@@ -12,6 +12,7 @@ import json
 import time
 import shutil
 import asyncio
+import threading
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, List, Optional
 from concurrent.futures import ThreadPoolExecutor
@@ -38,6 +39,7 @@ class ForensicBlackboxManager:
 
     def __init__(self):
         self._ensure_directories()
+        self._lock = threading.Lock()
         self.catalog = self._load_catalog()
         self.executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="ValkyrieForensic")
 
@@ -59,8 +61,10 @@ class ForensicBlackboxManager:
 
     def _save_catalog(self):
         try:
-            with open(self.CATALOG_FILE, "w", encoding="utf-8") as f:
+            temp_file = self.CATALOG_FILE + ".tmp"
+            with open(temp_file, "w", encoding="utf-8") as f:
                 json.dump(self.catalog, f, ensure_ascii=False, indent=2)
+            os.replace(temp_file, self.CATALOG_FILE)
         except Exception as e:
             print(f"[FORENSIC] Katalog kaydetme hatasi: {e}")
 
@@ -196,10 +200,11 @@ class ForensicBlackboxManager:
         except Exception as e:
             print(f"[FORENSIC] JSON kayit hatasi ({symbol}): {e}")
 
-        # 5. Kataloğu güncelle ve buda (Pruning)
-        self.catalog.insert(0, catalog_entry)
-        self._prune_storage()
-        self._save_catalog()
+        # 5. Kataloğu güncelle ve buda (Pruning) - Thread Güvenli
+        with self._lock:
+            self.catalog.insert(0, catalog_entry)
+            self._prune_storage()
+            self._save_catalog()
 
         print(f">> [ADLI KARA KUTU] #{symbol} {side} ({roe:+.1f}% ROE) snapshot uretildi -> {png_filename if has_image else json_filename}")
         return catalog_entry
@@ -279,48 +284,51 @@ class ForensicBlackboxManager:
     # =========================================================================
     def toggle_star(self, snapshot_id: str) -> bool:
         """Grafiği Hall of Fame (Yıldızlılar) arşivine ekler veya çıkarır."""
-        for item in self.catalog:
-            if item.get("id") == snapshot_id:
-                new_state = not item.get("is_starred", False)
-                item["is_starred"] = new_state
-                png_path = item.get("png_path")
+        with self._lock:
+            for item in self.catalog:
+                if item.get("id") == snapshot_id:
+                    new_state = not item.get("is_starred", False)
+                    item["is_starred"] = new_state
+                    png_path = item.get("png_path")
 
-                if new_state and png_path and os.path.exists(png_path):
-                    # Hall of Fame klasörüne kopyala
-                    dest_p = os.path.join(self.HALL_OF_FAME_DIR, os.path.basename(png_path))
-                    shutil.copy2(png_path, dest_p)
-                    item["hall_of_fame_path"] = dest_p
+                    if new_state and png_path and os.path.exists(png_path):
+                        # Hall of Fame klasörüne kopyala
+                        dest_p = os.path.join(self.HALL_OF_FAME_DIR, os.path.basename(png_path))
+                        shutil.copy2(png_path, dest_p)
+                        item["hall_of_fame_path"] = dest_p
 
-                self._save_catalog()
-                return new_state
-        return False
+                    self._save_catalog()
+                    return new_state
+            return False
 
     def mark_reviewed(self, snapshot_id: str) -> bool:
         """Kullanıcı tarafından incelendi olarak işaretlenir; PNG silinip 1KB JSON bırakılır."""
-        for item in self.catalog:
-            if item.get("id") == snapshot_id:
-                item["is_reviewed"] = True
-                png_path = item.get("png_path")
-                if png_path and os.path.exists(png_path) and not item.get("is_starred", False):
-                    try:
-                        os.remove(png_path)
-                        item["png_path"] = None
-                        item["has_image"] = False
-                    except Exception:
-                        pass
-                self._save_catalog()
-                return True
-        return False
+        with self._lock:
+            for item in self.catalog:
+                if item.get("id") == snapshot_id:
+                    item["is_reviewed"] = True
+                    png_path = item.get("png_path")
+                    if png_path and os.path.exists(png_path) and not item.get("is_starred", False):
+                        try:
+                            os.remove(png_path)
+                            item["png_path"] = None
+                            item["has_image"] = False
+                        except Exception:
+                            pass
+                    self._save_catalog()
+                    return True
+            return False
 
     def delete_snapshot(self, snapshot_id: str) -> bool:
         """Görseli ve raporu diskten kalıcı olarak siler."""
-        for item in list(self.catalog):
-            if item.get("id") == snapshot_id:
-                self._remove_snapshot_files(item)
-                self.catalog.remove(item)
-                self._save_catalog()
-                return True
-        return False
+        with self._lock:
+            for item in list(self.catalog):
+                if item.get("id") == snapshot_id:
+                    self._remove_snapshot_files(item)
+                    self.catalog.remove(item)
+                    self._save_catalog()
+                    return True
+            return False
 
     # =========================================================================
     # WEB UI ARAMA VE FİLTRELEME
@@ -336,7 +344,8 @@ class ForensicBlackboxManager:
         Web kokpiti için filtrelenmiş ve sayfalanmış adli kayıtları döner.
         Filtreler: ALL, LOSS, WIN, TRAP, STARRED, SHADOW, REAL
         """
-        filtered = self.catalog
+        with self._lock:
+            filtered = list(self.catalog)
 
         # Kategori filtresi
         if filter_category == "LOSS":

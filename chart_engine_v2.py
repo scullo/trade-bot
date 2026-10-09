@@ -98,8 +98,8 @@ class ForensicChartEngineV2:
         leverage = int(trade_record.get("leverage") or 5)
         entry_price = float(trade_record.get("entry_price") or 0.0)
         exit_price = float(trade_record.get("exit_price") or 0.0)
-        net_pnl = float(trade_record.get("net_pnl") or 0.0)
-        roe_pct = float(trade_record.get("roe_pct") or 0.0)
+        net_pnl = float(trade_record.get("net_pnl") if trade_record.get("net_pnl") is not None else (trade_record.get("virtual_pnl_usd") or 0.0))
+        roe_pct = float(trade_record.get("roe_pct") if trade_record.get("roe_pct") is not None else (trade_record.get("virtual_pnl_pct") or 0.0))
         is_profit = (net_pnl > 0) or (roe_pct > 0)
         theme_pnl_col = self.COLOR_GREEN if is_profit else (self.COLOR_RED if roe_pct < 0 else '#94a3b8')
 
@@ -158,8 +158,9 @@ class ForensicChartEngineV2:
         slice_start = max(0, entry_idx - 12)
         slice_end = min(len(df_5m), exit_idx + 9)
         if slice_end - slice_start < 25:
-            # Görsel derinliği için en az 25 mum olsun
+            # Görsel derinliği için en az 25-35 mum sağla
             slice_start = max(0, slice_end - 35)
+            slice_end = min(len(df_5m), slice_start + 35)
 
         display_df = df_5m.iloc[slice_start:slice_end].copy().reset_index(drop=True)
         n_bars = len(display_df)
@@ -299,8 +300,9 @@ class ForensicChartEngineV2:
             # 3. Çıkış Fiyatı ve ROE Rozeti
             x_lbl = f"★ ÇIKIŞ: {fmt_price(exit_price)} ({roe_pct:+.1f}% ROE)"
             tag_exit_x = local_exit_idx - 1.8 if local_exit_idx > 4 else local_exit_idx + 1.8
+            ha_exit_align = 'right' if local_exit_idx > 4 else 'left'
             ax_chart.text(tag_exit_x, exit_price, x_lbl,
-                          color='#ffffff', fontsize=8.6, fontweight='bold', ha='right', va='center',
+                          color='#ffffff', fontsize=8.6, fontweight='bold', ha=ha_exit_align, va='center',
                           bbox=dict(boxstyle='round,pad=0.35', facecolor='#090d16',
                                     edgecolor=exit_col, linewidth=1.5, alpha=0.98),
                           zorder=10)
@@ -489,13 +491,17 @@ class ForensicChartEngineV2:
         conf_score = trade_record.get('confluence_score', '4/4')
         ax_hud.text(0.06, y_cursor, f"Onay Skoru: {conf_score} (Kurumsal Confluence)", color='#38bdf8', fontsize=8.0, fontweight='bold', zorder=5)
 
-        # Onay maddeleri
-        confluences = [
-            f"[✓] Camarilla Rejim Sinyali ({trade_record.get('trend_regime', 'BOĞA')})",
-            f"[✓] Stoikov Mikro Fiyat Dengeli ({fmt_price(trade_record.get('stoikov_micro_price', entry_price))})",
-            f"[✓] Hacim Çarpanı: {float(trade_record.get('volume_surge', 1.0)):.2f}x",
-            f"[✓] Fonlama Kalkanı: {float(trade_record.get('entry_funding_rate', 0.0)):.4f}%"
-        ]
+        # Onay maddeleri (Varsa işlem anındaki confluences listesini kullan)
+        raw_confs = trade_record.get('confluence_list')
+        if isinstance(raw_confs, list) and len(raw_confs) > 0:
+            confluences = [f"[✓] {_clean_str(c, 36)}" for c in raw_confs[:4]]
+        else:
+            confluences = [
+                f"[✓] Camarilla Rejim Sinyali ({trade_record.get('trend_regime', 'BOĞA')})",
+                f"[✓] Stoikov Mikro Fiyat Dengeli ({fmt_price(trade_record.get('stoikov_micro_price', entry_price))})",
+                f"[✓] Hacim Çarpanı: {float(trade_record.get('volume_surge', 1.0)):.2f}x",
+                f"[✓] Fonlama Kalkanı: {float(trade_record.get('entry_funding_rate', 0.0)):.4f}%"
+            ]
         for c_item in confluences:
             y_cursor -= 0.026
             ax_hud.text(0.08, y_cursor, c_item, color='#cbd5e1', fontsize=7.4, zorder=5)
@@ -509,8 +515,8 @@ class ForensicChartEngineV2:
         ax_hud.text(0.06, y_cursor, f"Neden: {clean_close_reason}", color='#ffffff', fontsize=8.2, fontweight='bold', zorder=5)
 
         y_cursor -= 0.030
-        mfe_val = float(trade_record.get('max_mfe_roe') or 0.0)
-        mae_val = float(trade_record.get('max_mae_roe') or 0.0)
+        mfe_val = float(trade_record.get('max_mfe_roe') if trade_record.get('max_mfe_roe') is not None else (trade_record.get('max_mfe_pct') or 0.0))
+        mae_val = float(trade_record.get('max_mae_roe') if trade_record.get('max_mae_roe') is not None else (trade_record.get('max_mae_pct') or 0.0))
         mafe_text = f"MFE: +%{mfe_val:.2f}  │  MAE: %{mae_val:.2f}"
         ax_hud.text(0.06, y_cursor, mafe_text, color='#94a3b8', fontsize=7.8, fontweight='bold', zorder=5)
 

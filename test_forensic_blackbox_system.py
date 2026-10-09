@@ -74,6 +74,38 @@ class TestForensicBlackboxSystem(unittest.TestCase):
         self.assertEqual(autopsy_fakeout["diagnosis_code"], "LOW_VOLUME_FAKEOUT")
         self.assertIn("Hacim", autopsy_fakeout["findings"][0])
 
+        # 3. Standart Hedef Kâr (0.3% < ROE < 2.5%)
+        rec_tp1 = {
+            "symbol": "ETH/USDT",
+            "side": "LONG",
+            "entry_price": 2500.0,
+            "exit_price": 2530.0,
+            "net_pnl": 30.0,
+            "roe_pct": 1.20,
+            "candle_count": 8,
+            "setup_id": "SETUP_CAMARILLA_BO"
+        }
+        autopsy_tp1 = forensic_autopsy_engine.perform_autopsy(rec_tp1, df_5m=self.df_5m)
+        self.assertEqual(autopsy_tp1["diagnosis_code"], "PROFIT_TARGET_SECURED")
+        self.assertGreater(len(autopsy_tp1["findings"]), 0)
+
+        # 4. Gölge İşlem Anahtarları (virtual_pnl_usd & virtual_pnl_pct)
+        rec_shadow = {
+            "symbol": "DOGE/USDT",
+            "side": "LONG",
+            "entry_price": 0.10,
+            "exit_price": 0.104,
+            "virtual_pnl_usd": 12.50,
+            "virtual_pnl_pct": 4.0,
+            "max_mfe_pct": 4.2,
+            "max_mae_pct": -0.2,
+            "duration_mins": 45,
+            "setup_id": "SETUP_MEME_SURGE"
+        }
+        autopsy_shadow = forensic_autopsy_engine.perform_autopsy(rec_shadow, df_5m=self.df_5m)
+        self.assertEqual(autopsy_shadow["diagnosis_code"], "PERFECT_EXECUTION_RUNNER")
+        self.assertGreater(len(autopsy_shadow["findings"]), 0)
+
     def test_02_chart_engine_v2_composite_generation(self):
         """1600x900 kompozit infografik üretimini test et."""
         rec = {

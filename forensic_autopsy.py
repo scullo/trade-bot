@@ -52,9 +52,15 @@ class ForensicAutopsyEngine:
         },
         "PERFECT_EXECUTION_RUNNER": {
             "title": "Kusursuz Kurumsal İcraat & Trend Koşucusu",
-            "badge": "🏆 KUSURSUZ TREND İCRAATI",
+            "badge": "👑 KUSURSUZ TREND İCRAATI",
             "color": "#10b981",
             "icon": "👑"
+        },
+        "PROFIT_TARGET_SECURED": {
+            "title": "Hedef Kâr Realizasyonu (TP1 / Dinamik Kâr)",
+            "badge": "🎯 HEDEF KÂR KİLİTLENDİ",
+            "color": "#10b981",
+            "icon": "🎯"
         },
         "SQUEEZE_SURFING_SUCCESS": {
             "title": "Fonlama / Squeeze Dalgası Başarısı",
@@ -94,16 +100,19 @@ class ForensicAutopsyEngine:
         side = str(trade_record.get("side", "LONG")).upper()
         entry_price = float(trade_record.get("entry_price") or 0.0)
         exit_price = float(trade_record.get("exit_price") or 0.0)
-        net_pnl = float(trade_record.get("net_pnl") or 0.0)
-        roe_pct = float(trade_record.get("roe_pct") or 0.0)
+        
+        # Gerçek ve Gölge işlem anahtarlarını çift yönlü destekle
+        net_pnl = float(trade_record.get("net_pnl") if trade_record.get("net_pnl") is not None else (trade_record.get("virtual_pnl_usd") or 0.0))
+        roe_pct = float(trade_record.get("roe_pct") if trade_record.get("roe_pct") is not None else (trade_record.get("virtual_pnl_pct") or 0.0))
+        
         close_reason = str(trade_record.get("close_reason") or "")
         setup_id = str(trade_record.get("setup_id") or trade_record.get("reason") or "SETUP_QUANT")
-        holding_candles = int(trade_record.get("candle_count") or 1)
+        holding_candles = int(trade_record.get("candle_count") or max(1, int(float(trade_record.get("duration_mins", 5)) // 5)))
         duration_str = str(trade_record.get("duration") or f"{holding_candles * 5}dk")
 
-        # Ölçüm metrikleri
-        mfe_roe = float(trade_record.get("max_mfe_roe") or 0.0)
-        mae_roe = float(trade_record.get("max_mae_roe") or 0.0)
+        # Ölçüm metrikleri (Hem paper hem shadow anahtarları)
+        mfe_roe = float(trade_record.get("max_mfe_roe") if trade_record.get("max_mfe_roe") is not None else (trade_record.get("max_mfe_pct") or 0.0))
+        mae_roe = float(trade_record.get("max_mae_roe") if trade_record.get("max_mae_roe") is not None else (trade_record.get("max_mae_pct") or 0.0))
         vol_surge = float(trade_record.get("volume_surge") or 1.0)
         funding_rate = float(trade_record.get("entry_funding_rate") or 0.0)
         funding_status = str(trade_record.get("funding_status") or "BALANCED")
@@ -116,7 +125,7 @@ class ForensicAutopsyEngine:
         actionable_advice = ""
 
         # =========================================================================
-        # 1. TEST: KUSURSUZ TREND İCRAATI (Büyük Kâr + Düşük Drawdown)
+        # 1. TEST: BÜYÜK TREND KOŞUCUSU VEYA HEDEF KÂR REALİZASYONU
         # =========================================================================
         if roe_pct >= 2.5:
             if abs(mae_roe) < 1.0:
@@ -140,6 +149,16 @@ class ForensicAutopsyEngine:
                 findings.append(f"Pozisyon {holding_candles} mum boyunca trend yönünde disiplinle taşındı.")
                 findings.append(f"Çıkış stratejisi ({close_reason}) kârı başarıyla realize etti.")
                 actionable_advice = "Trend takibi kusursuz icra edildi; kural setine sadık kalın."
+
+        elif roe_pct > 0.3:
+            # Standart / Orta Dereceli Hedef Kâr (0.3% < ROE < 2.5%)
+            diagnosis_code = "PROFIT_TARGET_SECURED"
+            confidence = 0.90
+            findings.append(f"Hedef seviye başarıyla karşılandı: Net Kâr +${net_pnl:.2f} (+%{roe_pct:.2f} ROE).")
+            findings.append(f"Pozisyon {holding_candles} mum boyunca taşındı, kâr kurumsal disiplinle realize edildi.")
+            if mfe_roe > roe_pct:
+                findings.append(f"Zirve MFE: +%{mfe_roe:.2f} ROE seviyesi görüldü.")
+            actionable_advice = "Planlanan hedefe ulaşıldı ve sermaye büyütüldü; işlem disiplini korundu."
 
         # =========================================================================
         # 2. TEST: ZARAR / STOP POST-MORTEM (Neden Kaybettik?)
@@ -242,6 +261,14 @@ class ForensicAutopsyEngine:
                 findings.append(f"İşlem başa-baş ({roe_pct:+.2f}% ROE) seviyesinde temiz bir şekilde tasfiye edildi.")
                 findings.append(f"Sermaye riske atılmadan piyasa belirsizliğinden çıkıldı.")
                 actionable_advice = "Sıfır kayıpla çıkış başarıdır; yeni yüksek kaliteli fırsatları bekleyin."
+
+        else:
+            # -0.5 < roe_pct < -0.3 (Küçük Kayıp / Defansif Çıkış)
+            diagnosis_code = "BALANCED_NORMAL_CLOSE"
+            confidence = 0.82
+            findings.append(f"İşlem mikro zarar ({roe_pct:+.2f}% ROE) ile defansif olarak kapatıldı.")
+            findings.append(f"Büyük kayıp veya likidasyon riski oluşmadan sermaye korundu.")
+            actionable_advice = "Hafif sürtünme kaybı normaldir; risk yönetimi sınırlarında kalındı."
 
         # Bilgi kartı ve özet
         meta = self.DIAGNOSIS_CATALOG.get(diagnosis_code, self.DIAGNOSIS_CATALOG["BALANCED_NORMAL_CLOSE"])

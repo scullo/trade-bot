@@ -17932,6 +17932,10 @@ function downloadExcelReport() {
         }
 
         function renderForensicCards(items) {
+            window.currentForensicItemsMap = window.currentForensicItemsMap || new Map();
+            (items || []).forEach(it => {
+                if (it && it.id) window.currentForensicItemsMap.set(it.id, it);
+            });
             const grid = document.getElementById('forensic-gallery-grid');
             if (!grid) return;
 
@@ -18059,9 +18063,15 @@ function downloadExcelReport() {
 
         async function openForensicLightbox(snapshotId) {
             try {
-                const res = await fetch(`/api/forensic_snapshots?category=ALL&page_size=1000`);
-                const data = await res.json();
-                const snap = (data.snapshots || []).find(s => s.id === snapshotId);
+                let snap = (window.currentForensicItemsMap && window.currentForensicItemsMap.get(snapshotId)) || null;
+                if (!snap) {
+                    const res = await fetch(`/api/forensic_snapshots?category=ALL&page_size=1000`);
+                    const data = await res.json();
+                    snap = (data.snapshots || []).find(s => s.id === snapshotId);
+                    if (snap && window.currentForensicItemsMap) {
+                        window.currentForensicItemsMap.set(snap.id, snap);
+                    }
+                }
                 if (!snap) {
                     alert("Kayıt bulunamadı: " + snapshotId);
                     return;
@@ -18771,8 +18781,10 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                     cur_p = float(market_data.candles_5m[s]['close'].iloc[-1])
                     market_data.current_prices[s] = cur_p
                 if not lev or not lev.get("camarilla"):
-                    market_data.recalculate_levels(s)
-                    lev = market_data.levels.get(s, {})
+                    c_df = market_data.candles_5m.get(s)
+                    if c_df is not None and hasattr(c_df, 'empty') and not c_df.empty:
+                        market_data.recalculate_levels(s)
+                        lev = market_data.levels.get(s, {})
                 met = market_data.get_symbol_metrics(s) if hasattr(market_data, 'get_symbol_metrics') else {
                     "vol_surge": 1.0,
                     "min_vol_surge": 1.2 if s in ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "ADA/USDT"] else 1.5,
@@ -19421,12 +19433,16 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             if not snap_id:
                 return web.Response(status=400, text="Missing snapshot id")
             entry = next((item for item in forensic_blackbox_manager.catalog if item.get("id") == snap_id), None)
-            if not entry or not entry.get("png_path") or not os.path.exists(entry["png_path"]):
+            if not entry:
+                return web.Response(status=404, text="Snapshot not found")
+            
+            png_p = entry.get("png_path")
+            if not png_p or not os.path.exists(png_p):
+                png_p = entry.get("hall_of_fame_path")
+            if not png_p or not os.path.exists(png_p):
                 return web.Response(status=404, text="Image not found")
             
-            with open(entry["png_path"], "rb") as f:
-                img_data = f.read()
-            return web.Response(body=img_data, content_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+            return web.FileResponse(png_p, headers={"Cache-Control": "public, max-age=86400"})
         except Exception as e:
             return web.Response(status=500, text=str(e))
 
