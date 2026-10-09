@@ -7678,7 +7678,7 @@ async function loadAdminMetrics() {
 
                         ${itemRow('⚡', 'BTC 60s Mikro-Şok Kalkanı', 'Bitcoin ani 60 saniyelik mikro çöküş ve sıçrama devre kesicisi', 'BTC Hız: %' + btcVStr + ' (±%0.28)', pill(btcShock.is_active ? 'ŞOK DEVREDE' : 'GÜVENLİ', btcShock.is_active ? 'var(--red)' : 'var(--green)'))}
                         ${itemRow('🏛️', 'Deribit GEX & Gamma Flip Pivotu', 'Kurumsal opsiyon gamma maruziyeti, pinning (+GEX) / explosion (-GEX) rejimi ve sıfır gamma pivotu', (deribit.regime || 'NEUTRAL') + ' (Flip: $' + Number(deribit.gamma_flip_strike || 0).toLocaleString() + ')', pill(deribit.regime === 'POSITIVE_GAMMA_PIN' ? '+GEX MIKNATIS' : (deribit.regime === 'NEGATIVE_GAMMA_EXPLOSION' ? '-GEX PATLAMA' : 'GEX DENGELİ'), deribit.regime === 'POSITIVE_GAMMA_PIN' ? 'var(--cyan)' : (deribit.regime === 'NEGATIVE_GAMMA_EXPLOSION' ? 'var(--red)' : 'var(--green)')))}
-                        ${itemRow('🪙', 'SSR Osilatörü & Tether $1B Taze Mint Radarı', 'BTC/Stablecoin piyasa değeri oranı (24s MA altı spot alım gücü) ve Tether Treasury >=$1B taze mint 4 saatlik boğa ivmesi', 'SSR: ' + Number(ssrOsc.ssr_value || 0).toFixed(2) + (tetherRadar.is_active ? ' • 🚀 $1B BOĞA İVMESİ' : ' • Normal Akış'), pill(tetherRadar.is_active ? '🚀 4S MINT BOĞASI' : (ssrOsc.spot_purchasing_power_surge ? '⚡ SPOT ALIM GÜCÜ' : 'DENGELİ CEPHANE'), (tetherRadar.is_active || ssrOsc.spot_purchasing_power_surge) ? 'var(--green)' : 'var(--cyan)')))}
+                        ${itemRow('🪙', 'SSR Osilatörü & Tether $1B Taze Mint Radarı', 'BTC/Stablecoin piyasa değeri oranı (24s MA altı spot alım gücü) ve Tether Treasury >=$1B taze mint 4 saatlik boğa ivmesi', 'SSR: ' + Number(ssrOsc.ssr_value || 0).toFixed(2) + (tetherRadar.is_active ? ' • 🚀 $1B BOĞA İVMESİ' : ' • Normal Akış'), pill(tetherRadar.is_active ? '🚀 4S MINT BOĞASI' : (ssrOsc.spot_purchasing_power_surge ? '⚡ SPOT ALIM GÜCÜ' : 'DENGELİ CEPHANE'), (tetherRadar.is_active || ssrOsc.spot_purchasing_power_surge) ? 'var(--green)' : 'var(--cyan)'))}
                         ${itemRow('🧲', '100-Basamaklı Tasfiye Isı Haritası & Squeeze Avı', '100 dairesel basamakta Long/Short tasfiye yoğunluğu, Setup 15 (Short Squeeze >$1M ask-sweep) ve Setup 16 (Long Cascade Dip η<0.50)', (liqHeatmap.total_bins || 100) + ' Basamaklı Isı Haritası', pill('SETUP 15/16 AKTİF', 'var(--cyan)'))}
                         ${itemRow('🧬', 'Çift Ufuklu Otonom Evrim Motoru (8S & 48S)', '8 Saatlik Hızlı Risk Katmanı (SEI <%35 / ardışık stop marjin 0.20-0.50x) + 48 Saatlik Yapısal Kuant (Wick, Chandelier ATR, BE R)', '8S Hızlı / 48S Yavaş Katman', pill('ÇİFT UFUKLU AKTİF', 'var(--green)'))}
                         ${itemRow('⚡', 'Hawkes Tasfiye Çığı Radarı (!forceOrder)', 'Tasfiyelerin kendi kendini besleyen zincirleme patlama şiddeti (Branching Ratio η)', 'η: ' + Number(hawkes.eta || 0.15).toFixed(2) + (hawkes.is_active ? ' (' + (hawkes.side || 'ÇIĞ') + ')' : ''), pill(hawkes.is_active ? '⚡ ÇIĞ AKTİF' : 'SAKİN AKIŞ', hawkes.is_active ? 'var(--red)' : 'var(--green)'))}
@@ -9807,7 +9807,9 @@ async function loadAdminMetrics() {
                                 </tr>
                             `;
                         }).join('');
-                 updateWhaleRadarBadge();
+                    }
+                }
+                updateWhaleRadarBadge();
                 renderInstitutionalView();
             } catch(e) {
                 console.error("renderWhaleRadarView error:", e);
