@@ -16422,8 +16422,8 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                     upColor: '#10b981',
                     downColor: '#ef4444',
                     borderVisible: true,
-                    borderColor: '#10b981',
-                    downBorderColor: '#ef4444',
+                    borderUpColor: '#10b981',
+                    borderDownColor: '#ef4444',
                     wickUpColor: '#10b981',
                     wickDownColor: '#ef4444',
                     priceFormat: {
