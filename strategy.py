@@ -638,6 +638,7 @@ class StrategyEngine:
             except Exception:
                 pass
 
+        res.setdefault("is_trading_allowed", True)
         return res
 
     def get_coin_persona(self, symbol: str) -> dict:

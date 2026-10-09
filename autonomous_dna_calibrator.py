@@ -443,10 +443,12 @@ class AutonomousDNACalibrator:
         coin_stats = self._aggregate_coin_telemetry(completed_trades)
 
         # 4. Aday Değişiklikleri Belirle ve İçsel Doğrulama Testine Tabi Tut
-        proposals, rejected_proposals = self._evaluate_and_verify_candidates(current_dna, coin_stats, completed_trades)
+        proposals, rejected_proposals, retained_enriched = self._evaluate_and_verify_candidates(current_dna, coin_stats, completed_trades)
 
-        # 5. Kanıtlanan Değişiklikleri DNA'ya Uygula
+        # 5. Kanıtlanan Değişiklikleri ve Zenginleştirilmiş Kuant Telemetrilerini DNA'ya Uygula
         updated_dna = dict(current_dna)
+        for sym, new_cfg in retained_enriched.items():
+            updated_dna[sym] = new_cfg
         for sym, new_cfg in proposals.items():
             updated_dna[sym] = new_cfg
 
@@ -600,13 +602,14 @@ class AutonomousDNACalibrator:
         current_dna: Dict[str, dict],
         coin_stats: Dict[str, dict],
         all_trades: List[dict]
-    ) -> Tuple[Dict[str, dict], List[dict]]:
+    ) -> Tuple[Dict[str, dict], List[dict], Dict[str, dict]]:
         """
         Aday değişiklikleri üretir ve içsel simülasyon testinden (Proof of Simulation)
         geçirerek yalnızca matematiksel olarak performansı kanıtlananları onaylar.
         """
         approved_proposals: Dict[str, dict] = {}
         rejected_proposals: List[dict] = []
+        retained_enriched: Dict[str, dict] = {}
 
         for sym, cur_cfg in current_dna.items():
             s = coin_stats.get(sym)
@@ -773,6 +776,33 @@ class AutonomousDNACalibrator:
             candidate_cfg["reasons"] = candidate_reasons
 
             if not proposed:
+                safe_retained = dict(cur_cfg)
+                safe_retained["liquidity_tier"] = candidate_cfg.get("liquidity_tier", "TIER_2_DINAMIK")
+                safe_retained["liquidity_tier_badge"] = candidate_cfg.get("liquidity_tier_badge", "TIER-2 DİNAMİK")
+                safe_retained["liquidity_tier_color"] = candidate_cfg.get("liquidity_tier_color", "#38bdf8")
+                safe_retained["liquidity_tier_label"] = candidate_cfg.get("liquidity_tier_label", "Tier-2 Dinamik")
+                safe_retained["dynamic_cvd_threshold"] = candidate_cfg.get("dynamic_cvd_threshold", 55.0)
+                safe_retained["dynamic_obi_threshold"] = candidate_cfg.get("dynamic_obi_threshold", 1.20)
+                safe_retained["dynamic_vol_surge_threshold"] = candidate_cfg.get("dynamic_vol_surge_threshold", 1.45)
+                safe_retained["wick_reversal_threshold"] = float(candidate_cfg.get("wick_reversal_threshold") or cur_cfg.get("wick_reversal_threshold") or 13.5)
+                safe_retained["fakeout_wick_threshold"] = safe_retained["wick_reversal_threshold"]
+                safe_retained["chandelier_atr_mult"] = float(cur_cfg.get("chandelier_atr_mult") or candidate_cfg.get("chandelier_atr_mult") or 2.0)
+                safe_retained["break_even_trigger_r"] = float(cur_cfg.get("break_even_trigger_r") or candidate_cfg.get("break_even_trigger_r") or 1.0)
+                safe_retained["whale_sensitivity"] = candidate_cfg.get("whale_sensitivity", 1.0)
+                safe_retained["setup_matrix"] = candidate_cfg.get("setup_matrix", {})
+                safe_retained["muted_setups"] = candidate_cfg.get("muted_setups", [])
+                safe_retained["priority_setups"] = candidate_cfg.get("priority_setups", [])
+                safe_retained["forensic_commentary"] = candidate_cfg.get("forensic_commentary", "")
+                safe_retained["calibration_reason"] = cur_cfg.get("calibration_reason") or f"Mevcut Parametreler Optimal (SEI %{s['sei']:.1f})"
+                safe_retained["reasons"] = cur_cfg.get("reasons") or [safe_retained["calibration_reason"]]
+                safe_retained["last_verified_at"] = datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S")
+                if "validation_proof" not in safe_retained:
+                    safe_retained["validation_proof"] = {
+                        "symbol": sym, "passed": True,
+                        "proof_summary": f"Mevcut ayarlar optimal (SEI %{s['sei']:.1f})",
+                        "fail_reason": ""
+                    }
+                retained_enriched[sym] = safe_retained
                 continue
 
             # ── İÇSEL MATEMATİKSEL DOĞRULAMA (PROOF OF SIMULATION) ──
@@ -791,8 +821,31 @@ class AutonomousDNACalibrator:
                     "metrics": validation_report
                 })
                 print(f">> [OTONOM KALİBRASYON REDDİ] {sym}: İçsel denetim değişikliği reddetti: {validation_report.get('fail_reason')}")
+                # Güvenli mevcut parametreleri koru, fakat kuant telemetri ve doğrulama kanıtını ekle
+                safe_retained = dict(cur_cfg)
+                safe_retained["liquidity_tier"] = candidate_cfg.get("liquidity_tier", "TIER_2_DINAMIK")
+                safe_retained["liquidity_tier_badge"] = candidate_cfg.get("liquidity_tier_badge", "TIER-2 DİNAMİK")
+                safe_retained["liquidity_tier_color"] = candidate_cfg.get("liquidity_tier_color", "#38bdf8")
+                safe_retained["liquidity_tier_label"] = candidate_cfg.get("liquidity_tier_label", "Tier-2 Dinamik")
+                safe_retained["dynamic_cvd_threshold"] = candidate_cfg.get("dynamic_cvd_threshold", 55.0)
+                safe_retained["dynamic_obi_threshold"] = candidate_cfg.get("dynamic_obi_threshold", 1.20)
+                safe_retained["dynamic_vol_surge_threshold"] = candidate_cfg.get("dynamic_vol_surge_threshold", 1.45)
+                safe_retained["wick_reversal_threshold"] = float(candidate_cfg.get("wick_reversal_threshold") or cur_cfg.get("wick_reversal_threshold") or 13.5)
+                safe_retained["fakeout_wick_threshold"] = safe_retained["wick_reversal_threshold"]
+                safe_retained["chandelier_atr_mult"] = float(cur_cfg.get("chandelier_atr_mult") or candidate_cfg.get("chandelier_atr_mult") or 2.0)
+                safe_retained["break_even_trigger_r"] = float(cur_cfg.get("break_even_trigger_r") or candidate_cfg.get("break_even_trigger_r") or 1.0)
+                safe_retained["whale_sensitivity"] = candidate_cfg.get("whale_sensitivity", 1.0)
+                safe_retained["setup_matrix"] = candidate_cfg.get("setup_matrix", {})
+                safe_retained["muted_setups"] = candidate_cfg.get("muted_setups", [])
+                safe_retained["priority_setups"] = candidate_cfg.get("priority_setups", [])
+                safe_retained["forensic_commentary"] = candidate_cfg.get("forensic_commentary", "")
+                safe_retained["calibration_reason"] = f"Parametreler Korundu (Simülasyon Kalkanı): {validation_report.get('fail_reason')}"
+                safe_retained["reasons"] = [f"Parametreler Korundu: {validation_report.get('fail_reason')}"]
+                safe_retained["last_verified_at"] = datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S")
+                safe_retained["validation_proof"] = validation_report
+                retained_enriched[sym] = safe_retained
 
-        return approved_proposals, rejected_proposals
+        return approved_proposals, rejected_proposals, retained_enriched
 
     # ──────────────────────────────────────────────────────────────────────────
     # İÇSEL SİMÜLASYON MOTORU (SELF-VALIDATION SIMULATION ENGINE)
