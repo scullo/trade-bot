@@ -16,7 +16,8 @@ from typing import Dict, Any, Optional
 
 import matplotlib
 matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import matplotlib.patches as patches
 from matplotlib.gridspec import GridSpec
 
@@ -174,7 +175,8 @@ class ForensicChartEngineV2:
         # ---------------------------------------------------------------------
         # 2. ŞABLON VE DÜZEN KURULUMU (1600 x 900 COMPOSITE)
         # ---------------------------------------------------------------------
-        fig = plt.figure(figsize=(16.0, 9.0), dpi=100)
+        fig = Figure(figsize=(16.0, 9.0), dpi=100)
+        canvas = FigureCanvas(fig)
         fig.patch.set_facecolor(self.COLOR_BG)
 
         # 3 Panel GridSpec:
@@ -547,15 +549,14 @@ class ForensicChartEngineV2:
             y_cursor -= 0.038
             ax_hud.text(0.06, y_cursor, f"Tavsiye: {_clean_str(advice, 44)}", color='#38bdf8', fontsize=7.2, fontweight='bold', zorder=5)
 
-        # Buffer'a kaydet (Bellek Sızıntısı Koruması)
+        # Buffer'a kaydet (Pure OO Canvas - Thread-Safe & Sıfır Kilitlenme)
         buf = io.BytesIO()
         try:
-            plt.savefig(buf, format='png', facecolor=fig.get_facecolor(), edgecolor='none', bbox_inches='tight')
+            canvas.print_png(buf)
             buf.seek(0)
             return buf
         finally:
-            plt.close(fig)
-            plt.close('all')
+            fig.clf()
 
 
 # Singleton motor

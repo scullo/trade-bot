@@ -40,6 +40,7 @@ class ForensicBlackboxManager:
     def __init__(self):
         self._ensure_directories()
         self._lock = threading.Lock()
+        self._draw_lock = threading.Lock()
         self.catalog = self._load_catalog()
         self.executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="ValkyrieForensic")
 
@@ -155,16 +156,17 @@ class ForensicBlackboxManager:
         has_image = False
         if df_5m is not None and not df_5m.empty:
             try:
-                buf = forensic_chart_engine_v2.generate_composite_snapshot(
-                    trade_record=trade_record,
-                    df_5m=df_5m,
-                    levels=levels,
-                    autopsy_data=autopsy
-                )
-                if buf:
-                    with open(png_path, "wb") as f_img:
-                        f_img.write(buf.getvalue())
-                    has_image = True
+                with self._draw_lock:
+                    buf = forensic_chart_engine_v2.generate_composite_snapshot(
+                        trade_record=trade_record,
+                        df_5m=df_5m,
+                        levels=levels,
+                        autopsy_data=autopsy
+                    )
+                    if buf:
+                        with open(png_path, "wb") as f_img:
+                            f_img.write(buf.getvalue())
+                        has_image = True
             except Exception as e:
                 print(f"[FORENSIC] Grafik cizim hatasi ({symbol}): {e}")
 

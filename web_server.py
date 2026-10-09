@@ -4105,11 +4105,31 @@ HTML_PAGE = """
 
             <div style="display:flex; flex:1; overflow:hidden; background:#070b14;">
                 <!-- SOL ALAN: 1600x900 GÖRSEL ALANI (%72) -->
-                <div style="flex:1; overflow:auto; display:flex; justify-content:center; align-items:center; background:#04070f; padding:12px; position:relative;" id="forensic-img-container">
-                    <img id="forensic-lightbox-img" src="" alt="Forensic Snapshot" style="max-width:100%; max-height:100%; object-fit:contain; border-radius:8px; transition:transform 0.15s ease; box-shadow:0 8px 32px rgba(0,0,0,0.8);" />
+                <div style="flex:1; overflow:auto; display:flex; justify-content:center; align-items:center; background:#04070f; padding:12px; position:relative; min-height:480px;" id="forensic-img-container">
+                    <!-- CANLI YÜKLENİYOR ANİMASYONU -->
+                    <div id="forensic-img-loading" style="display:none; flex-direction:column; align-items:center; justify-content:center; gap:14px; color:var(--cyan); padding:30px;">
+                        <div style="width:44px; height:44px; border:3px solid rgba(0,242,254,0.15); border-top-color:var(--cyan); border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+                        <div style="font-size:13.5px; font-weight:800; font-family:'JetBrains Mono',monospace; letter-spacing:0.5px;">Mikroskobik Adli Grafik Yükleniyor...</div>
+                        <div style="font-size:11px; color:#94a3b8;">1600x900 Mum Grafiği, MAFE Koridoru & CVD Paneli Getiriliyor</div>
+                    </div>
+
+                    <!-- GÖRSEL ELEMANI -->
+                    <img id="forensic-lightbox-img" src="" alt="Forensic Snapshot" style="max-width:100%; max-height:100%; object-fit:contain; border-radius:8px; transition:transform 0.15s ease, opacity 0.25s ease; box-shadow:0 8px 32px rgba(0,0,0,0.8); display:none; opacity:0;" />
+
+                    <!-- GÖRSEL HATA & TEKRAR DENE KUTUSU -->
+                    <div id="forensic-img-error" style="display:none; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:#f43f5e; text-align:center; padding:30px;">
+                        <div style="font-size:36px;">⚠️</div>
+                        <div style="font-size:14px; font-weight:800; color:#fff;">Görsel Dosyası Yüklenemedi</div>
+                        <div id="forensic-img-error-desc" style="font-size:11.5px; color:#94a3b8; max-width:320px;">Görsel henüz diske yazılıyor olabilir veya bağlantı gecikti.</div>
+                        <button onclick="retryLoadForensicImage()" style="background:rgba(236,72,153,0.18); border:1px solid #ec4899; color:#fff; font-weight:800; font-size:12px; padding:7px 16px; border-radius:8px; cursor:pointer; margin-top:6px; display:flex; align-items:center; gap:6px;">
+                            🔄 Yeniden Yükle
+                        </button>
+                    </div>
+
+                    <!-- GÖRSEL MEVCUT DEĞİL (YALNIZCA TELEMETRİ) -->
                     <div id="forensic-img-empty" style="display:none; text-align:center; color:#94a3b8;">
                         <div style="font-size:36px; margin-bottom:12px;">🖼️</div>
-                        <div style="font-size:14px; font-weight:700;">Görsel Dosyası Bulunamadı veya Arşivlendi</div>
+                        <div style="font-size:14px; font-weight:700;">Görsel Dosyası Arşivlendi veya Üretilmedi</div>
                         <div style="font-size:12px; margin-top:6px;">Yalnızca JSON adli telemetrisi mevcut.</div>
                     </div>
                 </div>
@@ -18160,12 +18180,34 @@ function downloadExcelReport() {
                 title.innerText = `VALKYRIE GÖRSEL ADLİ OTOPSİ — #${snap.symbol} [${snap.side}]`;
                 sub.innerText = `İcraat: ${snap.close_reason || 'KAPANDI'} │ Net PnL: ${snap.net_pnl >= 0 ? '+$' : '-$'}${Math.abs(snap.net_pnl).toFixed(2)} (${snap.roe_pct >= 0 ? '+' : ''}${snap.roe_pct.toFixed(2)}% ROE)`;
 
+                const imgLoading = document.getElementById('forensic-img-loading');
+                const imgError = document.getElementById('forensic-img-error');
+
                 if (snap.has_image) {
-                    img.src = `/api/forensic_snapshot_image?id=${encodeURIComponent(snap.id)}`;
-                    img.style.display = 'block';
-                    img.style.transform = 'scale(1)';
+                    if (imgLoading) imgLoading.style.display = 'flex';
+                    if (imgError) imgError.style.display = 'none';
                     if (imgEmpty) imgEmpty.style.display = 'none';
+                    img.style.display = 'none';
+                    img.style.opacity = '0';
+                    img.style.transform = 'scale(1)';
+
+                    img.onload = () => {
+                        if (imgLoading) imgLoading.style.display = 'none';
+                        if (imgError) imgError.style.display = 'none';
+                        img.style.display = 'block';
+                        setTimeout(() => { img.style.opacity = '1'; }, 30);
+                    };
+
+                    img.onerror = () => {
+                        if (imgLoading) imgLoading.style.display = 'none';
+                        img.style.display = 'none';
+                        if (imgError) imgError.style.display = 'flex';
+                    };
+
+                    img.src = `/api/forensic_snapshot_image?id=${encodeURIComponent(snap.id)}&t=${Date.now()}`;
                 } else {
+                    if (imgLoading) imgLoading.style.display = 'none';
+                    if (imgError) imgError.style.display = 'none';
                     img.style.display = 'none';
                     if (imgEmpty) imgEmpty.style.display = 'block';
                 }
@@ -18208,6 +18250,19 @@ function downloadExcelReport() {
             const overlay = document.getElementById('forensic-lightbox-modal-overlay');
             if (overlay) overlay.style.display = 'none';
             currentViewingSnapshot = null;
+        }
+
+        function retryLoadForensicImage() {
+            if (!currentViewingSnapshot) return;
+            const img = document.getElementById('forensic-lightbox-img');
+            const imgLoading = document.getElementById('forensic-img-loading');
+            const imgError = document.getElementById('forensic-img-error');
+            if (imgLoading) imgLoading.style.display = 'flex';
+            if (imgError) imgError.style.display = 'none';
+            if (img) {
+                img.style.display = 'none';
+                img.src = `/api/forensic_snapshot_image?id=${encodeURIComponent(currentViewingSnapshot.id)}&retry=${Date.now()}`;
+            }
         }
 
         function zoomForensicImage(factor) {
@@ -19707,13 +19762,35 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             snap_id = request.query.get("id")
             if not snap_id:
                 return web.Response(status=400, text="Missing snapshot id")
-            entry = next((item for item in forensic_blackbox_manager.catalog if item.get("id") == snap_id), None)
-            if not entry:
-                return web.Response(status=404, text="Snapshot not found")
             
-            png_p = entry.get("png_path")
+            entry = next((item for item in forensic_blackbox_manager.catalog if item.get("id") == snap_id), None)
+            if not entry and hasattr(forensic_blackbox_manager, '_load_catalog'):
+                reloaded = forensic_blackbox_manager._load_catalog()
+                entry = next((item for item in reloaded if item.get("id") == snap_id), None)
+            
+            png_p = entry.get("png_path") if entry else None
             if not png_p or not os.path.exists(png_p):
-                png_p = entry.get("hall_of_fame_path")
+                if entry and entry.get("hall_of_fame_path"):
+                    png_p = entry.get("hall_of_fame_path")
+            
+            if png_p and not os.path.exists(png_p):
+                cand = os.path.abspath(png_p)
+                if os.path.exists(cand):
+                    png_p = cand
+            
+            if not png_p or not os.path.exists(png_p):
+                # Snapshots klasöründe snap_id ile eşleşen png tara
+                found_png = None
+                for root, _, files in os.walk(forensic_blackbox_manager.SNAPSHOTS_DIR):
+                    for f in files:
+                        if f.endswith(".png") and snap_id.replace("snap_", "") in f:
+                            found_png = os.path.join(root, f)
+                            break
+                    if found_png:
+                        break
+                if found_png and os.path.exists(found_png):
+                    png_p = found_png
+
             if not png_p or not os.path.exists(png_p):
                 return web.Response(status=404, text="Image not found")
             
