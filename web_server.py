@@ -19457,14 +19457,20 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
         try:
             from forensic_blackbox_manager import forensic_blackbox_manager
             body = await request.json()
-            symbol = body.get("symbol", "BTC/USDT")
-            clean_s = symbol.replace("/USDT", "").replace("USDT", "").strip().toUpperCase() if hasattr(symbol, 'toUpperCase') else symbol.replace("/USDT", "").replace("USDT", "").strip().upper()
+            symbol = str(body.get("symbol", "BTC/USDT")).strip().upper()
+            clean_s = symbol.replace("/USDT", "").replace(":USDT", "").replace("USDT", "").strip().upper()
             full_s = f"{clean_s}/USDT"
             
             # market_data'dan 5M mum ve seviyeleri al
             df_5m = None
             if market_data and hasattr(market_data, 'candles_5m'):
-                df_5m = market_data.candles_5m.get(full_s) or market_data.candles_5m.get(f"{clean_s}USDT") or market_data.candles_5m.get(symbol)
+                df_5m = market_data.candles_5m.get(full_s) or market_data.candles_5m.get(clean_s) or market_data.candles_5m.get(f"{clean_s}USDT")
+                if (df_5m is None or df_5m.empty) and hasattr(market_data, 'fetch_single_symbol'):
+                    try:
+                        await market_data.fetch_single_symbol(full_s)
+                        df_5m = market_data.candles_5m.get(full_s) or market_data.candles_5m.get(clean_s)
+                    except Exception:
+                        pass
             
             cur_p = 0.0
             if df_5m is not None and not df_5m.empty:
@@ -19496,7 +19502,13 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             if market_data and hasattr(market_data, 'get_camarilla_levels'):
                 lvl = market_data.get_camarilla_levels(full_s) or {}
 
-            snap = forensic_blackbox_manager.process_closed_trade_sync(record, df_5m=df_5m, levels=lvl, is_shadow=False)
+            snap = await asyncio.to_thread(
+                forensic_blackbox_manager.process_closed_trade_sync,
+                record,
+                df_5m,
+                lvl,
+                False
+            )
             return web.json_response({"status": "ok", "snapshot": snap})
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=500)
