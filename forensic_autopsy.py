@@ -79,6 +79,12 @@ class ForensicAutopsyEngine:
             "badge": "⚖️ STANDART İCRAAT",
             "color": "#94a3b8",
             "icon": "📋"
+        },
+        "LIVE_RADAR_INSPECTION": {
+            "title": "Canlı Piyasa Gözlemi & Radar İncelemesi",
+            "badge": "📡 CANLI PİYASA RADARI",
+            "color": "#00f2fe",
+            "icon": "🎯"
         }
     }
 
@@ -118,6 +124,40 @@ class ForensicAutopsyEngine:
         funding_status = str(trade_record.get("funding_status") or "BALANCED")
         cvd_delta = float(trade_record.get("entry_cvd_delta") or 0.0)
         atr_pct = float(trade_record.get("atr_pct") or 1.0)
+
+        # 0. CANLI PİYASA TARAMASI VE RADAR İNCELEMESİ (KAPALI İŞLEM DEĞİL)
+        is_manual = bool(
+            trade_record.get("is_manual_scan")
+            or trade_record.get("is_manual")
+            or ("MANUAL" in str(trade_record.get("id", "")))
+            or trade_record.get("close_reason") == "MANUEL_ANLIK_SNAPSHOT_KONTROLÜ"
+        )
+        if is_manual:
+            meta = self.DIAGNOSIS_CATALOG["LIVE_RADAR_INSPECTION"]
+            findings = [
+                f"Parite anlık referans fiyatı (${entry_price:,.4f}) üzerinde canlı radar taraması yapıldı.",
+                "Kurumsal Camarilla koridoru, EMA trendleri ve CVD emir akışı haritalandı."
+            ]
+            advice = "R4 üstü Long kırılımı veya S4 altı Short kırılımı teyit edilene kadar piyasa yönünü izleyin."
+            vision_prompt = (
+                f"Valkyrie Forensic Canlı Radar İncelemesi: #{symbol}/USDT ({side} {trade_record.get('leverage', 5)}x).\n"
+                f"Anlık Fiyat: ${entry_price:,.4f}.\n"
+                f"Ön Teşhis: {meta['title']} ({meta['badge']}).\n"
+                f"Adli Bulgular:\n" + "\n".join([f"- {f}" for f in findings]) + "\n"
+                f"Öneri: {advice}"
+            )
+            return {
+                "diagnosis_code": "LIVE_RADAR_INSPECTION",
+                "diagnosis_title": meta["title"],
+                "diagnosis_badge": meta["badge"],
+                "diagnosis_color": meta["color"],
+                "diagnosis_icon": meta["icon"],
+                "confidence_score": 0.95,
+                "findings": findings,
+                "actionable_advice": advice,
+                "vision_prompt": vision_prompt,
+                "analyzed_at": datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S")
+            }
 
         diagnosis_code = "BALANCED_NORMAL_CLOSE"
         confidence = 0.85

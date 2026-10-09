@@ -19904,6 +19904,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 cur_p = float(market_data.get_last_price(full_s) or 0.0)
             
             now_str = datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S")
+            from chart_engine_v2 import fmt_price
             record = {
                 "id": f"MANUAL_{clean_s}_{int(time.time())}",
                 "symbol": full_s,
@@ -19915,15 +19916,16 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "roe_pct": 0.0,
                 "entry_time": now_str,
                 "exit_time": now_str,
-                "duration": "Manuel Anlık İnceleme",
+                "duration": "Canlı Piyasa Taraması",
                 "candle_count": 1,
                 "close_reason": "MANUEL_ANLIK_SNAPSHOT_KONTROLÜ",
-                "setup_id": "SETUP_MANUAL_FORENSIC_INSPECTION",
+                "setup_id": "RADAR_MARKET_SCAN",
                 "max_mfe_roe": 0.0,
                 "max_mae_roe": 0.0,
+                "is_manual_scan": True,
                 "confluence_list": [
-                    f"[✓] {clean_s} Manuel Adli Denetim",
-                    f"[✓] Son Referans Fiyat: {cur_p}",
+                    f"[✓] {clean_s} Canlı Adli Denetim",
+                    f"[✓] Son Referans Fiyat: {fmt_price(cur_p)}",
                     "[✓] Mikroskobik Mum ve CVD Taraması",
                     "[✓] Kurumsal Camarilla / MAFE Analizi"
                 ]
