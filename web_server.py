@@ -7860,7 +7860,9 @@ async function loadAdminMetrics() {
             const dist = summary.status_distribution || {};
             const distEl = document.getElementById('quant-kpi-distribution');
             if (distEl) {
-                distEl.innerText = `${dist['GEVŞET'] || 0} Fırsat • ${dist['KORU'] || 0} Koruma`;
+                const fCount = dist['GEVŞET'] != null ? dist['GEVŞET'] : 0;
+                const kCount = dist['KORU'] != null ? dist['KORU'] : 0;
+                distEl.innerText = `${fCount} Fırsat • ${kCount} Koruma`;
             }
 
             const beDistEl = document.getElementById('quant-kpi-be-distribution');

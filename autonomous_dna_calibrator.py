@@ -985,10 +985,16 @@ class AutonomousDNACalibrator:
         next_fast_ts = (self.last_fast_risk_ts + FAST_RISK_CYCLE_SECONDS) if self.last_fast_risk_ts > 0 else (now_ts + FAST_RISK_CYCLE_SECONDS)
 
         current_dna = self._load_current_calibrated_dna()
-        counts = {"KORU": 0, "GEVŞET": 0, "ERKEN BE": 0, "DENGELİ": 0}
-        for v in current_dna.values():
-            st = v.get("calibration_status", "DENGELİ")
-            counts[st] = counts.get(st, 0) + 1
+        firsat_cnt = sum(1 for v in current_dna.values() if "GEVŞET" in v.get("calibration_status", ""))
+        koru_cnt = sum(1 for v in current_dna.values() if "KORU" in v.get("calibration_status", ""))
+        erken_be_cnt = sum(1 for v in current_dna.values() if "ERKEN BE" in v.get("calibration_status", ""))
+        dengeli_cnt = sum(1 for v in current_dna.values() if v.get("calibration_status") == "DENGELİ")
+        counts = {
+            "KORU": koru_cnt,
+            "GEVŞET": firsat_cnt,
+            "ERKEN BE": erken_be_cnt,
+            "DENGELİ": dengeli_cnt
+        }
 
         last_cycle = self.audit_history[-1] if self.audit_history else {}
 
