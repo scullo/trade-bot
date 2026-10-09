@@ -2671,6 +2671,8 @@ class MarketDataManager:
         hist_vals = [v for ts, v in self.ssr_history_deque]
         from indicators import calculate_ssr_oscillator
         res = calculate_ssr_oscillator(btc_mc, stable_mc, hist_vals)
+        res['ssr_value'] = float(res.get('ssr', 0.0))
+        res['spot_purchasing_power_surge'] = bool(res.get('is_bullish_purchasing_power', False))
         res['btc_market_cap'] = round(btc_mc, 2)
         res['stablecoin_market_cap'] = round(stable_mc, 2)
         return res

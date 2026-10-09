@@ -9234,18 +9234,18 @@ async function loadAdminMetrics() {
 
                 // SSR Osilatörü
                 const ssrSt = appState.ssr_status || (ammo && ammo.ssr) || {};
-                const ssrVal = Number(ssrSt.ssr_value || 0);
+                const ssrVal = Number(ssrSt.ssr_value || ssrSt.ssr || 0);
                 const ssrMa = Number(ssrSt.ssr_ma24 || 0);
-                const ssrSurge = Boolean(ssrSt.spot_purchasing_power_surge);
+                const ssrSurge = Boolean(ssrSt.spot_purchasing_power_surge !== undefined ? ssrSt.spot_purchasing_power_surge : ssrSt.is_bullish_purchasing_power);
 
                 const ssrValEl = document.getElementById('inst-ssr-val');
                 if (ssrValEl) {
-                    ssrValEl.innerText = ssrVal > 0 ? ssrVal.toFixed(2) : '3.85';
+                    ssrValEl.innerText = ssrVal > 0 ? ssrVal.toFixed(2) : (ssrSt.btc_market_cap && ssrSt.stable_market_cap ? (ssrSt.btc_market_cap / ssrSt.stable_market_cap).toFixed(2) : '--');
                     ssrValEl.style.color = ssrSurge ? 'var(--green)' : '#c084fc';
                 }
                 const ssrMaSubEl = document.getElementById('inst-ssr-ma-sub');
                 if (ssrMaSubEl) {
-                    ssrMaSubEl.innerText = `24s MA: ${ssrMa > 0 ? ssrMa.toFixed(2) : '3.92'} • ${ssrSurge ? '⚡ Spot Alım Gücü Artışı' : 'Normal Cephane Dengesi'}`;
+                    ssrMaSubEl.innerText = `24s MA: ${ssrMa > 0 ? ssrMa.toFixed(2) : (ssrVal > 0 ? ssrVal.toFixed(2) : '--')} • ${ssrSurge ? '⚡ Spot Alım Gücü Artışı' : 'Normal Cephane Dengesi'}`;
                 }
                 const ssrDescEl = document.getElementById('inst-ssr-status-desc');
                 if (ssrDescEl) {
@@ -9526,13 +9526,13 @@ async function loadAdminMetrics() {
 
                 // 2. SSR Osilatörü
                 const ssrSt = appState.ssr_status || (ammo && ammo.ssr) || {};
-                const ssrVal = Number(ssrSt.ssr_value || 0);
+                const ssrVal = Number(ssrSt.ssr_value || ssrSt.ssr || 0);
                 const ssrMa = Number(ssrSt.ssr_ma24 || 0);
-                const ssrSurge = Boolean(ssrSt.spot_purchasing_power_surge);
+                const ssrSurge = Boolean(ssrSt.spot_purchasing_power_surge !== undefined ? ssrSt.spot_purchasing_power_surge : ssrSt.is_bullish_purchasing_power);
 
-                const ssrText = ssrVal > 0 ? ssrVal.toFixed(2) : '3.85';
+                const ssrText = ssrVal > 0 ? ssrVal.toFixed(2) : (ssrSt.btc_market_cap && ssrSt.stable_market_cap ? (ssrSt.btc_market_cap / ssrSt.stable_market_cap).toFixed(2) : '--');
                 const ssrColor = ssrSurge ? 'var(--green)' : '#c084fc';
-                const ssrMaText = `24s MA: ${ssrMa > 0 ? ssrMa.toFixed(2) : '3.92'} • ${ssrSurge ? '⚡ Spot Alım Gücü Artışı' : 'Normal Cephane Dengesi'}`;
+                const ssrMaText = `24s MA: ${ssrMa > 0 ? ssrMa.toFixed(2) : (ssrVal > 0 ? ssrVal.toFixed(2) : '--')} • ${ssrSurge ? '⚡ Spot Alım Gücü Artışı' : 'Normal Cephane Dengesi'}`;
                 const ssrDescText = ssrSurge ? '🟢 SSR < MA24: Kurumsal Spot Cephane Artıyor (Boğa Teyidi)' : '⚪ SSR >= MA24: Dengeli Rezerv Dağılımı';
 
                 ['inst-page-ssr-val', 'inst-ssr-val'].forEach(id => {
@@ -11076,6 +11076,11 @@ async function loadAdminMetrics() {
                         const entropyNorm = Number(r.entropyNorm !== undefined ? r.entropyNorm : (r.reason && r.reason.includes('Entropi') ? 0.91 : 0.70));
                         const hurstVal = Number(r.hurstVal !== undefined ? r.hurstVal : (r.reason && r.reason.includes('Mandelbrot') ? 0.38 : 0.50));
 
+                        const sLookup = (typeof appState !== 'undefined' && appState && appState.symbols) || {};
+                        const sItem = sLookup[cleanS + '/USDT'] || sLookup[cleanS] || {};
+                        const symPrice = Number(r.price || sItem.price || 0);
+                        const symTgtPrice = Number(r.targetPrice || sItem.npoc || sItem.avwap || (symPrice > 0 ? symPrice : 0));
+
                         list.push({
                             symbol: cleanS,
                             category: 'blocked',
@@ -11085,9 +11090,9 @@ async function loadAdminMetrics() {
                             isVolOk: false,
                             targetName: r.setup || 'Sinyal Kurulumu',
                             action: 'ENGEL / İŞLEM REDDİ',
-                            price: 0,
-                            targetPrice: 0,
-                            rsScore: 0,
+                            price: symPrice,
+                            targetPrice: symTgtPrice,
+                            rsScore: Number(sItem.dynamic_rs_score !== undefined ? sItem.dynamic_rs_score : (sItem.rs_vs_btc || 0)),
                             reason: r.reason || 'Kriterler sağlanamadığı için işlem güvenliği gereği iptal edildi.',
                             angle: getStableAngle(cleanS + '_rej'),
                             displayAngle: getStableAngle(cleanS + '_rej'),
@@ -16935,6 +16940,17 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                         cvd_summary = market_data.get_market_cvd_summary()
                     except Exception:
                         pass
+                if hasattr(market_data, 'symbol_cvd') and isinstance(market_data.symbol_cvd, dict):
+                    symbol_cvd = dict(market_data.symbol_cvd)
+                if hasattr(market_data, 'active_symbols') and hasattr(market_data, 'get_symbol_cvd'):
+                    for sym in getattr(market_data, 'active_symbols', []):
+                        if sym not in symbol_cvd:
+                            try:
+                                cvd_d = market_data.get_symbol_cvd(sym)
+                                if cvd_d:
+                                    symbol_cvd[sym] = cvd_d
+                            except Exception:
+                                pass
             whale_radar = {
                 "ammunition": market_data.get_ammunition_status() if (market_data and hasattr(market_data, 'get_ammunition_status')) else {},
                 "recent_alerts": market_data.get_recent_whale_alerts(25) if (market_data and hasattr(market_data, 'get_recent_whale_alerts')) else [],
