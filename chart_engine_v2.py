@@ -59,7 +59,7 @@ class ForensicChartEngineV2:
     """
     1600x900 Ultra HD Kompozit Adli Görsel Üretim Motoru.
     Giriş ve çıkış mumunu asla kaybetmeyen dinamik zaman penceresi,
-    garantili Camarilla seviyeleri, EMA 20/50 trend çizgileri, sürekli CVD alanı
+    garantili Camarilla seviyeleri, kurumsal Hacim Profili (mPOC/nPOC), sürekli CVD alanı
     ve bağımsız adli HUD telemetri kartı içerir.
     """
 
@@ -71,8 +71,8 @@ class ForensicChartEngineV2:
     COLOR_GREEN_BODY = '#059669'  # Zengin Zümrüt Yeşili (Boğa Mum Gövdesi)
     COLOR_RED = '#ef4444'         # Neon Kırmızı (Short / Loss / Direnç)
     COLOR_RED_BODY = '#991b1b'    # Zengin Yakut Kırmızı (Ayı Mum Gövdesi)
-    COLOR_CYAN = '#00f2fe'        # Kuant Camgöbeği (Valkyrie Accent / EMA 20)
-    COLOR_YELLOW = '#eab308'      # Camarilla Altın / İkaz / EMA 50
+    COLOR_CYAN = '#00f2fe'        # Kuant Camgöbeği (Valkyrie Accent / Lazer Hattı)
+    COLOR_YELLOW = '#eab308'      # Camarilla Altın / İkaz Seviyesi
     COLOR_ORANGE = '#fb923c'      # R4 Breakout Turuncu
     COLOR_PURPLE = '#c084fc'      # nPOC / mPOC Mor
     COLOR_TEXT_MUTED = '#94a3b8'  # Soluk gri metin
@@ -185,16 +185,8 @@ class ForensicChartEngineV2:
         display_df = df_5m.iloc[slice_start:slice_end].copy().reset_index(drop=True)
         n_bars = len(display_df)
 
-        # ---------------------------------------------------------------------
-        # 2. TEKNİK İNDİKATÖRLER: EMA 20 & EMA 50 TREND HATLARI
-        # ---------------------------------------------------------------------
-        ema20_all = df_5m['close'].ewm(span=20, adjust=False).mean()
-        ema50_all = df_5m['close'].ewm(span=50, adjust=False).mean()
-        display_ema20 = ema20_all.iloc[slice_start:slice_end].values
-        display_ema50 = ema50_all.iloc[slice_start:slice_end].values
-
-        cur_ema20 = float(display_ema20[-1]) if len(display_ema20) > 0 else 0.0
-        cur_ema50 = float(display_ema50[-1]) if len(display_ema50) > 0 else 0.0
+        mpoc_val = float(levels.get('mpoc', 0.0)) if levels else 0.0
+        npoc_val = float(levels.get('above_npoc', 0.0)) if levels else 0.0
 
         # ---------------------------------------------------------------------
         # 3. CAMARILLA SEVİYE GÜVENCESİ (FALLBACK HESAPLAMA MOTORU)
@@ -332,14 +324,10 @@ class ForensicChartEngineV2:
                 ax_chart.add_patch(rect)
 
         # ---------------------------------------------------------------------
-        # 8. TREND ÇİZGİLERİ OVERLAY (EMA 20 & EMA 50)
+        # 8. KURUMSAL SEVİYE ÖZET BİLGİ ROZETİ (SOL ÜST)
         # ---------------------------------------------------------------------
-        ax_chart.plot(range(n_bars), display_ema20, color=self.COLOR_CYAN, linewidth=1.35, alpha=0.88, zorder=5)
-        ax_chart.plot(range(n_bars), display_ema50, color=self.COLOR_YELLOW, linewidth=1.35, alpha=0.88, zorder=5)
-
-        # EMA Bilgi Rozeti (Sol Üst)
-        ema_tag_txt = f"■ EMA 20: {fmt_price(cur_ema20)}   ■ EMA 50: {fmt_price(cur_ema50)}"
-        ax_chart.text(0.5, padded_max - y_span * 0.035, ema_tag_txt,
+        institutional_tag = f"■ PIVOT (P): {fmt_price(p_val)}   ■ mPOC: {fmt_price(mpoc_val)}" if mpoc_val > 0 else f"■ PIVOT (P): {fmt_price(p_val)}   ■ CAMARILLA KORİDORU"
+        ax_chart.text(0.5, padded_max - y_span * 0.035, institutional_tag,
                       color='#cbd5e1', fontsize=7.8, fontweight='bold',
                       bbox=dict(boxstyle='round,pad=0.25', facecolor='#090d16', edgecolor='#334155', linewidth=0.8, alpha=0.90),
                       zorder=7)
@@ -681,12 +669,12 @@ class ForensicChartEngineV2:
         if isinstance(raw_confs, list) and len(raw_confs) > 0 and not is_manual:
             confluences = [f"[✓] {_clean_str(c, 36)}" for c in raw_confs[:4]]
         elif is_manual:
-            ema_rel = "EMA20 > EMA50 (Boğa)" if cur_ema20 >= cur_ema50 else "EMA20 < EMA50 (Ayı)"
+            poc_desc = f"mPOC Hacim Profili: {fmt_price(mpoc_val)}" if mpoc_val > 0 else "Stoikov Mikro Denge"
             confluences = [
                 f"[✓] Camarilla Denge Seviyesi (P: {fmt_price(p_val)})",
-                f"[✓] Trend Eğilimi: {ema_rel}",
-                f"[✓] 24s Aralık: {fmt_price(min_y)} - {fmt_price(max_y)}",
-                f"[✓] CVD Emir Akışı ({dom_text})"
+                f"[✓] {poc_desc}",
+                f"[✓] 24s Kurumsal Aralık: {fmt_price(min_y)} - {fmt_price(max_y)}",
+                f"[✓] CVD Kümülatif Emir Akışı ({dom_text})"
             ]
         else:
             confluences = [

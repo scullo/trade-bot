@@ -136,7 +136,7 @@ class ForensicAutopsyEngine:
             meta = self.DIAGNOSIS_CATALOG["LIVE_RADAR_INSPECTION"]
             findings = [
                 f"Parite anlık referans fiyatı (${entry_price:,.4f}) üzerinde canlı radar taraması yapıldı.",
-                "Kurumsal Camarilla koridoru, EMA trendleri ve CVD emir akışı haritalandı."
+                "Kurumsal Camarilla koridoru, Hacim Profili (mPOC) ve CVD emir akışı haritalandı."
             ]
             advice = "R4 üstü Long kırılımı veya S4 altı Short kırılımı teyit edilene kadar piyasa yönünü izleyin."
             vision_prompt = (
