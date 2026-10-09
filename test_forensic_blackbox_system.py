@@ -184,6 +184,24 @@ class TestForensicBlackboxSystem(unittest.TestCase):
         res_after = forensic_blackbox_manager.get_snapshots()
         self.assertFalse(any(s["id"] == snap_id for s in res_after["snapshots"]))
 
+    def test_04_snapshot_trigger_rules(self):
+        """Görsel üretim kurallarını test et: Gerçek/Paper ve Manuel için AÇIK, Gölge için KAPALI olmalı."""
+        # 1. Gerçek/Paper İşlem -> Tetiklenmeli
+        real_trade = {"symbol": "BTC/USDT", "side": "LONG", "roe_pct": -1.5}
+        self.assertTrue(forensic_blackbox_manager.should_trigger_snapshot(real_trade, is_shadow=False))
+
+        # 2. Gölge İşlem (Stop-out veya Runner fark etmeksizin) -> ASLA tetiklenmemeli
+        shadow_loss = {"symbol": "ETH/USDT", "side": "SHORT", "roe_pct": -2.5, "close_reason": "STOP_LOSS"}
+        self.assertFalse(forensic_blackbox_manager.should_trigger_snapshot(shadow_loss, is_shadow=True))
+
+        shadow_runner = {"symbol": "SOL/USDT", "side": "LONG", "roe_pct": 8.0, "close_reason": "TP2"}
+        self.assertFalse(forensic_blackbox_manager.should_trigger_snapshot(shadow_runner, is_shadow=True))
+
+        # 3. Manuel İstek -> Gölge olsa bile tetiklenmeli
+        manual_snap = {"symbol": "BTC/USDT", "side": "LONG", "is_manual": True}
+        self.assertTrue(forensic_blackbox_manager.should_trigger_snapshot(manual_snap, is_shadow=True))
+
 
 if __name__ == '__main__':
     unittest.main()
+

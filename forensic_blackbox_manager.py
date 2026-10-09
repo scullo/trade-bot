@@ -74,41 +74,28 @@ class ForensicBlackboxManager:
     # =========================================================================
     def should_trigger_snapshot(self, trade_record: Dict[str, Any], is_shadow: bool = False) -> bool:
         """
-        3 Kademeli Akıllı Tetikleme Matrisi:
-        - Kademe 1: Gerçek ve Paper İşlemler -> %100 Görselleme
-        - Kademe 2: Gölge İşlemler -> Sadece kritik ders ve anomali durumları
+        Görsel Adli Kara Kutu Tetikleme Kuralı:
+        - Gerçek ve Paper Kasa İşlemleri: %100 Görselleme (Sermaye kanıtı ve adli arşiv)
+        - Manuel İstekler (Canlı Radar Snapshot Al): %100 Görselleme
+        - Gölge (Shadow) İşlemler: Otomatik PNG üretimi KAPALI (Sıfır kirlilik, sıfır disk maliyeti).
+          Gölge işlemler arka planda Coin DNA ve optimizasyon motorunu saf sayısal JSON olarak besler.
         """
-        if not is_shadow:
-            return True  # Gerçek ve paper her işlem belgelenir
-
-        # Gölge İşlem Kriterleri:
-        roe = float(trade_record.get("roe_pct") or trade_record.get("virtual_pnl_pct") or 0.0)
-        close_reason = str(trade_record.get("close_reason") or "")
-        candle_count = int(trade_record.get("candle_count") or 1)
-        atr_pct = float(trade_record.get("atr_pct") or 1.0)
-        setup_id = str(trade_record.get("setup_id") or trade_record.get("reason") or "")
-
-        # 1. Zarar Edenler (Stop-outs): ROE <= -0.8%
-        if roe <= -0.8 or "Stop" in close_reason or "Tasfiye" in close_reason:
+        # Manuel canlı inceleme talepleri her zaman görsel üretir
+        is_manual = bool(
+            trade_record.get("is_manual_scan")
+            or trade_record.get("is_manual")
+            or ("MANUAL" in str(trade_record.get("id", "")))
+            or trade_record.get("close_reason") == "MANUEL_ANLIK_SNAPSHOT_KONTROLÜ"
+        )
+        if is_manual:
             return True
 
-        # 2. Büyük Kârlar (Outlier Runners): ROE >= +2.5%
-        if roe >= 2.5:
-            return True
+        # Gölge işlemler için otomatik görsel üretimi kesinlikle KAPALI
+        if is_shadow:
+            return False
 
-        # 3. Başa Baş ve Erken Çıkışlar (Churn Analizi): -0.2% <= ROE <= 0.0% ve >= 10 mum
-        if -0.2 <= roe <= 0.0 and candle_count >= 10:
-            return True
-
-        # 4. Anomali ve Volatilite Şoku (ATR >= 2.2% veya Crash)
-        if atr_pct >= 2.2 or "ŞOK" in close_reason.upper() or "AVALANCHE" in close_reason.upper():
-            return True
-
-        # 5. Sahte Kırılımlar (Fakeout Traps)
-        if "BREAKOUT" in setup_id.upper() and roe < -0.3 and candle_count <= 2:
-            return True
-
-        return False
+        # Gerçek ve Paper kasa işlemleri %100 belgelenir
+        return True
 
     # =========================================================================
     # GÖRSEL ÜRETİMİ VE ARŞİVLEME (SENKRON & ASENKRON)
@@ -222,6 +209,9 @@ class ForensicBlackboxManager:
         Trading tick'ini kilitlememek için görsel üretimini arka plandaki ThreadPool'a atar.
         """
         try:
+            if not self.should_trigger_snapshot(trade_record, is_shadow=is_shadow):
+                return
+
             # Kopya oluşturarak thread güvenliği sağla
             df_copy = df_5m.copy() if df_5m is not None and not df_5m.empty else None
             rec_copy = dict(trade_record)
@@ -278,6 +268,9 @@ class ForensicBlackboxManager:
             json_p = entry.get("json_path")
             if json_p and os.path.exists(json_p):
                 os.remove(json_p)
+            hof_p = entry.get("hall_of_fame_path")
+            if hof_p and os.path.exists(hof_p):
+                os.remove(hof_p)
         except Exception:
             pass
 
@@ -298,6 +291,15 @@ class ForensicBlackboxManager:
                         dest_p = os.path.join(self.HALL_OF_FAME_DIR, os.path.basename(png_path))
                         shutil.copy2(png_path, dest_p)
                         item["hall_of_fame_path"] = dest_p
+                    elif not new_state:
+                        # Yıldız kaldırıldığında Hall of Fame kopyasını temizle
+                        hof_p = item.get("hall_of_fame_path")
+                        if hof_p and os.path.exists(hof_p):
+                            try:
+                                os.remove(hof_p)
+                            except Exception:
+                                pass
+                        item["hall_of_fame_path"] = None
 
                     self._save_catalog()
                     return new_state
