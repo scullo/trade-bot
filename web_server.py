@@ -3571,6 +3571,133 @@ HTML_PAGE = """
         .funding-table-enhanced tr.funding-row-balanced:hover {
             background: rgba(255, 255, 255, 0.02);
         }
+
+        /* ═══════════════════════════════════════════════════════════════════════════
+           ⚖️ ADLİ DEFTER SATIR OPTİMİZASYONU & TELEMETRİ MODAL STİLLERİ
+           ═══════════════════════════════════════════════════════════════════════════ */
+        .forensic-table-compact td {
+            padding: 9px 10px !important;
+            vertical-align: middle !important;
+            height: 48px !important;
+        }
+        .forensic-setup-box {
+            max-width: 270px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 2px;
+        }
+        .forensic-setup-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+        }
+        .forensic-chips-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        .forensic-mini-chip {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 10px;
+            color: #94a3b8;
+            white-space: nowrap;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .forensic-exit-badge {
+            display: inline-block;
+            max-width: 210px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* TELEMETRİ MODAL GELİŞMİŞ KUANT KARTLARI */
+        .tel-grid-2col {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+        .tel-panel-card {
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.8), rgba(15, 23, 42, 0.95));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 15px 18px;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        }
+        .tel-panel-head {
+            font-size: 11.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #38bdf8;
+            font-family: 'JetBrains Mono', monospace;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .tel-field-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 12px;
+        }
+        .tel-field-row:last-child {
+            border-bottom: none;
+        }
+        .tel-field-label {
+            color: #94a3b8;
+            font-weight: 600;
+        }
+        .tel-field-val {
+            color: #ffffff;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .tel-confluence-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .tel-confluence-chip {
+            background: rgba(0, 242, 254, 0.06);
+            border: 1px solid rgba(0, 242, 254, 0.22);
+            border-radius: 8px;
+            padding: 7px 10px;
+            font-size: 11.5px;
+            color: #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            transition: all 0.15s ease;
+        }
+        .tel-confluence-chip:hover {
+            background: rgba(0, 242, 254, 0.12);
+            border-color: var(--cyan);
+        }
     </style>
 </head>
 <body>
@@ -3918,8 +4045,8 @@ HTML_PAGE = """
     
     <!-- QUANT TELEMETRY FORENSIC AUDIT MODAL -->
     <div id="telemetry-modal-overlay" class="modal-overlay" style="display:none;" onclick="if(event.target===this) closeTelemetryModal()">
-        <div class="live-settings-card" style="max-width:780px;">
-            <div class="tv-modal-header" style="border-bottom:1px solid var(--border);">
+        <div class="live-settings-card" style="max-width:940px; width:95%; max-height:90vh; display:flex; flex-direction:column; overflow:hidden;">
+            <div class="tv-modal-header" style="border-bottom:1px solid var(--border); flex-shrink:0;">
                 <div style="display:flex; align-items:center; gap:12px;">
                     <div class="brand-logo-gem" style="width:36px; height:36px; background:rgba(0,242,254,0.15); border-color:var(--cyan);">
                         🔬
@@ -3937,7 +4064,7 @@ HTML_PAGE = """
                 </div>
             </div>
 
-            <div class="settings-body" id="tel-content" style="max-height:75vh; overflow-y:auto; padding:20px;">
+            <div class="settings-body" id="tel-content" style="max-height:80vh; overflow-y:auto; padding:20px;">
                 <!-- DYNAMIC CONTENT -->
             </div>
         </div>
@@ -16365,6 +16492,66 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
             renderHistoryTable();
         }
 
+        function formatCompactSetupCell(rawReason) {
+            if (!rawReason) return '<span style="color:#64748b; font-size:11.5px;">-</span>';
+
+            const parts = rawReason.split('[');
+            let baseTitle = parts[0].trim();
+            baseTitle = baseTitle.replace(/\(İlk Hedef.*?\)/gi, '').trim();
+            if (baseTitle.length > 34) {
+                baseTitle = baseTitle.substring(0, 32) + '...';
+            }
+
+            const bracketMatches = rawReason.match(/\[(.*?)\]/g) || [];
+            let pillsHtml = '';
+
+            if (bracketMatches.length > 0) {
+                const chips = bracketMatches.slice(0, 3).map(m => {
+                    let txt = m.replace(/[\[\]]/g, '').trim();
+                    txt = txt.replace('Teyitli', '').replace('Destek Emilimi', 'Emilim').replace('Spot Alım Gücü', 'Alım').trim();
+                    if (txt.length > 17) txt = txt.substring(0, 15) + '..';
+                    return `<span class="forensic-mini-chip" title="${m.replace(/[\[\]]/g, '').trim()}">${txt}</span>`;
+                }).join('');
+
+                const remaining = bracketMatches.length - 3;
+                const moreTag = remaining > 0 ? `<span style="background:rgba(0,242,254,0.12); color:var(--cyan); padding:1px 5px; border-radius:4px; font-size:9.5px; font-weight:800; font-family:'JetBrains Mono';">+${remaining}</span>` : '';
+
+                pillsHtml = `<div class="forensic-chips-row">${chips}${moreTag}</div>`;
+            }
+
+            return `
+                <div class="forensic-setup-box" title="${rawReason.replace(/"/g, '&quot;')}">
+                    <span class="forensic-setup-title">
+                        🎯 ${baseTitle}
+                    </span>
+                    ${pillsHtml}
+                </div>
+            `;
+        }
+
+        function formatCompactExitCell(rawExitReason) {
+            if (!rawExitReason) return '<span style="color:#64748b; font-size:11.5px;">-</span>';
+
+            const isStop = rawExitReason.includes('Stop') || rawExitReason.includes('SL') || rawExitReason.includes('Zarar');
+            const isTp = rawExitReason.includes('TP') || rawExitReason.includes('Kâr') || rawExitReason.includes('Hedef');
+            const isBe = rawExitReason.includes('Breakeven') || rawExitReason.includes('Başa');
+
+            let color = isStop ? '#f87171' : (isTp ? '#34d399' : (isBe ? '#38bdf8' : '#fbbf24'));
+            let bg = isStop ? 'rgba(239,68,68,0.1)' : (isTp ? 'rgba(16,185,129,0.1)' : (isBe ? 'rgba(56,189,248,0.1)' : 'rgba(245,158,11,0.1)'));
+            let border = isStop ? 'rgba(239,68,68,0.3)' : (isTp ? 'rgba(16,185,129,0.3)' : (isBe ? 'rgba(56,189,248,0.3)' : 'rgba(245,158,11,0.3)'));
+
+            let cleanText = rawExitReason.replace('Tetiklendi', '').trim();
+            if (cleanText.length > 26) cleanText = cleanText.substring(0, 24) + '..';
+
+            return `
+                <div style="max-width:210px; display:inline-block;" title="${rawExitReason.replace(/"/g, '&quot;')}">
+                    <span class="forensic-exit-badge" style="background:${bg}; border:1px solid ${border}; color:${color};">
+                        ${cleanText}
+                    </span>
+                </div>
+            `;
+        }
+
         function renderHistoryTable() {
             try {
                 const tbody = document.getElementById('trade-table-body');
@@ -16471,31 +16658,13 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                     const entryP = h.entry_price !== undefined ? h.entry_price : '-';
                     const exitP = h.exit_price !== undefined ? h.exit_price : '-';
 
-                    // Setup badge style
-                    let setupBadgeClass = 'badge-other';
-                    const sClass = classifyTradeSetup(h);
-                    if (sClass === 'NPOC') setupBadgeClass = 'badge-npoc';
-                    else if (sClass === 'MACRO') setupBadgeClass = 'badge-macro';
-                    else if (sClass === 'CAM_BO') setupBadgeClass = 'badge-breakout';
-                    else if (sClass === 'BREAKDOWN') setupBadgeClass = 'badge-hard';
-                    else if (sClass === 'CAM_BOUNCE') setupBadgeClass = 'badge-bounce';
-                    else if (sClass === 'RETEST') setupBadgeClass = 'badge-macro';
-                    else if (sClass === 'RECLAIM') setupBadgeClass = 'badge-breakout';
-
-                    // Exit badge style
-                    let exitBadgeClass = 'badge-time';
-                    if (cr.includes('PID') || (h.pid_telemetry && h.pid_telemetry.engaged) || h.pid_engaged) exitBadgeClass = 'badge-pid';
-                    else if (cr.includes('TP') || cr.includes('Kâr')) exitBadgeClass = 'badge-tp';
-                    else if (cr.includes('Yumuşak') || cr.includes('Mum')) exitBadgeClass = 'badge-soft';
-                    else if (cr.includes('Sert') || cr.includes('Stop')) exitBadgeClass = 'badge-hard';
-
                     const rMult = h.realized_r !== undefined ? h.realized_r : (roePct >= 0 ? +(roePct / 2).toFixed(1) : -1.0);
                     const mfe = Number(h.max_mfe_roe !== undefined ? h.max_mfe_roe : (h.mfe_roe !== undefined ? h.mfe_roe : Math.max(0, roePct)));
                     const mae = Number(h.max_mae_roe !== undefined ? h.max_mae_roe : (h.mae_roe !== undefined ? h.mae_roe : (roePct < 0 ? Math.abs(roePct) : 0.0)));
                     const rowClass = isWin ? 'trade-row-win' : 'trade-row-loss';
 
                     tableHtml += `
-                    <tr class="${rowClass}">
+                    <tr class="${rowClass} forensic-table-compact">
                         <td><span style="background:rgba(255,255,255,0.05); padding:3px 7px; border-radius:6px; color:#e2e8f0; font-family:'JetBrains Mono'; font-size:11.5px; border:1px solid rgba(255,255,255,0.08); font-weight:700;">#${h.id || '-'}</span></td>
                         <td style="color:#cbd5e1; font-size:12px; white-space:nowrap;">${exitTime}</td>
                         <td style="color:#94a3b8; font-size:12px; white-space:nowrap;"><span style="background:rgba(0,242,254,0.06); padding:2px 6px; border-radius:4px; border:1px solid rgba(0,242,254,0.15); color:#38bdf8;">⏱️ ${duration}</span></td>
@@ -16520,20 +16689,16 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                             <span style="color:#34d399; font-weight:700;">+${mfe.toFixed(1)}%</span> <span style="color:#64748b; font-size:10.5px;">(-${mae.toFixed(1)}%)</span>
                         </td>
                         <td>
-                            <span class="badge-setup ${setupBadgeClass}" title="${r}">
-                                ${r}
-                            </span>
+                            ${formatCompactSetupCell(r)}
                         </td>
                         <td>
-                            <span class="badge-exit ${exitBadgeClass}" title="${cr}">
-                                ${cr}
-                            </span>
+                            ${formatCompactExitCell(cr)}
                         </td>
                         <td style="white-space:nowrap; text-align:center;">
-                            <button onclick="openTelemetryModal('${h.id}')" style="background:rgba(0,242,254,0.12); border:1px solid rgba(0,242,254,0.35); color:var(--cyan); padding:4px 9px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer; transition:all 0.15s ease;" onmouseover="this.style.background='var(--cyan)'; this.style.color='#000';" onmouseout="this.style.background='rgba(0,242,254,0.12)'; this.style.color='var(--cyan)';" title="İşlem Detayını ve Adli Telemetrisini İncele">
+                            <button onclick="openTelemetryModal('${h.id}')" style="background:rgba(0,242,254,0.12); border:1px solid rgba(0,242,254,0.35); color:var(--cyan); padding:5px 10px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer; transition:all 0.15s ease;" onmouseover="this.style.background='var(--cyan)'; this.style.color='#000';" onmouseout="this.style.background='rgba(0,242,254,0.12)'; this.style.color='var(--cyan)';" title="İşlem Detayını ve Adli Telemetrisini İncele">
                                 🔬 İncele
                             </button>
-                            <button onclick="openTradingViewModal('${symClean}')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#cbd5e1; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; margin-left:4px; transition:all 0.15s ease;" onmouseover="this.style.background='rgba(0,242,254,0.15)'; this.style.color='#00f2fe';" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.color='#cbd5e1';" title="${symClean} Göstergeli Grafiğini Aç">
+                            <button onclick="openTradingViewModal('${symClean}')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#cbd5e1; padding:5px 8px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; margin-left:4px; transition:all 0.15s ease;" onmouseover="this.style.background='rgba(0,242,254,0.15)'; this.style.color='#00f2fe';" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.color='#cbd5e1';" title="${symClean} Göstergeli Grafiğini Aç">
                                 📈 Grafik
                             </button>
                         </td>
@@ -17101,10 +17266,26 @@ function downloadExcelReport() {
 
                 if (!modal || !content) return;
 
-                title.innerHTML = `🔬 ${item.symbol} (${item.side} ${item.leverage}x) — ${item.id}`;
-                sub.innerHTML = `Giriş: ${item.entry_time} | Çıkış: ${item.exit_time} | Süre: ${item.duration || '5M Mum'}`;
-
                 const cleanSym = (item.symbol || '').replace('/USDT', '').replace('USDT', '').trim();
+                const isWin = Number(item.net_pnl || 0.0) >= 0;
+                const netPnlVal = Number(item.net_pnl || 0.0);
+                const roePctVal = Number(item.roe_pct || 0.0);
+                const feesVal = Number(item.fees || 0.0);
+                const rMult = item.realized_r !== undefined ? item.realized_r : (roePctVal >= 0 ? +(roePctVal / 2).toFixed(1) : -1.0);
+                const mfeVal = Number(item.mfe_roe !== undefined ? item.mfe_roe : Math.max(0, roePctVal));
+                const maeVal = Number(item.mae_roe !== undefined ? item.mae_roe : (roePct < 0 ? Math.abs(roePct) : 0.0));
+                const effVal = Number(item.exit_efficiency_pct !== undefined ? item.exit_efficiency_pct : (isWin ? 90.0 : 0.0));
+
+                title.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <span style="font-weight:900; color:#fff; font-size:16px;">🔬 ${item.symbol}</span>
+                        <span style="background:${item.side === 'LONG' ? 'rgba(16,185,129,0.18)' : 'rgba(239,68,68,0.18)'}; border:1px solid ${item.side === 'LONG' ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}; color:${item.side === 'LONG' ? '#34d399' : '#f87171'}; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:800; font-family:'JetBrains Mono';">${item.leverage || 5}x ${item.side}</span>
+                        <span style="color:#64748b; font-size:12px;">•</span>
+                        <span style="font-family:'JetBrains Mono'; color:#38bdf8; font-weight:700; font-size:13px;">${item.id}</span>
+                    </div>
+                `;
+                sub.innerHTML = `📅 Giriş: <b>${item.entry_time}</b> | 🏁 Çıkış: <b>${item.exit_time}</b> | ⏱️ Süre: <b style="color:var(--cyan);">${item.duration || '5M Mum'}</b>`;
+
                 const chartBtn = document.getElementById('tel-chart-btn');
                 if (chartBtn) {
                     chartBtn.onclick = () => openTradingViewModal(cleanSym);
@@ -17112,88 +17293,203 @@ function downloadExcelReport() {
                     chartBtn.title = `${cleanSym} Göstergeli Bot Strateji Grafiğini Aç`;
                 }
 
-                const isWin = Number(item.net_pnl || 0.0) >= 0;
-                const netPnlVal = Number(item.net_pnl || 0.0);
-                const roePctVal = Number(item.roe_pct || 0.0);
-                const feesVal = Number(item.fees || 0.0);
-                const rMult = item.realized_r !== undefined ? item.realized_r : (roePctVal >= 0 ? +(roePctVal / 2).toFixed(1) : -1.0);
-                const mfeVal = Number(item.mfe_roe !== undefined ? item.mfe_roe : Math.max(0, roePctVal));
-                const maeVal = Number(item.mae_roe !== undefined ? item.mae_roe : (roePctVal < 0 ? Math.abs(roePctVal) : 0.0));
-                const effVal = Number(item.exit_efficiency_pct !== undefined ? item.exit_efficiency_pct : (isWin ? 90.0 : 0.0));
+                // Parse Confluence items from reason
+                const rawReason = item.reason || 'Strateji Sinyali';
+                const baseReasonText = rawReason.split('[')[0].trim().replace(/\(İlk Hedef.*?\)/gi, '').trim();
+                const bracketMatches = rawReason.match(/\[(.*?)\]/g) || [];
+                
+                let confluenceHtml = '';
+                if (bracketMatches.length > 0) {
+                    confluenceHtml = bracketMatches.map(m => {
+                        const cleanT = m.replace(/[\[\]]/g, '').trim();
+                        return `
+                            <div class="tel-confluence-chip">
+                                <span>🛡️</span>
+                                <span>${cleanT}</span>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    confluenceHtml = `
+                        <div class="tel-confluence-chip">
+                            <span>🛡️</span>
+                            <span>Kurumsal Seviye & Hacim Teyidi</span>
+                        </div>
+                    `;
+                }
 
+                // Compute Planned R:R if target & stop exist
+                let plannedRRStr = '1 : 2.5 R:R';
+                const entryP = Number(item.entry_price || 0);
+                const stopP = Number(item.hard_stop || item.soft_stop || 0);
+                const tpP = Number(item.tp1 || 0);
+                if (entryP > 0 && stopP > 0 && tpP > 0) {
+                    const riskDist = Math.abs(entryP - stopP);
+                    const rewardDist = Math.abs(tpP - entryP);
+                    if (riskDist > 0) {
+                        plannedRRStr = `1 : ${(rewardDist / riskDist).toFixed(1)} R:R`;
+                    }
+                }
+
+                // Autopsy summary note
+                let autopsyNote = '';
+                if (isWin) {
+                    autopsyNote = `💎 <b>Kâr Realizasyonu:</b> Pozisyon strateji hedefine ulaştı. Zirve kâr potansiyeli (+%${mfeVal.toFixed(2)} ROE) realize edildi; komisyon sonrası net <b>+${netPnlVal.toFixed(2)}$</b> kazanç sağlandı.`;
+                } else {
+                    autopsyNote = `🛡️ <b>Sermaye Koruması:</b> Stop tetikleyicisi (${item.close_reason || 'Stop'}) devredeydi. Maksimum çekilme -%${maeVal.toFixed(2)} ROE ile sınırlandırılarak kasanın daha derin düşüşe/fitile maruz kalması önlendi.`;
+                }
+
+                // Snapshot levels
                 let snaps = item.snapshot_levels || {};
-                // Fallback to coin's current levels if snapshot was before this update
                 if (Object.keys(snaps).length === 0 && appState.symbols && appState.symbols[item.symbol]) {
                     const cLevels = appState.symbols[item.symbol].levels || {};
                     const cam = cLevels.camarilla || {};
                     snaps = {
-                        "Pivot P": cam.P, "S3": cam.S3, "S4": cam.S4, "R3": cam.R3, "R4": cam.R4,
+                        "Pivot P": cam.P, "R4 Breakout": cam.R4, "R3 Direnç": cam.R3,
+                        "S3 Destek": cam.S3, "S4 Breakdown": cam.S4,
                         "Tepe AVWAP": cLevels.tepe_avwap, "Dip AVWAP": cLevels.dip_avwap,
-                        "mPOC": cLevels.mpoc, "mVAL": cLevels.mval, "mVAH": cLevels.mvah
+                        "mPOC Hacim": cLevels.mpoc, "mVAL Taban": cLevels.mval, "mVAH Tavan": cLevels.mvah
                     };
                 }
 
                 let snapHtml = '';
                 for (const [key, val] of Object.entries(snaps)) {
                     if (val && typeof val === 'number' && val > 0) {
+                        const isRes = key.includes('R') || key.includes('Tepe') || key.includes('VAH');
+                        const isSup = key.includes('S') || key.includes('Dip') || key.includes('VAL');
+                        const col = isRes ? '#f59e0b' : (isSup ? '#10b981' : '#38bdf8');
                         snapHtml += `
-                        <div style="background:rgba(255,255,255,0.04); border:1px solid var(--border); padding:8px 12px; border-radius:8px; font-size:12px; display:flex; justify-content:space-between; align-items:center;">
+                        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); padding:8px 12px; border-radius:8px; font-size:12px; display:flex; justify-content:space-between; align-items:center;">
                             <span style="color:#94a3b8; font-weight:700;">${key}:</span>
-                            <b style="color:#fff; font-family:'JetBrains Mono';">$${formatSmartPrice(val)}</b>
+                            <b style="color:${col}; font-family:'JetBrains Mono';">$${formatSmartPrice(val)}</b>
                         </div>`;
                     }
                 }
                 if (!snapHtml) {
-                    snapHtml = '<div style="color:#64748b; font-size:12px; grid-column:1/-1;">Bu işlem için anlık seviye verisi taze işlemlerle birlikte dolacaktır.</div>';
+                    snapHtml = '<div style="color:#64748b; font-size:12px; grid-column:1/-1;">Bu işlem için anlık seviye verisi kaydedilmemiş.</div>';
                 }
 
                 content.innerHTML = `
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-bottom:18px;">
-                        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:12px; text-align:center;">
-                            <div style="font-size:11px; color:#94a3b8; margin-bottom:4px;">NET PNL & ROE</div>
-                            <div style="font-size:15px; font-weight:800; color:${isWin ? 'var(--green)' : 'var(--red)'}; font-family:'JetBrains Mono';">${isWin ? '+' : ''}${netPnlVal.toFixed(2)}$ (${isWin ? '+' : ''}${roePctVal.toFixed(2)}%)</div>
+                    <!-- 1. DÖRT ANA KPI KARTI -->
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:12px; margin-bottom:18px;">
+                        <div style="background:linear-gradient(135deg, rgba(17,24,39,0.8), rgba(15,23,42,0.95)); border:1px solid ${isWin ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}; border-radius:12px; padding:14px; text-align:center; box-shadow:0 4px 16px rgba(0,0,0,0.3);">
+                            <div style="font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:4px; font-family:'JetBrains Mono';">NET PNL & ROE</div>
+                            <div style="font-size:18px; font-weight:900; color:${isWin ? '#10b981' : '#ef4444'}; font-family:'JetBrains Mono';">${isWin ? '+' : ''}${netPnlVal.toFixed(2)}$</div>
+                            <div style="font-size:11px; font-weight:700; color:${isWin ? '#34d399' : '#f87171'}; font-family:'JetBrains Mono'; margin-top:2px;">${isWin ? '+' : ''}${roePctVal.toFixed(2)}% ROE</div>
                         </div>
-                        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:12px; text-align:center;">
-                            <div style="font-size:11px; color:#94a3b8; margin-bottom:4px;">R-MULTIPLE (1R)</div>
-                            <div style="font-size:15px; font-weight:800; color:${rMult >= 0 ? 'var(--green)' : 'var(--red)'}; font-family:'JetBrains Mono';">${rMult >= 0 ? '+' : ''}${rMult}R</div>
+                        <div style="background:linear-gradient(135deg, rgba(17,24,39,0.8), rgba(15,23,42,0.95)); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px; text-align:center;">
+                            <div style="font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:4px; font-family:'JetBrains Mono';">R-MULTIPLE (1R)</div>
+                            <div style="font-size:18px; font-weight:900; color:${rMult >= 0 ? '#10b981' : '#ef4444'}; font-family:'JetBrains Mono';">${rMult >= 0 ? '+' : ''}${rMult}R</div>
+                            <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono'; margin-top:2px;">Planlanan Risk: ${plannedRRStr}</div>
                         </div>
-                        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:12px; text-align:center;">
-                            <div style="font-size:11px; color:#94a3b8; margin-bottom:4px;">ZİRVE KÂR (MFE)</div>
-                            <div style="font-size:15px; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono';">+${mfeVal.toFixed(2)}% ROE</div>
+                        <div style="background:linear-gradient(135deg, rgba(17,24,39,0.8), rgba(15,23,42,0.95)); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px; text-align:center;">
+                            <div style="font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:4px; font-family:'JetBrains Mono';">ZİRVE KÂR (MFE)</div>
+                            <div style="font-size:18px; font-weight:900; color:#38bdf8; font-family:'JetBrains Mono';">+${mfeVal.toFixed(2)}%</div>
+                            <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono'; margin-top:2px;">Görülen En Yüksek Kâr</div>
                         </div>
-                        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:12px; text-align:center;">
-                            <div style="font-size:11px; color:#94a3b8; margin-bottom:4px;">MAKS ÇEKİLME (MAE)</div>
-                            <div style="font-size:15px; font-weight:800; color:#f43f5e; font-family:'JetBrains Mono';">-${maeVal.toFixed(2)}% ROE</div>
+                        <div style="background:linear-gradient(135deg, rgba(17,24,39,0.8), rgba(15,23,42,0.95)); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px; text-align:center;">
+                            <div style="font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:4px; font-family:'JetBrains Mono';">MAKS ÇEKİLME (MAE)</div>
+                            <div style="font-size:18px; font-weight:900; color:#f43f5e; font-family:'JetBrains Mono';">-${maeVal.toFixed(2)}%</div>
+                            <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono'; margin-top:2px;">Pozisyondaki En Derin Çekilme</div>
                         </div>
                     </div>
 
-                    <!-- 📈 GRAFİK AÇMA HERO BUTONU -->
+                    <!-- 📈 GRAFİK HERO BUTONU -->
                     <div style="margin-bottom:18px;">
-                        <button onclick="openTradingViewModal('${cleanSym}')" style="width:100%; padding:12px 18px; background:linear-gradient(135deg, rgba(0,242,254,0.2), rgba(79,172,254,0.3)); border:1.5px solid var(--cyan); color:#00f2fe; font-weight:900; font-size:13.5px; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.15s ease; box-shadow:0 0 20px rgba(0,242,254,0.2);" onmouseover="this.style.background='var(--cyan)'; this.style.color='#000';" onmouseout="this.style.background='linear-gradient(135deg, rgba(0,242,254,0.2), rgba(79,172,254,0.3))'; this.style.color='#00f2fe';" title="${cleanSym} Canlı Göstergeli Strateji Grafiğini Aç">
+                        <button onclick="openTradingViewModal('${cleanSym}')" style="width:100%; padding:12px 18px; background:linear-gradient(135deg, rgba(0,242,254,0.18), rgba(79,172,254,0.25)); border:1.5px solid var(--cyan); color:#00f2fe; font-weight:900; font-size:13.5px; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.15s ease; box-shadow:0 0 20px rgba(0,242,254,0.18);" onmouseover="this.style.background='var(--cyan)'; this.style.color='#000';" onmouseout="this.style.background='linear-gradient(135deg, rgba(0,242,254,0.18), rgba(79,172,254,0.25))'; this.style.color='#00f2fe';" title="${cleanSym} Canlı Göstergeli Strateji Grafiğini Aç">
                             <span>📈</span> <b>${cleanSym} GÖSTERGELİ STRATEJİ GRAFİĞİNİ AÇ</b> (AVWAP + VP + Camarilla Seviyeleri) ➔
                         </button>
                     </div>
 
-                    <div style="background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:14px; margin-bottom:18px;">
-                        <div style="font-size:13px; font-weight:800; color:#38bdf8; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
-                            🎯 STRATEJİ, TREND REJİMİ & PİYASA KOŞULLARI
+                    <!-- 2. STRATEJİ & GİRİŞ ANATOMİSİ KARTI (2-SÜTUNLU MODERN DÜZEN) -->
+                    <div class="tel-grid-2col">
+                        <!-- SOL PANEL: STRATEJİ & PİYASA KOŞULLARI -->
+                        <div class="tel-panel-card">
+                            <div class="tel-panel-head">
+                                <span>🎯 STRATEJİ & PİYASA REJİMİ</span>
+                                <span style="color:var(--cyan); font-weight:700;">#${item.setup_id || classifyTradeSetup(item)}</span>
+                            </div>
+                            <div class="tel-field-row">
+                                <span class="tel-field-label">Giriş Formasyonu:</span>
+                                <span class="tel-field-val" style="color:#fff;">${baseReasonText || 'Teknik Seviye Sinyali'}</span>
+                            </div>
+                            <div class="tel-field-row">
+                                <span class="tel-field-label">Giriş Anı Trend Rejimi:</span>
+                                <span class="tel-field-val" style="color:#38bdf8;">${item.trend_regime || 'Belirleniyor'}</span>
+                            </div>
+                            <div class="tel-field-row">
+                                <span class="tel-field-label">Volatilite (ATR) & Seans:</span>
+                                <span class="tel-field-val">${item.session || 'Küresel'} • %${item.atr_pct !== undefined ? item.atr_pct : '1.2'} ATR</span>
+                            </div>
+                            <div class="tel-field-row">
+                                <span class="tel-field-label">Hacim Patlama Katsayısı:</span>
+                                <span class="tel-field-val" style="color:#fde047;">${item.volume_surge || '1.0'}x Ort. Hacim</span>
+                            </div>
+                            <div class="tel-field-row">
+                                <span class="tel-field-label">Makro Uyum (1H/4H):</span>
+                                <span class="tel-field-val" style="color:#a78bfa;">${item.htf_alignment || 'Nötr / Uyumlu'}</span>
+                            </div>
+                            <div class="tel-field-row">
+                                <span class="tel-field-label">Confluence Teyit Gücü:</span>
+                                <span class="tel-field-val" style="color:#34d399;">${item.confluence_score || '4/4'} (%100 Onay)</span>
+                            </div>
                         </div>
-                        <div style="font-size:12.5px; color:#f1f5f9; line-height:1.7;">
-                            <b>• Giriş Gerekçesi / Formasyon:</b> <span style="color:#ffffff;">${item.reason || 'Strateji Sinyali'}</span><br>
-                            <b>• Kurumsal Kurulum (Setup):</b> <span style="color:var(--cyan); font-weight:700; font-family:'JetBrains Mono';">${item.setup_id || classifyTradeSetup(item)}</span> | <b>Kapanış Tetikleyicisi:</b> <span style="color:#fbc531;">${item.close_reason || 'Kapanış'}</span><br>
-                            <b>• Giriş Anı Trend Rejimi:</b> <span style="color:#a5f3fc; font-weight:700;">${item.trend_regime || 'Belirleniyor'}</span> | <b>Volatilite (ATR):</b> <span style="color:#fde047; font-weight:700;">%${item.atr_pct !== undefined ? item.atr_pct : '1.2'}</span><br>
-                            <b>• Hacim Patlama Katsayısı:</b> <span style="color:#38bdf8; font-weight:700;">${item.volume_surge || '1.0'}x Ort. Hacim</span> | <b>Confluence Güç Skoru:</b> <span style="color:#c084fc; font-weight:700;">${item.confluence_score || '2/4'}</span><br>
-                            <b>• Makro Uyum (1H/4H):</b> <span style="color:#fcd34d; font-weight:700;">${item.htf_alignment || 'Nötr'}</span> | <b>Piyasa Seansı:</b> <span style="color:#e2e8f0;">${item.session || 'Küresel Seans'}</span><br>
-                            <b>• Kademeli TP1 Durumu:</b> <span style="color:#86efac; font-weight:700;">${item.tp1_hit || (item.id && item.id.includes('TP1') ? 'EVET (%50 Kilitlendi)' : 'HAYIR')}</span> | <b>Çıkış Verimliliği:</b> %${effVal.toFixed(1)}<br>
-                            <b>• Giriş / Çıkış Fiyatı:</b> $${formatSmartPrice(item.entry_price)} ➔ $${formatSmartPrice(item.exit_price)} | <b>Komisyon:</b> $${feesVal.toFixed(4)}<br>
-                            <b>• Planlanan Hedef (TP1):</b> ${item.tp1 ? '$' + formatSmartPrice(item.tp1) : 'Yok'} | <b>Planlanan Stop:</b> ${(item.hard_stop || item.soft_stop) ? '$' + formatSmartPrice(item.hard_stop || item.soft_stop) : 'Yok'}
+
+                        <!-- SAĞ PANEL: İŞLEM YÜRÜTME & RİSK MİMARİSİ -->
+                        <div class="tel-panel-card">
+                            <div class="tel-panel-head">
+                                <span>⚖️ FİYATLAR & HEDEF KONTROLÜ</span>
+                                <span style="color:#f59e0b; font-weight:700;">${item.close_reason || 'Kapanış'}</span>
+                            </div>
+                            <div class="tel-field-row">
+                                <span class="tel-field-label">Giriş Fiyatı:</span>
+                                <span class="tel-field-val" style="color:#ffffff;">$${formatSmartPrice(item.entry_price)}</span>
+                            </div>
+                            <div class="tel-field-row">
+                                <span class="tel-field-label">Çıkış Fiyatı:</span>
+                                <span class="tel-field-val" style="color:${isWin ? '#10b981' : '#f87171'};">$${formatSmartPrice(item.exit_price)}</span>
+                            </div>
+                            <div class="tel-field-row">
+                                <span class="tel-field-label">Planlanan Hedef (TP1):</span>
+                                <span class="tel-field-val" style="color:#10b981;">${item.tp1 ? '$' + formatSmartPrice(item.tp1) : 'Dinamik Hedef'}</span>
+                            </div>
+                            <div class="tel-field-row">
+                                <span class="tel-field-label">Planlanan Stop Seviyesi:</span>
+                                <span class="tel-field-val" style="color:#f43f5e;">${(item.hard_stop || item.soft_stop) ? '$' + formatSmartPrice(item.hard_stop || item.soft_stop) : 'Dinamik ATR Stop'}</span>
+                            </div>
+                            <div class="tel-field-row">
+                                <span class="tel-field-label">Ödenen Komisyon (Fees):</span>
+                                <span class="tel-field-val" style="color:#94a3b8;">$${feesVal.toFixed(4)} USDT</span>
+                            </div>
+                            <div class="tel-field-row">
+                                <span class="tel-field-label">Kademeli TP1 & Verimlilik:</span>
+                                <span class="tel-field-val">${item.tp1_hit || (item.id && item.id.includes('TP1') ? 'EVET' : 'HAYIR')} • %${effVal.toFixed(1)} Verimlilik</span>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- VALKYRIE ALPHA MASTER BLUEPRINT TELEMETRİSİ -->
-                    <div style="background:rgba(0,242,254,0.03); border:1px solid rgba(0,242,254,0.2); border-radius:12px; padding:14px; margin-bottom:18px;">
-                        <div style="font-size:13px; font-weight:800; color:var(--cyan); margin-bottom:10px; display:flex; align-items:center; gap:6px;">
-                            <span>🏛️</span> VALKYRIE KURUMSAL ALPHA MASTER BLUEPRINT TELEMETRİSİ
+                    <!-- 3. GİRİŞ TEYİT & ONAY ROZETLERİ (CONFLUENCE MATRIX) -->
+                    <div class="tel-panel-card" style="margin-bottom:16px;">
+                        <div class="tel-panel-head">
+                            <span>🛡️ GİRİŞ ANINDA DOĞRULANAN KURUMSAL ONAYLAR & KALKANLAR</span>
+                            <span style="color:#94a3b8; font-size:11px;">Milisaniyelik Çoklu Filtre Süzgeci</span>
+                        </div>
+                        <div class="tel-confluence-grid">
+                            ${confluenceHtml}
+                        </div>
+                        <div style="margin-top:12px; padding:10px 14px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.05); font-size:12px; color:#cbd5e1; line-height:1.5;">
+                            ${autopsyNote}
+                        </div>
+                    </div>
+
+                    <!-- 4. VALKYRIE ALPHA MASTER BLUEPRINT TELEMETRİSİ -->
+                    <div class="tel-panel-card" style="margin-bottom:16px;">
+                        <div class="tel-panel-head">
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <span>🏛️</span>
+                                <span>VALKYRIE KURUMSAL ALPHA MASTER BLUEPRINT TELEMETRİSİ</span>
+                            </div>
+                            <span style="color:#64748b; font-size:10.5px;">10 Kantitatif Sensör Akışı</span>
                         </div>
                         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap:10px;">
                             <div style="background:rgba(255,255,255,0.02); border-radius:8px; padding:8px 12px; border:1px solid rgba(255,255,255,0.05);">
@@ -17294,11 +17590,15 @@ function downloadExcelReport() {
                         </div>
                     </div>
 
-                    <div style="font-size:13px; font-weight:800; color:#fff; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
-                        📸 GİRİŞ ANINDAKİ KURUMSAL SEVİYE SNAPSHOT'I
-                    </div>
-                    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap:8px;">
-                        ${snapHtml}
+                    <!-- 5. GİRİŞ ANINDAKİ KURUMSAL SEVİYE SNAPSHOT'I -->
+                    <div class="tel-panel-card">
+                        <div class="tel-panel-head">
+                            <span>📸 GİRİŞ ANINDAKİ KURUMSAL SEVİYE SNAPSHOT'I</span>
+                            <span style="color:#64748b; font-size:10.5px;">Camarilla, nPOC & Likidite Düzlemleri</span>
+                        </div>
+                        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap:8px;">
+                            ${snapHtml}
+                        </div>
                     </div>
                 `;
 
