@@ -8826,10 +8826,10 @@ async function loadAdminMetrics() {
                 if (latestNews) {
                     window.currentHudLatestNews = latestNews;
                     const timeStr = latestNews.time_tsi ? `[${latestNews.time_tsi}] ` : '';
-                    const cleanTr = (latestNews.title_tr || latestNews.title || '').replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
-                    const cleanEn = (latestNews.title || '').replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+                    const cleanTr = (latestNews.title_tr || latestNews.title || '').split('\n').join(' ').split('\r').join(' ').trim();
+                    const cleanEn = (latestNews.title || '').split('\n').join(' ').split('\r').join(' ').trim();
                     newsEl.innerText = `${timeStr}${cleanTr}`;
-                    newsEl.title = `${cleanTr}\n\n(Orijinal: ${cleanEn})\n[Detaylı Türkçe analiz için tıklayın 🔍]`;
+                    newsEl.title = `${cleanTr} (Orijinal: ${cleanEn}) [Detay için tıklayın 🔍]`;
                     newsEl.style.cursor = 'pointer';
                     newsEl.onclick = () => { if (typeof openMacroNewsDetailModal === 'function') openMacroNewsDetailModal(latestNews); };
                     if (badgeEl) {
