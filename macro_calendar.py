@@ -288,6 +288,25 @@ class MacroCalendarManager:
 
         return False, None
 
+    def get_calendar_summary(self) -> Dict[str, Any]:
+        """Ekonomik takvim özet telemetrisini döner."""
+        next_ev = self.get_next_major_event()
+        today_evs = self.get_todays_key_events()
+        upcoming_24h = self.get_upcoming_events(24.0)
+        imminent, imm_ev = self.is_event_imminent(15.0)
+        shock, shock_ev = self.is_flash_shock_active(60.0)
+
+        return {
+            "events_count": len(self.events),
+            "next_event": next_ev,
+            "todays_events_count": len(today_evs),
+            "upcoming_24h_count": len(upcoming_24h),
+            "is_imminent": imminent,
+            "imminent_event": imm_ev,
+            "is_flash_shock": shock,
+            "flash_shock_event": shock_ev
+        }
+
     @staticmethod
     def calculate_surprise_zscore(actual_str: str, forecast_str: str, category: str = "INFLATION_CPI") -> Dict[str, Any]:
         """

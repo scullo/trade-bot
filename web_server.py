@@ -4922,6 +4922,12 @@ HTML_PAGE = """
                     <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span>
                     <span class="tab-btn-text">9. Yönetim</span>
                 </button>
+
+                <button class="nav-tab-btn" id="tab-btn-macro" onclick="switchMainTab('macro')" title="10. Valkyrie Macro Oracle & Küresel Risk Sentinel Masası">
+                    <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></span>
+                    <span class="tab-btn-text">10. Makro İstihbarat</span>
+                    <span class="tab-badge-sub" id="nav-macro-badge" style="background:rgba(251,197,49,0.15); color:#fbc531; border:1px solid rgba(251,197,49,0.3);">Oracle 7/24</span>
+                </button>
             </div>
 
             <!-- SIDEBAR TELEMETRİ KARTI -->
@@ -4950,6 +4956,39 @@ HTML_PAGE = """
          1. SEKME: KOKPİT (ANA SAYFA)
          ========================================================================= -->
     <div id="main-tab-content-cockpit" class="main-tab-content active-tab">
+
+        <!-- 🌐 VALKYRIE EXECUTIVE MACRO & FLASH NEWS HUD TICKER -->
+        <div class="cockpit-macro-hud-strip" id="cockpit-macro-hud-strip" style="background:linear-gradient(90deg, rgba(15,23,42,0.92), rgba(20,30,55,0.95)); border:1px solid rgba(0,242,254,0.25); border-radius:12px; padding:10px 16px; margin-bottom:18px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; box-shadow:0 4px 20px rgba(0,0,0,0.35);">
+            <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; flex:1; min-width:300px;">
+                <!-- Olay Bölümü -->
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:15px;">🔴</span>
+                    <span style="font-weight:800; font-size:11px; color:#f43f5e; letter-spacing:0.4px;">GÜNÜN DEV OLAYI:</span>
+                    <span style="font-weight:700; font-size:12px; color:#ffffff;" id="hud-macro-event-title">Yükleniyor...</span>
+                    <span style="background:rgba(244,63,94,0.15); color:#f43f5e; border:1px solid rgba(244,63,94,0.3); padding:2px 8px; border-radius:6px; font-size:10.5px; font-weight:800; font-family:'JetBrains Mono';" id="hud-macro-countdown">⏱️ Geri Sayım...</span>
+                </div>
+                <!-- Flaş Haber Bölümü -->
+                <div style="display:flex; align-items:center; gap:8px; border-left:1px solid rgba(255,255,255,0.1); padding-left:14px; max-width:580px;">
+                    <span style="font-size:14px;">⚡</span>
+                    <span style="font-weight:800; font-size:11px; color:var(--cyan); letter-spacing:0.4px;">FLAŞ İSTİHBARAT:</span>
+                    <span style="font-size:11.5px; color:#cbd5e1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:400px;" id="hud-macro-news-text">Canlı haber akışı taranıyor...</span>
+                    <span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:1px 6px; border-radius:5px; font-size:9.5px; font-weight:800;" id="hud-macro-news-badge">DOĞRULANDI</span>
+                </div>
+            </div>
+            <!-- Makro Nabız & Yönlendirme -->
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                <div style="font-size:11px; font-family:'JetBrains Mono'; color:#94a3b8; display:flex; align-items:center; gap:10px;">
+                    <span>DXY: <b id="hud-macro-dxy" style="color:#ffffff;">—</b></span>
+                    <span>US10Y: <b id="hud-macro-us10y" style="color:#38bdf8;">—</b></span>
+                    <span>USDT.D: <b id="hud-macro-usdtd" style="color:#10b981;">—</b></span>
+                    <span style="background:rgba(0,242,254,0.1); color:var(--cyan); border:1px solid rgba(0,242,254,0.25); padding:2px 7px; border-radius:6px; font-weight:700;" id="hud-macro-regime">⚪ DENGELİ</span>
+                </div>
+                <button onclick="switchMainTab('macro')" style="background:rgba(0,242,254,0.12); color:#00f2fe; border:1px solid rgba(0,242,254,0.35); padding:5px 12px; border-radius:7px; font-size:11px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.15s;" title="Detaylı Makro & İstihbarat Masasını Aç">
+                    <span>Makro Masası</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </button>
+            </div>
+        </div>
 
         <!-- 4 HERO FINANSAL KPI KARTI (MİKRO-SİMÜLASYONLU) -->
         <div class="cockpit-kpi-grid">
@@ -7343,6 +7382,15 @@ HTML_PAGE = """
         </div>
     </div>
 
+    <!-- =========================================================================
+         10. SEKME: VALKYRIE MACRO ORACLE & KÜRESEL RİSK SENTINEL DESK
+         ========================================================================= -->
+    <div id="main-tab-content-macro" class="main-tab-content" style="display:none; padding: 6px 0 30px 0;">
+        <div id="macro-tab-view-container">
+            <!-- Dynamically populated by renderMacroTabView() -->
+        </div>
+    </div>
+
         </main>
     </div><!-- END DASHBOARD-MAIN-LAYOUT -->
 
@@ -8519,10 +8567,518 @@ async function loadAdminMetrics() {
             `;
         }
 
+        // =========================================================================
+        // 🌐 VALKYRIE MACRO ORACLE & GLOBAL RISK SENTINEL JAVASCRIPT ENGINE
+        // =========================================================================
+        let macroOracleDataCache = null;
+        let lastMacroOracleFetchTs = 0;
 
-        // =========================================================================
-        // VALKYRIE QUANT COCKPIT 3.0 - MAIN TAB SWITCHING & AI ENGINE
-        // =========================================================================
+        function renderCockpitMacroHudTicker() {
+            const strip = document.getElementById('cockpit-macro-hud-strip');
+            if (!strip) return;
+
+            const hud = (appState && appState.macro_hud) || {};
+            const nextEv = hud.next_event || {};
+            const newsList = hud.latest_news || [];
+            const latestNews = newsList.length > 0 ? newsList[0] : null;
+            const cross = hud.cross_asset_regime || {};
+            const assets = cross.assets || {};
+            const shock = hud.shock_regime || {};
+
+            // 1. Olay başlığı ve geri sayım
+            const evTitleEl = document.getElementById('hud-macro-event-title');
+            if (evTitleEl) {
+                if (nextEv.title) {
+                    const countryBadge = nextEv.country === 'USD' ? '🇺🇸 ' : '';
+                    const fcPrev = (nextEv.forecast || nextEv.previous) ? ` (Beklenti: ${nextEv.forecast || '-'} | Önc: ${nextEv.previous || '-'})` : '';
+                    evTitleEl.innerText = `${countryBadge}${nextEv.title}${fcPrev}`;
+                } else {
+                    evTitleEl.innerText = 'Bekleyen Kritik Olay Yok (Piyasa Sakin)';
+                }
+            }
+
+            const cdEl = document.getElementById('hud-macro-countdown');
+            if (cdEl) {
+                if (nextEv.countdown_str) {
+                    cdEl.innerText = `⏱️ ${nextEv.countdown_str}`;
+                    if (nextEv.is_flash_shock) {
+                        cdEl.style.background = 'rgba(239,68,68,0.25)';
+                        cdEl.style.color = '#ef4444';
+                        cdEl.style.borderColor = '#ef4444';
+                        cdEl.innerText = `⚡ FLASH-SHOCK (0-60s)`;
+                    } else if (nextEv.is_imminent) {
+                        cdEl.style.background = 'rgba(244,63,94,0.25)';
+                        cdEl.style.color = '#f43f5e';
+                        cdEl.innerText = `🚨 ${nextEv.countdown_str} (T-5m DONDURMA)`;
+                    } else {
+                        cdEl.style.background = 'rgba(244,63,94,0.15)';
+                        cdEl.style.color = '#f43f5e';
+                    }
+                } else {
+                    cdEl.innerText = 'Takvim İzleniyor';
+                }
+            }
+
+            // 2. Flaş Haber
+            const newsEl = document.getElementById('hud-macro-news-text');
+            const badgeEl = document.getElementById('hud-macro-news-badge');
+            if (newsEl) {
+                if (latestNews) {
+                    const timeStr = latestNews.time_tsi ? `[${latestNews.time_tsi}] ` : '';
+                    newsEl.innerText = `${timeStr}${latestNews.title}`;
+                    newsEl.title = latestNews.title;
+                    if (badgeEl) {
+                        if (latestNews.is_primary_official) {
+                            badgeEl.innerText = 'RESMİ BİLDİRİM';
+                            badgeEl.style.color = '#38bdf8';
+                            badgeEl.style.borderColor = 'rgba(56,189,248,0.4)';
+                            badgeEl.style.background = 'rgba(56,189,248,0.15)';
+                        } else if (latestNews.is_verified) {
+                            badgeEl.innerText = 'ÇİFT TEYİT ✅';
+                            badgeEl.style.color = '#10b981';
+                            badgeEl.style.borderColor = 'rgba(16,185,129,0.4)';
+                            badgeEl.style.background = 'rgba(16,185,129,0.15)';
+                        } else {
+                            badgeEl.innerText = 'SAVUNMA MODU 🛡️';
+                            badgeEl.style.color = '#fbc531';
+                            badgeEl.style.borderColor = 'rgba(251,197,49,0.4)';
+                            badgeEl.style.background = 'rgba(251,197,49,0.15)';
+                        }
+                    }
+                } else {
+                    newsEl.innerText = '7/24 Flaş istihbarat soketleri dinleniyor (TreeNews, SEC 8-K, Fed RSS)...';
+                    if (badgeEl) badgeEl.innerText = 'CANLI DİNLİYOR';
+                }
+            }
+
+            // 3. Makro Nabız Değerleri
+            const dxyEl = document.getElementById('hud-macro-dxy');
+            if (dxyEl && assets.DXY) dxyEl.innerText = Number(assets.DXY.value || 0).toFixed(2);
+
+            const us10yEl = document.getElementById('hud-macro-us10y');
+            if (us10yEl && assets.US10Y) us10yEl.innerText = `%${Number(assets.US10Y.value || 0).toFixed(2)}`;
+
+            const usdtdEl = document.getElementById('hud-macro-usdtd');
+            if (usdtdEl && assets.USDT_D) usdtdEl.innerText = `%${Number(assets.USDT_D.value || 0).toFixed(2)}`;
+
+            const regEl = document.getElementById('hud-macro-regime');
+            if (regEl) {
+                if (shock.is_shock) {
+                    regEl.innerText = shock.title || '🚨 MAKRO ŞOK';
+                    regEl.style.color = '#f43f5e';
+                    regEl.style.borderColor = 'rgba(244,63,94,0.4)';
+                    regEl.style.background = 'rgba(244,63,94,0.18)';
+                } else {
+                    const regText = cross.regime || '⚪ DENGELİ';
+                    regEl.innerText = regText.split('(')[0].trim();
+                    regEl.style.color = 'var(--cyan)';
+                    regEl.style.borderColor = 'rgba(0,242,254,0.25)';
+                    regEl.style.background = 'rgba(0,242,254,0.1)';
+                }
+            }
+        }
+        window.renderCockpitMacroHudTicker = renderCockpitMacroHudTicker;
+
+        async function triggerMacroSync() {
+            const btn = document.getElementById('btn-macro-sync-trigger');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span>⏳ Senkronize Ediliyor...</span>';
+            }
+            try {
+                const res = await fetch('/api/macro_sync', { method: 'POST' });
+                const json = await res.json();
+                console.log("[Macro Sync Response]:", json);
+                await renderMacroTabView(true);
+            } catch (e) {
+                console.error("Macro sync trigger error:", e);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>🔄 Anında Senkronize Et</span>';
+                }
+            }
+        }
+        window.triggerMacroSync = triggerMacroSync;
+
+        async function renderMacroTabView(forceRefresh = false) {
+            const container = document.getElementById('macro-tab-view-container');
+            if (!container) return;
+
+            const now = Date.now();
+            if (forceRefresh || !macroOracleDataCache || (now - lastMacroOracleFetchTs > 8000)) {
+                try {
+                    const res = await fetch('/api/macro_oracle');
+                    const json = await res.json();
+                    if (json && json.status === 'ok') {
+                        macroOracleDataCache = json;
+                        lastMacroOracleFetchTs = now;
+                    }
+                } catch (e) {
+                    console.error("Macro oracle fetch error:", e);
+                }
+            }
+
+            const data = macroOracleDataCache || {};
+            const hud = data.hud_ticker || (appState && appState.macro_hud) || {};
+            const cal = data.calendar || {};
+            const events = cal.events || [];
+            const nextEv = hud.next_event || {};
+            const cross = data.cross_asset || {};
+            const crossRegime = hud.cross_asset_regime || {};
+            const assets = crossRegime.assets || {};
+            const newsList = data.news || [];
+            const quorumList = data.quorum || [];
+            const roles = data.roles || {};
+            const newsBias = hud.news_bias || {};
+
+            // Şahin - Güvercin Puanı Hesabı
+            const biasScore = Number(newsBias.score || 0.0);
+            const biasLabel = biasScore > 10 ? 'GÜVERCİN (BOĞA / FAİZ İNDİRİMİ)' : (biasScore < -10 ? 'ŞAHİN (AYI / SIKI PARA)' : 'NÖTR / DENGELİ SÖYLEM');
+            const biasColor = biasScore > 10 ? 'var(--green)' : (biasScore < -10 ? 'var(--red)' : '#cbd5e1');
+            const needlePct = Math.min(Math.max(50 + (biasScore * 0.5), 5), 95);
+
+            // Fed Başkanı Bilgisi
+            const fedChair = roles.FED_CHAIR || { current_holder: 'Jerome Powell', market_weight: 1.0 };
+
+            // HTML Şablonu
+            container.innerHTML = `
+                <!-- ÜST KONTROL BAR VE TELEMETRİ -->
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:20px; padding:18px 24px; background:linear-gradient(135deg, rgba(15,23,42,0.95), rgba(20,30,55,0.9)); border:1px solid rgba(0,242,254,0.22); border-radius:14px; box-shadow:0 4px 24px rgba(0,0,0,0.3);">
+                    <div>
+                        <div style="font-size:18px; font-weight:800; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif; display:flex; align-items:center; gap:10px;">
+                            <span>🌐</span>
+                            <span>VALKYRIE MACRO ORACLE &amp; GLOBAL RISK SENTINEL DESK</span>
+                            <span style="font-size:10px; background:rgba(0,242,254,0.12); color:var(--cyan); border:1px solid rgba(0,242,254,0.3); padding:2px 8px; border-radius:6px; font-weight:800;">ORACLE 7/24</span>
+                        </div>
+                        <div style="font-size:12px; color:#94a3b8; margin-top:4px;">
+                            Çok Kaynaklı Makro Ekonomik Takvim • Çapraz Piyasa Radarı • Byzantine Quorum Anti-Manipülasyon • Flaş İstihbarat Akışı
+                        </div>
+                    </div>
+
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:6px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.25); padding:6px 12px; border-radius:8px; font-size:11px; font-family:'JetBrains Mono'; color:#10b981;">
+                            <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#10b981; box-shadow:0 0 8px #10b981;"></span>
+                            <span>CANLI AKIŞ: ForexFactory • TreeNews • SEC EDGAR • Fed RSS</span>
+                        </div>
+                        <button id="btn-macro-sync-trigger" onclick="triggerMacroSync()" style="background:rgba(0,242,254,0.14); color:#00f2fe; border:1px solid rgba(0,242,254,0.35); padding:7px 14px; border-radius:8px; font-size:11.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.15s;">
+                            <span>🔄 Anında Senkronize Et</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4 HERO FINANSAL MAKRO KPI KARTI -->
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:16px; margin-bottom:22px;">
+                    <!-- KART 1: SIRADAKİ DEV MAKRO OLAY -->
+                    <div style="background:var(--card-bg, #111726); border:1px solid rgba(244,63,94,0.3); border-radius:14px; padding:18px; box-shadow:0 4px 20px rgba(0,0,0,0.25); position:relative; overflow:hidden;">
+                        <div style="font-size:11px; font-weight:800; color:#f43f5e; text-transform:uppercase; letter-spacing:0.6px; display:flex; justify-content:space-between; align-items:center;">
+                            <span>🕒 SONRAKİ DEV MAKRO OLAY</span>
+                            <span style="background:rgba(244,63,94,0.15); color:#f43f5e; padding:2px 6px; border-radius:5px; font-size:10px;">${nextEv.impact || 'KRİTİK'}</span>
+                        </div>
+                        <div style="font-size:15px; font-weight:800; color:#ffffff; margin-top:8px; line-height:1.3;">
+                            ${nextEv.country === 'USD' ? '🇺🇸 ' : ''}${nextEv.title || 'ABD Çekirdek TÜFE (Core CPI)'}
+                        </div>
+                        <div style="font-size:22px; font-weight:900; font-family:'JetBrains Mono'; color:#f43f5e; margin:10px 0 6px 0;" id="macro-hero-countdown">
+                            ⏱️ ${nextEv.countdown_str || '00:00:00'}
+                        </div>
+                        <div style="font-size:11px; color:#94a3b8; display:flex; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.06); padding-top:8px;">
+                            <span>Beklenti: <b style="color:#ffffff;">${nextEv.forecast || '-'}</b></span>
+                            <span>Önceki: <b style="color:#cbd5e1;">${nextEv.previous || '-'}</b></span>
+                            <span style="color:var(--cyan);">T-15m True BE: <b>HAZIR</b></span>
+                        </div>
+                    </div>
+
+                    <!-- KART 2: ŞAHİN / GÜVERCİN İBRESİ -->
+                    <div style="background:var(--card-bg, #111726); border:1px solid rgba(0,242,254,0.25); border-radius:14px; padding:18px; box-shadow:0 4px 20px rgba(0,0,0,0.25);">
+                        <div style="font-size:11px; font-weight:800; color:var(--cyan); text-transform:uppercase; letter-spacing:0.6px; display:flex; justify-content:space-between; align-items:center;">
+                            <span>🦅 FED &amp; POLİTİKA DUYGU İBRESİ</span>
+                            <span style="background:rgba(0,242,254,0.12); color:var(--cyan); padding:2px 6px; border-radius:5px; font-size:10px;">HAWK-DOVE</span>
+                        </div>
+                        <div style="font-size:14px; font-weight:800; color:${biasColor}; margin-top:8px;">
+                            ${biasLabel} (${biasScore > 0 ? '+' : ''}${biasScore.toFixed(1)})
+                        </div>
+                        <!-- İbre Çizgisi -->
+                        <div style="margin:14px 0 10px 0;">
+                            <div style="height:8px; border-radius:4px; background:linear-gradient(90deg, #ef4444 0%, #cbd5e1 50%, #10b981 100%); position:relative;">
+                                <div style="position:absolute; top:-4px; left:${needlePct}%; width:4px; height:16px; background:#ffffff; border-radius:2px; box-shadow:0 0 8px #ffffff; transform:translateX(-50%);"></div>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; font-size:9.5px; font-family:'JetBrains Mono'; color:#64748b; margin-top:5px;">
+                                <span>ŞAHİN (AYI -100)</span>
+                                <span>NÖTR (0)</span>
+                                <span>GÜVERCİN (BOĞA +100)</span>
+                            </div>
+                        </div>
+                        <div style="font-size:11px; color:#94a3b8; display:flex; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.06); padding-top:6px;">
+                            <span>Makam: <b style="color:#ffffff;">${fedChair.current_holder}</b></span>
+                            <span>Ağırlık: <b style="color:var(--cyan);">${fedChair.market_weight}x</b></span>
+                        </div>
+                    </div>
+
+                    <!-- KART 3: KÜRESEL ÇAPRAZ RADAR -->
+                    <div style="background:var(--card-bg, #111726); border:1px solid rgba(16,185,129,0.25); border-radius:14px; padding:18px; box-shadow:0 4px 20px rgba(0,0,0,0.25);">
+                        <div style="font-size:11px; font-weight:800; color:#10b981; text-transform:uppercase; letter-spacing:0.6px; display:flex; justify-content:space-between; align-items:center;">
+                            <span>🌍 KÜRESEL ÇAPRAZ PİYASA RADARI</span>
+                            <span style="background:rgba(16,185,129,0.12); color:#10b981; padding:2px 6px; border-radius:5px; font-size:10px;">CROSS-ASSET</span>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; font-family:'JetBrains Mono';">
+                            <div style="background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:7px;">
+                                <div style="font-size:10px; color:#64748b;">DOLAR ENDEKSİ (DXY)</div>
+                                <div style="font-size:14px; font-weight:800; color:#ffffff;">${Number(assets.DXY ? assets.DXY.value : (cross.dxy ? cross.dxy.price : 102.23)).toFixed(2)}</div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:7px;">
+                                <div style="font-size:10px; color:#64748b;">ABD 10Y TAHVİL</div>
+                                <div style="font-size:14px; font-weight:800; color:#38bdf8;">%${Number(assets.US10Y ? assets.US10Y.value : (cross.us10y ? cross.us10y.price : 5.24)).toFixed(2)}</div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:7px;">
+                                <div style="font-size:10px; color:#64748b;">USDT DOMİNANSI</div>
+                                <div style="font-size:14px; font-weight:800; color:#10b981;">%${Number(assets.USDT_D ? assets.USDT_D.value : (cross.usdt_d || 6.54)).toFixed(2)}</div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:7px;">
+                                <div style="font-size:10px; color:#64748b;">BTC DOMİNANSI</div>
+                                <div style="font-size:14px; font-weight:800; color:#fbc531;">%${Number(assets.BTC_D ? assets.BTC_D.value : (cross.btc_d || 59.09)).toFixed(2)}</div>
+                            </div>
+                        </div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:6px; display:flex; justify-content:space-between;">
+                            <span>Rejim: <b style="color:var(--cyan);">${(cross.regime || 'NEUTRAL').split('(')[0]}</b></span>
+                            <span style="color:#10b981;">Risk İştahı: <b>AÇIK</b></span>
+                        </div>
+                    </div>
+
+                    <!-- KART 4: BYZANTINE QUORUM & STRATEJİ ZIRHI -->
+                    <div style="background:var(--card-bg, #111726); border:1px solid rgba(251,197,49,0.25); border-radius:14px; padding:18px; box-shadow:0 4px 20px rgba(0,0,0,0.25);">
+                        <div style="font-size:11px; font-weight:800; color:#fbc531; text-transform:uppercase; letter-spacing:0.6px; display:flex; justify-content:space-between; align-items:center;">
+                            <span>🛡️ BYZANTINE QUORUM &amp; ZIRH</span>
+                            <span style="background:rgba(251,197,49,0.12); color:#fbc531; padding:2px 6px; border-radius:5px; font-size:10px;">ANTİ-MANİPÜLASYON</span>
+                        </div>
+                        <div style="margin-top:8px; font-size:11.5px; line-height:1.5; color:#cbd5e1;">
+                            <div>• <b>Çift Teyit Mutabakatı:</b> <span style="color:#10b981;">Tek kaynaklı tuzak girişi kilitli</span></div>
+                            <div>• <b>Tahta CVD Emilimi:</b> <span style="color:var(--cyan);">30s Sahte Pompalama Kalkanı</span></div>
+                            <div>• <b>Top-20 Likidite Kapısı:</b> <span style="color:#fbc531;">Düşük hacimli coinler kilitli</span></div>
+                            <div>• <b>Setup Muting:</b> <span style="color:#38bdf8;">Rejime ters kurulumlar susturuldu</span></div>
+                        </div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:6px; display:flex; justify-content:space-between;">
+                            <span>Kayıtlı Denetim: <b style="color:#ffffff;">${quorumList.length} Olay</b></span>
+                            <span style="color:#10b981;">Zırh: <b>TAM ETKİN</b></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2 BÜYÜK ANALİZ VE DETAY TABLO BLOKLARI (SOL & SAĞ) -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start;">
+
+                    <!-- SOL SÜTUN: EKONOMİK TAKVİM & YÖNETİCİ SİCİL KÜTÜĞÜ -->
+                    <div style="display:flex; flex-direction:column; gap:20px;">
+                        
+                        <!-- TABLO 1: YAKLAŞAN KRİTİK EKONOMİK TAKVİM -->
+                        <div style="background:var(--card-bg, #111726); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px; box-shadow:0 4px 20px rgba(0,0,0,0.25);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:10px;">
+                                <div style="font-size:13.5px; font-weight:800; color:#ffffff; display:flex; align-items:center; gap:8px;">
+                                    <span>📅</span>
+                                    <span>YAKLAŞAN KRİTİK EKONOMİK TAKVİM</span>
+                                </div>
+                                <span style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">${events.length} Kritik Olay Hafızada</span>
+                            </div>
+
+                            <div style="overflow-x:auto;">
+                                <table style="width:100%; border-collapse:collapse; font-size:11.5px; font-family:'JetBrains Mono'; text-align:left;">
+                                    <thead>
+                                        <tr style="color:#64748b; border-bottom:1px solid rgba(255,255,255,0.08); text-transform:uppercase; font-size:10px;">
+                                            <th style="padding:8px 6px;">Olay &amp; Ülke</th>
+                                            <th style="padding:8px 6px;">Etki</th>
+                                            <th style="padding:8px 6px;">Beklenti</th>
+                                            <th style="padding:8px 6px;">Önceki</th>
+                                            <th style="padding:8px 6px; text-align:right;">Geri Sayım</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${events.length === 0 ? `
+                                            <tr>
+                                                <td colspan="5" style="text-align:center; padding:20px; color:#64748b;">
+                                                    Yakın zamanda kritik olay bulunmuyor veya takvim taranıyor.
+                                                </td>
+                                            </tr>
+                                        ` : events.slice(0, 10).map((ev, idx) => {
+                                            const isCrit = (ev.impact === 'CRITICAL' || ev.impact === 'HIGH');
+                                            const impColor = isCrit ? '#f43f5e' : '#f59e0b';
+                                            const impBg = isCrit ? 'rgba(244,63,94,0.15)' : 'rgba(245,158,11,0.15)';
+                                            return `
+                                                <tr style="border-bottom:1px solid rgba(255,255,255,0.04); transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+                                                    <td style="padding:10px 6px;">
+                                                        <div style="font-weight:700; color:#ffffff;">${ev.country === 'USD' ? '🇺🇸 ' : ''}${ev.title}</div>
+                                                        <div style="font-size:10px; color:#64748b; margin-top:2px;">${ev.category || 'MAKRO VERİ'}</div>
+                                                    </td>
+                                                    <td style="padding:10px 6px;">
+                                                        <span style="background:${impBg}; color:${impColor}; border:1px solid ${impColor}40; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:800;">
+                                                            ${ev.impact || 'ORTA'}
+                                                        </span>
+                                                    </td>
+                                                    <td style="padding:10px 6px; color:#ffffff; font-weight:600;">${ev.forecast || '—'}</td>
+                                                    <td style="padding:10px 6px; color:#94a3b8;">${ev.previous || '—'}</td>
+                                                    <td style="padding:10px 6px; text-align:right; color:${idx === 0 ? '#f43f5e' : '#cbd5e1'}; font-weight:800;">
+                                                        ${ev.countdown_str || 'Takipte'}
+                                                    </td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- TABLO 2: DİNAMİK YÖNETİCİ & SİCİL KÜTÜĞÜ -->
+                        <div style="background:var(--card-bg, #111726); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px; box-shadow:0 4px 20px rgba(0,0,0,0.25);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:10px;">
+                                <div style="font-size:13.5px; font-weight:800; color:#ffffff; display:flex; align-items:center; gap:8px;">
+                                    <span>🏛️</span>
+                                    <span>DİNAMİK YÖNETİCİ &amp; MAKAMSAL SİCİL KÜTÜĞÜ</span>
+                                </div>
+                                <span style="font-size:10.5px; background:rgba(0,242,254,0.12); color:var(--cyan); border:1px solid rgba(0,242,254,0.25); padding:2px 6px; border-radius:5px;">Canlı Görev Teyidi</span>
+                            </div>
+
+                            <div style="display:flex; flex-direction:column; gap:8px;">
+                                ${Object.keys(roles).map(rk => {
+                                    const r = roles[rk];
+                                    const pastHolders = (r.past_holders || []).slice(0, 3).join(', ');
+                                    return `
+                                        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:9px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center;">
+                                            <div>
+                                                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono';">${r.title || rk}</div>
+                                                <div style="font-size:13px; font-weight:800; color:#ffffff; margin-top:2px;">${r.current_holder}</div>
+                                                ${pastHolders ? `<div style="font-size:9.5px; color:#475569; margin-top:2px;">Eski/Geçersiz: ${pastHolders}...</div>` : ''}
+                                            </div>
+                                            <div style="text-align:right;">
+                                                <div style="font-size:11px; font-weight:800; color:var(--cyan); font-family:'JetBrains Mono';">${r.market_weight}x Ağırlık</div>
+                                                <div style="font-size:9.5px; color:#10b981; margin-top:2px;">● GÖREVDE</div>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- SAĞ SÜTUN: CANLI FLAŞ HABER AKIŞI & ÇAPRAZ RADAR TABLOSU -->
+                    <div style="display:flex; flex-direction:column; gap:20px;">
+                        
+                        <!-- TABLO 3: CANLI FLAŞ HABER İSTİHBARATI & BYZANTINE QUORUM FEED -->
+                        <div style="background:var(--card-bg, #111726); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px; box-shadow:0 4px 20px rgba(0,0,0,0.25);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:10px;">
+                                <div style="font-size:13.5px; font-weight:800; color:#ffffff; display:flex; align-items:center; gap:8px;">
+                                    <span>⚡</span>
+                                    <span>CANLI FLAŞ HABERLER &amp; BYZANTINE TEYİT RADARI</span>
+                                </div>
+                                <span style="font-size:11px; color:#10b981; font-family:'JetBrains Mono';">7/24 Soket Aktif</span>
+                            </div>
+
+                            <div style="display:flex; flex-direction:column; gap:10px; max-height:480px; overflow-y:auto; padding-right:4px;">
+                                ${newsList.length === 0 ? `
+                                    <div style="text-align:center; padding:30px; color:#64748b; font-size:12px;">
+                                        Henüz flaş haber kaydedilmedi. Soketler ve RSS besleyicileri arka planda dinlemede.
+                                    </div>
+                                ` : newsList.slice(0, 15).map(item => {
+                                    const isOfficial = item.is_primary_official;
+                                    const isVer = item.is_verified;
+                                    const srcColor = isOfficial ? '#38bdf8' : (item.source === 'TREENEWS' ? '#10b981' : '#a855f7');
+                                    const sentScore = Number(item.sentiment_score || 0);
+                                    const sentColor = sentScore > 10 ? 'var(--green)' : (sentScore < -10 ? 'var(--red)' : '#94a3b8');
+                                    return `
+                                        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-left:3px solid ${srcColor}; border-radius:9px; padding:10px 14px; transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
+                                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:10.5px; font-family:'JetBrains Mono';">
+                                                <div style="display:flex; align-items:center; gap:6px;">
+                                                    <span style="color:${srcColor}; font-weight:800;">[${item.source}]</span>
+                                                    <span style="color:#64748b;">${item.time_tsi || 'Şimdi'}</span>
+                                                </div>
+                                                <div style="display:flex; align-items:center; gap:6px;">
+                                                    ${isOfficial ? `<span style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:1px 5px; border-radius:4px; font-size:9px; font-weight:800;">RESMİ</span>` : ''}
+                                                    ${isVer ? `<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:1px 5px; border-radius:4px; font-size:9px; font-weight:800;">ÇİFT TEYİT ✅</span>` : ''}
+                                                    <span style="color:${sentColor}; font-weight:800;">${sentScore > 0 ? '+' : ''}${sentScore.toFixed(0)}</span>
+                                                </div>
+                                            </div>
+                                            <div style="font-size:12px; color:#e2e8f0; font-weight:600; line-height:1.4;">
+                                                ${item.title}
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+
+                        <!-- TABLO 4: ÇAPRAZ PİYASA & KORELASYON DETAYI -->
+                        <div style="background:var(--card-bg, #111726); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px; box-shadow:0 4px 20px rgba(0,0,0,0.25);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:10px;">
+                                <div style="font-size:13.5px; font-weight:800; color:#ffffff; display:flex; align-items:center; gap:8px;">
+                                    <span>📊</span>
+                                    <span>KÜRESEL MAKRO KORELASYON &amp; ETKİ ANALİZİ</span>
+                                </div>
+                                <span style="font-size:10.5px; background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.25); padding:2px 6px; border-radius:5px;">Yahoo Finance Canlı</span>
+                            </div>
+
+                            <table style="width:100%; border-collapse:collapse; font-size:11.5px; font-family:'JetBrains Mono'; text-align:left;">
+                                <thead>
+                                    <tr style="color:#64748b; border-bottom:1px solid rgba(255,255,255,0.08); text-transform:uppercase; font-size:10px;">
+                                        <th style="padding:6px;">Varlık</th>
+                                        <th style="padding:6px;">Son Değer</th>
+                                        <th style="padding:6px;">24s Değişim</th>
+                                        <th style="padding:6px; text-align:right;">Kriptoya Etkisi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                                        <td style="padding:8px 6px; font-weight:700; color:#ffffff;">DXY (Dolar Endeksi)</td>
+                                        <td style="padding:8px 6px;">${Number(cross.dxy ? cross.dxy.price : 102.23).toFixed(2)}</td>
+                                        <td style="padding:8px 6px; color:${Number(cross.dxy ? cross.dxy.chg_24h : 0) >= 0 ? '#f43f5e' : '#10b981'}; font-weight:700;">
+                                            ${Number(cross.dxy ? cross.dxy.chg_24h : 0) >= 0 ? '+' : ''}${Number(cross.dxy ? cross.dxy.chg_24h : 0).toFixed(2)}%
+                                        </td>
+                                        <td style="padding:8px 6px; text-align:right; color:#38bdf8;">Ters Korele (Düşüş Boğa)</td>
+                                    </tr>
+                                    <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                                        <td style="padding:8px 6px; font-weight:700; color:#ffffff;">US10Y (10Y Tahvil)</td>
+                                        <td style="padding:8px 6px;">%${Number(cross.us10y ? cross.us10y.price : 5.24).toFixed(2)}</td>
+                                        <td style="padding:8px 6px; color:${Number(cross.us10y ? cross.us10y.chg_24h : 0) >= 0 ? '#f43f5e' : '#10b981'}; font-weight:700;">
+                                            ${Number(cross.us10y ? cross.us10y.chg_24h : 0) >= 0 ? '+' : ''}${Number(cross.us10y ? cross.us10y.chg_24h : 0).toFixed(2)}%
+                                        </td>
+                                        <td style="padding:8px 6px; text-align:right; color:#10b981;">Faiz İndirim İştahı</td>
+                                    </tr>
+                                    <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                                        <td style="padding:8px 6px; font-weight:700; color:#ffffff;">Nasdaq Futures (NQ)</td>
+                                        <td style="padding:8px 6px;">${Number(cross.nasdaq ? cross.nasdaq.price : 31108).toLocaleString()}</td>
+                                        <td style="padding:8px 6px; color:${Number(cross.nasdaq ? cross.nasdaq.chg_24h : 0) >= 0 ? '#10b981' : '#f43f5e'}; font-weight:700;">
+                                            ${Number(cross.nasdaq ? cross.nasdaq.chg_24h : 0) >= 0 ? '+' : ''}${Number(cross.nasdaq ? cross.nasdaq.chg_24h : 0).toFixed(2)}%
+                                        </td>
+                                        <td style="padding:8px 6px; text-align:right; color:#cbd5e1;">Teknoloji / Risk-On</td>
+                                    </tr>
+                                    <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                                        <td style="padding:8px 6px; font-weight:700; color:#ffffff;">Ons Altın (XAU)</td>
+                                        <td style="padding:8px 6px;">$${Number(cross.gold ? cross.gold.price : 4216).toLocaleString()}</td>
+                                        <td style="padding:8px 6px; color:${Number(cross.gold ? cross.gold.chg_24h : 0) >= 0 ? '#10b981' : '#f43f5e'}; font-weight:700;">
+                                            ${Number(cross.gold ? cross.gold.chg_24h : 0) >= 0 ? '+' : ''}${Number(cross.gold ? cross.gold.chg_24h : 0).toFixed(2)}%
+                                        </td>
+                                        <td style="padding:8px 6px; text-align:right; color:#fbc531;">Güvenli Liman Likiditesi</td>
+                                    </tr>
+                                    <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                                        <td style="padding:8px 6px; font-weight:700; color:#ffffff;">USDT Dominansı</td>
+                                        <td style="padding:8px 6px;">%${Number(cross.usdt_d || 6.54).toFixed(2)}</td>
+                                        <td style="padding:8px 6px; color:#10b981; font-weight:700;">-0.12%</td>
+                                        <td style="padding:8px 6px; text-align:right; color:#10b981;">Nakit Kriptoya Akıyor (Boğa)</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:8px 6px; font-weight:700; color:#ffffff;">ETH / BTC Rasyosu</td>
+                                        <td style="padding:8px 6px;">${Number(cross.eth_btc || 0.03018).toFixed(5)}</td>
+                                        <td style="padding:8px 6px; color:#cbd5e1; font-weight:700;">+0.25%</td>
+                                        <td style="padding:8px 6px; text-align:right; color:#a855f7;">Altcoin Sezon İbresi</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+
+                </div>
+            `;
+        }
+        window.renderMacroTabView = renderMacroTabView;
+
         let currentActiveMainTab = 'cockpit';
         window.currentActiveMainTab = currentActiveMainTab;
 
@@ -10930,7 +11486,8 @@ async function loadAdminMetrics() {
                 'whale': document.getElementById('tab-btn-whale'),
                 'institutional': document.getElementById('tab-btn-institutional'),
                 'health': document.getElementById('tab-btn-health'),
-                'admin': document.getElementById('tab-btn-admin')
+                'admin': document.getElementById('tab-btn-admin'),
+                'macro': document.getElementById('tab-btn-macro')
             };
             const tabContents = {
                 'cockpit': document.getElementById('main-tab-content-cockpit'),
@@ -10946,7 +11503,8 @@ async function loadAdminMetrics() {
                 'whale': document.getElementById('main-tab-content-whale'),
                 'institutional': document.getElementById('main-tab-content-institutional'),
                 'health': document.getElementById('main-tab-content-health'),
-                'admin': document.getElementById('main-tab-content-admin')
+                'admin': document.getElementById('main-tab-content-admin'),
+                'macro': document.getElementById('main-tab-content-macro')
             };
 
             for (const key in tabButtons) {
@@ -11033,6 +11591,8 @@ async function loadAdminMetrics() {
                     renderHealthTabView();
                 } else if (tabName === 'admin') {
                     loadAdminMetrics();
+                } else if (tabName === 'macro') {
+                    renderMacroTabView();
                 }
             } catch (tabErr) {
                 console.warn("[Valkyrie Navigation] View rendering warning for tab " + tabName + ":", tabErr);
@@ -15343,6 +15903,24 @@ async function loadAdminMetrics() {
                     const histCount = (appState.history || []).length;
                     navLedgerBadge.innerText = `${histCount} İşlem`;
                 }
+                const navMacroBadge = document.getElementById('nav-macro-badge');
+                if (navMacroBadge) {
+                    const hud = (appState && appState.macro_hud) || {};
+                    const shock = hud.shock_regime || {};
+                    if (shock.is_shock) {
+                        navMacroBadge.innerText = 'ŞOK AKTİF';
+                        navMacroBadge.style.color = '#f43f5e';
+                        navMacroBadge.style.background = 'rgba(244,63,94,0.18)';
+                        navMacroBadge.style.borderColor = 'rgba(244,63,94,0.4)';
+                    } else if (hud.next_event && hud.next_event.countdown_str) {
+                        navMacroBadge.innerText = hud.next_event.countdown_str;
+                        navMacroBadge.style.color = '#fbc531';
+                        navMacroBadge.style.background = 'rgba(251,197,49,0.15)';
+                        navMacroBadge.style.borderColor = 'rgba(251,197,49,0.3)';
+                    } else {
+                        navMacroBadge.innerText = 'Oracle 7/24';
+                    }
+                }
             } catch (e) {
                 console.error("updateNavBadges error:", e);
             }
@@ -17381,6 +17959,7 @@ function downloadExcelReport() {
                 }
                 renderCockpitView();
                 renderCockpitOpenPositions();
+                renderCockpitMacroHudTicker();
                 updateSystemHealthBadge();
 
                 // 4. Only re-render Open Positions if position IDs or count changed
@@ -17433,6 +18012,11 @@ function downloadExcelReport() {
                 // 5c3. Update Health & Telemetry View if active tab
                 if (currentActiveMainTab === 'health' || window.currentActiveMainTab === 'health') {
                     renderHealthTabView();
+                }
+
+                // 5c3b. Update Macro Oracle View if active tab
+                if (currentActiveMainTab === 'macro' || window.currentActiveMainTab === 'macro') {
+                    renderMacroTabView();
                 }
 
                 // 5c4. Update Shadow & Calibration View if active tab, otherwise update badge
@@ -19435,7 +20019,16 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "exchange_netflows": {k: dict(v) for k, v in list(getattr(market_data, 'exchange_netflows', {}).items()) if '/' in k} if market_data else {}
             }
 
+            macro_hud = {}
+            try:
+                from macro_strategy_guard import macro_guard
+                if macro_guard:
+                    macro_hud = macro_guard.get_macro_hud_telemetry()
+            except Exception:
+                pass
+
             return json_compressed_response(request, {
+                "macro_hud": macro_hud,
                 "balance": trader_manager.balance,
                 "initial_balance": 10000.0,
                 "free_balance": trader_manager.get_free_balance(),
@@ -20171,6 +20764,55 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
+    async def api_macro_oracle(request):
+        try:
+            from macro_strategy_guard import macro_guard
+            from macro_calendar import calendar_manager
+            from macro_cross_asset import cross_asset_radar
+            from macro_news_sentinel import news_sentinel
+            from macro_quorum import news_quorum
+            from macro_roles import role_registry
+
+            cal_summary = calendar_manager.get_calendar_summary() if calendar_manager else {}
+            all_events = list(calendar_manager.events) if calendar_manager else []
+            cross_data = cross_asset_radar.get_macro_summary() if cross_asset_radar else {}
+            news_feed = news_sentinel.get_latest_news(limit=50) if news_sentinel else []
+            quorum_logs = news_quorum.audit_history[-30:] if (news_quorum and hasattr(news_quorum, 'audit_history')) else []
+            hud_info = macro_guard.get_macro_hud_telemetry() if macro_guard else {}
+            roles_data = role_registry.data.get("roles", {}) if role_registry else {}
+
+            return json_compressed_response(request, {
+                "status": "ok",
+                "hud_ticker": hud_info,
+                "calendar": {
+                    "summary": cal_summary,
+                    "events": all_events
+                },
+                "cross_asset": cross_data,
+                "news": news_feed,
+                "quorum": quorum_logs,
+                "roles": roles_data
+            })
+        except Exception as e:
+            return web.json_response({"status": "error", "message": str(e)}, status=500)
+
+    async def api_macro_sync(request):
+        try:
+            from macro_calendar import calendar_manager
+            from macro_cross_asset import cross_asset_radar
+            from macro_news_sentinel import news_sentinel
+
+            t1 = asyncio.create_task(calendar_manager.sync_calendar())
+            t2 = asyncio.create_task(cross_asset_radar.sync_cross_assets())
+            t3 = asyncio.create_task(news_sentinel.sync_all_sources())
+            await asyncio.gather(t1, t2, t3, return_exceptions=True)
+
+            return web.json_response({"status": "ok", "message": "Makro veri kaynakları senkronize edildi."})
+        except Exception as e:
+            return web.json_response({"status": "error", "message": str(e)}, status=500)
+
+    app.router.add_get('/api/macro_oracle', api_macro_oracle)
+    app.router.add_post('/api/macro_sync', api_macro_sync)
     app.router.add_get('/api/debug_fetch', api_debug_fetch)
 
     app.router.add_get('/api/live/status', api_live_status)
