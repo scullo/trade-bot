@@ -249,31 +249,56 @@ Kullanıcının 10. sekmeye geçmek zorunda kalmadan, ana işlem terminalinde (p
 8.2. Özel 10. Sekme: "Makro İstihbarat & Sentinel Desk" (Detaylı Derin Analiz):
 Derinlemesine inceleme, ekonomik takvim arşivi, FOMC bildiri karşılaştırması ve canlı Şahin/Güvercin ibresi 10. sekmede detaylı sunulur.
 
+8.3. SİSTEM SAĞLIK MASASI (HEALTH TAB & AEGIS SENTINEL) İLE 7/24 KESİNTİSİZ NÖBET VE OTONOM MÜDAHALE (AUTO-HEALING):
+Makro İstihbarat motoru havada asılı veya kontrolsüz çalışamaz; Web Dashboard'un "8. Sistem Sağlığı (Aegis Sentinel Kokpiti)" sekmesinde 7/24 saniyelik telemetriyle izlenir ve bir anomali durumunda anında otonom müdahale (Auto-Healing) gerçekleşir:
+
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ 🌐 4. MAKRO İSTİHBARAT & SENTINEL MASASI [5/5 TAM SAĞLIKLI 🟢]                                 │
+├─────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ • 📅 Ekonomik Takvim (ForexFactory & Master): 11 Kritik Olay [TAKİPTE 🟢]                       │
+│ • 🌍 Çapraz Piyasa Radarı: DXY: 102.23 | US10Y: %5.24 | Rejim: NEUTRAL [RADAR CANLI 🟢]         │
+│ • ⚡ Flaş Haber İstihbaratı: TreeNews / SEC 8-K / Fed RSS [100+ Haber Hafızada - 7/24 DİNLİYOR 🟢]│
+│ • 🛡️ Byzantine Quorum Masası: Çift Teyit & Emir Akışı Doğrulama [BLOKAJ AKTİF 🟢]                │
+│ • 🚦 Strateji Koruma Kapısı: T-15m True Net BE & T-5m Freeze [ZIRH HAZIR 🟢]                    │
+└─────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+Otonom Müdahale ve Hata Kurtarma Protokolleri (Self-Healing Protocols):
+1. Takvim API 429 / Rate Limit Müdahalesi: ForexFactory uç noktası 429 döndürürse sistem anında "ANNUAL_MACRO_MASTER_SCHEDULE" kütüğüne geçer; takvim asla boş kalmaz.
+2. Çapraz Piyasa NaN / Donma Müdahalesi: DXY veya US10Y verilerinde NaN veya 600s gecikme saptanırsa Aegis Sentinel arka planda asenkron REST tazeleme tetikler.
+3. Flaş Haber Beslemesi Canlandırma: Haber soketleri 1 saatten uzun süre sessiz kalırsa RSS ve WebSocket dinleyicileri otonom yeniden başlatılır (Auto-Resurrection).
+4. Byzantine Quorum RAM Optimizasyonu: 180 saniyeden eski haber konu kümeleri bellekten tahliye edilerek Render 512MB RAM tavanı korunur.
+5. Kasa Emniyet Kilidi: Kritik bir küresel kriz veya makro veri hatasında bot yeni işlem açılışını dondurarak (Safe Mode) sermayeyi garantiye alır.
+
 ═══════════════════════════════════════════════════════════════════════════════
 9. AŞAMALI UYGULAMA VE DEVREYE ALMA YOL HARİTASI
 ═══════════════════════════════════════════════════════════════════════════════
 
-• Faz 1: Çok Kaynaklı Düşük Gecikmeli Veri Boru Hattı (Data Ingestion Pipeline)
+• Faz 1: Çok Kaynaklı Düşük Gecikmeli Veri Boru Hattı (TAMAMLANDI ✅)
   - TreeNews WebSocket, Walter Bloomberg ve FinancialJuice akışlarının entegrasyonu.
   - BLS, FRED ve ForexFactory ekonomik takvim JSON çekicisinin kurulması.
   - SEC EDGAR RSS ve CourtListener dinleyicilerinin yazılması.
   - Dinamik Makam Sicil Kütüğü (ExecutiveRoleRegistry) entegrasyonu.
 
-• Faz 2: Çapraz Piyasa (Cross-Asset) ve On-Chain Radarının Entegrasyonu
+• Faz 2: Çapraz Piyasa (Cross-Asset) ve On-Chain Radarının Entegrasyonu (TAMAMLANDI ✅)
   - DXY, US10Y, Nasdaq, USDT.D ve ETH/BTC anlık veri izleyicisinin market_data.py'ye eklenmesi.
   - Arkham hükümet cüzdanları ve PeckShield hack alarm soketlerinin bağlanması.
 
-• Faz 3: Byzantine Quorum & Anti-Manipülasyon Filtre Motoru
+• Faz 3: Byzantine Quorum & Anti-Manipülasyon Filtre Motoru (TAMAMLANDI ✅)
   - Çift kaynak doğrulama mantığı (Single-source blocking).
   - Haber düşüşü sonrası 5 saniyelik tahta/CVD alım-satım teyit denetleyicisi.
   - Siyasi ve polemik gürültü eleyici NLP sınıflandırıcısı.
 
-• Faz 4: Kuant Strateji Motoru ile Entegrasyon (strategy.py)
+• Faz 4: Kuant Strateji Motoru ile Entegrasyon (strategy.py) (TAMAMLANDI ✅)
   - Pre-Event: Veriden 15dk önce sıkı başabaş (Tight BE Ratchet) ve spread kilidi.
   - Flash-Shock: İlk 10 saniye fitil tuzağı kalkanı.
   - Post-Event: Sayısal sürpriz ve çift teyit sağlandığında elit R4/Breakout ve Retest tetikleyicisi.
 
-• Faz 5: Web UI (Ana Sayfa Flaş HUD Şeridi + 10. Makro Sekmesi) & Canlı Dağıtım
+• Faz 4B (Ara Güncelleme): Aegis Sentinel & Sistem Sağlık Masası Entegrasyonu (TAMAMLANDI ✅)
+  - 8. Sağlık Sekmesi ve Teşhis Modalına 4. Makro İstihbarat & Sentinel masasının eklenmesi.
+  - 5/5 alt sistemin (Takvim, DXY, Haber, Quorum, Strateji) kesintisiz denetlenmesi.
+  - Veri hatası, 429 rate limit ve gecikmelerde anında otonom müdahale (Auto-Healing) protokolü.
+
+• Faz 5: Web UI (Ana Sayfa Flaş HUD Şeridi + 10. Makro Sekmesi) & Canlı Dağıtım (SIRADAKİ ADIM 🚀)
   - Ana Dashboard'un en üstüne "Günün Kritik Olayı & Son Dakika Flaş İstihbarat HUD Şeridi" eklenmesi.
   - Web Dashboard'a "10. Makro İstihbarat & Sentinel Desk" derin analiz konsolunun eklenmesi.
   - Telegram'a acil flaş haber ve makro rejim değişim uyarılarının bağlanması.

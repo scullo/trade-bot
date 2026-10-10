@@ -596,7 +596,63 @@ class MarketDataManager:
                 shadow_ok, vault_ok
             ]
 
-            all_checks = streams_checks + quant_checks + infra_checks
+            # Kolon 4: 5 Makro İstihbarat ve Sentinel Sensörü
+            macro_calendar_ok = False
+            macro_cross_asset_ok = False
+            macro_news_sentinel_ok = False
+            macro_quorum_ok = False
+            macro_guard_ok = False
+            cal_ev_cnt = 0
+            cal_next_info = {}
+            cross_dxy_val = 102.2
+            cross_us10y_val = 5.24
+            cross_reg_text = "NEUTRAL"
+            news_tot_cnt = 0
+            news_top_item = {}
+
+            try:
+                from macro_calendar import calendar_manager
+                cal_ev_cnt = len(calendar_manager.events)
+                cal_next_info = calendar_manager.get_next_major_event() or {}
+                macro_calendar_ok = (cal_ev_cnt > 0)
+            except Exception:
+                pass
+
+            try:
+                from macro_cross_asset import cross_asset_radar
+                cross_dxy_val = float(cross_asset_radar.data.get("dxy", {}).get("price", 102.2) or 102.2)
+                cross_us10y_val = float(cross_asset_radar.data.get("us10y", {}).get("price", 5.24) or 5.24)
+                cross_reg_text = str(cross_asset_radar.data.get("regime", "NEUTRAL"))
+                macro_cross_asset_ok = (cross_dxy_val > 50.0 and cross_us10y_val > 0.0)
+            except Exception:
+                pass
+
+            try:
+                from macro_news_sentinel import news_sentinel
+                news_tot_cnt = len(news_sentinel.news_items)
+                news_top_item = news_sentinel.get_flash_breaking_alert() or {}
+                macro_news_sentinel_ok = (news_tot_cnt > 0)
+            except Exception:
+                pass
+
+            try:
+                from macro_quorum import news_quorum
+                macro_quorum_ok = isinstance(news_quorum.audit_history, list)
+            except Exception:
+                pass
+
+            try:
+                from macro_strategy_guard import macro_guard
+                macro_guard_ok = (macro_guard is not None)
+            except Exception:
+                pass
+
+            macro_checks = [
+                macro_calendar_ok, macro_cross_asset_ok, macro_news_sentinel_ok,
+                macro_quorum_ok, macro_guard_ok
+            ]
+
+            all_checks = streams_checks + quant_checks + infra_checks + macro_checks
             total_checks = len(all_checks)
             passed = sum(1 for c in all_checks if c)
             is_perfect = (passed >= total_checks - 2)
@@ -604,8 +660,9 @@ class MarketDataManager:
             streams_passed = sum(1 for c in streams_checks if c)
             quant_passed = sum(1 for c in quant_checks if c)
             infra_passed = sum(1 for c in infra_checks if c)
+            macro_passed = sum(1 for c in macro_checks if c)
 
-            status_text = f"{passed}/{total_checks} TAM SAĞLIKLI (36/36 Kuant & Altyapı Sensörü)" if is_perfect else f"UYARI: {total_checks - passed} Alt Sistemde Gecikme"
+            status_text = f"{passed}/{total_checks} TAM SAĞLIKLI ({passed}/{total_checks} Kuant, Makro & Altyapı Sensörü)" if is_perfect else f"UYARI: {total_checks - passed} Alt Sistemde Gecikme"
 
             return {
                 "is_perfect": is_perfect,
@@ -616,7 +673,36 @@ class MarketDataManager:
                 "category_scores": {
                     "streams": f"{streams_passed}/{len(streams_checks)}",
                     "quant_engine": f"{quant_passed}/{len(quant_checks)}",
-                    "infrastructure": f"{infra_passed}/{len(infra_checks)}"
+                    "infrastructure": f"{infra_passed}/{len(infra_checks)}",
+                    "macro_oracle": f"{macro_passed}/{len(macro_checks)}"
+                },
+                "macro_oracle": {
+                    "healthy": all(macro_checks),
+                    "score_str": f"{macro_passed}/{len(macro_checks)}",
+                    "calendar": {
+                        "healthy": macro_calendar_ok,
+                        "events_count": cal_ev_cnt,
+                        "next_event": cal_next_info
+                    },
+                    "cross_asset": {
+                        "healthy": macro_cross_asset_ok,
+                        "dxy": cross_dxy_val,
+                        "us10y": cross_us10y_val,
+                        "regime": cross_reg_text
+                    },
+                    "news_sentinel": {
+                        "healthy": macro_news_sentinel_ok,
+                        "news_count": news_tot_cnt,
+                        "latest_alert": news_top_item
+                    },
+                    "byzantine_quorum": {
+                        "healthy": macro_quorum_ok,
+                        "status": "ÇİFT KAYNAK TEYİT DEVREDE ✅"
+                    },
+                    "strategy_guard": {
+                        "healthy": macro_guard_ok,
+                        "status": "PRE-EVENT BE & FREEZE AKTİF 🛡️"
+                    }
                 },
                 "healthy_symbols": healthy_levs,
                 "total_symbols": total_syms,

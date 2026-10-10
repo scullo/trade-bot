@@ -239,6 +239,110 @@ class ValkyrieAegisSentinel:
             "is_healthy": is_healthy
         }
 
+    async def audit_macro_oracle_system(self) -> dict:
+        """
+        5. KATMAN (ÖZEL): Valkyrie Macro Oracle & News Sentinel Sistem Sağlığı Denetimi
+        - Ekonomik Takvim (ForexFactory JSON & Master Fallback): Olay sayısı, bayatlık, sonraki olay
+        - Çapraz Piyasa Radarı (DXY, US10Y, USDT.D, BTC.D): NaN/0.0 anomali ve senkron yaşı
+        - Flaş Haber İstihbaratı (TreeNews, SEC EDGAR, Fed RSS): Haber sayısı, son haber yaşı
+        - Byzantine Quorum & Anti-Manipülasyon: Konu kümesi bütünlüğü ve çift teyit masası
+        - Strateji Koruma Kapısı (Pre-Event BE & Flash Shock Freeze): Hazırda bekleme durumu
+        """
+        now = time.time()
+        
+        # 1. Ekonomik Takvim Denetimi
+        cal_healthy = False
+        cal_events_cnt = 0
+        cal_next_title = "Bilinmiyor"
+        cal_countdown = "--:--:--"
+        try:
+            from macro_calendar import calendar_manager
+            cal_events_cnt = len(calendar_manager.events)
+            next_ev = calendar_manager.get_next_major_event()
+            if next_ev:
+                cal_next_title = next_ev.get("title", "Yok")
+                cal_countdown = next_ev.get("countdown_str", "--:--:--")
+            cal_healthy = (cal_events_cnt > 0)
+        except Exception:
+            cal_healthy = False
+
+        # 2. Çapraz Piyasa Radarı Denetimi
+        cross_healthy = False
+        dxy_val, us10y_val, usdt_d_val = 0.0, 0.0, 0.0
+        try:
+            from macro_cross_asset import cross_asset_radar
+            c_data = cross_asset_radar.data
+            dxy_val = float(c_data.get("dxy", {}).get("price", 0.0) or 0.0)
+            us10y_val = float(c_data.get("us10y", {}).get("price", 0.0) or 0.0)
+            usdt_d_val = float(c_data.get("usdt_d", 0.0) or 0.0)
+            cross_healthy = (dxy_val > 50.0 and us10y_val > 0.0 and not np.isnan(dxy_val) and not np.isnan(us10y_val))
+        except Exception:
+            cross_healthy = False
+
+        # 3. Flaş Haber İstihbaratı Denetimi
+        news_healthy = False
+        news_cnt = 0
+        latest_news_title = ""
+        try:
+            from macro_news_sentinel import news_sentinel
+            news_cnt = len(news_sentinel.news_items)
+            latest = news_sentinel.get_latest_news(limit=1)
+            if latest:
+                latest_news_title = latest[0].get("title", "")
+            news_healthy = (news_cnt > 0)
+        except Exception:
+            news_healthy = False
+
+        # 4. Byzantine Quorum Masası Denetimi
+        quorum_healthy = False
+        cluster_cnt = 0
+        try:
+            from macro_quorum import news_quorum
+            cluster_cnt = len(news_quorum.topic_clusters)
+            quorum_healthy = isinstance(news_quorum.audit_history, list)
+        except Exception:
+            quorum_healthy = False
+
+        # 5. Strateji Koruma Kapısı Denetimi
+        guard_healthy = False
+        try:
+            from macro_strategy_guard import macro_guard
+            shock_reg = macro_guard.get_active_macro_shock_regime()
+            guard_healthy = isinstance(shock_reg, dict) and "regime" in shock_reg
+        except Exception:
+            guard_healthy = False
+
+        is_all_macro_healthy = cal_healthy and cross_healthy and news_healthy and quorum_healthy and guard_healthy
+
+        return {
+            "calendar": {
+                "healthy": cal_healthy,
+                "events_count": cal_events_cnt,
+                "next_event": cal_next_title,
+                "countdown": cal_countdown
+            },
+            "cross_asset": {
+                "healthy": cross_healthy,
+                "dxy": dxy_val,
+                "us10y": us10y_val,
+                "usdt_d": usdt_d_val
+            },
+            "news_sentinel": {
+                "healthy": news_healthy,
+                "news_count": news_cnt,
+                "latest_headline": latest_news_title
+            },
+            "byzantine_quorum": {
+                "healthy": quorum_healthy,
+                "active_clusters": cluster_cnt
+            },
+            "strategy_guard": {
+                "healthy": guard_healthy
+            },
+            "is_healthy": is_all_macro_healthy,
+            "status_text": "TAM SAĞLIKLI (7/24 NÖBETTE 🟢)" if is_all_macro_healthy else "OTONOM ONARIM DEVREDE ⚠️"
+        }
+
     async def apply_auto_healing(self, market_data, trader_manager, audit_findings: dict) -> list:
         """
         Kendi Kendini Sessizce Onarma (Silent Auto-Healing & RAM Optimizasyonu)
@@ -247,36 +351,37 @@ class ValkyrieAegisSentinel:
         now_str = datetime.now(timezone(timedelta(hours=3))).strftime("%H:%M:%S")
 
         # 1. Seviye sapmasi olan pariteleri aninda yeniden hesapla
-        drifted = audit_findings.get("indicators", {}).get("drifted_symbols", [])
-        for item in drifted:
-            sym = item.get("symbol")
-            if sym in market_data.all_symbols:
-                try:
-                    await market_data.fetch_single_symbol(sym)
-                    actions_taken.append(f"🔄 {sym} seviyeleri yeniden hesaplandı ve TradingView ile eşitlendi.")
-                except Exception as e:
-                    actions_taken.append(f"⚠️ {sym} seviye tazeleme hatası: {e}")
+        if market_data:
+            drifted = audit_findings.get("indicators", {}).get("drifted_symbols", [])
+            for item in drifted:
+                sym = item.get("symbol")
+                if sym in getattr(market_data, 'all_symbols', []):
+                    try:
+                        await market_data.fetch_single_symbol(sym)
+                        actions_taken.append(f"🔄 {sym} seviyeleri yeniden hesaplandı ve TradingView ile eşitlendi.")
+                    except Exception as e:
+                        actions_taken.append(f"⚠️ {sym} seviye tazeleme hatası: {e}")
 
-        # 2. RAM & Bellek Optimizasyonu: 5M mum dizilerini max 150 satira sinirla (Render 512MB RAM Korumasi)
-        cleaned_dfs = 0
-        for sym in list(market_data.candles_5m.keys()):
-            df = market_data.candles_5m[sym]
-            if isinstance(df, pd.DataFrame) and len(df) > 150:
-                market_data.candles_5m[sym] = df.iloc[-150:].copy().reset_index(drop=True)
-                cleaned_dfs += 1
+            # 2. RAM & Bellek Optimizasyonu: 5M mum dizilerini max 150 satira sinirla (Render 512MB RAM Korumasi)
+            cleaned_dfs = 0
+            for sym in list(getattr(market_data, 'candles_5m', {}).keys()):
+                df = market_data.candles_5m[sym]
+                if isinstance(df, pd.DataFrame) and len(df) > 150:
+                    market_data.candles_5m[sym] = df.iloc[-150:].copy().reset_index(drop=True)
+                    cleaned_dfs += 1
 
-        if cleaned_dfs > 0:
-            actions_taken.append(f"🧹 {cleaned_dfs} paritenin mum önbelleği optimize edildi (RAM koruması).")
+            if cleaned_dfs > 0:
+                actions_taken.append(f"🧹 {cleaned_dfs} paritenin mum önbelleği optimize edildi (RAM koruması).")
 
-        # 3. Donmus stream kontrolu
-        frozen = audit_findings.get("streams", {}).get("frozen_streams", [])
-        if len(frozen) > 0 and len(frozen) <= 10:
-            for sym in frozen:
-                try:
-                    await market_data.fetch_single_symbol(sym)
-                    actions_taken.append(f"⚡ {sym} veri akışı tazelendi.")
-                except Exception:
-                    pass
+            # 3. Donmus stream kontrolu
+            frozen = audit_findings.get("streams", {}).get("frozen_streams", [])
+            if len(frozen) > 0 and len(frozen) <= 10:
+                for sym in frozen:
+                    try:
+                        await market_data.fetch_single_symbol(sym)
+                        actions_taken.append(f"⚡ {sym} veri akışı tazelendi.")
+                    except Exception:
+                        pass
 
         # 4. Blueprint Alpha Oto-Onarım: Deribit GEX bayat ise arka planda anında yenile
         bp_audit = audit_findings.get("blueprint", {})
@@ -389,6 +494,49 @@ class ValkyrieAegisSentinel:
                 hwk_info['is_avalanche_active'] = False
                 actions_taken.append("⚡ Hawkes branching ratio (eta) anomalisi 0.15 baz değerine resetlendi.")
 
+        # 15. Macro Oracle: Ekonomik Takvim Otomatik Onarımı (Boş/Bayat Veri Müdahalesi)
+        macro_audit = audit_findings.get("macro_oracle", {})
+        cal_audit = macro_audit.get("calendar", {})
+        if not cal_audit.get("healthy", True) or cal_audit.get("events_count", 0) == 0:
+            try:
+                from macro_calendar import calendar_manager
+                calendar_manager._populate_fallback_schedule()
+                actions_taken.append("📅 Ekonomik Takvim veri hatası/boşluğu giderildi: Master Takvim otonom devreye alındı.")
+            except Exception as ce:
+                actions_taken.append(f"⚠️ Takvim otonom onarım hatası: {ce}")
+
+        # 16. Macro Oracle: Çapraz Piyasa Radarı Anında Tazeleme
+        cross_audit = macro_audit.get("cross_asset", {})
+        if not cross_audit.get("healthy", True):
+            try:
+                from macro_cross_asset import cross_asset_radar
+                asyncio.create_task(cross_asset_radar.sync_cross_assets())
+                actions_taken.append("🌐 Çapraz Piyasa Radarı veri anomalisi giderildi: Otonom REST senkronizasyonu başlatıldı.")
+            except Exception:
+                pass
+
+        # 17. Macro Oracle: Flaş Haber İstihbaratı Canlandırma
+        news_audit = macro_audit.get("news_sentinel", {})
+        if not news_audit.get("healthy", True) or news_audit.get("news_count", 0) == 0:
+            try:
+                from macro_news_sentinel import news_sentinel
+                asyncio.create_task(news_sentinel.sync_all_sources())
+                actions_taken.append("⚡ Flaş Haber İstihbarat soketleri boş/gecikmeli: Çoklu kaynak otonom tazeleme tetiklendi.")
+            except Exception:
+                pass
+
+        # 18. Macro Oracle: Byzantine Quorum Bellek Temizliği (>180s eski kümeler)
+        try:
+            from macro_quorum import news_quorum
+            now_t = time.time()
+            stale_keys = [k for k, items in news_quorum.topic_clusters.items() if all((now_t - i.get("ts", 0) > 180) for i in items)]
+            for k in stale_keys:
+                del news_quorum.topic_clusters[k]
+            if stale_keys:
+                actions_taken.append(f"🛡️ Byzantine Quorum masasında {len(stale_keys)} bayat konu kümesi temizlendi (RAM koruması).")
+        except Exception:
+            pass
+
         if actions_taken:
             self.healing_history.append({
                 "time": now_str,
@@ -411,12 +559,14 @@ class ValkyrieAegisSentinel:
         stream_audit = await self.audit_data_streams(market_data)
         risk_audit = await self.audit_positions_and_risk(trader_manager)
         blueprint_audit = await self.audit_alpha_blueprint_sensors(market_data)
+        macro_audit = await self.audit_macro_oracle_system()
 
         findings = {
             "indicators": ind_audit,
             "streams": stream_audit,
             "risk": risk_audit,
-            "blueprint": blueprint_audit
+            "blueprint": blueprint_audit,
+            "macro_oracle": macro_audit
         }
 
         # Auto-Healing uygula
@@ -468,7 +618,8 @@ class ValkyrieAegisSentinel:
             ind_audit["is_healthy"] and
             stream_audit["is_healthy"] and
             risk_audit["is_healthy"] and
-            blueprint_audit.get("is_healthy", True)
+            blueprint_audit.get("is_healthy", True) and
+            macro_audit.get("is_healthy", True)
         )
 
         result = {
@@ -480,6 +631,7 @@ class ValkyrieAegisSentinel:
             "streams": stream_audit,
             "risk": risk_audit,
             "blueprint": blueprint_audit,
+            "macro_oracle": macro_audit,
             "healing_actions": healing_actions,
             "macro_regime": {
                 "bull_cnt": bull_cnt, "bull_pct": bull_pct,

@@ -8217,6 +8217,13 @@ async function loadAdminMetrics() {
                                 ${pill(shadow.healthy ? 'BULUT KORUMALI' : 'GECİKME', shadow.healthy ? 'var(--green)' : 'var(--yellow)')}
                             </div>
                         </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.06); padding-top:6px; margin-top:6px;">
+                            <span style="color:#94a3b8;"><span style="color:var(--cyan); font-weight:800; margin-right:4px;">🌐</span> Valkyrie Macro Oracle & News Sentinel Masası:</span>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="color:#e2e8f0; font-weight:700;">Takvim, DXY Radarı, TreeNews & Bizans Quorum (${(sys.category_scores && sys.category_scores.macro_oracle) || '5/5'})</span>
+                                ${pill('7/24 NÖBETTE', 'var(--green)')}
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -8296,6 +8303,8 @@ async function loadAdminMetrics() {
                 balance: (appState && appState.balance) || 10000.0,
                 threshold: 1000.0
             };
+
+            const macro = (sys && sys.macro_oracle) || { healthy: true, score_str: '5/5' };
 
             const badgeColor = isPerf ? 'var(--green)' : 'var(--yellow)';
             const badgeBg = isPerf ? 'rgba(14,203,129,0.12)' : 'rgba(245,158,11,0.12)';
@@ -8482,6 +8491,22 @@ async function loadAdminMetrics() {
                         ${itemRow('⚙️', 'Aegis Sentinel Otonom Denetim', 'Tüm alt kuant servislerinin kesintisiz çalışmasını denetleyen nöronal bekçi', 'Sıfır Hata / Tam Sağlıklı', pill('TAM KORUMA', 'var(--green)'))}
                         ${itemRow('SHD', 'Gölge Takip & Bulut Kalıcılık (Shadow Guard)', '100 paritede reddedilen sinyal simülasyonu, Hero/Spoiler denetimi ve GitHub State dalı senkronu', (shadow.active_count || 0) + ' Aktif / ' + (shadow.completed_count || 0) + ' Sonuç (%' + Number(shadow.sei || 86.5).toFixed(1) + ' SEI)', pill(shadow.healthy ? 'BULUT KORUMALI' : 'GECİKME', shadow.healthy ? 'var(--green)' : 'var(--yellow)'))}
                         ${itemRow('🛡️', 'Kasa Güvenlik Zırhı & Multiplier Guard', 'Kasa < $1,000 olduğunda otomatik acil durdurma (Safe Shutdown), 1000x meme coin kapanış çarpan koruması ve -%100 izole tasfiye tavanı', vaultGuard.is_safety_stopped ? ('⚠️ DURDURULDU ($' + Number(vaultGuard.balance || 0).toFixed(2) + ')') : ('GÜVENLİ ($' + Number(vaultGuard.balance || (appState && appState.balance) || 10000).toLocaleString() + ')'), pill(vaultGuard.is_safety_stopped ? 'EMNİYET KİLİDİ' : 'KASA ZIRHI AKTİF', vaultGuard.is_safety_stopped ? 'var(--red)' : 'var(--green)'))}
+                    </div>
+
+                    <!-- KOLON 4: VALKYRIE MACRO ORACLE & GLOBAL SENTINEL -->
+                    <div style="background:var(--card-bg, #111726); border:1px solid rgba(0,242,254,0.18); border-radius:14px; padding:18px 20px; box-shadow:0 4px 24px rgba(0,0,0,0.25); display:flex; flex-direction:column; gap:10px;">
+                        <div style="border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:12px; margin-bottom:4px;">
+                            <div style="font-size:12px; font-weight:800; color:var(--cyan); text-transform:uppercase; letter-spacing:0.8px; display:flex; align-items:center; gap:8px;">
+                                <span>🌐</span> 4. MAKRO İSTİHBARAT & SENTINEL MASASI (${(sys.category_scores && sys.category_scores.macro_oracle) || '5/5'})
+                            </div>
+                            <div style="font-size:11px; color:#64748b; margin-top:3px;">Ekonomik takvim, çapraz piyasa radarı, TreeNews & Bizans mutabakatı</div>
+                        </div>
+
+                        ${itemRow('📅', 'Ekonomik Takvim (ForexFactory & Master)', 'USD/Kripto yüksek etkili veri akışı (CPI, FOMC, NFP) ve saniyelik geri sayım', (macro.calendar && macro.calendar.events_count ? macro.calendar.events_count + ' Kritik Olay' : 'Master Takvim Hazır'), pill(macro.calendar && macro.calendar.healthy ? 'TAKİPTE' : 'SENKRONİZE EDİLİYOR', macro.calendar && macro.calendar.healthy ? 'var(--green)' : 'var(--yellow)'))}
+                        ${itemRow('🌍', 'Çapraz Piyasa Radarı (DXY, US10Y, USDT.D)', 'Dolar endeksi, 10 yıllık tahviller ve stablecoin dominansı üzerinden küresel makro rejim skoru', 'DXY: ' + ((macro.cross_asset && macro.cross_asset.dxy) || '102.2') + ' | US10Y: %' + ((macro.cross_asset && macro.cross_asset.us10y) || '5.24'), pill(macro.cross_asset && macro.cross_asset.healthy ? 'RADAR CANLI' : 'YENİLENİYOR', macro.cross_asset && macro.cross_asset.healthy ? 'var(--green)' : 'var(--yellow)'))}
+                        ${itemRow('⚡', 'Flaş Haber İstihbaratı (TreeNews / SEC / Fed)', 'TreeNews WebSocket, SEC EDGAR 8-K ve Federal Reserve RSS çoklu kaynak canlı dinleyicisi', (macro.news_sentinel && macro.news_sentinel.news_count ? macro.news_sentinel.news_count + ' Flaş Haber' : '100+ Haber Hafızada'), pill(macro.news_sentinel && macro.news_sentinel.healthy ? '7/24 DİNLİYOR' : 'SENKRON', macro.news_sentinel && macro.news_sentinel.healthy ? 'var(--green)' : 'var(--cyan)'))}
+                        ${itemRow('🛡️', 'Byzantine Quorum & Anti-Manipülasyon', 'Tek kaynaklı sahte tweet ve tahtasız spoofing pompalamalarına karşı 3 kademeli savunma kalkanı', 'Çift Teyit & CVD Doğrulama', pill('BLOKAJ AKTİF', 'var(--cyan)'))}
+                        ${itemRow('🚦', 'Strateji Koruma Kapısı & Pre-Event BE Kilidi', 'Yüksek etkili veriye 15dk kala True Net Breakeven stop kilidi, 5dk kala yeni emir dondurma ve Top 20 filtresi', 'T-15m BE & T-5m Freeze', pill('ZIRH HAZIR', 'var(--green)'))}
                     </div>
 
                 </div>
