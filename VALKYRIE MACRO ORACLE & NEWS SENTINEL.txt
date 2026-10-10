@@ -164,7 +164,53 @@ Surprise_Score = (Açıklanan - Beklenti) / Standart_Sapma
 • Canlı Konuşma Transkript Akışı: Powell veya Trump konuşurken her 15 saniyelik metin parçası analiz edilerek ekrandaki canlı Şahin/Güvercin İbresi güncellenir.
 
 ═══════════════════════════════════════════════════════════════════════════════
-7. KULLANICI ARAYÜZÜ (WEB UI): "10. MAKRO & HABER İSTİHBARATI (ORACLE)" SEKMESİ
+7. MAKRO ORACLE İLE 8 TRADE SETUP'ININ ETKİLEŞİM MATRİSİ (SETUP INTEGRATION)
+═══════════════════════════════════════════════════════════════════════════════
+
+Makro haber ve takvim verisi havada asılı kalamaz; botun sahada uyguladığı 8 temel kurulum (Setup 1 - 8) ile mikrosaniyelik etkileşime girmelidir:
+
+7.1. Makro Rejime Göre Setup Uyumluluk & Susturma (Muting) Matrisi:
+┌───────────────────────────────┬───────────────────────────────┬───────────────────────────────┐
+│ Setup Adı                     │ Boğa Makro Şoku Rejimi        │ Ayı Makro Şoku Rejimi         │
+│                               │ (TÜFE Düşük, Faiz İndirimi)   │ (TÜFE Yüksek, Şahin Şok, Savaş)│
+├───────────────────────────────┼───────────────────────────────┼───────────────────────────────┤
+│ SETUP 1: Camarilla Reversal   │ • S3/S4 Long: +15 Puan Destek │ • S3/S4 Long: KESİNLİKLE MUTED│
+│ (Tersine Dönüş / Reversal)    │ • R3/R4 Short: KESİNLİKLE MUTED│ • R3/R4 Short: +15 Puan Tepe  │
+├───────────────────────────────┼───────────────────────────────┼───────────────────────────────┤
+│ SETUP 2: Range Breakout       │ 🚀 1 NUMARALI ALTIN İNFAZ:    │ 🩸 ÇÖKÜŞ ŞORTU İNFAZI:        │
+│ (R4 Üstü / S4 Altı Kırılım)   │ R4 Breakout Long anında 1.25x │ S4 Breakdown Short tasfiye    │
+│                               │ marjin ve Runner moduyla akar.│ çığıyla agresif tetiklenir.   │
+├───────────────────────────────┼───────────────────────────────┼───────────────────────────────┤
+│ SETUP 3: AVWAP Bounce         │ • İlk 15dk: Gürültüden kilitli│ • İlk 15dk: Gürültüden kilitli│
+│ (Dip / Tepe AVWAP Sekmesi)    │ • Sonraki 30dk: Retest Alımı  │ • Sonraki 30dk: Tepe Reddi    │
+├───────────────────────────────┼───────────────────────────────┼───────────────────────────────┤
+│ SETUP 4: Fakeout Reclaim      │ 🪤 TUZAKLANAN AYI İNTİKAMI:   │ 🪤 TUZAKLANAN BOĞA İNTİKAMI:  │
+│ (Fitil Avı Sonrası Geri Dönüş)│ Veri fitilinde S4 altına sahte│ Veri fitilinde R4 üstüne sahte│
+│                               │ iğne atıp reclaim edince Long.│ iğne atıp içeri düşünce Short.│
+├───────────────────────────────┼───────────────────────────────┼───────────────────────────────┤
+│ SETUP 5: nPOC Reaction        │ Trend yönündeki nPOC seviyesi │ Aşağı nPOC seviyeleri birincil│
+│ (Hacimsiz Bölge Mıknatısı)    │ birinci kâr (TP1) hedefi olur.│ kâr alma hedefi (TP1) yapılır.│
+├───────────────────────────────┼───────────────────────────────┼───────────────────────────────┤
+│ SETUP 6: Dynamic Decoupling   │ BTC'ye karşı en güçlü pozitif │ BTC düşerken en zayıf kalan   │
+│ (Göreceli Güç - Relative RS)  │ ayrışan (RS > 1.2) coin seçilir│ coinler short hedefi seçilir. │
+└───────────────────────────────┴───────────────────────────────┴───────────────────────────────┘
+
+7.2. Açık Pozisyonların 3 Fazlı Makro Koruma & Koşucu Döngüsü:
+1. Faz 1: Pre-Event (< 15 Dakika Kala):
+   • Kârdaki Pozisyonlar: Stop seviyesi anında "Giriş + Komisyon + Fonlama Maliyeti (True Net Breakeven)" veya +0.5R kâr garantisine kilitlenir.
+   • Zarardaki Pozisyonlar: Soft stop doğrudan Hard stop'a çekilir; spread açılmadan önce kontrolsüz zarara izin verilmez.
+2. Faz 2: Flash Shock (İlk 0 - 60 Saniye):
+   • Kyle's Lambda & Spread Kalkanı: Bid-Ask spread %0.08 üzerine fırlarsa YENİ EMİR AÇILIŞI KESİNLİKLE KİLİTLENİR (Slipaj koruması).
+   • Wick Absorber: Felaket tavanı (%1.60) hariç sahte fitillerde pozisyon hemen kapatılmaz; mum kapanışı beklenir.
+3. Faz 3: Post-Event (> 1 Dakika):
+   • Sayısal Z-Score teyitliyse: Kârdaki pozisyonlar için "Hawkes Çığ Koşucusu (Runner Mode)" tetiklenir: TP2 %3 ileri ötelenir, stop TP1'e çekilir ve kâr sonuna kadar sürülür.
+
+7.3. Likiditeye Dayalı Parite Kalkanı (Top 20 Likidite Filtresi):
+• Makro şok anlarında (ilk 15 dakika) düşük likiditeli meme coinlerde (BOME, PUMP, TURBO) tahta boşalabileceği için yeni işlem açılışı dondurulur.
+• Yalnızca en derin emir defterine sahip "Top 20 Majör Paritede (BTC, ETH, SOL, XRP vb.)" işlem açılarak slipaj sıfıra indirilir.
+
+═══════════════════════════════════════════════════════════════════════════════
+8. KULLANICI ARAYÜZÜ (WEB UI): "10. MAKRO & HABER İSTİHBARATI (ORACLE)" SEKMESİ
 ═══════════════════════════════════════════════════════════════════════════════
 
 Web terminalinde kurulacak kontrol merkezi:
@@ -192,7 +238,7 @@ Web terminalinde kurulacak kontrol merkezi:
 │ [ GÜVERCİN (DOVISH / BOĞA) <───────────|───────────> ŞAHİN (HAWKISH / AYI) ] (Mevcut: +55 Güvercin)│
 └─────────────────────────────────────────────────────────────────────────────────────────────────┘
 
-7.1. Ana Dashboard Canlı Makro & Flaş Haber HUD Şeridi (Main Dashboard Executive Ticker):
+8.1. Ana Dashboard Canlı Makro & Flaş Haber HUD Şeridi (Main Dashboard Executive Ticker):
 Kullanıcının 10. sekmeye geçmek zorunda kalmadan, ana işlem terminalinde (pozisyonlar ve grafik ekranında) günün en kritik olayını ve son dakika flaş haberini tek bakışta görmesi için ana sayfanın en üstüne şık, göz yormayan bir HUD bilgi şeridi yerleştirilir:
 ┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ 🔴 GÜNÜN DEV OLAYI: 15:30 TSİ ABD Çekirdek TÜFE (Beklenti: %3.2) [Geri Sayım: 02:14:35]        │
@@ -200,11 +246,11 @@ Kullanıcının 10. sekmeye geçmek zorunda kalmadan, ana işlem terminalinde (p
 │ 🌐 MAKRO NABIZ: DXY 101.40 🟢 | US10Y %3.88 🟢 | USDT.D %5.10 (Boğa) 🟢 | Risk İştahı: AÇIK 🚀 │
 └─────────────────────────────────────────────────────────────────────────────────────────────────┘
 
-7.2. Özel 10. Sekme: "Makro İstihbarat & Sentinel Desk" (Detaylı Derin Analiz):
+8.2. Özel 10. Sekme: "Makro İstihbarat & Sentinel Desk" (Detaylı Derin Analiz):
 Derinlemesine inceleme, ekonomik takvim arşivi, FOMC bildiri karşılaştırması ve canlı Şahin/Güvercin ibresi 10. sekmede detaylı sunulur.
 
 ═══════════════════════════════════════════════════════════════════════════════
-8. AŞAMALI UYGULAMA VE DEVREYE ALMA YOL HARİTASI
+9. AŞAMALI UYGULAMA VE DEVREYE ALMA YOL HARİTASI
 ═══════════════════════════════════════════════════════════════════════════════
 
 • Faz 1: Çok Kaynaklı Düşük Gecikmeli Veri Boru Hattı (Data Ingestion Pipeline)
@@ -233,7 +279,7 @@ Derinlemesine inceleme, ekonomik takvim arşivi, FOMC bildiri karşılaştırmas
   - Telegram'a acil flaş haber ve makro rejim değişim uyarılarının bağlanması.
 
 ═══════════════════════════════════════════════════════════════════════════════
-9. ÇIKARILAN SONUÇ
+10. ÇIKARILAN SONUÇ
 ═══════════════════════════════════════════════════════════════════════════════
 
 Bu genişletilmiş mimari, Valkyrie'yi basit bir grafik botu olmaktan çıkarıp; küresel sermaye akışlarını, siyasi regülasyonları, anlık haberleri ve tahta mikroyapısını tek bir kuant potada eriten **Otonom Bir Makro Kuant Fon Masası (Autonomous Macro Hedge Fund Desk)** haline getirecektir.
