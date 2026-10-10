@@ -103,6 +103,7 @@ class TestPhase5PaperTraderSafetyProof(unittest.TestCase):
         mock_md.get_symbol_metrics = MagicMock(side_effect=mock_metrics_func)
 
         strategy = StrategyEngine(self.trader, mock_notifier, mock_md)
+        strategy.macro_oracle = None  # Birim testinde PaperTrader marjin yarışını izole test et
 
         captured_orders = []
 

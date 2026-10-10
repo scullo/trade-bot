@@ -1,3 +1,10 @@
+import sys
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
 from security_vault import SecurityVault
 from shadow_engine import ShadowExecutionEngine
 try:
@@ -1455,9 +1462,15 @@ class StrategyEngine:
         # ── 0-MAKRO: VALKYRIE MACRO ORACLE & NEWS SENTINEL KAPISI ──
         if macro_guard is not None:
             spread_pct = 0.0
-            if self.market_data and hasattr(self.market_data, 'get_symbol_spread'):
+            if self.market_data and hasattr(self.market_data, 'orderbook_depth') and isinstance(getattr(self.market_data, 'orderbook_depth'), dict):
+                ob_data = self.market_data.orderbook_depth.get(symbol, {})
+                if isinstance(ob_data, dict):
+                    spread_pct = float(ob_data.get('spread_pct') or 0.0)
+            elif self.market_data and hasattr(self.market_data, 'get_symbol_spread'):
                 try:
-                    spread_pct = float(self.market_data.get_symbol_spread(symbol) or 0.0)
+                    val = self.market_data.get_symbol_spread(symbol)
+                    if isinstance(val, (int, float)):
+                        spread_pct = float(val)
                 except Exception:
                     spread_pct = 0.0
             macro_eval = macro_guard.evaluate_macro_entry_permission(
