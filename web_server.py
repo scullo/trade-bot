@@ -4324,16 +4324,29 @@ HTML_PAGE = """
                 <button onclick="closeMacroNewsDetailModal()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); color:#94a3b8; width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:800; display:flex; align-items:center; justify-content:center;">✕</button>
             </div>
 
-            <!-- HABER TAM BAŞLIĞI (TÜRKÇE & ORİJİNAL) -->
-            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-left:4px solid var(--cyan); border-radius:12px; padding:16px; margin-bottom:18px;">
-                <div style="font-size:11px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
-                    <span>🇹🇷</span>
-                    <span>TÜRKÇE FLAŞ HABER MANŞETİ</span>
+            <!-- HABER TAM BAŞLIĞI VE TÜRKÇE ÇEVİRİ METNİ -->
+            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-left:4px solid var(--cyan); border-radius:12px; padding:18px; margin-bottom:18px;">
+                <!-- 1. TÜRKÇE MANŞET VE TAM ÇEVİRİ METNİ -->
+                <div style="margin-bottom:12px;">
+                    <div style="font-size:11px; font-weight:800; color:#10b981; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                        <span>🇹🇷</span>
+                        <span>TÜRKÇE ÇEVİRİ METNİ</span>
+                    </div>
+                    <div id="mnews-modal-title" style="font-size:14.5px; font-weight:700; color:#ffffff; line-height:1.55; font-family:'Plus Jakarta Sans',sans-serif;">
+                        Haber başlığı yükleniyor...
+                    </div>
                 </div>
-                <div id="mnews-modal-title" style="font-size:14.5px; font-weight:700; color:#ffffff; line-height:1.5; font-family:'Plus Jakarta Sans',sans-serif;">
-                    Haber başlığı yükleniyor...
+
+                <!-- 2. ORİJİNAL İNGİLİZCE METİN (KAYNAK) -->
+                <div id="mnews-modal-orig-wrapper" style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:12px; margin-top:8px;">
+                    <div style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; display:flex; align-items:center; gap:5px;">
+                        <span>🌐</span>
+                        <span>ORİJİNAL METİN (İNGİLİZCE KAYNAK)</span>
+                    </div>
+                    <div id="mnews-modal-title-orig" style="font-size:12px; color:#cbd5e1; line-height:1.5; font-family:'JetBrains Mono',monospace;">
+                        --
+                    </div>
                 </div>
-                <div id="mnews-modal-title-orig" style="font-size:11px; color:#94a3b8; font-style:italic; margin-top:8px; border-top:1px dashed rgba(255,255,255,0.08); padding-top:6px; display:none;"></div>
             </div>
 
             <!-- ADLİ ANALİZ KARTLARI (3'LÜ GRID) -->
@@ -9555,16 +9568,19 @@ async function loadAdminMetrics() {
             // 2. Tam Manşet (Türkçe & Orijinal)
             const titleEl = document.getElementById('mnews-modal-title');
             const origTitleEl = document.getElementById('mnews-modal-title-orig');
+            const origWrapper = document.getElementById('mnews-modal-orig-wrapper');
+
+            const trText = item.title_tr || item.title || 'Başlık bilgisi yok';
+            const enText = item.title || trText;
+
             if (titleEl) {
-                titleEl.innerText = item.title_tr || item.title || 'Başlık bilgisi yok';
+                titleEl.innerText = trText;
             }
             if (origTitleEl) {
-                if (item.title_tr && item.title_tr !== item.title) {
-                    origTitleEl.innerText = `Orijinal (İngilizce): ${item.title}`;
-                    origTitleEl.style.display = 'block';
-                } else {
-                    origTitleEl.style.display = 'none';
-                }
+                origTitleEl.innerText = enText;
+            }
+            if (origWrapper) {
+                origWrapper.style.display = (trText !== enText && enText) ? 'block' : 'none';
             }
 
             // 3. NLP Sentiment Skoru
