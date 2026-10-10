@@ -362,10 +362,33 @@ class ForensicBlackboxManager:
         with self._lock:
             filtered = list(self.catalog)
 
-        # Kategori filtresi
-        is_be_entry = lambda x: (x.get("outcome") == "BE") or (abs(float(x.get("roe_pct", 0))) <= 0.35) or ("BREAKEVEN" in str(x.get("close_reason", "")).upper()) or ("BAŞA-BAŞ" in str(x.get("close_reason", "")).upper()) or ("BE" in str(x.get("close_reason", "")).upper())
-        is_win_entry = lambda x: (x.get("outcome") == "WIN") or (float(x.get("roe_pct", 0)) > 0.35 and not is_be_entry(x))
-        is_loss_entry = lambda x: (x.get("outcome") == "LOSS") or (float(x.get("roe_pct", 0)) < -0.35 and not is_be_entry(x))
+        # ---------------------------------------------------------------------
+        # MATEMATİKSEL VE HİYERARŞİK KATEGORİ SINIFLANDIRMA MOTORU
+        # ---------------------------------------------------------------------
+        # 1. KAZANÇ (WIN / RUNNER): Net kâr pozitif (+0.50$ üzerinde) ve ROE pozitif (+0.50% üzerinde) ise KESİNLİKLE KAZANÇTIR.
+        def is_win_entry(x):
+            pnl = float(x.get("net_pnl") or 0.0)
+            roe = float(x.get("roe_pct") or 0.0)
+            return (pnl > 0.50 and roe >= 0.50) or (x.get("outcome") == "WIN" and pnl > 0.0)
+
+        # 2. ZARAR (LOSS): Belirgin net zarar (-3.00$ altında) veya ROE < -0.80% ise KESİNLİKLE ZARARDIR.
+        def is_loss_entry(x):
+            pnl = float(x.get("net_pnl") or 0.0)
+            roe = float(x.get("roe_pct") or 0.0)
+            return (pnl < -3.00 or roe < -0.80) or (x.get("outcome") == "LOSS" and pnl < -0.50)
+
+        # 3. BAŞA-BAŞ (BE): Belirgin kâr veya zarar olmayan, giriş civarında sermaye korumasıyla kapatılan işlemler.
+        def is_be_entry(x):
+            return not is_win_entry(x) and not is_loss_entry(x)
+
+        # 4. FAKEOUT / TUZAK: Adli otopside likidite avı, sahte kırılım veya manipülasyon saptanan işlemler.
+        def is_trap_entry(x):
+            diag = str(x.get("autopsy", {}).get("diagnosis_code", "")).upper()
+            title = str(x.get("autopsy", {}).get("diagnosis_title", "")).upper()
+            reason = str(x.get("close_reason", "")).upper()
+            return any(k in diag for k in ["FAKEOUT", "HUNT", "TRAP", "MANIPULATION", "SPOOF"]) or \
+                   any(k in title for k in ["TUZAK", "FAKEOUT", "AVINA", "HUNT", "SÜPÜRME"]) or \
+                   any(k in reason for k in ["TUZAK", "FAKEOUT", "AVINA", "HUNT"])
 
         if filter_category == "LOSS":
             filtered = [x for x in filtered if is_loss_entry(x)]
@@ -374,13 +397,13 @@ class ForensicBlackboxManager:
         elif filter_category == "BE":
             filtered = [x for x in filtered if is_be_entry(x)]
         elif filter_category == "TRAP":
-            filtered = [x for x in filtered if "FAKEOUT" in str(x.get("autopsy", {}).get("diagnosis_code", "")) or "HUNT" in str(x.get("autopsy", {}).get("diagnosis_code", ""))]
+            filtered = [x for x in filtered if is_trap_entry(x)]
         elif filter_category == "STARRED":
             filtered = [x for x in filtered if x.get("is_starred", False)]
         elif filter_category == "SHADOW":
             filtered = [x for x in filtered if x.get("trade_category") == "SHADOW"]
         elif filter_category == "REAL":
-            filtered = [x for x in filtered if x.get("trade_category") == "REAL"]
+            filtered = [x for x in filtered if x.get("trade_category") in ["REAL", "PAPER", "LIVE"]]
 
         # Arama filtresi
         if search:
@@ -392,12 +415,12 @@ class ForensicBlackboxManager:
                 or q in x.get("autopsy", {}).get("diagnosis_title", "").lower()
             ]
 
-        # KPI İstatistikleri
+        # KPI İstatistikleri (Kusursuz ve çakışmasız toplam dağılımı)
         total_count = len(self.catalog)
         loss_count = sum(1 for x in self.catalog if is_loss_entry(x))
         win_count = sum(1 for x in self.catalog if is_win_entry(x))
         be_count = sum(1 for x in self.catalog if is_be_entry(x))
-        trap_count = sum(1 for x in self.catalog if "FAKEOUT" in str(x.get("autopsy", {}).get("diagnosis_code", "")) or "HUNT" in str(x.get("autopsy", {}).get("diagnosis_code", "")))
+        trap_count = sum(1 for x in self.catalog if is_trap_entry(x))
         starred_count = sum(1 for x in self.catalog if x.get("is_starred", False))
 
         # Disk boyutu hesabı

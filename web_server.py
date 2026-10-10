@@ -19392,10 +19392,26 @@ function downloadExcelReport() {
             }
 
             grid.innerHTML = items.map(item => {
-                const isBe = item.outcome === 'BE' || (Math.abs(Number(item.roe_pct || 0)) <= 0.35) || String(item.close_reason || '').toUpperCase().includes('BREAKEVEN');
-                const isProfit = !isBe && Number(item.roe_pct || 0) > 0;
-                const pnlCol = isBe ? '#38bdf8' : (isProfit ? '#10b981' : (Number(item.roe_pct || 0) < 0 ? '#f43f5e' : '#94a3b8'));
-                const pnlBg = isBe ? 'rgba(56,189,248,0.15)' : (isProfit ? 'rgba(16,185,129,0.15)' : (Number(item.roe_pct || 0) < 0 ? 'rgba(244,63,94,0.15)' : 'rgba(255,255,255,0.06)'));
+                const netPnlVal = Number(item.net_pnl || 0);
+                const roeVal = Number(item.roe_pct || 0);
+
+                // 1. KAZANÇ (WIN / RUNNER): Net kâr +0.50$ üzerinde ve ROE pozitif ise KESİNLİKLE KAZANÇTIR!
+                const isProfit = (netPnlVal > 0.50 && roeVal >= 0.50) || (item.outcome === 'WIN' && netPnlVal > 0);
+
+                // 2. ZARAR (LOSS): Net zarar -3.00$ altında veya ROE < -0.80% ise KESİNLİKLE ZARARDIR!
+                const isLoss = (netPnlVal < -3.00 || roeVal < -0.80) || (item.outcome === 'LOSS' && netPnlVal < -0.50);
+
+                // 3. BAŞA-BAŞ (BE): Belirgin kâr veya zarar olmayan nötr sermaye koruma çıkışları
+                const isBe = !isProfit && !isLoss;
+
+                const pnlCol = isProfit ? '#10b981' : (isBe ? '#38bdf8' : '#f43f5e');
+                const pnlBg = isProfit ? 'rgba(16,185,129,0.15)' : (isBe ? 'rgba(56,189,248,0.15)' : 'rgba(244,63,94,0.15)');
+
+                const pnlTag = isProfit 
+                    ? '<span style="font-size:9.5px; font-weight:800; color:#10b981; background:rgba(16,185,129,0.12); padding:1px 5px; border-radius:4px;">KÂR ALINDI 🎯</span>'
+                    : (isBe 
+                        ? '<span style="font-size:9.5px; font-weight:800; color:#38bdf8; background:rgba(56,189,248,0.12); padding:1px 5px; border-radius:4px;">BAŞA-BAŞ (BE) 🛡️</span>'
+                        : '<span style="font-size:9.5px; font-weight:800; color:#f43f5e; background:rgba(244,63,94,0.12); padding:1px 5px; border-radius:4px;">ZARAR KES 🛑</span>');
                 const sideCol = item.side === 'LONG' ? '#10b981' : '#f43f5e';
                 const sideBg = item.side === 'LONG' ? 'rgba(16,185,129,0.15)' : 'rgba(244,63,94,0.15)';
                 const autopsy = item.autopsy || {};
@@ -19437,9 +19453,12 @@ function downloadExcelReport() {
 
                             <!-- PNL & ROE -->
                             <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
-                                <span style="font-size:11px; color:#94a3b8; font-weight:700;">Net PnL / ROE:</span>
+                                <div style="display:flex; align-items:center; gap:6px;">
+                                    <span style="font-size:11px; color:#94a3b8; font-weight:700;">Net PnL / ROE:</span>
+                                    ${pnlTag}
+                                </div>
                                 <span style="font-size:12.5px; font-weight:900; color:${pnlCol}; font-family:'JetBrains Mono',monospace;">
-                                    ${Number(item.net_pnl || 0) >= 0 ? '+$' : '-$'}${Math.abs(Number(item.net_pnl || 0)).toFixed(2)} (${Number(item.roe_pct || 0) >= 0 ? '+' : ''}${Number(item.roe_pct || 0).toFixed(1)}%)
+                                    ${netPnlVal >= 0 ? '+$' : '-$'}${Math.abs(netPnlVal).toFixed(2)} (${roeVal >= 0 ? '+' : ''}${roeVal.toFixed(1)}%)
                                 </span>
                             </div>
 

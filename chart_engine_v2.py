@@ -115,12 +115,19 @@ class ForensicChartEngineV2:
 
         close_reason = str(trade_record.get("close_reason") or "Pozisyon Kapatıldı")
         cr_upper = close_reason.upper()
-        is_breakeven = (abs(roe_pct) <= 0.35) or ("BREAKEVEN" in cr_upper) or ("BAŞA-BAŞ" in cr_upper) or ("BAŞABAŞ" in cr_upper) or ("BE " in cr_upper) or ("BE)" in cr_upper)
-        is_profit = not is_breakeven and ((net_pnl > 0) or (roe_pct > 0))
-        if is_breakeven:
-            theme_pnl_col = '#38bdf8'  # Kuant açık mavi (Breakeven koruma rengi)
-        elif is_profit:
+
+        # Matematiksel ve Hiyerarşik Kategori Tespiti:
+        # 1. Net Kâr varsa KESİNLİKLE KÂRDIR (Yeşil)
+        is_profit = (net_pnl > 0.50 and roe_pct >= 0.50) or (trade_record.get("outcome") == "WIN" and net_pnl > 0)
+        # 2. Net Belirgin Zarar varsa KESİNLİKLE ZARARDIR (Kırmızı)
+        is_loss = (net_pnl < -3.00 or roe_pct < -0.80) or (trade_record.get("outcome") == "LOSS" and net_pnl < -0.50)
+        # 3. Kâr veya Zarar değilse (Giriş civarı nötr / başa-baş kapanışı) BAŞA-BAŞTIR (Kuant Mavi)
+        is_breakeven = not is_profit and not is_loss
+
+        if is_profit:
             theme_pnl_col = self.COLOR_GREEN
+        elif is_breakeven:
+            theme_pnl_col = '#38bdf8'  # Kuant açık mavi (Breakeven koruma rengi)
         else:
             theme_pnl_col = self.COLOR_RED
 
