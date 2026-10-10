@@ -5165,11 +5165,11 @@ HTML_PAGE = """
                     <span style="background:rgba(244,63,94,0.15); color:#f43f5e; border:1px solid rgba(244,63,94,0.3); padding:2px 8px; border-radius:6px; font-size:10.5px; font-weight:800; font-family:'JetBrains Mono';" id="hud-macro-countdown">⏱️ Geri Sayım...</span>
                 </div>
                 <!-- Flaş Haber Bölümü -->
-                <div style="display:flex; align-items:center; gap:8px; border-left:1px solid rgba(255,255,255,0.1); padding-left:14px; max-width:580px;">
+                <div style="display:flex; align-items:center; gap:8px; border-left:1px solid rgba(255,255,255,0.1); padding-left:14px; max-width:680px; overflow:hidden;">
                     <span style="font-size:14px;">⚡</span>
-                    <span style="font-weight:800; font-size:11px; color:var(--cyan); letter-spacing:0.4px;">FLAŞ İSTİHBARAT:</span>
-                    <span style="font-size:11.5px; color:#cbd5e1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:400px;" id="hud-macro-news-text">Canlı haber akışı taranıyor...</span>
-                    <span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:1px 6px; border-radius:5px; font-size:9.5px; font-weight:800;" id="hud-macro-news-badge">DOĞRULANDI</span>
+                    <span style="font-weight:800; font-size:11px; color:var(--cyan); letter-spacing:0.4px; white-space:nowrap;">FLAŞ İSTİHBARAT:</span>
+                    <span style="font-size:11.5px; color:#cbd5e1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:480px; display:inline-block; vertical-align:middle;" id="hud-macro-news-text">Canlı haber akışı taranıyor...</span>
+                    <span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:1px 6px; border-radius:5px; font-size:9.5px; font-weight:800; white-space:nowrap;" id="hud-macro-news-badge">DOĞRULANDI</span>
                 </div>
             </div>
             <!-- Makro Nabız & Yönlendirme -->
@@ -8826,8 +8826,10 @@ async function loadAdminMetrics() {
                 if (latestNews) {
                     window.currentHudLatestNews = latestNews;
                     const timeStr = latestNews.time_tsi ? `[${latestNews.time_tsi}] ` : '';
-                    newsEl.innerText = `${timeStr}${latestNews.title}`;
-                    newsEl.title = `${latestNews.title} (Detay için tıklayın 🔍)`;
+                    const cleanTr = (latestNews.title_tr || latestNews.title || '').replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+                    const cleanEn = (latestNews.title || '').replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+                    newsEl.innerText = `${timeStr}${cleanTr}`;
+                    newsEl.title = `${cleanTr}\n\n(Orijinal: ${cleanEn})\n[Detaylı Türkçe analiz için tıklayın 🔍]`;
                     newsEl.style.cursor = 'pointer';
                     newsEl.onclick = () => { if (typeof openMacroNewsDetailModal === 'function') openMacroNewsDetailModal(latestNews); };
                     if (badgeEl) {
