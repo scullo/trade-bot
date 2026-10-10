@@ -60,6 +60,7 @@ class MacroAIInterpreter:
         yapay zeka kuant yorumu ve gerekçesi üretir.
         """
         title = item.get("title", "")
+        tr_headline = (item.get("title_tr") or title).strip()
         source = item.get("source", "WIRE").upper()
         raw_score = float(item.get("sentiment_score", 0.0))
         speaker_info = item.get("speaker_info", {})
@@ -139,8 +140,8 @@ class MacroAIInterpreter:
                 market_impact = "DENGELİ / NÖTR FED BİLDİRİMİ"
 
             ai_summary = (
-                f"Federal Reserve (ABD Merkez Bankası) resmi yayın organından gelen birincil bildirimdir. "
-                f"Konu başlığı: {title.replace('[FED RESMİ AÇIKLAMA]', '').strip()}."
+                f"Federal Reserve (ABD Merkez Bankası) resmi yayın organından gelen birincil bildirimdir: "
+                f"'{tr_headline.replace('[FED RESMİ AÇIKLAMA]', '').strip()}'."
             )
             ai_interpretation = (
                 f"Fed'in para politikası, bilanço büyüklüğü veya bankacılık sistemi duyuruları küresel dolar likiditesini doğrudan belirler. "
@@ -168,7 +169,7 @@ class MacroAIInterpreter:
 
             ai_summary = (
                 f"2026 yılı güncel makam sahibi {role_title} {matched_person} tarafından yapılan veya "
-                f"doğrudan kendisini ilgilendiren üst düzey politika açıklamasıdır."
+                f"doğrudan kendisini ilgilendiren üst düzey politika açıklamasıdır: '{tr_headline}'."
             )
             ai_interpretation = (
                 f"{matched_person} piyasa nezdinde en yüksek yönlendirici ağırlığa sahiptir. "
@@ -195,7 +196,7 @@ class MacroAIInterpreter:
             if any(w in title_upper for w in ["APPROVE", "ETF", "INFLOW", "BUY", "ACQUIRE", "SURGE", "RALLY", "PARTNERSHIP", "LAUNCH"]):
                 impact_direction = "BULLISH"
                 market_impact = "POZİTİF / BOĞA İVMESİ"
-                ai_summary = f"Kripto piyasasında sermaye girişi, ürün lansmanı veya olumlu gelişmeye işaret eden flaş istihbarattır."
+                ai_summary = f"Kripto piyasasında sermaye girişi veya olumlu boğa ivmesine işaret eden flaş gelişme: '{tr_headline}'."
                 ai_interpretation = (
                     "Haber başlığı kurumsal benimsenme, ETF net girişleri veya ekosistem büyümesine dair pozitif sinyaller içermektedir. "
                     "Kısa vadede alıcı iştahını tetikleyebilir."
@@ -206,7 +207,7 @@ class MacroAIInterpreter:
             elif any(w in title_upper for w in ["HACK", "EXPLOIT", "STOLEN", "DRAIN", "SUED", "LAWSUIT", "BAN", "CRASH", "DUMP", "OUTFLOW"]):
                 impact_direction = "BEARISH"
                 market_impact = "RİSKLİ / AYI BASKISI"
-                ai_summary = f"Kripto güvenliği, dava veya fon çıkışı içeren negatif piyasa gelişmesidir."
+                ai_summary = f"Kripto güvenliği, dava veya fon çıkışı içeren negatif piyasa riski: '{tr_headline}'."
                 ai_interpretation = (
                     "Protokol açığı, likidite boşalması veya regülasyon baskısı gibi risk faktörlerine işaret eder. "
                     "Piyasada panik satışı veya tasfiye kaskadı riski yaratabilir."
@@ -217,7 +218,7 @@ class MacroAIInterpreter:
             elif any(w in title_upper for w in ["CHATBOT", "AI", "FORMULA", "PREDICT", "DECRYPT", "OPINION", "FEEDBACK"]):
                 impact_direction = "NEUTRAL"
                 market_impact = "BİLGİLENDİRME / ANALİZ HABERİ"
-                ai_summary = f"Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir."
+                ai_summary = f"Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: '{tr_headline}'."
                 ai_interpretation = (
                     "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. "
                     "Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez."
@@ -231,7 +232,7 @@ class MacroAIInterpreter:
             else:
                 impact_direction = "NEUTRAL" if abs(raw_score) <= 10 else ("BULLISH" if raw_score > 0 else "BEARISH")
                 market_impact = "GENEL PİYASA AKIŞI"
-                ai_summary = f"Kripto piyasası akışından kaydedilen güncel haber metnidir."
+                ai_summary = f"Kripto piyasası akışından kaydedilen güncel istihbarat: '{tr_headline}'."
                 ai_interpretation = (
                     "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. "
                     "Makro rejim ve CVD yönüyle birlikte değerlendirilir."

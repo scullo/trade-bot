@@ -1,6 +1,6 @@
 {
-  "last_sync_ts": 1791661787.1401794,
-  "updated_at": "2026-10-10T19:49:47.141356+00:00",
+  "last_sync_ts": 0.0,
+  "updated_at": "2026-10-10T20:11:09.056006+00:00",
   "news": [
     {
       "title": "[FED RESMİ AÇIKLAMA] Federal Reserve Board finalizes changes to enhance the transparency and public accountability of its stress test and reduce volatility in its stress test-related capital requirements",
@@ -23,12 +23,14 @@
       "speaker": "Federal Reserve (Fed) Basın Masası",
       "is_primary_official": true,
       "is_verified": true,
-      "ai_summary": "Federal Reserve (ABD Merkez Bankası) resmi yayın organından gelen birincil bildirimdir. Konu başlığı: Federal Reserve Board finalizes changes to enhance the transparency and public accountability of its stress test and reduce volatility in its stress test-related capital requirements.",
+      "ai_summary": "Federal Reserve (ABD Merkez Bankası) resmi yayın organından gelen birincil bildirimdir: 'Federal Rezerv Kurulu, stres testinin şeffaflığını ve kamuya hesap verebilirliğini artırmak ve stres testiyle ilgili sermaye gereksinimlerindeki oynaklığı azaltmak için değişiklikleri tamamladı'.",
       "ai_interpretation": "Fed'in para politikası, bilanço büyüklüğü veya bankacılık sistemi duyuruları küresel dolar likiditesini doğrudan belirler. Faiz indirimine veya gevşemeye işaret eden ifadeler kripto için güçlü yakıt oluştururken, şahin tonda söylemler risk primini baskılar.",
       "market_impact": "GÜVERCİN / BOĞA LEHİNE FED ETKİSİ",
       "impact_direction": "BULLISH",
       "score_explanation": "Metin içerisindeki makro anahtar kelimeler ve makam ağırlığı (1.0x) taranarak +35.0 duygu puanı hesaplanmıştır.",
-      "strategy_action": "Fed bildirimlerinde Byzantine Quorum çift teyidi devreye girer; ani faiz şoklarında T-15m ve 30s koruma kalkanları hazır tutulur."
+      "strategy_action": "Fed bildirimlerinde Byzantine Quorum çift teyidi devreye girer; ani faiz şoklarında T-15m ve 30s koruma kalkanları hazır tutulur.",
+      "title_tr": "[FED RESMİ AÇIKLAMA] Federal Rezerv Kurulu, stres testinin şeffaflığını ve kamuya hesap verebilirliğini artırmak ve stres testiyle ilgili sermaye gereksinimlerindeki oynaklığı azaltmak için değişiklikleri tamamladı",
+      "actual_entity": "Federal Reserve (Fed) Basın Masası"
     },
     {
       "title": "[FED RESMİ AÇIKLAMA] Federal Reserve Board issues enforcement action with Ontario Bancorporation, Inc.",
@@ -51,12 +53,14 @@
       "speaker": "Federal Reserve (Fed) Basın Masası",
       "is_primary_official": true,
       "is_verified": true,
-      "ai_summary": "Federal Reserve (ABD Merkez Bankası) resmi yayın organından gelen birincil bildirimdir. Konu başlığı: Federal Reserve Board issues enforcement action with Ontario Bancorporation, Inc..",
+      "ai_summary": "Federal Reserve (ABD Merkez Bankası) resmi yayın organından gelen birincil bildirimdir: 'Federal Rezerv Kurulu, Ontario Bancorporation, Inc.'e yaptırım kararı verdi.'.",
       "ai_interpretation": "Fed'in para politikası, bilanço büyüklüğü veya bankacılık sistemi duyuruları küresel dolar likiditesini doğrudan belirler. Faiz indirimine veya gevşemeye işaret eden ifadeler kripto için güçlü yakıt oluştururken, şahin tonda söylemler risk primini baskılar.",
       "market_impact": "DENGELİ / NÖTR FED BİLDİRİMİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Metin içerisindeki makro anahtar kelimeler ve makam ağırlığı (1.0x) taranarak -5.0 duygu puanı hesaplanmıştır.",
-      "strategy_action": "Fed bildirimlerinde Byzantine Quorum çift teyidi devreye girer; ani faiz şoklarında T-15m ve 30s koruma kalkanları hazır tutulur."
+      "strategy_action": "Fed bildirimlerinde Byzantine Quorum çift teyidi devreye girer; ani faiz şoklarında T-15m ve 30s koruma kalkanları hazır tutulur.",
+      "title_tr": "[FED RESMİ AÇIKLAMA] Federal Rezerv Kurulu, Ontario Bancorporation, Inc.'e yaptırım kararı verdi.",
+      "actual_entity": "Federal Reserve (Fed) Basın Masası"
     },
     {
       "title": "[FED RESMİ AÇIKLAMA] Federal Reserve Board announces it will extend, until November 4, the comment period on its proposal to modernize Regulation O",
@@ -79,12 +83,14 @@
       "speaker": "Federal Reserve (Fed) Basın Masası",
       "is_primary_official": true,
       "is_verified": true,
-      "ai_summary": "Federal Reserve (ABD Merkez Bankası) resmi yayın organından gelen birincil bildirimdir. Konu başlığı: Federal Reserve Board announces it will extend, until November 4, the comment period on its proposal to modernize Regulation O.",
+      "ai_summary": "Federal Reserve (ABD Merkez Bankası) resmi yayın organından gelen birincil bildirimdir: 'Federal Rezerv Kurulu, Düzenleme O'nun modernleştirilmesine ilişkin teklifine ilişkin yorum süresini 4 Kasım'a kadar uzatacağını duyurdu'.",
       "ai_interpretation": "Fed'in para politikası, bilanço büyüklüğü veya bankacılık sistemi duyuruları küresel dolar likiditesini doğrudan belirler. Faiz indirimine veya gevşemeye işaret eden ifadeler kripto için güçlü yakıt oluştururken, şahin tonda söylemler risk primini baskılar.",
       "market_impact": "GÜVERCİN / BOĞA LEHİNE FED ETKİSİ",
       "impact_direction": "BULLISH",
       "score_explanation": "Metin içerisindeki makro anahtar kelimeler ve makam ağırlığı (1.0x) taranarak +35.0 duygu puanı hesaplanmıştır.",
-      "strategy_action": "Fed bildirimlerinde Byzantine Quorum çift teyidi devreye girer; ani faiz şoklarında T-15m ve 30s koruma kalkanları hazır tutulur."
+      "strategy_action": "Fed bildirimlerinde Byzantine Quorum çift teyidi devreye girer; ani faiz şoklarında T-15m ve 30s koruma kalkanları hazır tutulur.",
+      "title_tr": "[FED RESMİ AÇIKLAMA] Federal Rezerv Kurulu, Düzenleme O'nun modernleştirilmesine ilişkin teklifine ilişkin yorum süresini 4 Kasım'a kadar uzatacağını duyurdu",
+      "actual_entity": "Federal Reserve (Fed) Basın Masası"
     },
     {
       "title": "[FED RESMİ AÇIKLAMA] Federal Reserve Board announces approval of application by Fleur Capital Corporation",
@@ -107,12 +113,14 @@
       "speaker": "Federal Reserve (Fed) Basın Masası",
       "is_primary_official": true,
       "is_verified": true,
-      "ai_summary": "Federal Reserve (ABD Merkez Bankası) resmi yayın organından gelen birincil bildirimdir. Konu başlığı: Federal Reserve Board announces approval of application by Fleur Capital Corporation.",
+      "ai_summary": "Federal Reserve (ABD Merkez Bankası) resmi yayın organından gelen birincil bildirimdir: 'Federal Rezerv Kurulu, Fleur Capital Corporation'ın başvurusunu onayladığını duyurdu'.",
       "ai_interpretation": "Fed'in para politikası, bilanço büyüklüğü veya bankacılık sistemi duyuruları küresel dolar likiditesini doğrudan belirler. Faiz indirimine veya gevşemeye işaret eden ifadeler kripto için güçlü yakıt oluştururken, şahin tonda söylemler risk primini baskılar.",
       "market_impact": "GÜVERCİN / BOĞA LEHİNE FED ETKİSİ",
       "impact_direction": "BULLISH",
       "score_explanation": "Metin içerisindeki makro anahtar kelimeler ve makam ağırlığı (1.0x) taranarak +70.0 duygu puanı hesaplanmıştır.",
-      "strategy_action": "Fed bildirimlerinde Byzantine Quorum çift teyidi devreye girer; ani faiz şoklarında T-15m ve 30s koruma kalkanları hazır tutulur."
+      "strategy_action": "Fed bildirimlerinde Byzantine Quorum çift teyidi devreye girer; ani faiz şoklarında T-15m ve 30s koruma kalkanları hazır tutulur.",
+      "title_tr": "[FED RESMİ AÇIKLAMA] Federal Rezerv Kurulu, Fleur Capital Corporation'ın başvurusunu onayladığını duyurdu",
+      "actual_entity": "Federal Reserve (Fed) Basın Masası"
     },
     {
       "title": "[FED RESMİ AÇIKLAMA] Federal Reserve Board announces approval of application by Isabella Bank Corporation",
@@ -135,12 +143,14 @@
       "speaker": "Federal Reserve (Fed) Basın Masası",
       "is_primary_official": true,
       "is_verified": true,
-      "ai_summary": "Federal Reserve (ABD Merkez Bankası) resmi yayın organından gelen birincil bildirimdir. Konu başlığı: Federal Reserve Board announces approval of application by Isabella Bank Corporation.",
+      "ai_summary": "Federal Reserve (ABD Merkez Bankası) resmi yayın organından gelen birincil bildirimdir: 'Federal Rezerv Kurulu, Isabella Bank Corporation'ın başvurusunun onaylandığını duyurdu'.",
       "ai_interpretation": "Fed'in para politikası, bilanço büyüklüğü veya bankacılık sistemi duyuruları küresel dolar likiditesini doğrudan belirler. Faiz indirimine veya gevşemeye işaret eden ifadeler kripto için güçlü yakıt oluştururken, şahin tonda söylemler risk primini baskılar.",
       "market_impact": "GÜVERCİN / BOĞA LEHİNE FED ETKİSİ",
       "impact_direction": "BULLISH",
       "score_explanation": "Metin içerisindeki makro anahtar kelimeler ve makam ağırlığı (1.0x) taranarak +30.0 duygu puanı hesaplanmıştır.",
-      "strategy_action": "Fed bildirimlerinde Byzantine Quorum çift teyidi devreye girer; ani faiz şoklarında T-15m ve 30s koruma kalkanları hazır tutulur."
+      "strategy_action": "Fed bildirimlerinde Byzantine Quorum çift teyidi devreye girer; ani faiz şoklarında T-15m ve 30s koruma kalkanları hazır tutulur.",
+      "title_tr": "[FED RESMİ AÇIKLAMA] Federal Rezerv Kurulu, Isabella Bank Corporation'ın başvurusunun onaylandığını duyurdu",
+      "actual_entity": "Federal Reserve (Fed) Basın Masası"
     },
     {
       "title": "[FED RESMİ AÇIKLAMA] Minutes of the Federal Open Market Committee, September 15-16, 2026",
@@ -163,12 +173,14 @@
       "speaker": "Federal Reserve (Fed) Basın Masası",
       "is_primary_official": true,
       "is_verified": true,
-      "ai_summary": "Federal Reserve (ABD Merkez Bankası) resmi yayın organından gelen birincil bildirimdir. Konu başlığı: Minutes of the Federal Open Market Committee, September 15-16, 2026.",
+      "ai_summary": "Federal Reserve (ABD Merkez Bankası) resmi yayın organından gelen birincil bildirimdir: 'Federal Açık Piyasa Komitesi Tutanakları, 15-16 Eylül 2026'.",
       "ai_interpretation": "Fed'in para politikası, bilanço büyüklüğü veya bankacılık sistemi duyuruları küresel dolar likiditesini doğrudan belirler. Faiz indirimine veya gevşemeye işaret eden ifadeler kripto için güçlü yakıt oluştururken, şahin tonda söylemler risk primini baskılar.",
       "market_impact": "DENGELİ / NÖTR FED BİLDİRİMİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Metin içerisindeki makro anahtar kelimeler ve makam ağırlığı (1.0x) taranarak +0.0 duygu puanı hesaplanmıştır.",
-      "strategy_action": "Fed bildirimlerinde Byzantine Quorum çift teyidi devreye girer; ani faiz şoklarında T-15m ve 30s koruma kalkanları hazır tutulur."
+      "strategy_action": "Fed bildirimlerinde Byzantine Quorum çift teyidi devreye girer; ani faiz şoklarında T-15m ve 30s koruma kalkanları hazır tutulur.",
+      "title_tr": "[FED RESMİ AÇIKLAMA] Federal Açık Piyasa Komitesi Tutanakları, 15-16 Eylül 2026",
+      "actual_entity": "Federal Reserve (Fed) Basın Masası"
     },
     {
       "title": "[FED RESMİ AÇIKLAMA] Federal Reserve Board announces enforcement action against American Express Company to address, among other things, the firm’s failure to sufficiently detect and report certain suspicious activity related to money laundering",
@@ -191,12 +203,14 @@
       "speaker": "Federal Reserve (Fed) Basın Masası",
       "is_primary_official": true,
       "is_verified": true,
-      "ai_summary": "Federal Reserve (ABD Merkez Bankası) resmi yayın organından gelen birincil bildirimdir. Konu başlığı: Federal Reserve Board announces enforcement action against American Express Company to address, among other things, the firm’s failure to sufficiently detect and report certain suspicious activity related to money laundering.",
+      "ai_summary": "Federal Reserve (ABD Merkez Bankası) resmi yayın organından gelen birincil bildirimdir: 'Federal Rezerv Kurulu, diğer hususların yanı sıra, firmanın kara para aklamayla ilgili belirli şüpheli faaliyetleri yeterince tespit edip raporlamadaki başarısızlığını gidermek için American Express Company'ye karşı yaptırım eylemi başlatacağını duyurdu'.",
       "ai_interpretation": "Fed'in para politikası, bilanço büyüklüğü veya bankacılık sistemi duyuruları küresel dolar likiditesini doğrudan belirler. Faiz indirimine veya gevşemeye işaret eden ifadeler kripto için güçlü yakıt oluştururken, şahin tonda söylemler risk primini baskılar.",
       "market_impact": "GÜVERCİN / BOĞA LEHİNE FED ETKİSİ",
       "impact_direction": "BULLISH",
       "score_explanation": "Metin içerisindeki makro anahtar kelimeler ve makam ağırlığı (1.0x) taranarak +35.0 duygu puanı hesaplanmıştır.",
-      "strategy_action": "Fed bildirimlerinde Byzantine Quorum çift teyidi devreye girer; ani faiz şoklarında T-15m ve 30s koruma kalkanları hazır tutulur."
+      "strategy_action": "Fed bildirimlerinde Byzantine Quorum çift teyidi devreye girer; ani faiz şoklarında T-15m ve 30s koruma kalkanları hazır tutulur.",
+      "title_tr": "[FED RESMİ AÇIKLAMA] Federal Rezerv Kurulu, diğer hususların yanı sıra, firmanın kara para aklamayla ilgili belirli şüpheli faaliyetleri yeterince tespit edip raporlamadaki başarısızlığını gidermek için American Express Company'ye karşı yaptırım eylemi başlatacağını duyurdu",
+      "actual_entity": "Federal Reserve (Fed) Basın Masası"
     },
     {
       "title": "Sam Altman-backed bitcoin life insurer Meanwhile raises $37.5 million round led by Bain Capital Crypto",
@@ -219,12 +233,14 @@
       "speaker": "THEBLOCK",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'Sam Altman destekli bitcoin hayat sigortacısı Bu arada Bain Capital Crypto liderliğindeki 37,5 milyon dolarlık yatırımı artırdı'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "Sam Altman destekli bitcoin hayat sigortacısı Bu arada Bain Capital Crypto liderliğindeki 37,5 milyon dolarlık yatırımı artırdı",
+      "actual_entity": "THEBLOCK"
     },
     {
       "title": "Thailand SEC issues bitcoin and ether ETF rules set to take effect Oct. 16",
@@ -247,12 +263,14 @@
       "speaker": "THEBLOCK",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasasında sermaye girişi, ürün lansmanı veya olumlu gelişmeye işaret eden flaş istihbarattır.",
+      "ai_summary": "Kripto piyasasında sermaye girişi veya olumlu boğa ivmesine işaret eden flaş gelişme: 'Tayland SEC, 16 Ekim'de yürürlüğe girecek Bitcoin ve Ethereum ETF kurallarını yayınladı'.",
       "ai_interpretation": "Haber başlığı kurumsal benimsenme, ETF net girişleri veya ekosistem büyümesine dair pozitif sinyaller içermektedir. Kısa vadede alıcı iştahını tetikleyebilir.",
       "market_impact": "POZİTİF / BOĞA İVMESİ",
       "impact_direction": "BULLISH",
       "score_explanation": "Pozitif piyasa kelimeleri saptanmış ve +0.0 boğa yönlü etki puanı verilmiştir.",
-      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır."
+      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır.",
+      "title_tr": "Tayland SEC, 16 Ekim'de yürürlüğe girecek Bitcoin ve Ethereum ETF kurallarını yayınladı",
+      "actual_entity": "THEBLOCK"
     },
     {
       "title": "Base creator Jesse Pollak says equities and non-dollar stablecoins will lead upcoming ‘tokenization supercycle’",
@@ -275,12 +293,14 @@
       "speaker": "THEBLOCK",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasası akışından kaydedilen güncel haber metnidir.",
+      "ai_summary": "Kripto piyasası akışından kaydedilen güncel istihbarat: 'Base yaratıcısı Jesse Pollak, hisse senetlerinin ve dolar dışı stabilcoinlerin yaklaşan 'tokenizasyon süper döngüsüne' öncülük edeceğini söyledi'.",
       "ai_interpretation": "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. Makro rejim ve CVD yönüyle birlikte değerlendirilir.",
       "market_impact": "GENEL PİYASA AKIŞI",
       "impact_direction": "NEUTRAL",
       "score_explanation": "NLP analizi sonucunda +0.0 etki skoru üretilmiştir.",
-      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır."
+      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır.",
+      "title_tr": "Base yaratıcısı Jesse Pollak, hisse senetlerinin ve dolar dışı stabilcoinlerin yaklaşan 'tokenizasyon süper döngüsüne' öncülük edeceğini söyledi",
+      "actual_entity": "THEBLOCK"
     },
     {
       "title": "[FED RESMİ AÇIKLAMA] Federal Reserve Board releases results of the 2025 Survey of Consumer Finances, which provides the public and policymakers with detailed insights into the economic condition of American families",
@@ -303,12 +323,14 @@
       "speaker": "Federal Reserve (Fed) Basın Masası",
       "is_primary_official": true,
       "is_verified": true,
-      "ai_summary": "Federal Reserve (ABD Merkez Bankası) resmi yayın organından gelen birincil bildirimdir. Konu başlığı: Federal Reserve Board releases results of the 2025 Survey of Consumer Finances, which provides the public and policymakers with detailed insights into the economic condition of American families.",
+      "ai_summary": "Federal Reserve (ABD Merkez Bankası) resmi yayın organından gelen birincil bildirimdir: 'Federal Rezerv Kurulu, kamuoyuna ve politika yapıcılara Amerikalı ailelerin ekonomik durumuna ilişkin ayrıntılı bilgiler sağlayan 2025 Tüketici Finansmanı Anketi'nin sonuçlarını açıkladı'.",
       "ai_interpretation": "Fed'in para politikası, bilanço büyüklüğü veya bankacılık sistemi duyuruları küresel dolar likiditesini doğrudan belirler. Faiz indirimine veya gevşemeye işaret eden ifadeler kripto için güçlü yakıt oluştururken, şahin tonda söylemler risk primini baskılar.",
       "market_impact": "GÜVERCİN / BOĞA LEHİNE FED ETKİSİ",
       "impact_direction": "BULLISH",
       "score_explanation": "Metin içerisindeki makro anahtar kelimeler ve makam ağırlığı (1.0x) taranarak +35.0 duygu puanı hesaplanmıştır.",
-      "strategy_action": "Fed bildirimlerinde Byzantine Quorum çift teyidi devreye girer; ani faiz şoklarında T-15m ve 30s koruma kalkanları hazır tutulur."
+      "strategy_action": "Fed bildirimlerinde Byzantine Quorum çift teyidi devreye girer; ani faiz şoklarında T-15m ve 30s koruma kalkanları hazır tutulur.",
+      "title_tr": "[FED RESMİ AÇIKLAMA] Federal Rezerv Kurulu, kamuoyuna ve politika yapıcılara Amerikalı ailelerin ekonomik durumuna ilişkin ayrıntılı bilgiler sağlayan 2025 Tüketici Finansmanı Anketi'nin sonuçlarını açıkladı",
+      "actual_entity": "Federal Reserve (Fed) Basın Masası"
     },
     {
       "title": "New York AG secures up to $35 million from former Celsius CEO Alex Mashinsky",
@@ -331,12 +353,14 @@
       "speaker": "THEBLOCK",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasası akışından kaydedilen güncel haber metnidir.",
+      "ai_summary": "Kripto piyasası akışından kaydedilen güncel istihbarat: 'New York AG, eski Celsius CEO'su Alex Mashinsky'den 35 milyon dolara kadar teminat aldı'.",
       "ai_interpretation": "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. Makro rejim ve CVD yönüyle birlikte değerlendirilir.",
       "market_impact": "GENEL PİYASA AKIŞI",
       "impact_direction": "NEUTRAL",
       "score_explanation": "NLP analizi sonucunda +0.0 etki skoru üretilmiştir.",
-      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır."
+      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır.",
+      "title_tr": "New York AG, eski Celsius CEO'su Alex Mashinsky'den 35 milyon dolara kadar teminat aldı",
+      "actual_entity": "THEBLOCK"
     },
     {
       "title": "US targets $1 billion Iran-linked crypto seizure, Bessent says ‘we know where it is’",
@@ -359,12 +383,14 @@
       "speaker": "ABD Hazine Bakanı (Scott Bessent)",
       "is_primary_official": false,
       "is_verified": true,
-      "ai_summary": "2026 yılı güncel makam sahibi ABD Hazine Bakanı Scott Bessent tarafından yapılan veya doğrudan kendisini ilgilendiren üst düzey politika açıklamasıdır.",
+      "ai_summary": "2026 yılı güncel makam sahibi ABD Hazine Bakanı Scott Bessent tarafından yapılan veya doğrudan kendisini ilgilendiren üst düzey politika açıklamasıdır: 'ABD, İran bağlantılı 1 milyar dolarlık kripto ele geçirmeyi hedefliyor, Bessent \"nerede olduğunu biliyoruz\" diyor'.",
       "ai_interpretation": "Scott Bessent piyasa nezdinde en yüksek yönlendirici ağırlığa sahiptir. Açıklama para politikası, sermaye piyasası regülasyonları ve kurumsal fon akışları üzerinde doğrudan fiyatlama oluşturma potansiyeli taşır.",
       "market_impact": "DENGELİ SÖYLEM (SCOTT BESSENT)",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Resmi makam sahibi tespitiyle +0.0 puan hesaplanmış ve makam katsayısı ile ağırlıklandırılmıştır.",
-      "strategy_action": "Yetkili açıklamalarında CVD absorpsiyonu ve tahta derinliği doğrulanmadan ters yönde aceleci işleme girilmez."
+      "strategy_action": "Yetkili açıklamalarında CVD absorpsiyonu ve tahta derinliği doğrulanmadan ters yönde aceleci işleme girilmez.",
+      "title_tr": "ABD, İran bağlantılı 1 milyar dolarlık kripto ele geçirmeyi hedefliyor, Bessent \"nerede olduğunu biliyoruz\" diyor",
+      "actual_entity": "ABD Hazine Bakanı (Scott Bessent)"
     },
     {
       "title": "Ledger investigates wallet drains involving CryptoBilis buyers; estimate tops $86 million in losses",
@@ -387,12 +413,14 @@
       "speaker": "THEBLOCK",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasasında sermaye girişi, ürün lansmanı veya olumlu gelişmeye işaret eden flaş istihbarattır.",
+      "ai_summary": "Kripto piyasasında sermaye girişi veya olumlu boğa ivmesine işaret eden flaş gelişme: 'Ledger, CryptoBilis alıcılarının dahil olduğu cüzdan kaçaklarını araştırıyor; Zararın 86 milyon doları aşacağı tahmin ediliyor'.",
       "ai_interpretation": "Haber başlığı kurumsal benimsenme, ETF net girişleri veya ekosistem büyümesine dair pozitif sinyaller içermektedir. Kısa vadede alıcı iştahını tetikleyebilir.",
       "market_impact": "POZİTİF / BOĞA İVMESİ",
       "impact_direction": "BULLISH",
       "score_explanation": "Pozitif piyasa kelimeleri saptanmış ve +0.0 boğa yönlü etki puanı verilmiştir.",
-      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır."
+      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır.",
+      "title_tr": "Ledger, CryptoBilis alıcılarının dahil olduğu cüzdan kaçaklarını araştırıyor; Zararın 86 milyon doları aşacağı tahmin ediliyor",
+      "actual_entity": "THEBLOCK"
     },
     {
       "title": "New York AG secures up to $35 million and lifetime crypto ban from Celsius’ Alex Mashinsky",
@@ -415,12 +443,14 @@
       "speaker": "COINDESK",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto güvenliği, dava veya fon çıkışı içeren negatif piyasa gelişmesidir.",
+      "ai_summary": "Kripto güvenliği, dava veya fon çıkışı içeren negatif piyasa riski: 'New York AG, Celsius'tan Alex Mashinsky'den 35 milyon dolara kadar kripto yasağı ve ömür boyu kripto yasağı aldı'.",
       "ai_interpretation": "Protokol açığı, likidite boşalması veya regülasyon baskısı gibi risk faktörlerine işaret eder. Piyasada panik satışı veya tasfiye kaskadı riski yaratabilir.",
       "market_impact": "RİSKLİ / AYI BASKISI",
       "impact_direction": "BEARISH",
       "score_explanation": "Risk ve güvenlik ihlali terimleri nedeniyle -40.0 negatif puan verilmiştir.",
-      "strategy_action": "Long yönlü işlemlerde stoplar sıkılaştırılır; risk kalkanı koruma moduna geçer."
+      "strategy_action": "Long yönlü işlemlerde stoplar sıkılaştırılır; risk kalkanı koruma moduna geçer.",
+      "title_tr": "New York AG, Celsius'tan Alex Mashinsky'den 35 milyon dolara kadar kripto yasağı ve ömür boyu kripto yasağı aldı",
+      "actual_entity": "COINDESK"
     },
     {
       "title": "Blockchain.com seeks CFTC greenlight for US prediction markets, crypto derivatives trading: CNBC",
@@ -443,12 +473,14 @@
       "speaker": "THEBLOCK",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'Blockchain.com, ABD tahmin piyasaları ve kripto türevleri ticareti için CFTC'ye yeşil ışık istiyor: CNBC'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "Blockchain.com, ABD tahmin piyasaları ve kripto türevleri ticareti için CFTC'ye yeşil ışık istiyor: CNBC",
+      "actual_entity": "THEBLOCK"
     },
     {
       "title": "DWF Labs Subsidiaries Sue BitGo for $141 Million Over Early Token Sales",
@@ -471,12 +503,14 @@
       "speaker": "DECRYPT",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasası akışından kaydedilen güncel haber metnidir.",
+      "ai_summary": "Kripto piyasası akışından kaydedilen güncel istihbarat: 'DWF Labs İştirakleri BitGo'ya Erken Token Satışları Karşılığında 141 Milyon Dolarlık Dava Açtı'.",
       "ai_interpretation": "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. Makro rejim ve CVD yönüyle birlikte değerlendirilir.",
       "market_impact": "GENEL PİYASA AKIŞI",
       "impact_direction": "NEUTRAL",
       "score_explanation": "NLP analizi sonucunda +0.0 etki skoru üretilmiştir.",
-      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır."
+      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır.",
+      "title_tr": "DWF Labs İştirakleri BitGo'ya Erken Token Satışları Karşılığında 141 Milyon Dolarlık Dava Açtı",
+      "actual_entity": "DECRYPT"
     },
     {
       "title": "Blockchain.com pursues CFTC approval for prediction markets: CNBC",
@@ -499,12 +533,14 @@
       "speaker": "COINTELEGRAPH",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'Blockchain.com tahmin pazarları için CFTC onayını almaya çalışıyor: CNBC'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "Blockchain.com tahmin pazarları için CFTC onayını almaya çalışıyor: CNBC",
+      "actual_entity": "COINTELEGRAPH"
     },
     {
       "title": "Ethereum L2 Starknet Jumps 20% After Saying It Wants to Become an L1",
@@ -527,12 +563,14 @@
       "speaker": "DECRYPT",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasası akışından kaydedilen güncel haber metnidir.",
+      "ai_summary": "Kripto piyasası akışından kaydedilen güncel istihbarat: 'Ethereum L2 Starknet, L1 Olmak İstediğini Söyledikten Sonra %20 Arttı'.",
       "ai_interpretation": "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. Makro rejim ve CVD yönüyle birlikte değerlendirilir.",
       "market_impact": "GENEL PİYASA AKIŞI",
       "impact_direction": "BEARISH",
       "score_explanation": "NLP analizi sonucunda -40.0 etki skoru üretilmiştir.",
-      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır."
+      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır.",
+      "title_tr": "Ethereum L2 Starknet, L1 Olmak İstediğini Söyledikten Sonra %20 Arttı",
+      "actual_entity": "DECRYPT"
     },
     {
       "title": "Ledger investigates fund losses linked to Southeast Asian reseller, warns users",
@@ -555,12 +593,14 @@
       "speaker": "COINTELEGRAPH",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasası akışından kaydedilen güncel haber metnidir.",
+      "ai_summary": "Kripto piyasası akışından kaydedilen güncel istihbarat: 'Ledger, Güneydoğu Asya bayileriyle bağlantılı fon kayıplarını araştırıyor, kullanıcıları uyarıyor'.",
       "ai_interpretation": "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. Makro rejim ve CVD yönüyle birlikte değerlendirilir.",
       "market_impact": "GENEL PİYASA AKIŞI",
       "impact_direction": "NEUTRAL",
       "score_explanation": "NLP analizi sonucunda +0.0 etki skoru üretilmiştir.",
-      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır."
+      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır.",
+      "title_tr": "Ledger, Güneydoğu Asya bayileriyle bağlantılı fon kayıplarını araştırıyor, kullanıcıları uyarıyor",
+      "actual_entity": "COINTELEGRAPH"
     },
     {
       "title": "HSBC, Ant Digital test AI-agent payments using tokenized deposits",
@@ -583,12 +623,14 @@
       "speaker": "COINTELEGRAPH",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'HSBC ve Ant Digital, tokenize mevduat kullanarak yapay zeka aracısı ödemelerini test ediyor'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "HSBC ve Ant Digital, tokenize mevduat kullanarak yapay zeka aracısı ödemelerini test ediyor",
+      "actual_entity": "COINTELEGRAPH"
     },
     {
       "title": "Bitcoin Rebounds After Rough Week, But Traders Are Pricing In More Downside",
@@ -611,12 +653,14 @@
       "speaker": "DECRYPT",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasası akışından kaydedilen güncel haber metnidir.",
+      "ai_summary": "Kripto piyasası akışından kaydedilen güncel istihbarat: 'Bitcoin Zorlu Haftanın Ardından Toparlanıyor, Ancak Yatırımcılar Daha Fazla Olumsuz Fiyatlama Yapıyor'.",
       "ai_interpretation": "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. Makro rejim ve CVD yönüyle birlikte değerlendirilir.",
       "market_impact": "GENEL PİYASA AKIŞI",
       "impact_direction": "NEUTRAL",
       "score_explanation": "NLP analizi sonucunda +0.0 etki skoru üretilmiştir.",
-      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır."
+      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır.",
+      "title_tr": "Bitcoin Zorlu Haftanın Ardından Toparlanıyor, Ancak Yatırımcılar Daha Fazla Olumsuz Fiyatlama Yapıyor",
+      "actual_entity": "DECRYPT"
     },
     {
       "title": "Blockchain.com Seeks Approval for US Prediction Markets and Crypto Derivatives",
@@ -639,12 +683,14 @@
       "speaker": "DECRYPT",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'Blockchain.com ABD Tahmin Piyasaları ve Kripto Türevleri İçin Onay İstiyor'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "Blockchain.com ABD Tahmin Piyasaları ve Kripto Türevleri İçin Onay İstiyor",
+      "actual_entity": "DECRYPT"
     },
     {
       "title": "Robinhood Chain considers technology that gives paying traders priority",
@@ -667,12 +713,14 @@
       "speaker": "COINDESK",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'Robinhood Chain, ödeme yapan yatırımcılara öncelik veren teknolojiyi değerlendiriyor'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "Robinhood Chain, ödeme yapan yatırımcılara öncelik veren teknolojiyi değerlendiriyor",
+      "actual_entity": "COINDESK"
     },
     {
       "title": "Senate Democrat Presses Cantor Fitzgerald on Tether Ties and Lutnick Family Profits",
@@ -695,12 +743,14 @@
       "speaker": "DECRYPT",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasası akışından kaydedilen güncel haber metnidir.",
+      "ai_summary": "Kripto piyasası akışından kaydedilen güncel istihbarat: 'Senato Demokratı Cantor Fitzgerald'a Tether Bağları ve Lutnick Ailesinin Kârları Konusunda Baskı Yaptı'.",
       "ai_interpretation": "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. Makro rejim ve CVD yönüyle birlikte değerlendirilir.",
       "market_impact": "GENEL PİYASA AKIŞI",
       "impact_direction": "NEUTRAL",
       "score_explanation": "NLP analizi sonucunda +0.0 etki skoru üretilmiştir.",
-      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır."
+      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır.",
+      "title_tr": "Senato Demokratı Cantor Fitzgerald'a Tether Bağları ve Lutnick Ailesinin Kârları Konusunda Baskı Yaptı",
+      "actual_entity": "DECRYPT"
     },
     {
       "title": "Former FTX COO says Netflix’s ‘Altruists’ trailer ‘made me physically throw up’",
@@ -723,12 +773,14 @@
       "speaker": "THEBLOCK",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasasında sermaye girişi, ürün lansmanı veya olumlu gelişmeye işaret eden flaş istihbarattır.",
+      "ai_summary": "Kripto piyasasında sermaye girişi veya olumlu boğa ivmesine işaret eden flaş gelişme: 'Eski FTX COO'su, Netflix'in \"Altruists\" fragmanının \"beni fiziksel olarak kusturduğunu\" söyledi'.",
       "ai_interpretation": "Haber başlığı kurumsal benimsenme, ETF net girişleri veya ekosistem büyümesine dair pozitif sinyaller içermektedir. Kısa vadede alıcı iştahını tetikleyebilir.",
       "market_impact": "POZİTİF / BOĞA İVMESİ",
       "impact_direction": "BULLISH",
       "score_explanation": "Pozitif piyasa kelimeleri saptanmış ve +0.0 boğa yönlü etki puanı verilmiştir.",
-      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır."
+      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır.",
+      "title_tr": "Eski FTX COO'su, Netflix'in \"Altruists\" fragmanının \"beni fiziksel olarak kusturduğunu\" söyledi",
+      "actual_entity": "THEBLOCK"
     },
     {
       "title": "THORChain exec accuses Tether of temporarily freezing USDT vaults",
@@ -751,12 +803,14 @@
       "speaker": "COINTELEGRAPH",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'THORChain yöneticisi Tether'ı USDT kasalarını geçici olarak dondurmakla suçluyor'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "THORChain yöneticisi Tether'ı USDT kasalarını geçici olarak dondurmakla suçluyor",
+      "actual_entity": "COINTELEGRAPH"
     },
     {
       "title": "OpenAI and Anthropic Are Quietly Rehearsing for the Day After an AI Catastrophe",
@@ -779,12 +833,14 @@
       "speaker": "DECRYPT",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'OpenAI ve Anthropic Yapay Zeka Felaketinden Sonraki Gün İçin Sessizce Prova Yapıyor'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "OpenAI ve Anthropic Yapay Zeka Felaketinden Sonraki Gün İçin Sessizce Prova Yapıyor",
+      "actual_entity": "DECRYPT"
     },
     {
       "title": "New York permanently bars Celsius founder Mashinsky in $35M fraud settlement",
@@ -807,12 +863,14 @@
       "speaker": "COINTELEGRAPH",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasası akışından kaydedilen güncel haber metnidir.",
+      "ai_summary": "Kripto piyasası akışından kaydedilen güncel istihbarat: 'New York, Celsius'un kurucusu Mashinsky'yi 35 milyon dolarlık dolandırıcılık anlaşmasında kalıcı olarak yasakladı'.",
       "ai_interpretation": "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. Makro rejim ve CVD yönüyle birlikte değerlendirilir.",
       "market_impact": "GENEL PİYASA AKIŞI",
       "impact_direction": "NEUTRAL",
       "score_explanation": "NLP analizi sonucunda +0.0 etki skoru üretilmiştir.",
-      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır."
+      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır.",
+      "title_tr": "New York, Celsius'un kurucusu Mashinsky'yi 35 milyon dolarlık dolandırıcılık anlaşmasında kalıcı olarak yasakladı",
+      "actual_entity": "COINTELEGRAPH"
     },
     {
       "title": "US plans to seize $1B in crypto linked to Iran this week: Scott Bessent",
@@ -835,12 +893,14 @@
       "speaker": "ABD Hazine Bakanı (Scott Bessent)",
       "is_primary_official": false,
       "is_verified": true,
-      "ai_summary": "2026 yılı güncel makam sahibi ABD Hazine Bakanı Scott Bessent tarafından yapılan veya doğrudan kendisini ilgilendiren üst düzey politika açıklamasıdır.",
+      "ai_summary": "2026 yılı güncel makam sahibi ABD Hazine Bakanı Scott Bessent tarafından yapılan veya doğrudan kendisini ilgilendiren üst düzey politika açıklamasıdır: 'Scott Bessent: ABD bu hafta İran'la bağlantılı 1 milyar dolarlık kripto para ele geçirmeyi planlıyor'.",
       "ai_interpretation": "Scott Bessent piyasa nezdinde en yüksek yönlendirici ağırlığa sahiptir. Açıklama para politikası, sermaye piyasası regülasyonları ve kurumsal fon akışları üzerinde doğrudan fiyatlama oluşturma potansiyeli taşır.",
       "market_impact": "DENGELİ SÖYLEM (SCOTT BESSENT)",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Resmi makam sahibi tespitiyle +0.0 puan hesaplanmış ve makam katsayısı ile ağırlıklandırılmıştır.",
-      "strategy_action": "Yetkili açıklamalarında CVD absorpsiyonu ve tahta derinliği doğrulanmadan ters yönde aceleci işleme girilmez."
+      "strategy_action": "Yetkili açıklamalarında CVD absorpsiyonu ve tahta derinliği doğrulanmadan ters yönde aceleci işleme girilmez.",
+      "title_tr": "Scott Bessent: ABD bu hafta İran'la bağlantılı 1 milyar dolarlık kripto para ele geçirmeyi planlıyor",
+      "actual_entity": "ABD Hazine Bakanı (Scott Bessent)"
     },
     {
       "title": "U.S. CFTC moves to fold event contracts into swaps regulations as legal fight rages",
@@ -863,12 +923,14 @@
       "speaker": "COINDESK",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasası akışından kaydedilen güncel haber metnidir.",
+      "ai_summary": "Kripto piyasası akışından kaydedilen güncel istihbarat: 'ABD CFTC, hukuki mücadele kızışırken etkinlik sözleşmelerini takas düzenlemelerine dahil etmek için harekete geçti'.",
       "ai_interpretation": "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. Makro rejim ve CVD yönüyle birlikte değerlendirilir.",
       "market_impact": "GENEL PİYASA AKIŞI",
       "impact_direction": "NEUTRAL",
       "score_explanation": "NLP analizi sonucunda +0.0 etki skoru üretilmiştir.",
-      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır."
+      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır.",
+      "title_tr": "ABD CFTC, hukuki mücadele kızışırken etkinlik sözleşmelerini takas düzenlemelerine dahil etmek için harekete geçti",
+      "actual_entity": "COINDESK"
     },
     {
       "title": "Visa survey says nearly half of APAC consumers open to using stablecoins by 2031",
@@ -891,12 +953,14 @@
       "speaker": "COINDESK",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasası akışından kaydedilen güncel haber metnidir.",
+      "ai_summary": "Kripto piyasası akışından kaydedilen güncel istihbarat: 'Visa anketi, Asya Pasifik tüketicilerinin neredeyse yarısının 2031 yılına kadar stabilcoin kullanmaya açık olduğunu gösteriyor'.",
       "ai_interpretation": "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. Makro rejim ve CVD yönüyle birlikte değerlendirilir.",
       "market_impact": "GENEL PİYASA AKIŞI",
       "impact_direction": "NEUTRAL",
       "score_explanation": "NLP analizi sonucunda +0.0 etki skoru üretilmiştir.",
-      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır."
+      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır.",
+      "title_tr": "Visa anketi, Asya Pasifik tüketicilerinin neredeyse yarısının 2031 yılına kadar stabilcoin kullanmaya açık olduğunu gösteriyor",
+      "actual_entity": "COINDESK"
     },
     {
       "title": "XRP Ledger patched decade-old bug that could create billions of dollars in XRP from nothing",
@@ -919,12 +983,14 @@
       "speaker": "COINDESK",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasası akışından kaydedilen güncel haber metnidir.",
+      "ai_summary": "Kripto piyasası akışından kaydedilen güncel istihbarat: 'XRP Ledger, XRP'de sıfırdan milyarlarca dolar yaratabilecek on yıllık hatayı düzeltti'.",
       "ai_interpretation": "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. Makro rejim ve CVD yönüyle birlikte değerlendirilir.",
       "market_impact": "GENEL PİYASA AKIŞI",
       "impact_direction": "NEUTRAL",
       "score_explanation": "NLP analizi sonucunda +0.0 etki skoru üretilmiştir.",
-      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır."
+      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır.",
+      "title_tr": "XRP Ledger, XRP'de sıfırdan milyarlarca dolar yaratabilecek on yıllık hatayı düzeltti",
+      "actual_entity": "COINDESK"
     },
     {
       "title": "Robinhood Chain slowdown spreads from fees to trading as transactions fall more than 40%",
@@ -947,12 +1013,14 @@
       "speaker": "COINDESK",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'İşlemler %40'tan fazla düştüğü için Robinhood Chain yavaşlaması ücretlerden alım satıma yayılıyor'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "İşlemler %40'tan fazla düştüğü için Robinhood Chain yavaşlaması ücretlerden alım satıma yayılıyor",
+      "actual_entity": "COINDESK"
     },
     {
       "title": "Bitcoin's volatility has plunged, but extreme price swings are more frequent than in 2018",
@@ -975,12 +1043,14 @@
       "speaker": "COINDESK",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasası akışından kaydedilen güncel haber metnidir.",
+      "ai_summary": "Kripto piyasası akışından kaydedilen güncel istihbarat: 'Bitcoin'in oynaklığı azaldı ancak aşırı fiyat dalgalanmaları 2018'e göre daha sık görülüyor'.",
       "ai_interpretation": "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. Makro rejim ve CVD yönüyle birlikte değerlendirilir.",
       "market_impact": "GENEL PİYASA AKIŞI",
       "impact_direction": "BULLISH",
       "score_explanation": "NLP analizi sonucunda +35.0 etki skoru üretilmiştir.",
-      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır."
+      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır.",
+      "title_tr": "Bitcoin'in oynaklığı azaldı ancak aşırı fiyat dalgalanmaları 2018'e göre daha sık görülüyor",
+      "actual_entity": "COINDESK"
     },
     {
       "title": "Sam Altman-backed Bitcoin life insurer, Meanwhile, raises more funds",
@@ -1003,12 +1073,14 @@
       "speaker": "COINTELEGRAPH",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'Sam Altman destekli Bitcoin hayat sigortacısı bu arada daha fazla fon topladı'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "Sam Altman destekli Bitcoin hayat sigortacısı bu arada daha fazla fon topladı",
+      "actual_entity": "COINTELEGRAPH"
     },
     {
       "title": "Tech chief says EU can fend off rogue AI risk: Report",
@@ -1031,12 +1103,14 @@
       "speaker": "COINTELEGRAPH",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'Teknoloji şefi, AB'nin hileli AI riskinden korunabileceğini söyledi: Rapor'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "Teknoloji şefi, AB'nin hileli AI riskinden korunabileceğini söyledi: Rapor",
+      "actual_entity": "COINTELEGRAPH"
     },
     {
       "title": "Bitcoin's $19 billion wake-up call: One-year after flash crash, has crypto learned anything?",
@@ -1059,12 +1133,14 @@
       "speaker": "COINDESK",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto güvenliği, dava veya fon çıkışı içeren negatif piyasa gelişmesidir.",
+      "ai_summary": "Kripto güvenliği, dava veya fon çıkışı içeren negatif piyasa riski: 'Bitcoin'in 19 milyar dolarlık uyandırma çağrısı: Ani çöküşten bir yıl sonra kripto bir şey öğrendi mi?'.",
       "ai_interpretation": "Protokol açığı, likidite boşalması veya regülasyon baskısı gibi risk faktörlerine işaret eder. Piyasada panik satışı veya tasfiye kaskadı riski yaratabilir.",
       "market_impact": "RİSKLİ / AYI BASKISI",
       "impact_direction": "BEARISH",
       "score_explanation": "Risk ve güvenlik ihlali terimleri nedeniyle -40.0 negatif puan verilmiştir.",
-      "strategy_action": "Long yönlü işlemlerde stoplar sıkılaştırılır; risk kalkanı koruma moduna geçer."
+      "strategy_action": "Long yönlü işlemlerde stoplar sıkılaştırılır; risk kalkanı koruma moduna geçer.",
+      "title_tr": "Bitcoin'in 19 milyar dolarlık uyandırma çağrısı: Ani çöküşten bir yıl sonra kripto bir şey öğrendi mi?",
+      "actual_entity": "COINDESK"
     },
     {
       "title": "Justin Sun says Tron’s post-quantum cryptography has gone live on testnet",
@@ -1087,12 +1163,14 @@
       "speaker": "COINTELEGRAPH",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasası akışından kaydedilen güncel haber metnidir.",
+      "ai_summary": "Kripto piyasası akışından kaydedilen güncel istihbarat: 'Justin Sun, Tron'un kuantum sonrası kriptografisinin test ağında yayına girdiğini söyledi'.",
       "ai_interpretation": "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. Makro rejim ve CVD yönüyle birlikte değerlendirilir.",
       "market_impact": "GENEL PİYASA AKIŞI",
       "impact_direction": "NEUTRAL",
       "score_explanation": "NLP analizi sonucunda +0.0 etki skoru üretilmiştir.",
-      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır."
+      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır.",
+      "title_tr": "Justin Sun, Tron'un kuantum sonrası kriptografisinin test ağında yayına girdiğini söyledi",
+      "actual_entity": "COINTELEGRAPH"
     },
     {
       "title": "One year after 10/10 flash crash, bitcoin and ether liquidity have rebuilt, but altcoins still face risks",
@@ -1115,12 +1193,14 @@
       "speaker": "COINDESK",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto güvenliği, dava veya fon çıkışı içeren negatif piyasa gelişmesidir.",
+      "ai_summary": "Kripto güvenliği, dava veya fon çıkışı içeren negatif piyasa riski: '10/10 ani çöküşten bir yıl sonra, Bitcoin ve Ethereum likiditesi yeniden oluştu ancak altcoinler hâlâ risklerle karşı karşıya'.",
       "ai_interpretation": "Protokol açığı, likidite boşalması veya regülasyon baskısı gibi risk faktörlerine işaret eder. Piyasada panik satışı veya tasfiye kaskadı riski yaratabilir.",
       "market_impact": "RİSKLİ / AYI BASKISI",
       "impact_direction": "BEARISH",
       "score_explanation": "Risk ve güvenlik ihlali terimleri nedeniyle -40.0 negatif puan verilmiştir.",
-      "strategy_action": "Long yönlü işlemlerde stoplar sıkılaştırılır; risk kalkanı koruma moduna geçer."
+      "strategy_action": "Long yönlü işlemlerde stoplar sıkılaştırılır; risk kalkanı koruma moduna geçer.",
+      "title_tr": "10/10 ani çöküşten bir yıl sonra, Bitcoin ve Ethereum likiditesi yeniden oluştu ancak altcoinler hâlâ risklerle karşı karşıya",
+      "actual_entity": "COINDESK"
     },
     {
       "title": "Tokenized commodities look beyond gold as lending and oil open new markets",
@@ -1143,12 +1223,14 @@
       "speaker": "COINDESK",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasası akışından kaydedilen güncel haber metnidir.",
+      "ai_summary": "Kripto piyasası akışından kaydedilen güncel istihbarat: 'Borç verme ve petrol yeni pazarlar açarken tokenleştirilmiş emtialar altının ötesine bakıyor'.",
       "ai_interpretation": "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. Makro rejim ve CVD yönüyle birlikte değerlendirilir.",
       "market_impact": "GENEL PİYASA AKIŞI",
       "impact_direction": "NEUTRAL",
       "score_explanation": "NLP analizi sonucunda +0.0 etki skoru üretilmiştir.",
-      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır."
+      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır.",
+      "title_tr": "Borç verme ve petrol yeni pazarlar açarken tokenleştirilmiş emtialar altının ötesine bakıyor",
+      "actual_entity": "COINDESK"
     },
     {
       "title": "Here’s what happened in crypto today",
@@ -1171,12 +1253,14 @@
       "speaker": "COINTELEGRAPH",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasası akışından kaydedilen güncel haber metnidir.",
+      "ai_summary": "Kripto piyasası akışından kaydedilen güncel istihbarat: 'İşte bugün kriptoda olanlar'.",
       "ai_interpretation": "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. Makro rejim ve CVD yönüyle birlikte değerlendirilir.",
       "market_impact": "GENEL PİYASA AKIŞI",
       "impact_direction": "NEUTRAL",
       "score_explanation": "NLP analizi sonucunda +0.0 etki skoru üretilmiştir.",
-      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır."
+      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır.",
+      "title_tr": "İşte bugün kriptoda olanlar",
+      "actual_entity": "COINTELEGRAPH"
     },
     {
       "title": "French Committee Backs Stablecoin Swap Tax and Crypto Exit Tax, Then Rejects the Budget",
@@ -1199,12 +1283,14 @@
       "speaker": "DECRYPT",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasası akışından kaydedilen güncel haber metnidir.",
+      "ai_summary": "Kripto piyasası akışından kaydedilen güncel istihbarat: 'Fransız Komitesi Stablecoin Swap Vergisini ve Kripto Çıkış Vergisini Destekledi, Sonra Bütçeyi Reddetti'.",
       "ai_interpretation": "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. Makro rejim ve CVD yönüyle birlikte değerlendirilir.",
       "market_impact": "GENEL PİYASA AKIŞI",
       "impact_direction": "BEARISH",
       "score_explanation": "NLP analizi sonucunda -40.0 etki skoru üretilmiştir.",
-      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır."
+      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır.",
+      "title_tr": "Fransız Komitesi Stablecoin Swap Vergisini ve Kripto Çıkış Vergisini Destekledi, Sonra Bütçeyi Reddetti",
+      "actual_entity": "DECRYPT"
     },
     {
       "title": "Here’s a Way to Predict When AI Chatbots Will Turn Bad",
@@ -1227,12 +1313,14 @@
       "speaker": "DECRYPT",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'Yapay Zeka Chatbotlarının Ne Zaman Kötüleşeceğini Tahmin Etmenin Bir Yolu'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "Yapay Zeka Chatbotlarının Ne Zaman Kötüleşeceğini Tahmin Etmenin Bir Yolu",
+      "actual_entity": "DECRYPT"
     },
     {
       "title": "Ether ETFs extend outflow streak to nine days as Solana funds snap record 14-week inflow run",
@@ -1255,12 +1343,14 @@
       "speaker": "THEBLOCK",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasasında sermaye girişi, ürün lansmanı veya olumlu gelişmeye işaret eden flaş istihbarattır.",
+      "ai_summary": "Kripto piyasasında sermaye girişi veya olumlu boğa ivmesine işaret eden flaş gelişme: 'Ether ETF'leri, Solana fonlarının 14 haftalık giriş rekorunu kırmasıyla çıkış serisini dokuz güne çıkardı'.",
       "ai_interpretation": "Haber başlığı kurumsal benimsenme, ETF net girişleri veya ekosistem büyümesine dair pozitif sinyaller içermektedir. Kısa vadede alıcı iştahını tetikleyebilir.",
       "market_impact": "POZİTİF / BOĞA İVMESİ",
       "impact_direction": "BULLISH",
       "score_explanation": "Pozitif piyasa kelimeleri saptanmış ve +30.0 boğa yönlü etki puanı verilmiştir.",
-      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır."
+      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır.",
+      "title_tr": "Ether ETF'leri, Solana fonlarının 14 haftalık giriş rekorunu kırmasıyla çıkış serisini dokuz güne çıkardı",
+      "actual_entity": "THEBLOCK"
     },
     {
       "title": "CROWDFUNDINSIDER: Bitcoin Volatility Declines While Significant BTC Price Movements Outpace 2018 as $82,800 Emerges as Key Level Amid Declining Crypto ETF Demand",
@@ -1283,12 +1373,14 @@
       "speaker": "Blogs",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasasında sermaye girişi, ürün lansmanı veya olumlu gelişmeye işaret eden flaş istihbarattır.",
+      "ai_summary": "Kripto piyasasında sermaye girişi veya olumlu boğa ivmesine işaret eden flaş gelişme: 'CROWDFUNDINSIDER: Bitcoin Oynaklığı Düşerken Önemli BTC Fiyat Hareketleri 2018'i Geride Bırakarak Kripto ETF Talebinin Düşüşü Ortasında 82.800 Dolar Anahtar Seviye Olarak Ortaya Çıktı'.",
       "ai_interpretation": "Haber başlığı kurumsal benimsenme, ETF net girişleri veya ekosistem büyümesine dair pozitif sinyaller içermektedir. Kısa vadede alıcı iştahını tetikleyebilir.",
       "market_impact": "POZİTİF / BOĞA İVMESİ",
       "impact_direction": "BULLISH",
       "score_explanation": "Pozitif piyasa kelimeleri saptanmış ve +0.0 boğa yönlü etki puanı verilmiştir.",
-      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır."
+      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır.",
+      "title_tr": "CROWDFUNDINSIDER: Bitcoin Oynaklığı Düşerken Önemli BTC Fiyat Hareketleri 2018'i Geride Bırakarak Kripto ETF Talebinin Düşüşü Ortasında 82.800 Dolar Anahtar Seviye Olarak Ortaya Çıktı",
+      "actual_entity": "Blogs"
     },
     {
       "title": "Holoworld AI (@HoloworldAI): This Week in Crypto, brought to you by Holoworld\n\nSamsung is bringing USDC transfers on @solana to 82M Galaxy devices in the U.S., while @Securitize launched 1:1-backed tokenized U.S. stocks with dividends and shareholder rights.\n\nIn Europe, ESMA gave platforms three months to remove non-MiCA stablecoins like USDT, and Russia registered its first crypto exchanges and custodians.\n\nStablecoins, stocks and crypto rails are moving further into the mainstream.",
@@ -1311,12 +1403,14 @@
       "speaker": "X / Twitter (@HoloworldAI)",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasasında sermaye girişi, ürün lansmanı veya olumlu gelişmeye işaret eden flaş istihbarattır.",
+      "ai_summary": "Kripto piyasasında sermaye girişi veya olumlu boğa ivmesine işaret eden flaş gelişme: 'Holoworld AI (@HoloworldAI): Kripto'da Bu Hafta, Holoworld tarafından sizlere sunuldu\n\nSamsung, ABD'deki 82 milyon Galaxy cihazına @solana üzerinden USDC transferleri getirirken @Securitize, temettü ve hissedar haklarıyla 1:1 destekli tokenize ABD hisse senetlerini başlattı.\n\nAvrupa'da ESMA, platformlara USDT gibi MiCA olmayan stabilcoinleri kaldırmaları için üç ay süre verdi ve Rusya ilk kripto borsalarını ve saklayıcılarını kaydetti.\n\nStablecoin'ler, hisse senetleri ve kripto rayları ana akıma doğru ilerliyor.'.",
       "ai_interpretation": "Haber başlığı kurumsal benimsenme, ETF net girişleri veya ekosistem büyümesine dair pozitif sinyaller içermektedir. Kısa vadede alıcı iştahını tetikleyebilir.",
       "market_impact": "POZİTİF / BOĞA İVMESİ",
       "impact_direction": "BULLISH",
       "score_explanation": "Pozitif piyasa kelimeleri saptanmış ve +0.0 boğa yönlü etki puanı verilmiştir.",
-      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır."
+      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır.",
+      "title_tr": "Holoworld AI (@HoloworldAI): Kripto'da Bu Hafta, Holoworld tarafından sizlere sunuldu\n\nSamsung, ABD'deki 82 milyon Galaxy cihazına @solana üzerinden USDC transferleri getirirken @Securitize, temettü ve hissedar haklarıyla 1:1 destekli tokenize ABD hisse senetlerini başlattı.\n\nAvrupa'da ESMA, platformlara USDT gibi MiCA olmayan stabilcoinleri kaldırmaları için üç ay süre verdi ve Rusya ilk kripto borsalarını ve saklayıcılarını kaydetti.\n\nStablecoin'ler, hisse senetleri ve kripto rayları ana akıma doğru ilerliyor.",
+      "actual_entity": "X / Twitter (@HoloworldAI)"
     },
     {
       "title": "Elon Musk (@elonmusk): Interesting piece from CEO of Microsoft",
@@ -1339,12 +1433,14 @@
       "speaker": "X / Twitter (@elonmusk)",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasası akışından kaydedilen güncel haber metnidir.",
+      "ai_summary": "Kripto piyasası akışından kaydedilen güncel istihbarat: 'Elon Musk (@elonmusk): Microsoft CEO'sundan ilginç bir yazı'.",
       "ai_interpretation": "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. Makro rejim ve CVD yönüyle birlikte değerlendirilir.",
       "market_impact": "GENEL PİYASA AKIŞI",
       "impact_direction": "NEUTRAL",
       "score_explanation": "NLP analizi sonucunda +0.0 etki skoru üretilmiştir.",
-      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır."
+      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır.",
+      "title_tr": "Elon Musk (@elonmusk): Microsoft CEO'sundan ilginç bir yazı",
+      "actual_entity": "X / Twitter (@elonmusk)"
     },
     {
       "title": "Coinbase Wallet (@CoinbaseWallet): Time to log off for the weekend.\n\nBut first, let me add a few coins to my watchlist.",
@@ -1367,12 +1463,14 @@
       "speaker": "X / Twitter (@CoinbaseWallet)",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasası akışından kaydedilen güncel haber metnidir.",
+      "ai_summary": "Kripto piyasası akışından kaydedilen güncel istihbarat: 'Coinbase Cüzdan (@CoinbaseWallet): Hafta sonu için oturumu kapatma zamanı.\n\nAma önce izleme listeme birkaç coin ekleyeyim.'.",
       "ai_interpretation": "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. Makro rejim ve CVD yönüyle birlikte değerlendirilir.",
       "market_impact": "GENEL PİYASA AKIŞI",
       "impact_direction": "NEUTRAL",
       "score_explanation": "NLP analizi sonucunda +0.0 etki skoru üretilmiştir.",
-      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır."
+      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır.",
+      "title_tr": "Coinbase Cüzdan (@CoinbaseWallet): Hafta sonu için oturumu kapatma zamanı.\n\nAma önce izleme listeme birkaç coin ekleyeyim.",
+      "actual_entity": "X / Twitter (@CoinbaseWallet)"
     },
     {
       "title": "A16Z: Can AI really break cryptography? Experts weigh in",
@@ -1395,12 +1493,14 @@
       "speaker": "Blogs",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'A16Z: Yapay zeka gerçekten kriptografiyi kırabilir mi? Uzmanlar değerlendiriyor'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "A16Z: Yapay zeka gerçekten kriptografiyi kırabilir mi? Uzmanlar değerlendiriyor",
+      "actual_entity": "Blogs"
     },
     {
       "title": "Wu Blockchain (@WuBlockchain): Fake Ledger Phishing Site Tops Google Search Results with Over 1M Monthly Visits\n\nAccording to Bitcoin News, amid ongoing investigations into an estimated $86 million in wallet thefts linked to Southeast Asian reseller CryptoBilis, security researcher Cyber Scrilla discovered a fraudulent Ledger phishing website and application appearing at the top of Google Search, designed to trick users into submitting their 24-word recovery phrases. Google reportedly displays more than 1 million visits over the past 30 days. The alert follows a September investigation by cybersecurity firm Zscaler, which uncovered malicious Google ads impersonating Ledger and redirecting users to fake wallet-verification pages.",
@@ -1423,12 +1523,14 @@
       "speaker": "X / Twitter (@WuBlockchain)",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'Wu Blockchain (@WuBlockchain): Sahte Defter Kimlik Avı Sitesi, 1 Milyondan Fazla Aylık Ziyaretle Google Arama Sonuçlarında Zirvede\n\nBitcoin News'e göre, Güneydoğu Asyalı satıcı CryptoBilis ile bağlantılı tahmini 86 milyon dolarlık cüzdan hırsızlığıyla ilgili devam eden soruşturmalar sırasında, güvenlik araştırmacısı Cyber Scrilla, kullanıcıları 24 kelimelik kurtarma ifadelerini göndermeleri için kandırmak üzere tasarlanmış, Google Arama'nın en üstünde görünen sahte bir Ledger kimlik avı web sitesi ve uygulaması keşfetti. Google'ın son 30 gün içinde 1 milyondan fazla ziyaret gösterdiği bildiriliyor. Uyarı, Eylül ayında siber güvenlik firması Zscaler tarafından yürütülen ve Ledger'ı taklit eden ve kullanıcıları sahte cüzdan doğrulama sayfalarına yönlendiren kötü amaçlı Google reklamlarını ortaya çıkaran bir soruşturmanın ardından geldi.'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "Wu Blockchain (@WuBlockchain): Sahte Defter Kimlik Avı Sitesi, 1 Milyondan Fazla Aylık Ziyaretle Google Arama Sonuçlarında Zirvede\n\nBitcoin News'e göre, Güneydoğu Asyalı satıcı CryptoBilis ile bağlantılı tahmini 86 milyon dolarlık cüzdan hırsızlığıyla ilgili devam eden soruşturmalar sırasında, güvenlik araştırmacısı Cyber Scrilla, kullanıcıları 24 kelimelik kurtarma ifadelerini göndermeleri için kandırmak üzere tasarlanmış, Google Arama'nın en üstünde görünen sahte bir Ledger kimlik avı web sitesi ve uygulaması keşfetti. Google'ın son 30 gün içinde 1 milyondan fazla ziyaret gösterdiği bildiriliyor. Uyarı, Eylül ayında siber güvenlik firması Zscaler tarafından yürütülen ve Ledger'ı taklit eden ve kullanıcıları sahte cüzdan doğrulama sayfalarına yönlendiren kötü amaçlı Google reklamlarını ortaya çıkaran bir soruşturmanın ardından geldi.",
+      "actual_entity": "X / Twitter (@WuBlockchain)"
     },
     {
       "title": "WOO X (@_WOO_X): ⏳ FINAL 48 HOURS: 300 USDT WOO X EU GIVEAWAY!\n\nDon't miss out on free USDT! Drop your WOO X EU CID on the official launch tweet before Sunday 23:59 UTC+8! 💰\n\nEnter now! https://x.com/_WOO_X/status/2104830001174688190",
@@ -1451,12 +1553,14 @@
       "speaker": "X / Twitter (@_WOO_X)",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasasında sermaye girişi, ürün lansmanı veya olumlu gelişmeye işaret eden flaş istihbarattır.",
+      "ai_summary": "Kripto piyasasında sermaye girişi veya olumlu boğa ivmesine işaret eden flaş gelişme: 'WOO X (@_WOO_X): ⏳ SON 48 SAAT: 300 USDT WOO X AB ÇEKİLİŞİ!\n\nÜcretsiz USDT'yi kaçırmayın! WOO X EU CID'nizi Pazar 23:59 UTC+8'den önce resmi lansman tweet'ine bırakın! 💰\n\nŞimdi girin! https://x.com/_WOO_X/status/2104830001174688190'.",
       "ai_interpretation": "Haber başlığı kurumsal benimsenme, ETF net girişleri veya ekosistem büyümesine dair pozitif sinyaller içermektedir. Kısa vadede alıcı iştahını tetikleyebilir.",
       "market_impact": "POZİTİF / BOĞA İVMESİ",
       "impact_direction": "BULLISH",
       "score_explanation": "Pozitif piyasa kelimeleri saptanmış ve +0.0 boğa yönlü etki puanı verilmiştir.",
-      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır."
+      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır.",
+      "title_tr": "WOO X (@_WOO_X): ⏳ SON 48 SAAT: 300 USDT WOO X AB ÇEKİLİŞİ!\n\nÜcretsiz USDT'yi kaçırmayın! WOO X EU CID'nizi Pazar 23:59 UTC+8'den önce resmi lansman tweet'ine bırakın! 💰\n\nŞimdi girin! https://x.com/_WOO_X/status/2104830001174688190",
+      "actual_entity": "X / Twitter (@_WOO_X)"
     },
     {
       "title": "DECRYPT: This Sam Altman-Backed Life Insurer Runs Entirely on Bitcoin, and Just Raised $37.5 Million",
@@ -1479,12 +1583,14 @@
       "speaker": "Blogs",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'ŞİFRESİ ÇÖZME: Sam Altman Destekli Bu Hayat Sigortacısı Tamamen Bitcoin ile Çalışıyor ve Az Önce 37,5 Milyon Dolar Topladı'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "ŞİFRESİ ÇÖZME: Sam Altman Destekli Bu Hayat Sigortacısı Tamamen Bitcoin ile Çalışıyor ve Az Önce 37,5 Milyon Dolar Topladı",
+      "actual_entity": "Blogs"
     },
     {
       "title": "This Sam Altman-Backed Life Insurer Runs Entirely on Bitcoin, and Just Raised $37.5 Million",
@@ -1507,12 +1613,14 @@
       "speaker": "DECRYPT",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'Sam Altman Destekli Bu Hayat Sigortacısı Tamamen Bitcoin ile Çalışıyor ve Az Önce 37,5 Milyon Dolar Topladı'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "Sam Altman Destekli Bu Hayat Sigortacısı Tamamen Bitcoin ile Çalışıyor ve Az Önce 37,5 Milyon Dolar Topladı",
+      "actual_entity": "DECRYPT"
     },
     {
       "title": "Grayscale (@Grayscale): Artificial Intelligence usage is increasing, and token consumption is expected to increase 24x by 2030.\n \nAgents, @OpenAI's \"dots,\" and new lower-cost models could further amplify demand for compute. But the physical infrastructure powering compute remains a bottleneck.\n \nRead more on The Stack: https://www.grayscale.com/the-stack/cheaper-agentic-ai-means-greater-demand-for-compute",
@@ -1535,12 +1643,14 @@
       "speaker": "X / Twitter (@Grayscale)",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'Grayscale (@Grayscale): Yapay Zeka kullanımı artıyor ve token tüketiminin 2030 yılına kadar 24 kat artması bekleniyor.\n \nAracılar, @OpenAI'nin \"noktaları\" ve yeni düşük maliyetli modeller, bilgi işlem talebini daha da artırabilir. Ancak bilişimi destekleyen fiziksel altyapı hâlâ bir darboğaz olmaya devam ediyor.\n \nThe Stack hakkında daha fazlasını okuyun: https://www.grayscale.com/the-stack/cheaper-agentic-ai-means-greater-demand-for-compute'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "Grayscale (@Grayscale): Yapay Zeka kullanımı artıyor ve token tüketiminin 2030 yılına kadar 24 kat artması bekleniyor.\n \nAracılar, @OpenAI'nin \"noktaları\" ve yeni düşük maliyetli modeller, bilgi işlem talebini daha da artırabilir. Ancak bilişimi destekleyen fiziksel altyapı hâlâ bir darboğaz olmaya devam ediyor.\n \nThe Stack hakkında daha fazlasını okuyun: https://www.grayscale.com/the-stack/cheaper-agentic-ai-means-greater-demand-for-compute",
+      "actual_entity": "X / Twitter (@Grayscale)"
     },
     {
       "title": "Elon Musk (@elonmusk): Electricity production is the best metric for the true strength of any large-scale economy imo",
@@ -1563,12 +1673,14 @@
       "speaker": "X / Twitter (@elonmusk)",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasası akışından kaydedilen güncel haber metnidir.",
+      "ai_summary": "Kripto piyasası akışından kaydedilen güncel istihbarat: 'Elon Musk (@elonmusk): Elektrik üretimi herhangi bir büyük ölçekli ekonominin gerçek gücünü gösteren en iyi ölçüttür imo'.",
       "ai_interpretation": "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. Makro rejim ve CVD yönüyle birlikte değerlendirilir.",
       "market_impact": "GENEL PİYASA AKIŞI",
       "impact_direction": "NEUTRAL",
       "score_explanation": "NLP analizi sonucunda +0.0 etki skoru üretilmiştir.",
-      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır."
+      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır.",
+      "title_tr": "Elon Musk (@elonmusk): Elektrik üretimi herhangi bir büyük ölçekli ekonominin gerçek gücünü gösteren en iyi ölçüttür imo",
+      "actual_entity": "X / Twitter (@elonmusk)"
     },
     {
       "title": "CROWDFUNDINSIDER: Blockchain.com Seeks CFTC Approval to Launch US Prediction Markets and Crypto Derivatives",
@@ -1591,12 +1703,14 @@
       "speaker": "Blogs",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasasında sermaye girişi, ürün lansmanı veya olumlu gelişmeye işaret eden flaş istihbarattır.",
+      "ai_summary": "Kripto piyasasında sermaye girişi veya olumlu boğa ivmesine işaret eden flaş gelişme: 'CROWDFUNDINSIDER: Blockchain.com ABD Tahmin Piyasalarını ve Kripto Türevlerini Başlatmak İçin CFTC Onayı İstiyor'.",
       "ai_interpretation": "Haber başlığı kurumsal benimsenme, ETF net girişleri veya ekosistem büyümesine dair pozitif sinyaller içermektedir. Kısa vadede alıcı iştahını tetikleyebilir.",
       "market_impact": "POZİTİF / BOĞA İVMESİ",
       "impact_direction": "BULLISH",
       "score_explanation": "Pozitif piyasa kelimeleri saptanmış ve +35.0 boğa yönlü etki puanı verilmiştir.",
-      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır."
+      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır.",
+      "title_tr": "CROWDFUNDINSIDER: Blockchain.com ABD Tahmin Piyasalarını ve Kripto Türevlerini Başlatmak İçin CFTC Onayı İstiyor",
+      "actual_entity": "Blogs"
     },
     {
       "title": "THE VERGE: Ledger wallet tampering suspected after reports of crypto thefts",
@@ -1619,12 +1733,14 @@
       "speaker": "Blogs",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasası akışından kaydedilen güncel haber metnidir.",
+      "ai_summary": "Kripto piyasası akışından kaydedilen güncel istihbarat: 'VERGE: Kripto hırsızlığı raporlarının ardından defter cüzdanına müdahale edildiğinden şüpheleniliyor'.",
       "ai_interpretation": "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. Makro rejim ve CVD yönüyle birlikte değerlendirilir.",
       "market_impact": "GENEL PİYASA AKIŞI",
       "impact_direction": "NEUTRAL",
       "score_explanation": "NLP analizi sonucunda +0.0 etki skoru üretilmiştir.",
-      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır."
+      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır.",
+      "title_tr": "VERGE: Kripto hırsızlığı raporlarının ardından defter cüzdanına müdahale edildiğinden şüpheleniliyor",
+      "actual_entity": "Blogs"
     },
     {
       "title": "Kyber Network (@KyberNetwork): Not every token in your wallet needs to sit idle waiting for better market conditions.\n\nKyberSwap's Partner Vaults give you other ways to put them to work 💸\n\nEnjoy up to 6.25% APY at https://kyberswap.com/earn/vaults",
@@ -1647,12 +1763,14 @@
       "speaker": "X / Twitter (@KyberNetwork)",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'Kyber Network (@KyberNetwork): Cüzdanınızdaki her tokenin daha iyi piyasa koşulları için boşta durmasına gerek yok.\n\nKyberSwap'in Ortak Kasaları bunları çalıştırmanız için size başka yollar sunar 💸\n\nhttps://kyberswap.com/earn/vaults adresinde %6,25'e varan APY'nin keyfini çıkarın'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "Kyber Network (@KyberNetwork): Cüzdanınızdaki her tokenin daha iyi piyasa koşulları için boşta durmasına gerek yok.\n\nKyberSwap'in Ortak Kasaları bunları çalıştırmanız için size başka yollar sunar 💸\n\nhttps://kyberswap.com/earn/vaults adresinde %6,25'e varan APY'nin keyfini çıkarın",
+      "actual_entity": "X / Twitter (@KyberNetwork)"
     },
     {
       "title": "DECRYPT: CFTC Draws the Line Between Prediction Markets and Gambling in New Rules",
@@ -1675,12 +1793,14 @@
       "speaker": "Blogs",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'DECRYPT: CFTC, Yeni Kurallarda Tahmin Piyasaları ile Kumar Arasındaki Çizgiyi Çekiyor'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "DECRYPT: CFTC, Yeni Kurallarda Tahmin Piyasaları ile Kumar Arasındaki Çizgiyi Çekiyor",
+      "actual_entity": "Blogs"
     },
     {
       "title": "CFTC Draws the Line Between Prediction Markets and Gambling in New Rules",
@@ -1703,12 +1823,14 @@
       "speaker": "DECRYPT",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'CFTC, Yeni Kurallarda Tahmin Piyasaları ile Kumar Arasındaki Çizgiyi Çekiyor'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "CFTC, Yeni Kurallarda Tahmin Piyasaları ile Kumar Arasındaki Çizgiyi Çekiyor",
+      "actual_entity": "DECRYPT"
     },
     {
       "title": "Pump.fun (@Pumpfun): if i ever say i'm comfy in spot it means i'm fully allocated + my memes are undervalued by at least 100x + they're going to raise ceilings + imma get as full as threadguy + retirement frontrun pending + i’m the next kimchi\n\nanyways, i'm comfy in spot",
@@ -1731,12 +1853,14 @@
       "speaker": "X / Twitter (@Pumpfun)",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'Pump.fun (@Pumpfun): eğer yerinde rahat olduğumu söylersem bu tamamen tahsis edildiğim anlamına gelir + memlerimin değeri en az 100 kat düşük + tavanları yükseltecekler + threadguy kadar dolu olacağım + emeklilik ön koşusu beklemede + sıradaki kimchi benim\n\nneyse, yerimde rahatım'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "Pump.fun (@Pumpfun): eğer yerinde rahat olduğumu söylersem bu tamamen tahsis edildiğim anlamına gelir + memlerimin değeri en az 100 kat düşük + tavanları yükseltecekler + threadguy kadar dolu olacağım + emeklilik ön koşusu beklemede + sıradaki kimchi benim\n\nneyse, yerimde rahatım",
+      "actual_entity": "X / Twitter (@Pumpfun)"
     },
     {
       "title": "THE BLOCK: Kalshi is investigating bets on Trump's press secretary pick placed before announcement",
@@ -1759,12 +1883,14 @@
       "speaker": "Amerika Birleşik Devletleri Başkanı (Donald Trump)",
       "is_primary_official": false,
       "is_verified": true,
-      "ai_summary": "2026 yılı güncel makam sahibi Amerika Birleşik Devletleri Başkanı Donald Trump tarafından yapılan veya doğrudan kendisini ilgilendiren üst düzey politika açıklamasıdır.",
+      "ai_summary": "2026 yılı güncel makam sahibi Amerika Birleşik Devletleri Başkanı Donald Trump tarafından yapılan veya doğrudan kendisini ilgilendiren üst düzey politika açıklamasıdır: 'BLOK: Kalshi, Trump'ın basın sekreteri seçimine ilişkin duyurudan önce yapılan bahisleri araştırıyor'.",
       "ai_interpretation": "Donald Trump piyasa nezdinde en yüksek yönlendirici ağırlığa sahiptir. Açıklama para politikası, sermaye piyasası regülasyonları ve kurumsal fon akışları üzerinde doğrudan fiyatlama oluşturma potansiyeli taşır.",
       "market_impact": "DENGELİ SÖYLEM (DONALD TRUMP)",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Resmi makam sahibi tespitiyle +0.0 puan hesaplanmış ve makam katsayısı ile ağırlıklandırılmıştır.",
-      "strategy_action": "Yetkili açıklamalarında CVD absorpsiyonu ve tahta derinliği doğrulanmadan ters yönde aceleci işleme girilmez."
+      "strategy_action": "Yetkili açıklamalarında CVD absorpsiyonu ve tahta derinliği doğrulanmadan ters yönde aceleci işleme girilmez.",
+      "title_tr": "BLOK: Kalshi, Trump'ın basın sekreteri seçimine ilişkin duyurudan önce yapılan bahisleri araştırıyor",
+      "actual_entity": "Amerika Birleşik Devletleri Başkanı (Donald Trump)"
     },
     {
       "title": "Donald J. Trump (@realDonaldTrump): Doug Schoen, a Third Rate Political Hack, who does nothing but cater to the Fake News Media, has been proven wrong so many times that he shouldn't even be allowed on Television. The guy is a TRUMP DERANGED, STONE COLD LOSER! President DONALD J. TRUMP",
@@ -1787,12 +1913,14 @@
       "speaker": "Amerika Birleşik Devletleri Başkanı (Donald Trump)",
       "is_primary_official": false,
       "is_verified": true,
-      "ai_summary": "2026 yılı güncel makam sahibi Amerika Birleşik Devletleri Başkanı Donald Trump tarafından yapılan veya doğrudan kendisini ilgilendiren üst düzey politika açıklamasıdır.",
+      "ai_summary": "2026 yılı güncel makam sahibi Amerika Birleşik Devletleri Başkanı Donald Trump tarafından yapılan veya doğrudan kendisini ilgilendiren üst düzey politika açıklamasıdır: 'Donald J. Trump (@realDonaldTrump): Sahte Haber Medyasına hizmet vermekten başka hiçbir şey yapmayan, Üçüncü Sınıf Siyasi Hacker Doug Schoen'in yanıldığı o kadar çok kez kanıtlandı ki, televizyona çıkmasına bile izin verilmemeli. Adam TRUMP'IN DENGESİZ, SOĞUK BİR Ezik! Başkan DONALD J. TRUMP'.",
       "ai_interpretation": "Donald Trump piyasa nezdinde en yüksek yönlendirici ağırlığa sahiptir. Açıklama para politikası, sermaye piyasası regülasyonları ve kurumsal fon akışları üzerinde doğrudan fiyatlama oluşturma potansiyeli taşır.",
       "market_impact": "YÜKSEK AYI ETKİSİ (DONALD TRUMP)",
       "impact_direction": "BEARISH",
       "score_explanation": "Resmi makam sahibi tespitiyle -78.0 puan hesaplanmış ve makam katsayısı ile ağırlıklandırılmıştır.",
-      "strategy_action": "Yetkili açıklamalarında CVD absorpsiyonu ve tahta derinliği doğrulanmadan ters yönde aceleci işleme girilmez."
+      "strategy_action": "Yetkili açıklamalarında CVD absorpsiyonu ve tahta derinliği doğrulanmadan ters yönde aceleci işleme girilmez.",
+      "title_tr": "Donald J. Trump (@realDonaldTrump): Sahte Haber Medyasına hizmet vermekten başka hiçbir şey yapmayan, Üçüncü Sınıf Siyasi Hacker Doug Schoen'in yanıldığı o kadar çok kez kanıtlandı ki, televizyona çıkmasına bile izin verilmemeli. Adam TRUMP'IN DENGESİZ, SOĞUK BİR Ezik! Başkan DONALD J. TRUMP",
+      "actual_entity": "Amerika Birleşik Devletleri Başkanı (Donald Trump)"
     },
     {
       "title": "Kalshi is investigating bets on Trump’s press secretary pick placed before announcement: WSJ",
@@ -1815,12 +1943,14 @@
       "speaker": "Amerika Birleşik Devletleri Başkanı (Donald Trump)",
       "is_primary_official": false,
       "is_verified": true,
-      "ai_summary": "2026 yılı güncel makam sahibi Amerika Birleşik Devletleri Başkanı Donald Trump tarafından yapılan veya doğrudan kendisini ilgilendiren üst düzey politika açıklamasıdır.",
+      "ai_summary": "2026 yılı güncel makam sahibi Amerika Birleşik Devletleri Başkanı Donald Trump tarafından yapılan veya doğrudan kendisini ilgilendiren üst düzey politika açıklamasıdır: 'Kalshi, Trump'ın basın sekreteri seçimine ilişkin duyurudan önce yapılan bahisleri araştırıyor: WSJ'.",
       "ai_interpretation": "Donald Trump piyasa nezdinde en yüksek yönlendirici ağırlığa sahiptir. Açıklama para politikası, sermaye piyasası regülasyonları ve kurumsal fon akışları üzerinde doğrudan fiyatlama oluşturma potansiyeli taşır.",
       "market_impact": "DENGELİ SÖYLEM (DONALD TRUMP)",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Resmi makam sahibi tespitiyle +0.0 puan hesaplanmış ve makam katsayısı ile ağırlıklandırılmıştır.",
-      "strategy_action": "Yetkili açıklamalarında CVD absorpsiyonu ve tahta derinliği doğrulanmadan ters yönde aceleci işleme girilmez."
+      "strategy_action": "Yetkili açıklamalarında CVD absorpsiyonu ve tahta derinliği doğrulanmadan ters yönde aceleci işleme girilmez.",
+      "title_tr": "Kalshi, Trump'ın basın sekreteri seçimine ilişkin duyurudan önce yapılan bahisleri araştırıyor: WSJ",
+      "actual_entity": "Amerika Birleşik Devletleri Başkanı (Donald Trump)"
     },
     {
       "title": "The Block (@TheBlockCo): THE BLOCK: Kalshi is investigating three bets placed before news outlets reported President Trump's selection of Katie Zacharia as White House press secretary, according to the WSJ.\n\nThe wagers, totaling about $173, came when Kalshi priced her chances at about 1% and stand to pay out roughly $9,600.",
@@ -1843,12 +1973,14 @@
       "speaker": "Amerika Birleşik Devletleri Başkanı (Donald Trump)",
       "is_primary_official": false,
       "is_verified": true,
-      "ai_summary": "2026 yılı güncel makam sahibi Amerika Birleşik Devletleri Başkanı Donald Trump tarafından yapılan veya doğrudan kendisini ilgilendiren üst düzey politika açıklamasıdır.",
+      "ai_summary": "2026 yılı güncel makam sahibi Amerika Birleşik Devletleri Başkanı Donald Trump tarafından yapılan veya doğrudan kendisini ilgilendiren üst düzey politika açıklamasıdır: 'The Block (@TheBlockCo): THE BLOCK: WSJ'ye göre Kalshi, haber kuruluşlarının Başkan Trump'ın Beyaz Saray basın sözcüsü olarak Katie Zacharia'yı seçtiğini bildirmesinden önce oynanan üç iddiayı araştırıyor.\n\nToplamı 173 dolar olan bahisler, Kalshi'nin şansını yaklaşık %1 olarak fiyatlandırdığı ve yaklaşık 9.600 dolar ödeyeceği zaman geldi.'.",
       "ai_interpretation": "Donald Trump piyasa nezdinde en yüksek yönlendirici ağırlığa sahiptir. Açıklama para politikası, sermaye piyasası regülasyonları ve kurumsal fon akışları üzerinde doğrudan fiyatlama oluşturma potansiyeli taşır.",
       "market_impact": "DENGELİ SÖYLEM (DONALD TRUMP)",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Resmi makam sahibi tespitiyle +0.0 puan hesaplanmış ve makam katsayısı ile ağırlıklandırılmıştır.",
-      "strategy_action": "Yetkili açıklamalarında CVD absorpsiyonu ve tahta derinliği doğrulanmadan ters yönde aceleci işleme girilmez."
+      "strategy_action": "Yetkili açıklamalarında CVD absorpsiyonu ve tahta derinliği doğrulanmadan ters yönde aceleci işleme girilmez.",
+      "title_tr": "The Block (@TheBlockCo): THE BLOCK: WSJ'ye göre Kalshi, haber kuruluşlarının Başkan Trump'ın Beyaz Saray basın sözcüsü olarak Katie Zacharia'yı seçtiğini bildirmesinden önce oynanan üç iddiayı araştırıyor.\n\nToplamı 173 dolar olan bahisler, Kalshi'nin şansını yaklaşık %1 olarak fiyatlandırdığı ve yaklaşık 9.600 dolar ödeyeceği zaman geldi.",
+      "actual_entity": "Amerika Birleşik Devletleri Başkanı (Donald Trump)"
     },
     {
       "title": "Donald J. Trump (@realDonaldTrump): I will be landing in Tennessee shortly. As always, incredible Crowd — Lots of love. See you soon! President DONALD J. TRUMP",
@@ -1871,12 +2003,14 @@
       "speaker": "Amerika Birleşik Devletleri Başkanı (Donald Trump)",
       "is_primary_official": false,
       "is_verified": true,
-      "ai_summary": "2026 yılı güncel makam sahibi Amerika Birleşik Devletleri Başkanı Donald Trump tarafından yapılan veya doğrudan kendisini ilgilendiren üst düzey politika açıklamasıdır.",
+      "ai_summary": "2026 yılı güncel makam sahibi Amerika Birleşik Devletleri Başkanı Donald Trump tarafından yapılan veya doğrudan kendisini ilgilendiren üst düzey politika açıklamasıdır: 'Donald J. Trump (@realDonaldTrump): Kısa süre sonra Tennessee'ye ineceğim. Her zamanki gibi inanılmaz Kalabalık - Çok fazla sevgi. Yakında görüşürüz! Başkan DONALD J. TRUMP'.",
       "ai_interpretation": "Donald Trump piyasa nezdinde en yüksek yönlendirici ağırlığa sahiptir. Açıklama para politikası, sermaye piyasası regülasyonları ve kurumsal fon akışları üzerinde doğrudan fiyatlama oluşturma potansiyeli taşır.",
       "market_impact": "DENGELİ SÖYLEM (DONALD TRUMP)",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Resmi makam sahibi tespitiyle +0.0 puan hesaplanmış ve makam katsayısı ile ağırlıklandırılmıştır.",
-      "strategy_action": "Yetkili açıklamalarında CVD absorpsiyonu ve tahta derinliği doğrulanmadan ters yönde aceleci işleme girilmez."
+      "strategy_action": "Yetkili açıklamalarında CVD absorpsiyonu ve tahta derinliği doğrulanmadan ters yönde aceleci işleme girilmez.",
+      "title_tr": "Donald J. Trump (@realDonaldTrump): Kısa süre sonra Tennessee'ye ineceğim. Her zamanki gibi inanılmaz Kalabalık - Çok fazla sevgi. Yakında görüşürüz! Başkan DONALD J. TRUMP",
+      "actual_entity": "Amerika Birleşik Devletleri Başkanı (Donald Trump)"
     },
     {
       "title": "CZ 🔶 BNB (@cz_binance): Keep Your Crypto #SAFU in 2026\n\nRealizing the original article (https://www.binance.com/en/blog/from-our-ceo/421499824684900429) is too long and wordy, I made a condensed version. \n \nMatch security measures to the value of your holdings and your technical ability. Address three priorities: prevent theft, prevent accidental loss, and provide for inheritance.\nSelf-custody\nPrivate keys authorize access to funds. Seed phrases generate those keys. Anyone who obtains either can control the associated crypto.\nSelf-custody requires secure devices, reliable backups, and a workable recovery plan.\n1. Prevent key theft\nComputers\nUse a dedicated offline computer to store keys and sign transactions.\nInstall software from official sources using clean removable media.\nCheck downloads for malware and reported security issues.\nUse supported software that permits offline signing.\nEncrypt the disk and protect the computer physically.\nMobile phones\nUse a dedicated phone, reset before installing the wallet.\nInstall only necessary wallet software; avoid rooting or jailbreaking.\nKeep the phone offline except when transfers or updates require connectivity.\nUse a strong passcode and maintain physical control.\nFor fully offline wallets, plan how to update software and move funds securely.\nHardware wallets\nChoose an established device and protect it against theft or tampering.\nKeep the connected computer or phone secure.\nVerify the destination address on the hardware wallet before approving transfers.\nProtect backups as carefully as the device itself.\nHardware wallets reduce exposure of private keys but remain vulnerable to software flaws, physical attacks, and insecure backups.\n2. Prevent key loss\nMaintain multiple protected backups in separate locations.\nPaper: Simple to create, but vulnerable to damage, loss, transcription errors, and unauthorized reading.\nMetal: More durable, but still vulnerable to loss and unauthorized reading.\nEncrypted USB drives: Allow geographically separated backups but require strong encryption and technical care.\nAvoid photographs or screenshots of keys that may sync to cloud accounts. Research backup and encryption tools, restrict access, and ensure the recovery process works.\n3. Plan for inheritance\nProvide a recovery process without unnecessarily exposing funds during your lifetime.\nSharing keys gives recipients immediate spending access and creates additional opportunities for loss or theft. Storing keys with an intermediary carries similar risks.\nA dead man’s switch can release instructions after prolonged inactivity. Research and test the service before relying on it.\nDo not place unencrypted keys or backup passwords in scheduled messages. Encrypt recovery instructions for the intended recipient—for example, using their PGP public key. Recipients must understand the process and protect the private key needed to decrypt it.\nCentralized exchanges\nExchanges manage custody and infrastructure; users remain responsible for account security.\nEvaluate reputation, security resources, testing practices, and the sustainability of the business model. Treat unusually generous incentives or unclear revenue sources cautiously. Exchange custody carries counterparty risk.\nSecure your account\n1. Protect computers\nUse a dedicated computer where practical. Enable antivirus and firewall protection, minimize installed software, and limit downloads. Protect other devices on the same network.\nInstall operating-system and application updates promptly. Disable unnecessary automatic downloads in messaging apps.\n2. Protect email\nUse a separate email address for each exchange. Enable strong two-factor authentication, preferably a hardware security key. Avoid phone-based recovery that could expose the account to SIM-swap attacks.\n3. Use unique passwords\nCreate a strong, unique password for every account and store it in a suitable password manager. Protect the device running the manager; malware can undermine its safeguards.\n4. Enable two-factor authentication\nUse 2FA on exchange and email accounts. Authentication codes add protection, but malware and phishing sites may capture or relay them.\n5. Use hardware security keys\nWhere supported, secure exchange, email, and password-manager accounts with hardware security keys. Their website-specific authentication helps resist phishing.\n6. Avoid SMS authentication\nPrefer authenticator apps or hardware security keys. Attackers who take control of a phone number may intercept SMS codes.\n7. Whitelist withdrawal addresses\nRestrict withdrawals to approved addresses to make unauthorized transfers more difficult.\n8. Protect API credentials\nKeep API keys private and prevent unauthorized use. For asymmetric authentication, retain the private key securely and provide only the public key to the exchange.\nLost API credentials can generally be replaced; wallet keys require a separate backup strategy.\n9. Complete identity verification\nIdentity verification can support ownership checks, investigations of suspicious activity, and inheritance procedures. Understand the exchange’s documentation requirements.\n10. Secure devices physically\nUse strong screen locks and protect phones, computers, hardware wallets, and backups. A phone may provide access to email, exchange accounts, and authentication codes simultaneously.\n11. Avoid phishing\nOpen exchanges through trusted bookmarks or carefully typed addresses. Do not enter credentials after following unsolicited email, text, or social-media links.\nTreat unexpected contact from purported exchange staff or public figures cautiously.\nChoose a custody mix\nAllocate funds between exchanges and personal wallets according to technical ability, security practices, and access needs.\nSelf-custody requires independent key protection and recovery. Exchange custody requires trust in the provider and strong account protection. A separate wallet can provide access during exchange maintenance.",
@@ -1899,12 +2033,14 @@
       "speaker": "X / Twitter (@cz_binance)",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasasında sermaye girişi, ürün lansmanı veya olumlu gelişmeye işaret eden flaş istihbarattır.",
+      "ai_summary": "Kripto piyasasında sermaye girişi veya olumlu boğa ivmesine işaret eden flaş gelişme: 'CZ 🔶 BNB (@cz_binance): 2026'da Kripto #SAFU'nuzu Koruyun\n\nOrijinal makalenin (https://www.binance.com/en/blog/from-our-ceo/421499824684900429) çok uzun ve uzun olduğunu fark ederek kısaltılmış bir versiyon hazırladım. \n \nGüvenlik önlemlerini varlıklarınızın değeri ve teknik yeteneğinizle eşleştirin. Üç önceliği ele alın: hırsızlığın önlenmesi, kazara kaybın önlenmesi ve mirasın sağlanması.\nKendi kendine velayet\nÖzel anahtarlar fonlara erişime izin verir. Çekirdek ifadeler bu anahtarları oluşturur. Bunlardan herhangi birini alan herkes ilgili kriptoyu kontrol edebilir.\nKendi kendine saklama, güvenli cihazlar, güvenilir yedeklemeler ve uygulanabilir bir kurtarma planı gerektirir.\n1. Anahtar hırsızlığını önleyin\nBilgisayarlar\nAnahtarları depolamak ve işlemleri imzalamak için özel bir çevrimdışı bilgisayar kullanın.\nTemiz çıkarılabilir medya kullanarak resmi kaynaklardan yazılım yükleyin.\nİndirilenleri kötü amaçlı yazılımlara ve bildirilen güvenlik sorunlarına karşı kontrol edin.\nÇevrimdışı imzalamaya izin veren desteklenen yazılımı kullanın.\nDiski şifreleyin ve bilgisayarı fiziksel olarak koruyun.\nCep telefonları\nÖzel bir telefon kullanın, cüzdanı kurmadan önce sıfırlayın.\nYalnızca gerekli cüzdan yazılımını yükleyin; Root yapmaktan veya jailbreak yapmaktan kaçının.\nAktarımların veya güncellemelerin bağlantı gerektirdiği durumlar dışında telefonu çevrimdışı tutun.\nGüçlü bir şifre kullanın ve fiziksel kontrolü koruyun.\nTamamen çevrimdışı cüzdanlar için yazılımı nasıl güncelleyeceğinizi ve fonları güvenli bir şekilde nasıl taşıyacağınızı planlayın.\nDonanım cüzdanları\nKurulu bir cihazı seçin ve hırsızlığa veya kurcalamaya karşı koruyun.\nBağlı bilgisayarı veya telefonu güvende tutun.\nAktarımları onaylamadan önce donanım cüzdanındaki hedef adresi doğrulayın.\nYedeklemeleri cihazın kendisi kadar dikkatli bir şekilde koruyun.\nDonanım cüzdanları özel anahtarların açığa çıkmasını azaltır ancak yazılım kusurlarına, fiziksel saldırılara ve güvenli olmayan yedeklemelere karşı savunmasız kalır.\n2. Anahtar kaybını önleyin\nBirden fazla korumalı yedeklemeyi ayrı konumlarda tutun.\nKağıt: Oluşturulması basit ancak hasara, kaybolmaya, transkripsiyon hatalarına ve yetkisiz okumaya karşı savunmasızdır.\nMetal: Daha dayanıklıdır ancak yine de kaybolmaya ve izinsiz okunmaya karşı savunmasızdır.\nŞifreli USB sürücüler: Coğrafi olarak ayrılmış yedeklemelere izin verir ancak güçlü şifreleme ve teknik bakım gerektirir.\nBulut hesaplarıyla senkronize edilebilecek anahtarların fotoğraflarından veya ekran görüntülerinden kaçının. Yedekleme ve şifreleme araçlarını araştırın, erişimi kısıtlayın ve kurtarma sürecinin çalıştığından emin olun.\n3. Miras planı\nYaşamınız boyunca gereksiz yere fon harcamadan bir kurtarma süreci sağlayın.\nAnahtarların paylaşılması, alıcılara anında harcama erişimi sağlar ve kayıp veya hırsızlık için ek fırsatlar yaratır. Anahtarların bir aracıda saklanması da benzer riskler taşır.\nÖlü bir adamın anahtarı, uzun süre işlem yapılmadığında talimatları serbest bırakabilir. Hizmete güvenmeden önce araştırın ve test edin.\nPlanlanmış mesajlara şifrelenmemiş anahtarlar veya yedek şifreler koymayın. Hedeflenen alıcıya yönelik kurtarma talimatlarını, örneğin PGP genel anahtarını kullanarak şifreleyin. Alıcıların süreci anlamaları ve şifreyi çözmek için gereken özel anahtarı korumaları gerekir.\nMerkezi borsalar\nBorsalar saklama ve altyapıyı yönetir; hesap güvenliğinden kullanıcılar sorumlu olmaya devam eder.\nİtibarı, güvenlik kaynaklarını, test uygulamalarını ve iş modelinin sürdürülebilirliğini değerlendirin. Alışılmadık derecede cömert teşviklere veya belirsiz gelir kaynaklarına ihtiyatlı davranın. Döviz saklama, karşı taraf riski taşır.\nHesabınızı güvence altına alın\n1. Bilgisayarları koruyun\nUygun olduğu yerde özel bir bilgisayar kullanın. Antivirüs ve güvenlik duvarı korumasını etkinleştirin, yüklü yazılımları en aza indirin ve indirmeleri sınırlayın. Aynı ağdaki diğer cihazları koruyun.\nİşletim sistemi ve uygulama güncellemelerini hemen yükleyin. Mesajlaşma uygulamalarında gereksiz otomatik indirmeleri devre dışı bırakın.\n2. E-postayı koruyun\nHer değişim için ayrı bir e-posta adresi kullanın. Güçlü iki faktörlü kimlik doğrulamayı, tercihen bir donanım güvenlik anahtarını etkinleştirin. Hesabı SIM değiştirme saldırılarına maruz bırakabilecek telefon tabanlı kurtarma işleminden kaçının.\n3. Benzersiz şifreler kullanın\nHer hesap için güçlü, benzersiz bir şifre oluşturun ve bunu uygun bir şifre yöneticisinde saklayın. Yöneticiyi çalıştıran cihazı koruyun; Kötü amaçlı yazılım, korumalarını zayıflatabilir.\n4. İki faktörlü kimlik doğrulamayı etkinleştirin\nExchange ve e-posta hesaplarında 2FA kullanın. Kimlik doğrulama kodları koruma sağlar ancak kötü amaçlı yazılım ve kimlik avı siteleri bunları yakalayabilir veya aktarabilir.\n5. Donanım güvenlik anahtarlarını kullanın\nDesteklendiğinde, donanım güvenlik anahtarlarıyla takas, e-posta ve parola yöneticisi hesaplarını güvenli hale getirin. Web sitesine özel kimlik doğrulamaları, kimlik avına karşı direnmeye yardımcı olur.\n6. SMS kimlik doğrulamasından kaçının\nKimlik doğrulama uygulamalarını veya donanım güvenlik anahtarlarını tercih edin. Bir telefon numarasının kontrolünü ele geçiren saldırganlar SMS kodlarını ele geçirebilir.\n7. Para çekme adreslerini beyaz listeye alın\nYetkisiz transferleri daha da zorlaştırmak için para çekme işlemlerini onaylanmış adreslerle sınırlandırın.\n8. API kimlik bilgilerini koruyun\nAPI anahtarlarını gizli tutun ve yetkisiz kullanımı önleyin. Asimetrik kimlik doğrulama için özel anahtarı güvenli bir şekilde saklayın ve borsaya yalnızca genel anahtarı sağlayın.\nKayıp API kimlik bilgileri genellikle değiştirilebilir; cüzdan anahtarları ayrı bir yedekleme stratejisi gerektirir.\n9. Kimlik doğrulamasını tamamlayın\nKimlik doğrulama, sahiplik kontrollerini, şüpheli etkinlik araştırmalarını ve miras prosedürlerini destekleyebilir. Borsanın dokümantasyon gereksinimlerini anlayın.\n10. Cihazları fiziksel olarak koruyun\nGüçlü ekran kilitleri kullanın ve telefonları, bilgisayarları, donanım cüzdanlarını ve yedeklemeleri koruyun. Bir telefon aynı anda e-postaya, hesap alışverişine ve kimlik doğrulama kodlarına erişim sağlayabilir.\n11. Kimlik avından kaçının\nGüvenilir yer imleri veya dikkatlice yazılan adresler aracılığıyla borsaları açın. İstenmeyen e-posta, metin veya sosyal medya bağlantılarını izledikten sonra kimlik bilgilerini girmeyin.\nDeğişim personeli veya kamuya mal olmuş kişiler olduğu iddia edilen kişilerle beklenmedik temaslara karşı dikkatli olun.\nBir velayet karışımı seçin\nTeknik yeterliliğe, güvenlik uygulamalarına ve erişim ihtiyaçlarına göre borsalar ve kişisel cüzdanlar arasında fon tahsis edin.\nKendi kendine saklama, bağımsız anahtar koruması ve kurtarma gerektirir. Takas saklama, sağlayıcıya güven ve güçlü hesap koruması gerektirir. Ayrı bir cüzdan, değişim bakımı sırasında erişim sağlayabilir.'.",
       "ai_interpretation": "Haber başlığı kurumsal benimsenme, ETF net girişleri veya ekosistem büyümesine dair pozitif sinyaller içermektedir. Kısa vadede alıcı iştahını tetikleyebilir.",
       "market_impact": "POZİTİF / BOĞA İVMESİ",
       "impact_direction": "BULLISH",
       "score_explanation": "Pozitif piyasa kelimeleri saptanmış ve +25.0 boğa yönlü etki puanı verilmiştir.",
-      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır."
+      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır.",
+      "title_tr": "CZ 🔶 BNB (@cz_binance): 2026'da Kripto #SAFU'nuzu Koruyun\n\nOrijinal makalenin (https://www.binance.com/en/blog/from-our-ceo/421499824684900429) çok uzun ve uzun olduğunu fark ederek kısaltılmış bir versiyon hazırladım. \n \nGüvenlik önlemlerini varlıklarınızın değeri ve teknik yeteneğinizle eşleştirin. Üç önceliği ele alın: hırsızlığın önlenmesi, kazara kaybın önlenmesi ve mirasın sağlanması.\nKendi kendine velayet\nÖzel anahtarlar fonlara erişime izin verir. Çekirdek ifadeler bu anahtarları oluşturur. Bunlardan herhangi birini alan herkes ilgili kriptoyu kontrol edebilir.\nKendi kendine saklama, güvenli cihazlar, güvenilir yedeklemeler ve uygulanabilir bir kurtarma planı gerektirir.\n1. Anahtar hırsızlığını önleyin\nBilgisayarlar\nAnahtarları depolamak ve işlemleri imzalamak için özel bir çevrimdışı bilgisayar kullanın.\nTemiz çıkarılabilir medya kullanarak resmi kaynaklardan yazılım yükleyin.\nİndirilenleri kötü amaçlı yazılımlara ve bildirilen güvenlik sorunlarına karşı kontrol edin.\nÇevrimdışı imzalamaya izin veren desteklenen yazılımı kullanın.\nDiski şifreleyin ve bilgisayarı fiziksel olarak koruyun.\nCep telefonları\nÖzel bir telefon kullanın, cüzdanı kurmadan önce sıfırlayın.\nYalnızca gerekli cüzdan yazılımını yükleyin; Root yapmaktan veya jailbreak yapmaktan kaçının.\nAktarımların veya güncellemelerin bağlantı gerektirdiği durumlar dışında telefonu çevrimdışı tutun.\nGüçlü bir şifre kullanın ve fiziksel kontrolü koruyun.\nTamamen çevrimdışı cüzdanlar için yazılımı nasıl güncelleyeceğinizi ve fonları güvenli bir şekilde nasıl taşıyacağınızı planlayın.\nDonanım cüzdanları\nKurulu bir cihazı seçin ve hırsızlığa veya kurcalamaya karşı koruyun.\nBağlı bilgisayarı veya telefonu güvende tutun.\nAktarımları onaylamadan önce donanım cüzdanındaki hedef adresi doğrulayın.\nYedeklemeleri cihazın kendisi kadar dikkatli bir şekilde koruyun.\nDonanım cüzdanları özel anahtarların açığa çıkmasını azaltır ancak yazılım kusurlarına, fiziksel saldırılara ve güvenli olmayan yedeklemelere karşı savunmasız kalır.\n2. Anahtar kaybını önleyin\nBirden fazla korumalı yedeklemeyi ayrı konumlarda tutun.\nKağıt: Oluşturulması basit ancak hasara, kaybolmaya, transkripsiyon hatalarına ve yetkisiz okumaya karşı savunmasızdır.\nMetal: Daha dayanıklıdır ancak yine de kaybolmaya ve izinsiz okunmaya karşı savunmasızdır.\nŞifreli USB sürücüler: Coğrafi olarak ayrılmış yedeklemelere izin verir ancak güçlü şifreleme ve teknik bakım gerektirir.\nBulut hesaplarıyla senkronize edilebilecek anahtarların fotoğraflarından veya ekran görüntülerinden kaçının. Yedekleme ve şifreleme araçlarını araştırın, erişimi kısıtlayın ve kurtarma sürecinin çalıştığından emin olun.\n3. Miras planı\nYaşamınız boyunca gereksiz yere fon harcamadan bir kurtarma süreci sağlayın.\nAnahtarların paylaşılması, alıcılara anında harcama erişimi sağlar ve kayıp veya hırsızlık için ek fırsatlar yaratır. Anahtarların bir aracıda saklanması da benzer riskler taşır.\nÖlü bir adamın anahtarı, uzun süre işlem yapılmadığında talimatları serbest bırakabilir. Hizmete güvenmeden önce araştırın ve test edin.\nPlanlanmış mesajlara şifrelenmemiş anahtarlar veya yedek şifreler koymayın. Hedeflenen alıcıya yönelik kurtarma talimatlarını, örneğin PGP genel anahtarını kullanarak şifreleyin. Alıcıların süreci anlamaları ve şifreyi çözmek için gereken özel anahtarı korumaları gerekir.\nMerkezi borsalar\nBorsalar saklama ve altyapıyı yönetir; hesap güvenliğinden kullanıcılar sorumlu olmaya devam eder.\nİtibarı, güvenlik kaynaklarını, test uygulamalarını ve iş modelinin sürdürülebilirliğini değerlendirin. Alışılmadık derecede cömert teşviklere veya belirsiz gelir kaynaklarına ihtiyatlı davranın. Döviz saklama, karşı taraf riski taşır.\nHesabınızı güvence altına alın\n1. Bilgisayarları koruyun\nUygun olduğu yerde özel bir bilgisayar kullanın. Antivirüs ve güvenlik duvarı korumasını etkinleştirin, yüklü yazılımları en aza indirin ve indirmeleri sınırlayın. Aynı ağdaki diğer cihazları koruyun.\nİşletim sistemi ve uygulama güncellemelerini hemen yükleyin. Mesajlaşma uygulamalarında gereksiz otomatik indirmeleri devre dışı bırakın.\n2. E-postayı koruyun\nHer değişim için ayrı bir e-posta adresi kullanın. Güçlü iki faktörlü kimlik doğrulamayı, tercihen bir donanım güvenlik anahtarını etkinleştirin. Hesabı SIM değiştirme saldırılarına maruz bırakabilecek telefon tabanlı kurtarma işleminden kaçının.\n3. Benzersiz şifreler kullanın\nHer hesap için güçlü, benzersiz bir şifre oluşturun ve bunu uygun bir şifre yöneticisinde saklayın. Yöneticiyi çalıştıran cihazı koruyun; Kötü amaçlı yazılım, korumalarını zayıflatabilir.\n4. İki faktörlü kimlik doğrulamayı etkinleştirin\nExchange ve e-posta hesaplarında 2FA kullanın. Kimlik doğrulama kodları koruma sağlar ancak kötü amaçlı yazılım ve kimlik avı siteleri bunları yakalayabilir veya aktarabilir.\n5. Donanım güvenlik anahtarlarını kullanın\nDesteklendiğinde, donanım güvenlik anahtarlarıyla takas, e-posta ve parola yöneticisi hesaplarını güvenli hale getirin. Web sitesine özel kimlik doğrulamaları, kimlik avına karşı direnmeye yardımcı olur.\n6. SMS kimlik doğrulamasından kaçının\nKimlik doğrulama uygulamalarını veya donanım güvenlik anahtarlarını tercih edin. Bir telefon numarasının kontrolünü ele geçiren saldırganlar SMS kodlarını ele geçirebilir.\n7. Para çekme adreslerini beyaz listeye alın\nYetkisiz transferleri daha da zorlaştırmak için para çekme işlemlerini onaylanmış adreslerle sınırlandırın.\n8. API kimlik bilgilerini koruyun\nAPI anahtarlarını gizli tutun ve yetkisiz kullanımı önleyin. Asimetrik kimlik doğrulama için özel anahtarı güvenli bir şekilde saklayın ve borsaya yalnızca genel anahtarı sağlayın.\nKayıp API kimlik bilgileri genellikle değiştirilebilir; cüzdan anahtarları ayrı bir yedekleme stratejisi gerektirir.\n9. Kimlik doğrulamasını tamamlayın\nKimlik doğrulama, sahiplik kontrollerini, şüpheli etkinlik araştırmalarını ve miras prosedürlerini destekleyebilir. Borsanın dokümantasyon gereksinimlerini anlayın.\n10. Cihazları fiziksel olarak koruyun\nGüçlü ekran kilitleri kullanın ve telefonları, bilgisayarları, donanım cüzdanlarını ve yedeklemeleri koruyun. Bir telefon aynı anda e-postaya, hesap alışverişine ve kimlik doğrulama kodlarına erişim sağlayabilir.\n11. Kimlik avından kaçının\nGüvenilir yer imleri veya dikkatlice yazılan adresler aracılığıyla borsaları açın. İstenmeyen e-posta, metin veya sosyal medya bağlantılarını izledikten sonra kimlik bilgilerini girmeyin.\nDeğişim personeli veya kamuya mal olmuş kişiler olduğu iddia edilen kişilerle beklenmedik temaslara karşı dikkatli olun.\nBir velayet karışımı seçin\nTeknik yeterliliğe, güvenlik uygulamalarına ve erişim ihtiyaçlarına göre borsalar ve kişisel cüzdanlar arasında fon tahsis edin.\nKendi kendine saklama, bağımsız anahtar koruması ve kurtarma gerektirir. Takas saklama, sağlayıcıya güven ve güçlü hesap koruması gerektirir. Ayrı bir cüzdan, değişim bakımı sırasında erişim sağlayabilir.",
+      "actual_entity": "X / Twitter (@cz_binance)"
     },
     {
       "title": "Elon Musk (@elonmusk): The ridiculous arguments by Ambani’s army of Internet shills make no sense\n\nOn the one hand, they say Starlink couldn’t possibly compete with the amazing low prices offered by Ambani’s de facto monopoly in India and then, in the same breath, they essentially claim that Starlink would be too strong of a competitor! This is absurd hypocrisy and hyperbole. \n\nThe reality is that competition would greatly benefit the average citizen in India by giving them more choices, as it always does. Ambani’s profits will be lower, but he is not going out of business. And, obviously, if Starlink is too expensive in India, no one will buy it, so SpaceX will need to make pricing affordable.",
@@ -1927,12 +2063,14 @@
       "speaker": "X / Twitter (@elonmusk)",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasasında sermaye girişi, ürün lansmanı veya olumlu gelişmeye işaret eden flaş istihbarattır.",
+      "ai_summary": "Kripto piyasasında sermaye girişi veya olumlu boğa ivmesine işaret eden flaş gelişme: 'Elon Musk (@elonmusk): Ambani'nin internetteki saçmalıklardan oluşan ordusunun saçma argümanları hiçbir anlam ifade etmiyor\n\nBir yandan Starlink'in, Ambani'nin Hindistan'daki fiili tekelinin sunduğu inanılmaz düşük fiyatlarla rekabet edemeyeceğini söylüyorlar ve ardından aynı nefeste Starlink'in çok güçlü bir rakip olacağını iddia ediyorlar! Bu saçma bir ikiyüzlülük ve abartıdır. \n\nGerçek şu ki, rekabet Hindistan'daki ortalama vatandaşa her zaman olduğu gibi daha fazla seçenek sunarak büyük fayda sağlayacaktır. Ambani'nin karı daha düşük olacak ama iflas etmeyecek. Ve açıkçası, eğer Starlink Hindistan'da çok pahalıysa kimse onu satın almayacak, dolayısıyla SpaceX'in fiyatlandırmayı uygun hale getirmesi gerekecek.'.",
       "ai_interpretation": "Haber başlığı kurumsal benimsenme, ETF net girişleri veya ekosistem büyümesine dair pozitif sinyaller içermektedir. Kısa vadede alıcı iştahını tetikleyebilir.",
       "market_impact": "POZİTİF / BOĞA İVMESİ",
       "impact_direction": "BULLISH",
       "score_explanation": "Pozitif piyasa kelimeleri saptanmış ve -5.0 boğa yönlü etki puanı verilmiştir.",
-      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır."
+      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır.",
+      "title_tr": "Elon Musk (@elonmusk): Ambani'nin internetteki saçmalıklardan oluşan ordusunun saçma argümanları hiçbir anlam ifade etmiyor\n\nBir yandan Starlink'in, Ambani'nin Hindistan'daki fiili tekelinin sunduğu inanılmaz düşük fiyatlarla rekabet edemeyeceğini söylüyorlar ve ardından aynı nefeste Starlink'in çok güçlü bir rakip olacağını iddia ediyorlar! Bu saçma bir ikiyüzlülük ve abartıdır. \n\nGerçek şu ki, rekabet Hindistan'daki ortalama vatandaşa her zaman olduğu gibi daha fazla seçenek sunarak büyük fayda sağlayacaktır. Ambani'nin karı daha düşük olacak ama iflas etmeyecek. Ve açıkçası, eğer Starlink Hindistan'da çok pahalıysa kimse onu satın almayacak, dolayısıyla SpaceX'in fiyatlandırmayı uygun hale getirmesi gerekecek.",
+      "actual_entity": "X / Twitter (@elonmusk)"
     },
     {
       "title": "CZ 🔶 BNB (@cz_binance): \"SAFU\" came from this video: https://www.youtube.com/watch?v=DelF6zEHXpE",
@@ -1955,12 +2093,14 @@
       "speaker": "X / Twitter (@cz_binance)",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasası akışından kaydedilen güncel haber metnidir.",
+      "ai_summary": "Kripto piyasası akışından kaydedilen güncel istihbarat: 'CZ 🔶 BNB (@cz_binance): \"SAFU\" bu videodan geldi: https://www.youtube.com/watch?v=DelF6zEHXpE'.",
       "ai_interpretation": "Piyasa katılımcılarının duyarlılığını ölçen genel haber akışıdır. Makro rejim ve CVD yönüyle birlikte değerlendirilir.",
       "market_impact": "GENEL PİYASA AKIŞI",
       "impact_direction": "NEUTRAL",
       "score_explanation": "NLP analizi sonucunda +0.0 etki skoru üretilmiştir.",
-      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır."
+      "strategy_action": "Tekil habere göre değil, çift teyitli çoklu sinyallere göre işlem yapılır.",
+      "title_tr": "CZ 🔶 BNB (@cz_binance): \"SAFU\" bu videodan geldi: https://www.youtube.com/watch?v=DelF6zEHXpE",
+      "actual_entity": "X / Twitter (@cz_binance)"
     },
     {
       "title": "Donald J. Trump (@realDonaldTrump): The Dumocrats, along with their partners in crime, the Fake News Media, are trying to create the false narrative that, Donald Trump is so “unpopular,” the Republicans are going to lose. Actually, it's just the opposite. I'm so “popular,” that the Republicans are going to WIN, and that's being proven by the Record Setting Rallies we're doing (including the one in Tennessee where I'll be in a short while — See you soon!). President DONALD J. TRUMP",
@@ -1983,12 +2123,14 @@
       "speaker": "Amerika Birleşik Devletleri Başkanı (Donald Trump)",
       "is_primary_official": false,
       "is_verified": true,
-      "ai_summary": "2026 yılı güncel makam sahibi Amerika Birleşik Devletleri Başkanı Donald Trump tarafından yapılan veya doğrudan kendisini ilgilendiren üst düzey politika açıklamasıdır.",
+      "ai_summary": "2026 yılı güncel makam sahibi Amerika Birleşik Devletleri Başkanı Donald Trump tarafından yapılan veya doğrudan kendisini ilgilendiren üst düzey politika açıklamasıdır: 'Donald J. Trump (@realDonaldTrump): Dumokratlar, suç ortakları Sahte Haber Medyası ile birlikte, Donald Trump'ın o kadar \"popüler olmadığı\" ve Cumhuriyetçilerin kaybedeceği yönünde yanlış bir anlatı yaratmaya çalışıyor. Aslında durum tam tersi. Ben o kadar \"popülerim\" ki, Cumhuriyetçiler KAZANACAK ve bu, yaptığımız Rekor Kıran Mitingler tarafından kanıtlanıyor (kısa bir süre içinde olacağım Tennessee'deki miting de dahil - Yakında görüşürüz!). Başkan DONALD J. TRUMP'.",
       "ai_interpretation": "Donald Trump piyasa nezdinde en yüksek yönlendirici ağırlığa sahiptir. Açıklama para politikası, sermaye piyasası regülasyonları ve kurumsal fon akışları üzerinde doğrudan fiyatlama oluşturma potansiyeli taşır.",
       "market_impact": "YÜKSEK BOĞA ETKİSİ (DONALD TRUMP)",
       "impact_direction": "BULLISH",
       "score_explanation": "Resmi makam sahibi tespitiyle +68.2 puan hesaplanmış ve makam katsayısı ile ağırlıklandırılmıştır.",
-      "strategy_action": "Yetkili açıklamalarında CVD absorpsiyonu ve tahta derinliği doğrulanmadan ters yönde aceleci işleme girilmez."
+      "strategy_action": "Yetkili açıklamalarında CVD absorpsiyonu ve tahta derinliği doğrulanmadan ters yönde aceleci işleme girilmez.",
+      "title_tr": "Donald J. Trump (@realDonaldTrump): Dumokratlar, suç ortakları Sahte Haber Medyası ile birlikte, Donald Trump'ın o kadar \"popüler olmadığı\" ve Cumhuriyetçilerin kaybedeceği yönünde yanlış bir anlatı yaratmaya çalışıyor. Aslında durum tam tersi. Ben o kadar \"popülerim\" ki, Cumhuriyetçiler KAZANACAK ve bu, yaptığımız Rekor Kıran Mitingler tarafından kanıtlanıyor (kısa bir süre içinde olacağım Tennessee'deki miting de dahil - Yakında görüşürüz!). Başkan DONALD J. TRUMP",
+      "actual_entity": "Amerika Birleşik Devletleri Başkanı (Donald Trump)"
     },
     {
       "title": "Solana Foundation (@SolanaFndn): Prediction markets let you bet on a single outcome. Umang Verma thinks the bigger opportunity is a way to back an entire belief.\n\n@umang_veerma, founder of Cleopetra, joined @afscott on Solana is Global to talk thesis trading, prediction markets, and how anyone with expertise and an audience can become a fund manager.\n\nFull episode 👇",
@@ -2011,12 +2153,14 @@
       "speaker": "X / Twitter (@SolanaFndn)",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından bir araştırma, makale veya ekosistem değerlendirmesidir.",
+      "ai_summary": "Kripto, yapay zeka veya teknoloji dünyasından araştırma ve değerlendirme: 'Solana Vakfı (@SolanaFndn): Tahmin piyasaları tek bir sonuç üzerine bahis oynamanıza olanak tanır. Umang Verma, daha büyük fırsatın tüm inancı desteklemenin bir yolu olduğunu düşünüyor.\n\nCleopetra'nın kurucusu @umang_veerma, tez ticareti, tahmin piyasaları ve uzmanlığı ve hedef kitlesi olan herkesin nasıl fon yöneticisi olabileceği hakkında konuşmak için Solana is Global'de @afscott'a katıldı.\n\nTam bölüm 👇'.",
       "ai_interpretation": "Sektörel vizyon, araştırma raporu veya topluluk tartışması niteliğindedir. Anlık bir fiyat patlaması veya panik dalgası yaratması beklenmez.",
       "market_impact": "BİLGİLENDİRME / ANALİZ HABERİ",
       "impact_direction": "NEUTRAL",
       "score_explanation": "Puan NÖTR (0.0): Fiyatı anlık etkileyecek ani bir tasfiye veya alım haberi olmadığından, bilgilendirme amaçlı içerik olarak doğru biçimde 0.0 puanla sınıflandırılmıştır.",
-      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır."
+      "strategy_action": "Al-sat stratejileri kısıtlanmadan normal algoritma parametreleriyle çalışır.",
+      "title_tr": "Solana Vakfı (@SolanaFndn): Tahmin piyasaları tek bir sonuç üzerine bahis oynamanıza olanak tanır. Umang Verma, daha büyük fırsatın tüm inancı desteklemenin bir yolu olduğunu düşünüyor.\n\nCleopetra'nın kurucusu @umang_veerma, tez ticareti, tahmin piyasaları ve uzmanlığı ve hedef kitlesi olan herkesin nasıl fon yöneticisi olabileceği hakkında konuşmak için Solana is Global'de @afscott'a katıldı.\n\nTam bölüm 👇",
+      "actual_entity": "X / Twitter (@SolanaFndn)"
     },
     {
       "title": "Aero (@aeroxyz): “What we are going to launch is our third DEX OS, the most ambitious one we have yet.\n\nAnd now we have a proven track record.\n\nFrankly, I think it’s going to be a lot of fun.\n\nWe haven’t seen a big disruption like this in DeFi in some time.”",
@@ -2039,12 +2183,14 @@
       "speaker": "X / Twitter (@aeroxyz)",
       "is_primary_official": false,
       "is_verified": false,
-      "ai_summary": "Kripto piyasasında sermaye girişi, ürün lansmanı veya olumlu gelişmeye işaret eden flaş istihbarattır.",
+      "ai_summary": "Kripto piyasasında sermaye girişi veya olumlu boğa ivmesine işaret eden flaş gelişme: 'Aero (@aeroxyz): “Şu ana kadar sahip olduğumuz en iddialı olan üçüncü DEX işletim sistemimizi piyasaya süreceğiz.\n\nVe artık kanıtlanmış bir geçmiş performansımız var.\n\nAçıkçası çok eğlenceli olacağını düşünüyorum.\n\nUzun zamandır DeFi'de bu kadar büyük bir aksama görmemiştik.\"'.",
       "ai_interpretation": "Haber başlığı kurumsal benimsenme, ETF net girişleri veya ekosistem büyümesine dair pozitif sinyaller içermektedir. Kısa vadede alıcı iştahını tetikleyebilir.",
       "market_impact": "POZİTİF / BOĞA İVMESİ",
       "impact_direction": "BULLISH",
       "score_explanation": "Pozitif piyasa kelimeleri saptanmış ve +0.0 boğa yönlü etki puanı verilmiştir.",
-      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır."
+      "strategy_action": "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır.",
+      "title_tr": "Aero (@aeroxyz): “Şu ana kadar sahip olduğumuz en iddialı olan üçüncü DEX işletim sistemimizi piyasaya süreceğiz.\n\nVe artık kanıtlanmış bir geçmiş performansımız var.\n\nAçıkçası çok eğlenceli olacağını düşünüyorum.\n\nUzun zamandır DeFi'de bu kadar büyük bir aksama görmemiştik.\"",
+      "actual_entity": "X / Twitter (@aeroxyz)"
     }
   ]
 }

@@ -4324,12 +4324,16 @@ HTML_PAGE = """
                 <button onclick="closeMacroNewsDetailModal()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); color:#94a3b8; width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:800; display:flex; align-items:center; justify-content:center;">✕</button>
             </div>
 
-            <!-- HABER TAM BAŞLIĞI -->
+            <!-- HABER TAM BAŞLIĞI (TÜRKÇE & ORİJİNAL) -->
             <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-left:4px solid var(--cyan); border-radius:12px; padding:16px; margin-bottom:18px;">
-                <div style="font-size:11px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">📰 Orijinal Başlık &amp; Bildirim Metni</div>
-                <div id="mnews-modal-title" style="font-size:14px; font-weight:700; color:#ffffff; line-height:1.5; font-family:'Plus Jakarta Sans',sans-serif;">
+                <div style="font-size:11px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                    <span>🇹🇷</span>
+                    <span>TÜRKÇE FLAŞ HABER MANŞETİ</span>
+                </div>
+                <div id="mnews-modal-title" style="font-size:14.5px; font-weight:700; color:#ffffff; line-height:1.5; font-family:'Plus Jakarta Sans',sans-serif;">
                     Haber başlığı yükleniyor...
                 </div>
+                <div id="mnews-modal-title-orig" style="font-size:11px; color:#94a3b8; font-style:italic; margin-top:8px; border-top:1px dashed rgba(255,255,255,0.08); padding-top:6px; display:none;"></div>
             </div>
 
             <!-- ADLİ ANALİZ KARTLARI (3'LÜ GRID) -->
@@ -9237,9 +9241,14 @@ async function loadAdminMetrics() {
                                                         <span style="background:rgba(0,242,254,0.1); color:var(--cyan); border:1px solid rgba(0,242,254,0.25); padding:1px 6px; border-radius:4px; font-size:9px; font-weight:800;">Detay ↗</span>
                                                     </div>
                                                 </div>
-                                                <div style="font-size:12px; color:#e2e8f0; font-weight:600; line-height:1.4;">
-                                                    ${item.title}
+                                                <div style="font-size:12.5px; color:#ffffff; font-weight:700; line-height:1.45;">
+                                                    ${item.title_tr || item.title}
                                                 </div>
+                                                ${item.title_tr && item.title_tr !== item.title ? `
+                                                    <div style="font-size:10.5px; color:#64748b; font-weight:400; margin-top:3px; line-height:1.3;">
+                                                        ${item.title}
+                                                    </div>
+                                                ` : ''}
                                             </div>
                                         `;
                                     }).join('');
@@ -9543,9 +9552,20 @@ async function loadAdminMetrics() {
                 tsEl.innerText = `Yayın Zamanı: ${tsStr} • Durum: Aktif Kayıt`;
             }
 
-            // 2. Tam Manşet
+            // 2. Tam Manşet (Türkçe & Orijinal)
             const titleEl = document.getElementById('mnews-modal-title');
-            if (titleEl) titleEl.innerText = item.title || 'Başlık bilgisi yok';
+            const origTitleEl = document.getElementById('mnews-modal-title-orig');
+            if (titleEl) {
+                titleEl.innerText = item.title_tr || item.title || 'Başlık bilgisi yok';
+            }
+            if (origTitleEl) {
+                if (item.title_tr && item.title_tr !== item.title) {
+                    origTitleEl.innerText = `Orijinal (İngilizce): ${item.title}`;
+                    origTitleEl.style.display = 'block';
+                } else {
+                    origTitleEl.style.display = 'none';
+                }
+            }
 
             // 3. NLP Sentiment Skoru
             const sentEl = document.getElementById('mnews-modal-sentiment');
@@ -9700,7 +9720,8 @@ async function loadAdminMetrics() {
         function copyMacroNewsHeadline() {
             const item = window.activeMacroNewsModalItem;
             if (!item || !item.title) return;
-            const textToCopy = `${item.title} [Kaynak: ${item.source || 'Valkyrie News'}]`;
+            const headline = item.title_tr || item.title;
+            const textToCopy = `${headline} [Kaynak: ${item.source || 'Valkyrie News'}]`;
             navigator.clipboard.writeText(textToCopy).then(() => {
                 const btn = document.getElementById('mnews-btn-copy');
                 if (btn) {

@@ -63,6 +63,43 @@ BEARISH_KEYWORDS = [
     "INVESTIGATION", "SANCTION", "DELAYED", "NET OUTFLOW", "DOWNGRADED", "SECURITY BREACH", "BEARISH", "AYI", "ŞAHİN", "HAWKISH"
 ]
 
+TRANSLATION_CACHE: Dict[str, str] = {}
+
+def translate_to_turkish(text: str) -> str:
+    """
+    İngilizce haber başlıklarını ve metinlerini akıcı Türkçeye çevirir.
+    Google Translate gtx servisi kullanılır, önbellekleme (cache) destekler.
+    """
+    if not text or not str(text).strip():
+        return ""
+    clean_text = str(text).strip()
+    if clean_text in TRANSLATION_CACHE:
+        return TRANSLATION_CACHE[clean_text]
+
+    prefix = ""
+    m = re.match(r"^(\[.*?\])\s*(.*)$", clean_text)
+    if m:
+        prefix = m.group(1) + " "
+        clean_text = m.group(2)
+
+    try:
+        import urllib.request
+        import urllib.parse
+        url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=tr&dt=t&q=" + urllib.parse.quote(clean_text)
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+        with urllib.request.urlopen(req, timeout=3.0) as response:
+            res = json.loads(response.read().decode("utf-8"))
+            translated = "".join([part[0] for part in res[0] if part[0]])
+            if translated and len(translated.strip()) > 1:
+                res_tr = (prefix + translated.strip()).strip()
+                TRANSLATION_CACHE[str(text).strip()] = res_tr
+                return res_tr
+    except Exception:
+        pass
+
+    TRANSLATION_CACHE[str(text).strip()] = str(text).strip()
+    return str(text).strip()
+
 class MacroNewsSentinel:
     """Çok Kaynaklı Flaş Haber ve Birincil İstihbarat Bekçisi."""
 
@@ -84,6 +121,10 @@ class MacroNewsSentinel:
                     for item in self.news_items:
                         sig = self._create_signature(item.get("title", ""), item.get("source", ""))
                         self.seen_signatures.add(sig)
+                        # Başlık Türkçe çevirisi yoksa ekle
+                        if not item.get("title_tr"):
+                            item["title_tr"] = translate_to_turkish(item.get("title", ""))
+                            has_upgrades = True
                         # Yapay zeka yorumu eksikse otomatik tamamla
                         if not item.get("ai_summary") or not item.get("ai_interpretation") or item.get("speaker") == "Resmi Makam / Fed":
                             ai_data = ai_interpreter.analyze_news_ai(item)
@@ -172,9 +213,13 @@ class MacroNewsSentinel:
             clean_search = re.sub(r"\[.*?\]", "", title).strip()
             url = f"https://x.com/search?q={urllib.parse.quote(clean_search[:65])}"
 
+        # 🇹🇷 Türkçe Başlık Çevirisi (Anlık & Önbellekli)
+        title_tr = translate_to_turkish(title)
+
         # 🧠 Yapay Zeka Adli İstihbarat & Kuant Analiz Motoru
         temp_item = {
             "title": title.strip(),
+            "title_tr": title_tr,
             "source": source,
             "sentiment_score": round(final_score, 1),
             "speaker_info": speaker_info,
@@ -184,6 +229,7 @@ class MacroNewsSentinel:
 
         return {
             "title": title.strip(),
+            "title_tr": title_tr,
             "source": source,
             "url": url,
             "timestamp": raw_ts,
