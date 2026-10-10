@@ -689,36 +689,83 @@ class ForensicChartEngineV2:
         visible_levels = [l for l in level_candidates if padded_min <= l['price'] <= padded_max]
         visible_levels.sort(key=lambda x: x['price'])
 
-        # Sağ Marj Rozet Çakışma Önleyici (Anti-Collision Pill Placement)
-        min_label_gap = y_span * 0.028
-        adjusted_y_positions = []
-        for l_item in visible_levels:
-            target_y = l_item['price']
-            if adjusted_y_positions and (target_y - adjusted_y_positions[-1]) < min_label_gap:
-                target_y = adjusted_y_positions[-1] + min_label_gap
-            adjusted_y_positions.append(target_y)
+        # ---------------------------------------------------------------------
+        # FERAH SAĞ KORİDOR & MİKRO-BİRLEŞTİRME & YAYLI ÇAKIŞMA ÖNLEYİCİ
+        # ---------------------------------------------------------------------
+        # 1. Mumların sağında seviye etiketleri ve göstergeler için ferah sağ koridor (%35 genişletilmiş alan)
+        right_margin_bars = max(28, int(n_bars * 0.35))
+        chart_x_max = n_bars + right_margin_bars
 
-        for idx_l, item in enumerate(visible_levels):
+        # 2. Birbirine aşırı yakın (< %0.18) göstergeleri birleştir (İşlem STOP/TP seviyeleri ASLA birleştirilmez!)
+        merged_levels = []
+        for item in visible_levels:
+            if not merged_levels:
+                merged_levels.append(dict(item))
+            else:
+                prev = merged_levels[-1]
+                pct_diff = abs(item['price'] - prev['price']) / max(prev['price'], 1e-6)
+                if (pct_diff < 0.0018 
+                    and not prev.get('is_trade') 
+                    and not item.get('is_trade') 
+                    and prev['label'].count('│') == 0):
+                    prev['label'] = f"{prev['label']} │ {item['label']}"
+                else:
+                    merged_levels.append(dict(item))
+
+        # 3. İki Yönlü Yaylı İtme (Spring Relaxation) Çakışma Önleyici Motoru
+        n_lvl = len(merged_levels)
+        target_y_positions = [item['price'] for item in merged_levels]
+        min_label_gap = max(y_span * 0.046, 1e-6)
+
+        for _ in range(80):
+            moved = False
+            for i in range(n_lvl - 1):
+                gap = target_y_positions[i+1] - target_y_positions[i]
+                if gap < min_label_gap:
+                    push = (min_label_gap - gap) / 2.0
+                    target_y_positions[i] -= push
+                    target_y_positions[i+1] += push
+                    moved = True
+            for i in range(n_lvl):
+                if target_y_positions[i] < padded_min + y_span * 0.02:
+                    target_y_positions[i] = padded_min + y_span * 0.02
+                elif target_y_positions[i] > padded_max - y_span * 0.02:
+                    target_y_positions[i] = padded_max - y_span * 0.02
+            if not moved:
+                break
+
+        # 4. Çizgileri ve Sağ Koridor Etiketlerini Çiz (Mumların Üzerine Asla Binmez)
+        tag_start_x = n_bars + 2.5
+
+        for idx_l, item in enumerate(merged_levels):
             p_val = item['price']
-            lbl_y = adjusted_y_positions[idx_l]
+            lbl_y = target_y_positions[idx_l]
             c = item['color']
             st = item['style']
             lbl = item['label']
-            is_tr = item['is_trade']
+            is_tr = item.get('is_trade', False)
 
-            lw = 1.8 if is_tr else 1.0
-            al = 0.95 if is_tr else 0.45
-            ax_chart.plot([0, n_bars - 0.2], [p_val, p_val], color=c, linestyle=st, linewidth=lw, alpha=al, zorder=4)
+            lw = 1.6 if is_tr else 0.95
+            al = 0.92 if is_tr else 0.42
 
-            # Rozeti çizginin sağ ucuna grafiğin İÇİNE yerleştir (TradingView Standardı - Fiyat Skalasıyla Asla Çakışmaz)
+            # A. Ana yatay seviye çizgisi (Mumlar boyunca uzanır, mum bitiminde sonlanır)
+            ax_chart.plot([0, n_bars + 1.0], [p_val, p_val], color=c, linestyle=st, linewidth=lw, alpha=al, zorder=4)
+
+            # B. Seviye çizgisinden sağdaki etikete kesikli kılavuz rehber hattı
+            ax_chart.plot([n_bars + 1.0, tag_start_x - 0.4], [p_val, lbl_y], color=c, linestyle=':', linewidth=0.85, alpha=0.55, zorder=5)
+
+            # C. Seviye Etiket Rozeti (Mumların tamamen sağında, sağa doğru genişler: ha='left')
             font_sz = 7.4 if is_tr else 6.8
             font_wt = 'bold'
-            bbox_kw = dict(boxstyle='round,pad=0.22', facecolor='#090d16', edgecolor=c, linewidth=1.1, alpha=0.96)
-            ax_chart.text(n_bars - 0.8, lbl_y, f"{lbl}: {fmt_price(p_val)}",
-                          color=c, fontsize=font_sz, fontweight=font_wt, va='center', ha='right', bbox=bbox_kw, zorder=6)
+            bbox_kw = dict(boxstyle='round,pad=0.25', facecolor='#090d16', edgecolor=c, linewidth=1.1, alpha=0.96)
+            ax_chart.text(
+                tag_start_x, lbl_y, f"{lbl}: {fmt_price(p_val)}",
+                color=c, fontsize=font_sz, fontweight=font_wt, va='center', ha='left',
+                bbox=bbox_kw, zorder=6
+            )
 
         ax_chart.set_ylim(padded_min, padded_max)
-        ax_chart.set_xlim(-0.8, n_bars + 3.0)
+        ax_chart.set_xlim(-0.8, chart_x_max)
         ax_chart.tick_params(axis='x', labelbottom=False, bottom=False)
 
         # =====================================================================
@@ -743,13 +790,17 @@ class ForensicChartEngineV2:
         ax_chart.tick_params(axis='y', colors='#94a3b8', labelsize=8.0, labelcolor='#e2e8f0', length=5, width=1.1, pad=5)
         ax_chart.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(fmt_axis_price))
 
-        # Sağ Skala Üzerinde Anlık / Kapanış Fiyat Rozeti (TradingView Stili)
+        # Sağ Skala Üzerinde Anlık / Kapanış Fiyat Rozeti (TradingView Stili - Sağ Skalada Hizalı)
         cur_active_price = entry_price if is_manual else exit_price
         cur_p_color = self.COLOR_CYAN if is_manual else theme_pnl_col
         if cur_active_price > 0:
+            # Fiyat seviyesinde sağ skalaya kadar kesikli lazer hattı
+            ax_chart.plot([n_bars + 1.0, chart_x_max - 0.5], [cur_active_price, cur_active_price],
+                          color=cur_p_color, linestyle='--', linewidth=1.1, alpha=0.75, zorder=7)
+            # Sağ skala üzerinde fütüristik fiyat kutusu
             ax_chart.text(
-                n_bars + 0.3, cur_active_price, f" ▶ {fmt_price(cur_active_price)} ",
-                color='#ffffff', fontsize=8.6, fontweight='bold', va='center', ha='left',
+                chart_x_max - 0.2, cur_active_price, f" ▶ {fmt_price(cur_active_price)} ",
+                color='#ffffff', fontsize=8.6, fontweight='bold', va='center', ha='right',
                 bbox=dict(boxstyle='square,pad=0.28', facecolor=cur_p_color, edgecolor='#ffffff', linewidth=0.8),
                 zorder=20
             )
