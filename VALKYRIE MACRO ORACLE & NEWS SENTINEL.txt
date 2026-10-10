@@ -246,8 +246,51 @@ Kullanıcının 10. sekmeye geçmek zorunda kalmadan, ana işlem terminalinde (p
 │ 🌐 MAKRO NABIZ: DXY 101.40 🟢 | US10Y %3.88 🟢 | USDT.D %5.10 (Boğa) 🟢 | Risk İştahı: AÇIK 🚀 │
 └─────────────────────────────────────────────────────────────────────────────────────────────────┘
 
-8.2. Özel 10. Sekme: "Makro İstihbarat & Sentinel Desk" (Detaylı Derin Analiz):
-Derinlemesine inceleme, ekonomik takvim arşivi, FOMC bildiri karşılaştırması ve canlı Şahin/Güvercin ibresi 10. sekmede detaylı sunulur.
+8.2. Özel 10. Sekme: "10. Makro İstihbarat & Sentinel Desk" (Detaylı Derin Analiz Konsolu):
+Kullanıcının küresel piyasaları, takvim olaylarını ve doğrulanmış flaş haberleri tek bakışta gözü yormayan kurumsal kuant arayüzüyle izleyebilmesi için sol navigasyon menüsüne "10. Makro İstihbarat" (Rozet: Oracle 7/24) sekmesi yerleştirilmiştir:
+
+A. Üst Telemetri ve Senkronizasyon Başlığı:
+   • 🌐 VALKYRIE MACRO ORACLE & GLOBAL RISK SENTINEL DESK başlığı ve "ORACLE 7/24" rozeti.
+   • Canlı Akış Bildirimi: "ForexFactory • TreeNews • SEC EDGAR • Fed RSS" durum göstergesi.
+   • "🔄 Anında Senkronize Et" Butonu: Tıklandığında /api/macro_sync REST uç noktasını asenkron tetikleyerek takvim, çapraz radar ve haber soketlerini JIT (anlık) tazeler.
+
+B. 4 Hero Finansal Makro KPI Kartı:
+   1. 🕒 SONRAKİ DEV MAKRO OLAY KARTI:
+      - Ülke bayrağı (🇺🇸 USD), Olay adı (Örn: ABD Çekirdek TÜFE / CPI), Önem derecesi rozeti (KRİTİK / YÜKSEK).
+      - Büyük Dijital Geri Sayım Sayacı (⏱️ 93:41:05) - Flash-shock ve Imminent anlarında otomatik renk değişimi.
+      - Beklenti & Önceki değerleri, T-15m True Net BE kalkanının hazır olduğunu bildiren telemetri çipi.
+   2. 🦅 FED & POLİTİKA ŞAHİN/GÜVERCİN İBRESİ (HAWK-DOVE METER):
+      - Gerçek zamanlı NLP duygu puanı (Örn: +11.8 Güvercin / Boğa).
+      - Renkli Yatay İbre Çizgisi: Sol (Kırmızı / Şahin -100) <---> Orta (Gri / Nötr 0) <---> Sağ (Yeşil / Güvercin +100) üzerinde parlayan dinamik ibre.
+      - Görevdeki Federal Reserve Başkanı (Jerome Powell) ve kurumsal piyasa etki ağırlığı (1.0x).
+   3. 🌍 KÜRESEL ÇAPRAZ PİYASA RADARI (CROSS-ASSET RADAR):
+      - DXY Dolar Endeksi, US10Y 10 Yıllık Tahvil Getirisi, USDT Dominansı (%USDT.D) ve BTC Dominansı (%BTC.D) canlı değerleri.
+      - Rejim etiketi (Örn: NEUTRAL / Dengeli) ve Risk İştahı durumu (AÇIK 🚀).
+   4. 🛡️ BYZANTINE QUORUM & STRATEJİ ZIRHI:
+      - Çift Teyit Mutabakatı: Tek kaynaklı tuzak haber girişlerinin engellendiğini kanıtlar.
+      - Tahta CVD Emilimi: 30s sahte pompalama kalkanının aktif olduğunu gösterir.
+      - Top-20 Likidite Filtresi ve Setup Susturma Matrisinin (Muting) çalışma durumunu teyit eder.
+
+C. 2 Büyük Detay ve Analiz Masası (Sol & Sağ Panel):
+   • Sol Panel:
+     1. 📅 YAKLAŞAN KRİTİK EKONOMİK TAKVİM TABLOSU:
+        - ForexFactory ve Yıllık Master Takvimden süzülen 10+ kritik olay listesi.
+        - Sütunlar: Olay & Ülke, Etki (Kırmızı Kritik / Sarı Orta), Beklenti, Önceki, Anlık Kalan Süre.
+     2. 🏛️ DİNAMİK YÖNETİCİ & MAKAMSAL SİCİL KÜTÜĞÜ:
+        - Fed Başkanı, SEC Başkanı, ABD Başkanı, Hazine Bakanı, FOMC Üyeleri güncel isimleri.
+        - Makam etki ağırlıkları (0.1x - 1.0x) ve sistemin hafızasındaki "Eski/Geçersiz İsimler Filtresi".
+   • Sağ Panel:
+     1. ⚡ CANLI FLAŞ HABER İSTİHBARATI & BYZANTINE TEYİT RADARI:
+        - TreeNews, SEC EDGAR 8-K ve Fed RSS'ten gelen son 15 doğrulanmış haber.
+        - Rozetler: [TREENEWS], [SEC_EDGAR], [FED_OFFICIAL], [RESMİ], [ÇİFT TEYİT ✅] ve sayısal sentiment skoru.
+     2. 📊 KÜRESEL MAKRO KORELASYON & ETKİ ANALİZİ TABLOSU:
+        - DXY, US10Y, Nasdaq Vadeli, Ons Altın, USDT.D ve ETH/BTC rasyoları.
+        - Fiyat, 24 saatlik değişim oranı ve kripto sektörüne doğrudan etki yorumu (Ters Korelasyon, Risk-On, Güvenli Liman vb.).
+
+8.4. WEB API & TELEMETRİ ALTYAPISI (/api/macro_oracle, /api/macro_sync, /api/data):
+• GET /api/macro_oracle: Takvim, çapraz radar, flaş haberler, Bizans denetim kayıtları ve yönetici sicil kütüğünü gzip sıkıştırmalı JSON olarak istemciye iletir.
+• POST /api/macro_sync: Asenkron arka plan görevleri ile ForexFactory, Yahoo Finance, TreeNews ve RSS akışlarını anında senkronize eder.
+• GET /api/data Entegrasyonu: Ana Dashboard polling döngüsüne "macro_hud" verisi eklenerek Kokpit HUD Şeridinin sıfır gecikmeyle (zero-lag) canlı akması garanti edilmiştir.
 
 8.3. SİSTEM SAĞLIK MASASI (HEALTH TAB & AEGIS SENTINEL) İLE 7/24 KESİNTİSİZ NÖBET VE OTONOM MÜDAHALE (AUTO-HEALING):
 Makro İstihbarat motoru havada asılı veya kontrolsüz çalışamaz; Web Dashboard'un "8. Sistem Sağlığı (Aegis Sentinel Kokpiti)" sekmesinde 7/24 saniyelik telemetriyle izlenir ve bir anomali durumunda anında otonom müdahale (Auto-Healing) gerçekleşir:
