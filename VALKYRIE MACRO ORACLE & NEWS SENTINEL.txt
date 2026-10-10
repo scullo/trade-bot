@@ -312,6 +312,29 @@ Otonom Müdahale ve Hata Kurtarma Protokolleri (Self-Healing Protocols):
 4. Byzantine Quorum RAM Optimizasyonu: 180 saniyeden eski haber konu kümeleri bellekten tahliye edilerek Render 512MB RAM tavanı korunur.
 5. Kasa Emniyet Kilidi: Kritik bir küresel kriz veya makro veri hatasında bot yeni işlem açılışını dondurarak (Safe Mode) sermayeyi garantiye alır.
 
+8.5. OTONOM HABER & KAYNAK EVRİMİ (DARWINIAN NEWS & SOURCE EVOLUTION ENGINE):
+Nasıl ki işlem gören 100 coinimizin DNA parametreleri al-sat sonuçlarına göre kendini 48 saatte bir otonom kalibre ediyorsa; haber ve istihbarat motoru da sabit kalmayıp geriye dönük piyasa tepkileri ve PnL verileriyle kendini eğiten Darwinist bir evrim mekanizmasına kavuşturulur:
+
+1. Geriye Dönük Performans ve Kaynak ELO Skorlama (Post-Facto Attribution):
+   • Her haber yayını sonrasında t+30s, t+5m ve t+15m piyasa fiyat tepkisi, tahta akış doğrulaması ve botun açtığı işlemlerin net kâr/zararı (PnL) ölçülür.
+   • Doğru yön tahmini ve kurumsal emilim sağlayan kaynakların ELO güven puanı artırılır; Byzantine Quorum masasında oy ağırlığı yükseltilir.
+   • Sahte fitil (wick), gecikme (latency) veya yalan haber üreten kaynaklara ağır ceza puanı kesilir. ELO puanı 100 üzerinden 45'in altına inen kaynaklar OTONOM OLARAK SUSTURULUR (Auto-Muting / Quarantine).
+
+2. Alıntı Grafiği (Citation Graph) ile Yeni Kaynak ve Kişi Keşfi:
+   • TreeNews, Bloomberg, SEC ve yetkili bültenlerin geçtiği metinler NLP ile taranarak alıntı yapılan Twitter hesapları (@kullanıcı), yeni haber siteleri ve analistler cımbızla çekilir.
+   • Son 30 günde 3'ten fazla kritik haberde ilk kaynak (primary source) olarak atıf alan hesaplar "Aday İstihbarat Havuzu"na kaydedilir.
+
+3. Gölge Gözlem Havuzu (Shadow Intelligence Sandbox):
+   • Yeni keşfedilen hiçbir kaynak doğrudan canlı al-sat kararlarına dahil edilmez.
+   • 14 gün boyunca Gölge Modda (Shadow Sandbox) izlenir. Fiyat korelasyonu ve doğruluk oranı %80'i aşarsa otonom olarak asil teyit ağına terfi ettirilir.
+
+4. Dinamik Makam ve Regülasyon Sicil Tarayıcısı (Automated Roll-Call):
+   • FederalReserve.gov, SEC.gov ve Treasury.gov resmi liderlik sayfaları periyodik taranır.
+   • Fed veya SEC başkanı değiştiğinde eski isim otomatik olarak past_holders (0.1x ağırlık) listesine aktarılır; yeni lider current_holder (1.0x tam yetki) olarak tescil edilir.
+
+5. Saniyelik Hız ve Gecikme Hakemliği (Latency Arbitrage Benchmark):
+   • Aynı flaş haberi ilk milisaniyelerde geçen kaynaklara hız primi verilir; sürekli geciken kaynakların oy katsayısı düşürülür.
+
 ═══════════════════════════════════════════════════════════════════════════════
 9. AŞAMALI UYGULAMA VE DEVREYE ALMA YOL HARİTASI
 ═══════════════════════════════════════════════════════════════════════════════
@@ -347,9 +370,14 @@ Otonom Müdahale ve Hata Kurtarma Protokolleri (Self-Healing Protocols):
   - Canlı REST API uç noktaları (/api/macro_oracle ve /api/macro_sync) ile telemetri bağlanması.
   - İstemci tarafı canlı geri sayım, Şahin/Güvercin ibresi ve Bizans teyit radarı gösterimi.
 
+• Faz 6: Otonom Kaynak Evrimi, Darwinist ELO İtibar Motoru & Yeni Kaynak Keşfi (SIRADAKİ HEDEF 🚀)
+  - Faz 6A: Geriye Dönük Performans (Attribution) & Kaynak ELO Skorlama (Kötüleri otonom susturma).
+  - Faz 6B: Alıntı Grafiği (Citation Graph) ile Yeni Kaynak/Kişi Keşfi & 14 Günlük Gölge Havuz (Sandbox).
+  - Faz 6C: Resmi Liderlik Siteleri Otonom Tarayıcısı & 10. Sekme "Kaynak İtibar Masası" UI Entegrasyonu.
+
 ═══════════════════════════════════════════════════════════════════════════════
 10. ÇIKARILAN SONUÇ
 ═══════════════════════════════════════════════════════════════════════════════
 
 Bu genişletilmiş mimari, Valkyrie'yi basit bir grafik botu olmaktan çıkarıp; küresel sermaye akışlarını, siyasi regülasyonları, anlık haberleri ve tahta mikroyapısını tek bir kuant potada eriten **Otonom Bir Makro Kuant Fon Masası (Autonomous Macro Hedge Fund Desk)** haline getirecektir.
-Yalan haberlere ve manipülatif fitillere asla kanmayacak; yalnızca doğrulanmış kurumsal sermaye hareketleriyle birlikte yön bulacaktır.
+Yalan haberlere ve manipülatif fitillere asla kanmayacak; yalnızca doğrulanmış kurumsal sermaye hareketleriyle birlikte yön bulacaktır. Kendi kendini eğiten evrim motoruyla daima en hızlı ve en güvenilir kaynaklarla güncel kalacaktır.
