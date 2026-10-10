@@ -82,6 +82,16 @@ class PaperTrader:
         self.is_safety_stopped = False  # VDA-13: Kasa < $1,000 olduğunda otomatik güvenli durdurma modu
         self.trading_halted = False
         self._last_checked_funding_epoch = int(time.time()) // 28800  # 8H UTC fonlama yerleşim takipçisi
+
+        # Test Modu Tespiti: Testler sırasında canlı GitHub state dalına veya diske yazmayı engeller
+        import sys
+        self.is_test = (
+            "test" in sys.argv[0].lower() or
+            any("test" in str(arg).lower() for arg in sys.argv) or
+            bool(os.environ.get("UNITTEST_MODE")) or
+            bool(os.environ.get("PYTEST_CURRENT_TEST"))
+        )
+
         self.load_history()
 
     def reset_state(self):
@@ -101,8 +111,8 @@ class PaperTrader:
         """Önce GitHub'dan yükle, başarısız olursa lokal dosyadan yükle."""
         loaded = False
 
-        # 1. GitHub'dan yüklemeyi dene
-        if GITHUB_TOKEN:
+        # 1. GitHub'dan yüklemeyi dene (Test modundaysa canlı GitHub state'e dokunma)
+        if GITHUB_TOKEN and not getattr(self, "is_test", False):
             try:
                 import urllib.request
                 req = urllib.request.Request(f"{GITHUB_API_URL}?ref={GITHUB_BRANCH}", headers={
@@ -125,22 +135,21 @@ class PaperTrader:
                     gh_balance = float(self.initial_balance)
                 gh_positions = _sanitize_floats(data.get("open_positions", {}))
 
-                # Yerel dosya kontrolü: Yerel dosyada daha fazla işlem varsa (GitHub eski kalmışsa) yereli koru
+                # Yerel dosya kontrolü: Yerel dosyada daha fazla işlem varsa veya GitHub bakiyesi anormal/bozuksa yereli koru
                 local_has_more = False
                 if os.path.exists(HISTORY_FILE):
                     try:
                         with open(HISTORY_FILE, "r", encoding="utf-8-sig") as lf:
                             local_data = json.load(lf)
-                            if len(local_data.get("history", [])) > len(gh_history):
+                            loc_bal = float(local_data.get("balance", self.initial_balance))
+                            loc_hist = local_data.get("history", [])
+                            # Anomali Koruması: Yerel işlem sayısı daha çoksa veya GitHub test bakiyesiyle (<5000) ezilmişse yereli koru
+                            if len(loc_hist) > len(gh_history) or (gh_balance < 5000.0 and loc_bal >= 5000.0):
                                 local_has_more = True
-                                try:
-                                    lb = float(local_data.get("balance", self.initial_balance))
-                                    self.balance = float(self.initial_balance) if (math.isnan(lb) or math.isinf(lb)) else lb
-                                except Exception:
-                                    self.balance = float(self.initial_balance)
+                                self.balance = float(self.initial_balance) if (math.isnan(loc_bal) or math.isinf(loc_bal)) else loc_bal
                                 self.open_positions = _sanitize_floats(local_data.get("open_positions", {}))
-                                self.history = _sanitize_floats(local_data.get("history", []))
-                                print(f">> [PERSISTENCE GUARD] Yerel dosyada daha fazla işlem var ({len(self.history)} vs GitHub {len(gh_history)}). Yerel korundu!")
+                                self.history = _sanitize_floats(loc_hist)
+                                print(f">> [PERSISTENCE GUARD] Güvenli yerel veri korundu (Yerel: {len(self.history)} işlem / ${self.balance:.2f} vs GitHub: {len(gh_history)} işlem / ${gh_balance:.2f})!")
                     except Exception:
                         pass
 
@@ -198,11 +207,12 @@ class PaperTrader:
             "history": _sanitize_floats(self.history)
         }
 
-        # 1. Lokal dosyaya atomik kaydet
-        self.save_local_history()
+        # 1. Lokal dosyaya atomik kaydet (Test modundaysa gerçek dosyayı ezme)
+        if not getattr(self, "is_test", False):
+            self.save_local_history()
 
-        # 2. GitHub'a kaydet (İzole state branch'ine - Render Auto-Deploy tetiklemez!)
-        if GITHUB_TOKEN:
+        # 2. GitHub'a kaydet (Test modundaysa ASLA GitHub state dalına push etme)
+        if GITHUB_TOKEN and not getattr(self, "is_test", False):
             self._pending_state = state
             now_ts = time.time()
             if critical:
@@ -216,8 +226,8 @@ class PaperTrader:
 
     def _push_to_github(self, state: dict):
         """trade_history.json dosyasini izole state branch'ine kaydeder (Render restart dongusunu onler)."""
-        if not self._push_lock.acquire(blocking=False):
-            return  # Zaten başka bir push devam ediyor, çakışma önleme
+        if getattr(self, "is_test", False) or not self._push_lock.acquire(blocking=False):
+            return  # Test modunda veya kilit meşgulse engelle
         try:
             state = _sanitize_floats(state)
             import urllib.request
