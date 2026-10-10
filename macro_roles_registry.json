@@ -1,0 +1,126 @@
+{
+  "version": "2.0.0",
+  "last_updated": 1791640408,
+  "roles": {
+    "FED_CHAIR": {
+      "title": "Federal Reserve Başkanı",
+      "current_holder": "Jerome Powell",
+      "alias_list": [
+        "Jerome Powell"
+      ],
+      "market_weight": 1.0,
+      "domain": "MONETARY_POLICY",
+      "past_holders": [
+        "Janet Yellen",
+        "Ben Bernanke",
+        "Alan Greenspan",
+        "Jerome Powell",
+        "Kevin Warsh",
+        "Powell",
+        "Chair Powell",
+        "Fed Başkanı Powell",
+        "Warsh"
+      ]
+    },
+    "SEC_CHAIR": {
+      "title": "SEC (Menkul Kıymetler Komisyonu) Başkanı",
+      "current_holder": "Gary Gensler",
+      "alias_list": [
+        "Gensler",
+        "Gary Gensler",
+        "SEC Başkanı",
+        "Chair Gensler"
+      ],
+      "market_weight": 1.0,
+      "domain": "REGULATION",
+      "past_holders": [
+        "Jay Clayton",
+        "Mary Jo White"
+      ]
+    },
+    "POTUS": {
+      "title": "Amerika Birleşik Devletleri Başkanı",
+      "current_holder": "Donald Trump",
+      "alias_list": [
+        "Trump",
+        "Donald Trump",
+        "Başkan Trump",
+        "POTUS",
+        "Beyaz Saray",
+        "White House"
+      ],
+      "market_weight": 0.95,
+      "domain": "EXECUTIVE_POLICY",
+      "past_holders": [
+        "Joe Biden",
+        "Barack Obama"
+      ]
+    },
+    "TREASURY_SECRETARY": {
+      "title": "ABD Hazine Bakanı",
+      "current_holder": "Janet Yellen",
+      "alias_list": [
+        "Yellen",
+        "Janet Yellen",
+        "Hazine Bakanı",
+        "Treasury Secretary"
+      ],
+      "market_weight": 0.85,
+      "domain": "LIQUIDITY_POLICY",
+      "past_holders": [
+        "Steven Mnuchin",
+        "Jack Lew"
+      ]
+    },
+    "FOMC_VOTING_MEMBERS": {
+      "title": "FOMC Oy Hakkına Sahip Fed Guvernörleri / Bölge Başkanları",
+      "current_holder": "FOMC Core Governors",
+      "alias_list": [
+        "Christopher Waller",
+        "Waller",
+        "Michelle Bowman",
+        "Bowman",
+        "John Williams",
+        "Williams",
+        "Michael Barr",
+        "Barr",
+        "Philip Jefferson",
+        "Jefferson",
+        "Lisa Cook",
+        "Cook",
+        "Adriana Kugler",
+        "Kugler",
+        "Austan Goolsbee",
+        "Goolsbee",
+        "Raphael Bostic",
+        "Bostic",
+        "Neel Kashkari",
+        "Kashkari"
+      ],
+      "market_weight": 0.75,
+      "domain": "MONETARY_POLICY",
+      "past_holders": [
+        "James Bullard",
+        "Esther George"
+      ]
+    },
+    "SEC_COMMISSIONERS": {
+      "title": "Kripto Dostu / Muhalif SEC Komiserleri",
+      "current_holder": "SEC Commissioners",
+      "alias_list": [
+        "Hester Peirce",
+        "Peirce",
+        "Crypto Mom",
+        "Mark Uyeda",
+        "Uyeda",
+        "Caroline Crenshaw",
+        "Crenshaw",
+        "Jaime Lizarraga",
+        "Lizarraga"
+      ],
+      "market_weight": 0.7,
+      "domain": "REGULATION",
+      "past_holders": []
+    }
+  }
+}
