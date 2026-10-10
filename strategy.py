@@ -863,24 +863,26 @@ class StrategyEngine:
         res = self.paper_trader.close_position(*args, **kwargs)
         if hasattr(res, '__await__'):
             res = await res
-        if isinstance(res, dict) and not kwargs.get("is_partial", False):
-            self._record_structural_stop(res)
-            # 👻 Çift Yönlü Takip: Kapanan gerçek işlem için 'İşlem devam etseydi ne olurdu?' hayalet takibi
-            if hasattr(self, 'shadow_engine') and self.shadow_engine:
-                try:
-                    self.shadow_engine.spawn_post_exit_ghost(
-                        trade_id=str(res.get("trade_id") or int(time.time())),
-                        symbol=str(res.get("symbol", "")),
-                        side=str(res.get("side", "")),
-                        exit_price=float(res.get("exit_price") or res.get("close_price") or 0.0),
-                        entry_price=float(res.get("entry_price") or 0.0),
-                        exit_status=str(res.get("close_reason") or "CLOSED"),
-                        close_reason=str(res.get("close_reason") or "CLOSED")
-                    )
-                except Exception:
-                    pass
+        if isinstance(res, dict):
+            if not kwargs.get("is_partial", False):
+                self._record_structural_stop(res)
+                # 👻 Çift Yönlü Takip: Kapanan gerçek işlem için 'İşlem devam etseydi ne olurdu?' hayalet takibi
+                if hasattr(self, 'shadow_engine') and self.shadow_engine:
+                    try:
+                        self.shadow_engine.spawn_post_exit_ghost(
+                            trade_id=str(res.get("trade_id") or int(time.time())),
+                            symbol=str(res.get("symbol", "")),
+                            side=str(res.get("side", "")),
+                            exit_price=float(res.get("exit_price") or res.get("close_price") or 0.0),
+                            entry_price=float(res.get("entry_price") or 0.0),
+                            exit_status=str(res.get("close_reason") or "CLOSED"),
+                            close_reason=str(res.get("close_reason") or "CLOSED")
+                        )
+                    except Exception:
+                        pass
 
             # 🖼️ VALKYRIE GÖRSEL ADLİ KARA KUTU & MİKROSKOBİK MUM OTOPSİSİ
+            # (Hem TP1 Kısmi Kâr Kilidi hem Tam Kapanışlar İçin %100 Görselleme)
             try:
                 from forensic_blackbox_manager import forensic_blackbox_manager
                 sym = str(res.get("symbol", ""))

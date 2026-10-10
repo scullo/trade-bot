@@ -128,7 +128,16 @@ class ForensicBlackboxManager:
 
         # 2. Dosya Adlandırma Standardı
         trade_category = "SHADOW" if is_shadow else "REAL"
-        outcome_tag = "WIN" if roe > 0 else ("LOSS" if roe < 0 else "BE")
+        cr_upper = str(trade_record.get("close_reason") or "").upper()
+        # Başa-baş toleransı: |ROE| <= %0.35 veya Breakeven Koruması
+        is_breakeven = (abs(roe) <= 0.35) or ("BREAKEVEN" in cr_upper) or ("BAŞA-BAŞ" in cr_upper) or ("BAŞABAŞ" in cr_upper) or ("🛡️ BE" in cr_upper)
+        if is_breakeven:
+            outcome_tag = "BE"
+        elif roe > 0:
+            outcome_tag = "WIN"
+        else:
+            outcome_tag = "LOSS"
+
         roe_clean = f"PLUS{roe:.1f}" if roe >= 0 else f"MINUS{abs(roe):.1f}"
         diag_short = autopsy["diagnosis_code"].replace("_", "")[:12]
 
@@ -352,10 +361,16 @@ class ForensicBlackboxManager:
             filtered = list(self.catalog)
 
         # Kategori filtresi
+        is_be_entry = lambda x: (x.get("outcome") == "BE") or (abs(float(x.get("roe_pct", 0))) <= 0.35) or ("BREAKEVEN" in str(x.get("close_reason", "")).upper()) or ("BAŞA-BAŞ" in str(x.get("close_reason", "")).upper()) or ("BE" in str(x.get("close_reason", "")).upper())
+        is_win_entry = lambda x: (x.get("outcome") == "WIN") or (float(x.get("roe_pct", 0)) > 0.35 and not is_be_entry(x))
+        is_loss_entry = lambda x: (x.get("outcome") == "LOSS") or (float(x.get("roe_pct", 0)) < -0.35 and not is_be_entry(x))
+
         if filter_category == "LOSS":
-            filtered = [x for x in filtered if float(x.get("roe_pct", 0)) < 0]
+            filtered = [x for x in filtered if is_loss_entry(x)]
         elif filter_category == "WIN":
-            filtered = [x for x in filtered if float(x.get("roe_pct", 0)) > 2.0]
+            filtered = [x for x in filtered if is_win_entry(x)]
+        elif filter_category == "BE":
+            filtered = [x for x in filtered if is_be_entry(x)]
         elif filter_category == "TRAP":
             filtered = [x for x in filtered if "FAKEOUT" in str(x.get("autopsy", {}).get("diagnosis_code", "")) or "HUNT" in str(x.get("autopsy", {}).get("diagnosis_code", ""))]
         elif filter_category == "STARRED":
@@ -377,8 +392,9 @@ class ForensicBlackboxManager:
 
         # KPI İstatistikleri
         total_count = len(self.catalog)
-        loss_count = sum(1 for x in self.catalog if float(x.get("roe_pct", 0)) < 0)
-        win_count = sum(1 for x in self.catalog if float(x.get("roe_pct", 0)) > 2.0)
+        loss_count = sum(1 for x in self.catalog if is_loss_entry(x))
+        win_count = sum(1 for x in self.catalog if is_win_entry(x))
+        be_count = sum(1 for x in self.catalog if is_be_entry(x))
         trap_count = sum(1 for x in self.catalog if "FAKEOUT" in str(x.get("autopsy", {}).get("diagnosis_code", "")) or "HUNT" in str(x.get("autopsy", {}).get("diagnosis_code", "")))
         starred_count = sum(1 for x in self.catalog if x.get("is_starred", False))
 
@@ -406,6 +422,7 @@ class ForensicBlackboxManager:
                 "total_count": total_count,
                 "loss_count": loss_count,
                 "win_count": win_count,
+                "be_count": be_count,
                 "trap_count": trap_count,
                 "starred_count": starred_count,
                 "disk_mb": disk_mb

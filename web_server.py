@@ -5781,6 +5781,15 @@ HTML_PAGE = """
                 <div class="kpi-card-sub">Outlier Runner (ROE ≥ %2.5)</div>
             </div>
 
+            <div class="cockpit-kpi-card" style="border-top:3px solid #38bdf8;">
+                <div class="kpi-card-head">
+                    <span class="kpi-card-title">🛡️ Başa Baş</span>
+                    <span class="kpi-card-icon">🛡️</span>
+                </div>
+                <div class="kpi-card-value" id="forensic-kpi-be" style="color:#38bdf8;">0</div>
+                <div class="kpi-card-sub">Sermaye Koruması (BE)</div>
+            </div>
+
             <div class="cockpit-kpi-card" style="border-top:3px solid #f59e0b;">
                 <div class="kpi-card-head">
                     <span class="kpi-card-title">⚠️ Sahte Kırılımlar</span>
@@ -5816,6 +5825,7 @@ HTML_PAGE = """
                 <button class="nav-tab-btn active" id="btn-ff-all" onclick="setForensicFilter('ALL')" style="padding:6px 14px; font-size:11.5px; border-radius:8px;">⚪ Tümü</button>
                 <button class="nav-tab-btn" id="btn-ff-loss" onclick="setForensicFilter('LOSS')" style="padding:6px 14px; font-size:11.5px; border-radius:8px; border-color:rgba(244,63,94,0.4); color:#f43f5e;">🔴 Zararlar (SL)</button>
                 <button class="nav-tab-btn" id="btn-ff-win" onclick="setForensicFilter('WIN')" style="padding:6px 14px; font-size:11.5px; border-radius:8px; border-color:rgba(16,185,129,0.4); color:#10b981;">🟢 Runner Kazançlar</button>
+                <button class="nav-tab-btn" id="btn-ff-be" onclick="setForensicFilter('BE')" style="padding:6px 14px; font-size:11.5px; border-radius:8px; border-color:rgba(56,189,248,0.4); color:#38bdf8;">🛡️ Başa Baş (BE)</button>
                 <button class="nav-tab-btn" id="btn-ff-trap" onclick="setForensicFilter('TRAP')" style="padding:6px 14px; font-size:11.5px; border-radius:8px; border-color:rgba(245,158,11,0.4); color:#f59e0b;">⚠️ Fakeout / Tuzaklar</button>
                 <button class="nav-tab-btn" id="btn-ff-starred" onclick="setForensicFilter('STARRED')" style="padding:6px 14px; font-size:11.5px; border-radius:8px; border-color:rgba(251,197,49,0.4); color:#fbc531;">⭐ Hall of Fame</button>
                 <button class="nav-tab-btn" id="btn-ff-shadow" onclick="setForensicFilter('SHADOW')" style="padding:6px 14px; font-size:11.5px; border-radius:8px; border-color:rgba(168,85,247,0.4); color:#a855f7;">⚡ Gölge Dersler</button>
@@ -18027,6 +18037,7 @@ function downloadExcelReport() {
                 'ALL': 'btn-ff-all',
                 'LOSS': 'btn-ff-loss',
                 'WIN': 'btn-ff-win',
+                'BE': 'btn-ff-be',
                 'TRAP': 'btn-ff-trap',
                 'STARRED': 'btn-ff-starred',
                 'SHADOW': 'btn-ff-shadow',
@@ -18079,6 +18090,8 @@ function downloadExcelReport() {
                 if (kpiLoss) kpiLoss.innerText = stats.loss_count || 0;
                 const kpiWin = document.getElementById('forensic-kpi-runners');
                 if (kpiWin) kpiWin.innerText = stats.win_count || 0;
+                const kpiBe = document.getElementById('forensic-kpi-be');
+                if (kpiBe) kpiBe.innerText = stats.be_count || 0;
                 const kpiTrap = document.getElementById('forensic-kpi-traps');
                 if (kpiTrap) kpiTrap.innerText = stats.trap_count || 0;
                 const kpiStar = document.getElementById('forensic-kpi-starred');
@@ -18119,9 +18132,10 @@ function downloadExcelReport() {
             }
 
             grid.innerHTML = items.map(item => {
-                const isProfit = Number(item.roe_pct || 0) > 0;
-                const pnlCol = isProfit ? '#10b981' : (Number(item.roe_pct || 0) < 0 ? '#f43f5e' : '#94a3b8');
-                const pnlBg = isProfit ? 'rgba(16,185,129,0.15)' : (Number(item.roe_pct || 0) < 0 ? 'rgba(244,63,94,0.15)' : 'rgba(255,255,255,0.06)');
+                const isBe = item.outcome === 'BE' || (Math.abs(Number(item.roe_pct || 0)) <= 0.35) || String(item.close_reason || '').toUpperCase().includes('BREAKEVEN');
+                const isProfit = !isBe && Number(item.roe_pct || 0) > 0;
+                const pnlCol = isBe ? '#38bdf8' : (isProfit ? '#10b981' : (Number(item.roe_pct || 0) < 0 ? '#f43f5e' : '#94a3b8'));
+                const pnlBg = isBe ? 'rgba(56,189,248,0.15)' : (isProfit ? 'rgba(16,185,129,0.15)' : (Number(item.roe_pct || 0) < 0 ? 'rgba(244,63,94,0.15)' : 'rgba(255,255,255,0.06)'));
                 const sideCol = item.side === 'LONG' ? '#10b981' : '#f43f5e';
                 const sideBg = item.side === 'LONG' ? 'rgba(16,185,129,0.15)' : 'rgba(244,63,94,0.15)';
                 const autopsy = item.autopsy || {};
