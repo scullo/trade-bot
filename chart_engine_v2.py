@@ -838,6 +838,10 @@ class ForensicChartEngineV2:
             return buf
         finally:
             fig.clf()
+            del fig
+            del canvas
+            import gc
+            gc.collect()
 
 
 # Singleton motor

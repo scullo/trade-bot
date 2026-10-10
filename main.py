@@ -3,6 +3,8 @@ import os
 import sys
 import time
 
+os.environ["MALLOC_ARENA_MAX"] = "2"
+
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 from config import ALL_AVAILABLE_SYMBOLS, DEFAULT_ACTIVE_SYMBOLS, TIMEFRAME, INITIAL_BALANCE, LEVERAGE, POSITION_SIZE_USDT
@@ -51,26 +53,51 @@ async def main():
     # Sistem Hazır — WebSocket döngüsüne geçiliyor (candle_poller_worker ısınma sonrası ilk taramayı yapacaktır)
     print(">> [SİSTEM HAZIR] 100 Parite seviyeleri ve veritabanı hazır. Canlı WebSocket ve tarayıcı başlatılıyor...")
 
-    # 60 Saniyelik Bellek Temizleyici + 5 Dakikalık Periyodik GitHub Sync + Bellek Baskısı Algılama (OOM & Veri Kaybı Kalkanı)
+    # 30 Saniyelik Aktif RAM OOM Kalkanı + glibc malloc_trim + Periyodik GitHub Sync
     async def memory_and_sync_watchdog():
         import gc
+        import ctypes
         sync_counter = 0
         while True:
-            await asyncio.sleep(60)
-            # Agresif bellek temizliği (Render 512MB RAM Koruması)
-            gc.collect()
-            # 5M mum verilerini 300 satıra (25 saat) sınırla (Asya seansı ve 24s AVWAP korunur, OOM önlenir)
+            await asyncio.sleep(30)
             try:
+                # 1. Agresif Python çöp toplayıcı (Render 512MB RAM Koruması)
+                gc.collect()
+
+                # 2. Linux glibc malloc_trim ile boşaltılan belleği doğrudan işletim sistemine iade et
+                try:
+                    ctypes.CDLL('libc.so.6').malloc_trim(0)
+                except Exception:
+                    pass
+
+                # 3. 5M mum verilerini 240 satıra (20 saat) sınırla (OOM kesin önlenir, AVWAP tam korunur)
                 for sym in list(market_data.candles_5m.keys()):
                     df = market_data.candles_5m[sym]
-                    if hasattr(df, '__len__') and len(df) > 300:
-                        market_data.candles_5m[sym] = df.iloc[-300:].reset_index(drop=True)
+                    if hasattr(df, '__len__') and len(df) > 240:
+                        market_data.candles_5m[sym] = df.iloc[-240:].reset_index(drop=True)
+
+                # 4. Aktif Bellek Baskısı Algılama (350 MB üzeri acil budama)
+                try:
+                    import resource
+                    ram_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
+                    if ram_mb > 350.0:
+                        print(f">> [🛡️ RAM OOM KALKANI] Bellek baskısı tespit edildi ({ram_mb:.1f} MB / 512 MB). Acil temizlik devrede...")
+                        if hasattr(strategy, 'shadow_engine') and strategy.shadow_engine:
+                            strategy.shadow_engine.archive_old_trades(keep_latest=800)
+                        gc.collect()
+                        try:
+                            ctypes.CDLL('libc.so.6').malloc_trim(0)
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+
             except Exception:
                 pass
 
-            # Her 15 dakikada bir (15 * 60s = 15 döngü) bekleyen GitHub state sync kontrolü
+            # Her 15 dakikada bir (30 * 30s = 900s = 15dk) bekleyen GitHub state sync kontrolü
             sync_counter += 1
-            if sync_counter >= 15:
+            if sync_counter >= 30:
                 sync_counter = 0
                 try:
                     paper_trader.retry_pending_push()
