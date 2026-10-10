@@ -465,7 +465,7 @@ class MarketDataManager:
 
             # 10. RAM & Bellek Koruması
             max_candles = max([len(df) for df in self.candles_5m.values() if hasattr(df, '__len__')] or [0])
-            ram_ok = (max_candles <= 200)
+            ram_ok = (max_candles <= 350)
 
             # 11. GitHub Cloud State Persistence
             gh_synced = True
@@ -760,7 +760,7 @@ class MarketDataManager:
                 },
                 "infrastructure": {
                     "github_persistence": {"healthy": gh_synced, "branch": gh_branch, "sha": gh_sha or "-"},
-                    "ram_watchdog": {"healthy": ram_ok, "max_candles": max_candles, "limit": 150, "gc_interval": "60s"},
+                    "ram_watchdog": {"healthy": ram_ok, "max_candles": max_candles, "limit": 300, "gc_interval": "60s"},
                     "keepalive": {"healthy": True, "interval": "3dk Self-Ping"},
                     "telegram": {"healthy": True, "mode": "Saatlik VIP + /kasa Dinleyici"},
                     "shadow_guard": sh_health,

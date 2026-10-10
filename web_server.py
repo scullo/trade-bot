@@ -7997,7 +7997,7 @@ async function loadAdminMetrics() {
             const dna = qEngine.coin_dna || { count: 100, total: 100 };
 
             const gh = infra.github_persistence || { branch: 'state', sha: '-' };
-            const ram = infra.ram_watchdog || { max_candles: 150, limit: 150, gc_interval: '60s' };
+            const ram = infra.ram_watchdog || { max_candles: 300, limit: 300, gc_interval: '60s' };
             const shadow = infra.shadow_guard || (appState && appState.shadow_summary ? {
                 healthy: true,
                 active_count: (appState.active_shadow_positions || []).length,
@@ -8182,7 +8182,7 @@ async function loadAdminMetrics() {
                         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:6px;">
                             <span style="color:#94a3b8;">🧹 Otonom Bellek (RAM) Watchdog (Render OOM Kalkanı):</span>
                             <div style="display:flex; align-items:center; gap:8px;">
-                                <span style="color:#e2e8f0; font-weight:700;">Max ${ram.limit || 150} Mum Tavanı (${ram.max_candles || 150} Satır) + 60s GC</span>
+                                <span style="color:#e2e8f0; font-weight:700;">Max ${ram.limit || 300} Mum Tavanı (${ram.max_candles || 300} Satır) + 60s GC</span>
                                 ${pill('512MB GÜVENLİ', 'var(--green)')}
                             </div>
                         </div>
@@ -8265,7 +8265,7 @@ async function loadAdminMetrics() {
 
             // Infra Data
             const gh = infra.github_persistence || { branch: 'state', sha: '-' };
-            const ram = infra.ram_watchdog || { max_candles: 150, limit: 150, gc_interval: '60s' };
+            const ram = infra.ram_watchdog || { max_candles: 300, limit: 300, gc_interval: '60s' };
             const shadow = infra.shadow_guard || (appState && appState.shadow_summary ? {
                 healthy: true,
                 active_count: (appState.active_shadow_positions || []).length,
@@ -8466,7 +8466,7 @@ async function loadAdminMetrics() {
                         </div>
 
                         ${itemRow('🛡️', 'GitHub Bulut Kasa Senkronu', 'Kasa bakiyesi ve islemlerin state dalina otonom commit ve senkronu', (gh.branch || 'state') + ' Dali (Commit: ' + (gh.sha || '-') + ')', pill('SENKRONİZE', 'var(--green)'))}
-                        ${itemRow('🧹', 'Otonom Bellek (RAM) Watchdog', 'Bellek şişmesini önleyen 150 mumluk dinamik tavan ve Render 512MB RAM kalkanı', 'Max ' + (ram.limit || 150) + ' Mum + 60s GC', pill('512MB GÜVENLİ', 'var(--green)'))}
+                        ${itemRow('🧹', 'Otonom Bellek (RAM) Watchdog', 'Bellek şişmesini önleyen 300 mumluk dinamik tavan ve Render 512MB RAM kalkanı', 'Max ' + (ram.limit || 300) + ' Mum + 60s GC', pill('512MB GÜVENLİ', 'var(--green)'))}
                         ${itemRow('⏱️', 'Render Keep-Alive Uyku Kalkanı', 'Render Free Tier 15 dakika inaktivite uykusunu engelleyen 3 dakikalık self-ping', 'Her 3 Dakika (200 OK)', pill('7/24 UYANIK', 'var(--green)'))}
                         ${itemRow('📱', 'Telegram Saatlik VIP Raporlayıcı', 'Saat başı :00 otomatik kasa raporu ve /kasa interaktif komut dinleyici', 'Saat Başı :00 Rapor', pill('AKTİF', 'var(--cyan)'))}
                         ${itemRow('⚙️', 'Aegis Sentinel Otonom Denetim', 'Tüm alt kuant servislerinin kesintisiz çalışmasını denetleyen nöronal bekçi', 'Sıfır Hata / Tam Sağlıklı', pill('TAM KORUMA', 'var(--green)'))}
