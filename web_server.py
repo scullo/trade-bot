@@ -3016,6 +3016,12 @@ HTML_PAGE = """
             border: 1px solid rgba(244, 63, 94, 0.3);
             box-shadow: 0 0 8px rgba(244, 63, 94, 0.15);
         }
+        .history-pnl-pill.pnl-be {
+            background: rgba(56, 189, 248, 0.12);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.15);
+        }
         .history-roe-pill {
             display: inline-flex;
             align-items: center;
@@ -3036,6 +3042,11 @@ HTML_PAGE = """
             background: rgba(244, 63, 94, 0.08);
             color: #fb7185;
             border: 1px solid rgba(244, 63, 94, 0.2);
+        }
+        .history-roe-pill.roe-be {
+            background: rgba(56, 189, 248, 0.08);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.2);
         }
 
         /* 📊 SETUP PERFORMANS MATRİSİ */
@@ -3341,6 +3352,13 @@ HTML_PAGE = """
         }
         .trade-table-enhanced tr.trade-row-loss:hover {
             background: rgba(244, 63, 94, 0.04);
+        }
+        .trade-table-enhanced tr.trade-row-be {
+            border-left: 3px solid #38bdf8;
+            transition: background 0.15s ease;
+        }
+        .trade-table-enhanced tr.trade-row-be:hover {
+            background: rgba(56, 189, 248, 0.04);
         }
         .forensic-empty-state {
             text-align: center;
@@ -5854,6 +5872,7 @@ HTML_PAGE = """
                 <button class="ledger-pill-btn active" id="l-pill-all" onclick="quickFilterStatus('ALL')">⭐ Tümü</button>
                 <button class="ledger-pill-btn" id="l-pill-win" onclick="quickFilterStatus('WIN')">🟢 Kârlı İşlemler</button>
                 <button class="ledger-pill-btn" id="l-pill-loss" onclick="quickFilterStatus('LOSS')">🔴 Zararlı İşlemler</button>
+                <button class="ledger-pill-btn" id="l-pill-be" onclick="quickFilterStatus('BE')">🛡️ Başa Baş (BE)</button>
                 <button class="ledger-pill-btn" id="l-pill-cambo" onclick="quickFilterSetup('CAM_BO')">⚡ Breakout</button>
                 <button class="ledger-pill-btn" id="l-pill-npoc" onclick="quickFilterSetup('NPOC')">🔵 nPOC Likidite</button>
                 <button class="ledger-pill-btn" id="l-pill-retest" onclick="quickFilterSetup('RETEST')">🔁 Retest &amp; Flip</button>
@@ -5907,6 +5926,7 @@ HTML_PAGE = """
                         <option value="ALL">Tüm Sonuçlar</option>
                         <option value="WIN">🟢 Kârlı İşlemler</option>
                         <option value="LOSS">🔴 Zararlı İşlemler</option>
+                        <option value="BE">🛡️ Başa Baş (BE)</option>
                     </select>
                 </div>
             </div>
@@ -15303,7 +15323,7 @@ async function loadAdminMetrics() {
             const stEl = document.getElementById('filter-status');
             if (stEl) stEl.value = status;
             document.querySelectorAll('.ledger-quick-pills .ledger-pill-btn').forEach(b => b.classList.remove('active'));
-            const map = { 'ALL': 'l-pill-all', 'WIN': 'l-pill-win', 'LOSS': 'l-pill-loss' };
+            const map = { 'ALL': 'l-pill-all', 'WIN': 'l-pill-win', 'LOSS': 'l-pill-loss', 'BE': 'l-pill-be' };
             if (map[status]) {
                 const pEl = document.getElementById(map[status]);
                 if (pEl) pEl.classList.add('active');
@@ -18200,8 +18220,11 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                     if (cleanSymFilter !== 'ALL' && itemSym !== cleanSymFilter && item.symbol !== symFilter) return false;
                     
                     const pnlNum = Number(item.net_pnl || 0.0);
-                    if (statusFilter === 'WIN' && pnlNum < 0) return false;
-                    if (statusFilter === 'LOSS' && pnlNum >= 0) return false;
+                    const crItem = (item.close_reason || '').toUpperCase();
+                    const isItemBe = (Math.abs(pnlNum) <= 0.05) || (Math.abs(pnlNum) <= 0.50 && (crItem.includes('BREAKEVEN') || crItem.includes('BAŞA')));
+                    if (statusFilter === 'WIN' && (pnlNum < 0 || isItemBe)) return false;
+                    if (statusFilter === 'LOSS' && (pnlNum >= 0 || isItemBe)) return false;
+                    if (statusFilter === 'BE' && !isItemBe) return false;
 
                     if (!matchSetupFilter(item, setupFilter)) return false;
 
@@ -18248,7 +18271,16 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                     const mae = Number(h.max_mae_roe !== undefined ? h.max_mae_roe : (h.mae_roe !== undefined ? h.mae_roe : (roePct < 0 ? Math.abs(roePct) : 0.0)));
                     const hasSubLegs = Boolean(h.has_sub_legs || (h.sub_legs && h.sub_legs.length > 0));
                     const idDisp = `<span style="background:rgba(255,255,255,0.05); padding:3px 7px; border-radius:6px; color:#e2e8f0; font-family:'JetBrains Mono'; font-size:11.5px; border:1px solid rgba(255,255,255,0.08); font-weight:700;">#${h.id || '-'}${hasSubLegs ? ' <span style="background:rgba(0,242,254,0.15); color:var(--cyan); padding:1px 4px; border-radius:3px; font-size:9.5px; margin-left:3px;" title="Birleşik Yaşam Döngüsü: Parçalı Kapanış">2P</span>' : ''}</span>`;
-                    const exitPDisp = hasSubLegs ? `$${formatSmartPrice(exitP)} <span style="font-size:10px; color:#38bdf8;" title="Parçalı çıkışların ağırlıklı ortalaması">(Ort.)</span>` : `$${formatSmartPrice(exitP)}`;
+                    
+                    const formatP = (typeof formatSmartPrice === 'function') ? formatSmartPrice : (v => Number(v).toFixed(4));
+                    const entryPDisp = (entryP !== '-' && formatP(entryP) !== '-') ? '$' + formatP(entryP) : '-';
+                    const exitPFormatted = (exitP !== '-') ? formatP(exitP) : '-';
+                    const exitPDisp = (exitPFormatted !== '-') ? (hasSubLegs ? `$${exitPFormatted} <span style="font-size:10px; color:#38bdf8;" title="Parçalı çıkışların ağırlıklı ortalaması">(Ort.)</span>` : `$${exitPFormatted}`) : '-';
+
+                    const isBe = (Math.abs(netPnl) <= 0.05) || (Math.abs(netPnl) <= 0.50 && (cr.toUpperCase().includes('BREAKEVEN') || cr.toUpperCase().includes('BAŞA')));
+                    const rowClass = isBe ? 'trade-row-be' : (isWin ? 'trade-row-win' : 'trade-row-loss');
+                    const pnlClass = isBe ? 'pnl-be' : (isWin ? 'pnl-win' : 'pnl-loss');
+                    const roeClass = isBe ? 'roe-be' : (isWin ? 'roe-win' : 'roe-loss');
 
                     tableHtml += `
                     <tr class="${rowClass} forensic-table-compact">
@@ -18257,19 +18289,19 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                         <td style="color:#94a3b8; font-size:12px; white-space:nowrap;"><span style="background:rgba(0,242,254,0.06); padding:2px 6px; border-radius:4px; border:1px solid rgba(0,242,254,0.15); color:#38bdf8;">⏱️ ${duration}</span></td>
                         <td><b style="color:#ffffff; font-size:13.5px; cursor:pointer;" onclick="openTradingViewModal('${symClean}')" title="${symClean} Göstergeli Grafiğini Aç">${symClean}</b></td>
                         <td><span class="pos-badge ${side === 'LONG' ? 'pos-long' : 'pos-short'}" style="font-size:11px; padding:2px 8px;">${(Number(lev) >= 7 ? '💎 ' : (Number(lev) <= 3 ? '🛡️ ' : ''))}${lev}x ${side}</span></td>
-                        <td style="font-family:'JetBrains Mono';">$${formatSmartPrice(entryP)}</td>
+                        <td style="font-family:'JetBrains Mono';">${entryPDisp}</td>
                         <td style="font-family:'JetBrains Mono';">${exitPDisp}</td>
                         <td style="text-align:right;">
-                            <span class="history-pnl-pill ${isWin ? 'pnl-win' : 'pnl-loss'}" style="font-size:12.5px; font-weight:800;">
+                            <span class="history-pnl-pill ${pnlClass}" style="font-size:12.5px; font-weight:800;">
                                 ${netPnl >= 0 ? '+' : '-'}$${Math.abs(netPnl).toFixed(2)}
                             </span>
                         </td>
                         <td style="text-align:right;">
-                            <span class="history-roe-pill ${isWin ? 'roe-win' : 'roe-loss'}" style="font-size:12px; font-weight:700;">
+                            <span class="history-roe-pill ${roeClass}" style="font-size:12px; font-weight:700;">
                                 ${roePct >= 0 ? '+' : ''}${roePct.toFixed(2)}%
                             </span>
                         </td>
-                        <td style="text-align:center; color:${rMult >= 0 ? 'var(--green)' : 'var(--red)'}; font-weight:800; font-family:'JetBrains Mono'">
+                        <td style="text-align:center; color:${isBe ? '#38bdf8' : (rMult >= 0 ? 'var(--green)' : 'var(--red)')}; font-weight:800; font-family:'JetBrains Mono'">
                             ${rMult >= 0 ? '+' : ''}${rMult}R
                         </td>
                         <td style="text-align:center; color:#38bdf8; font-size:12px;" title="MFE: Görülen Zirve Kâr (+%${mfe.toFixed(1)}) | MAE: Maks Çekilme (-%${mae.toFixed(1)})">
@@ -18349,8 +18381,11 @@ function downloadExcelReport() {
                     const cleanSymFilter = (symFilter || '').replace('/USDT', '');
                     if (cleanSymFilter !== 'ALL' && itemSym !== cleanSymFilter && item.symbol !== symFilter) return false;
                     const pnlNum = Number(item.net_pnl || 0.0);
-                    if (statusFilter === 'WIN' && pnlNum < 0) return false;
-                    if (statusFilter === 'LOSS' && pnlNum >= 0) return false;
+                    const crItem = (item.close_reason || '').toUpperCase();
+                    const isItemBe = (Math.abs(pnlNum) <= 0.05) || (Math.abs(pnlNum) <= 0.50 && (crItem.includes('BREAKEVEN') || crItem.includes('BAŞA')));
+                    if (statusFilter === 'WIN' && (pnlNum < 0 || isItemBe)) return false;
+                    if (statusFilter === 'LOSS' && (pnlNum >= 0 || isItemBe)) return false;
+                    if (statusFilter === 'BE' && !isItemBe) return false;
                     if (!matchSetupFilter(item, setupFilter)) return false;
                     return true;
                 });
