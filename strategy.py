@@ -1028,6 +1028,7 @@ class StrategyEngine:
         # Normal fitil bölgesindeki iğnelerde mum kapanışı teyidi (evaluate_candle_close) beklenerek sahte fitiller elenir.
         entry_p = float(pos.get("entry_price", current_price))
         abs_max_stop_pct = MAX_ABSOLUTE_STOP_PCT / 100.0
+        cur_price_pct = (current_price - entry_p) / entry_p if side == "LONG" else (entry_p - current_price) / entry_p
 
         # ── 0b. CHANDELIER ANLIK TICK ERKEN BREAKEVEN KİLİDİ ──
         if ENABLE_CHANDELIER_EARLY_BE_LOCK and not pos.get("is_half_closed", False):
@@ -1041,10 +1042,13 @@ class StrategyEngine:
             else:
                 be_threshold_pct = float(pos.get("chandelier_be_threshold_pct") or coin_p.get("chandelier_be_threshold_pct", CHANDELIER_EARLY_BE_THRESHOLD_PCT))
                 be_threshold = be_threshold_pct / 100.0
-            cur_price_pct = (current_price - entry_p) / entry_p if side == "LONG" else (entry_p - current_price) / entry_p
             if cur_price_pct >= be_threshold:
                 fee_buffer = (float(COMMISSION_RATE) * 2.0) + 0.0002  # Dinamik giriş-çıkış komisyon tamponu + slipaj koruması
-                be_price = entry_p * (1.0 + fee_buffer) if side == "LONG" else entry_p * (1.0 - fee_buffer)
+                pos_qty = float(pos.get("quantity") or 0.0)
+                acc_funding = float(pos.get("accumulated_funding_fee") or 0.0)
+                funding_buffer_pct = (acc_funding / (pos_qty * entry_p)) if (pos_qty > 0 and entry_p > 0) else 0.0
+                total_be_buffer = fee_buffer + funding_buffer_pct
+                be_price = entry_p * (1.0 + total_be_buffer) if side == "LONG" else entry_p * (1.0 - total_be_buffer)
                 cur_stop = pos.get("hard_stop") or pos.get("soft_stop", 0.0)
                 should_lock = (side == "LONG" and cur_stop < be_price) or (side == "SHORT" and (cur_stop == 0.0 or cur_stop > be_price))
                 if should_lock:
@@ -1114,24 +1118,48 @@ class StrategyEngine:
                         self.paper_trader.save_local_history()
 
         if pos.get("is_half_closed", False):
-            # 🎯 MİKROYAPI REFORMU: ANTİ-KMNO DİNAMİK RUNNER KÂR KİLİDİ
+            # 🎯 MİKROYAPI REFORMU: ANTİ-KMNO DİNAMİK RUNNER KÂR KİLİDİ (ROE & MFE ÇİFT KALKANLI)
             # TP1 sonrası pozisyon kâra gittikçe stop basamaklanır; asla kârı verip eksiye düşemez!
             entry_p_pos = float(pos.get("entry_price", entry_p))
             runner_gain_pct = ((current_price - entry_p_pos) / entry_p_pos * 100.0) if side == "LONG" else ((entry_p_pos - current_price) / entry_p_pos * 100.0)
             peak_gain = max(float(pos.get("peak_runner_gain_pct", 0.0)), runner_gain_pct)
             pos["peak_runner_gain_pct"] = peak_gain
             
-            # Dinamik kâr kilidi seviyesini belirle
+            # Kaldıraç ve ROE hesabı
+            lev = int(pos.get("leverage") or 5)
+            current_roe = runner_gain_pct * lev
+            peak_roe = max(float(pos.get("peak_runner_roe", 0.0)), current_roe, float(pos.get("max_mfe_roe", 0.0)))
+            pos["peak_runner_roe"] = peak_roe
+            
+            # Fonlama tamponu hesabı (True Net Breakeven)
+            pos_qty = float(pos.get("quantity") or 0.0)
+            acc_funding = float(pos.get("accumulated_funding_fee") or 0.0)
+            funding_buffer_pct = (acc_funding / (pos_qty * entry_p_pos)) if (pos_qty > 0 and entry_p_pos > 0) else 0.0
+            fee_buffer = (float(COMMISSION_RATE) * 2.0) + 0.0002
+            base_be_pct = max(0.003, fee_buffer + funding_buffer_pct)
+
+            # Dinamik kâr kilidi seviyesini belirle (ROE ve Fiyat Hareketi Koruması)
             if ENABLE_DYNAMIC_RUNNER_PROFIT_LOCK:
-                if peak_gain >= float(RUNNER_LOCK_TIER3_MFE):      # >= %5.0 MFE -> En az +%3.0 net kâr kilit
-                    target_lock_pct = 0.030
-                elif peak_gain >= float(RUNNER_LOCK_TIER2_MFE):    # >= %3.5 MFE -> En az +%2.0 net kâr kilit
-                    target_lock_pct = 0.020
-                elif peak_gain >= float(RUNNER_LOCK_TIER1_MFE):    # >= %2.0 MFE -> En az +%1.0 net kâr kilit
-                    target_lock_pct = 0.010
+                if peak_gain >= 3.5 or peak_roe >= 18.0:
+                    # Ralli: Zirve >= %18 ROE -> En az +%2.0 fiyat (+%10.0 ROE) kâr kilidi
+                    target_lock_pct = max(0.020, base_be_pct)
+                    lock_label = "🏆 Süper Ralli Kâr Kilidi (+%10 ROE)"
+                elif peak_gain >= 2.0 or peak_roe >= 10.0:
+                    # Güçlü Trend: Zirve >= %10 ROE -> En az +%1.0 fiyat (+%5.0 ROE) kâr kilidi
+                    target_lock_pct = max(0.010, base_be_pct)
+                    lock_label = "🚀 Güçlü Trend Kâr Kilidi (+%5 ROE)"
+                elif peak_gain >= 1.2 or peak_roe >= 6.0:
+                    # Orta Trend: Zirve >= %6 ROE -> En az +%0.6 fiyat (+%3.0 ROE) kâr kilidi
+                    target_lock_pct = max(0.006, base_be_pct)
+                    lock_label = "🎯 Dinamik Runner Kâr Kilidi (+%3 ROE)"
+                elif peak_gain >= 0.6 or peak_roe >= 3.0:
+                    # Erken Kâr: Zirve >= %3 ROE -> En az +%0.35 fiyat (+%1.75 ROE) kâr kilidi
+                    target_lock_pct = max(0.0035, base_be_pct)
+                    lock_label = "🛡️ Erken Kâr Kilidi (+%1.75 ROE)"
                 else:
-                    target_lock_pct = 0.003                        # Fee-Armor Breakeven tabanı (+%0.30)
-                
+                    target_lock_pct = base_be_pct
+                    lock_label = "🛡️ Fonlama Korumalı Breakeven"
+
                 locked_stop = entry_p_pos * (1.0 + target_lock_pct) if side == "LONG" else entry_p_pos * (1.0 - target_lock_pct)
                 cur_hard = float(pos.get("hard_stop") or 0.0)
                 
@@ -1139,11 +1167,11 @@ class StrategyEngine:
                 if side == "LONG" and locked_stop > cur_hard:
                     pos["hard_stop"] = locked_stop
                     pos["soft_stop"] = locked_stop
-                    pos["trail_status"] = f"🛡️ Runner Kilitlendi (+%{target_lock_pct*100:.1f} Kâr)"
+                    pos["trail_status"] = f"{lock_label} (${locked_stop:.4f})"
                 elif side == "SHORT" and (cur_hard == 0.0 or locked_stop < cur_hard):
                     pos["hard_stop"] = locked_stop
                     pos["soft_stop"] = locked_stop
-                    pos["trail_status"] = f"🛡️ Runner Kilitlendi (+%{target_lock_pct*100:.1f} Kâr)"
+                    pos["trail_status"] = f"{lock_label} (${locked_stop:.4f})"
 
             be_stop = float(pos.get("hard_stop") or pos.get("soft_stop") or entry_p)
             if side == "LONG" and current_price <= be_stop:
@@ -4321,7 +4349,11 @@ class StrategyEngine:
                         be_threshold = be_threshold_pct / 100.0
                     if price_pct >= be_threshold:
                         fee_buffer = (float(COMMISSION_RATE) * 2.0) + 0.0002  # Dinamik giriş-çıkış komisyon tamponu + slipaj koruması
-                        be_price = entry_p * (1.0 + fee_buffer) if side == "LONG" else entry_p * (1.0 - fee_buffer)
+                        pos_qty = float(pos.get("quantity") or 0.0)
+                        acc_funding = float(pos.get("accumulated_funding_fee") or 0.0)
+                        funding_buffer_pct = (acc_funding / (pos_qty * entry_p)) if (pos_qty > 0 and entry_p > 0) else 0.0
+                        total_be_buffer = fee_buffer + funding_buffer_pct
+                        be_price = entry_p * (1.0 + total_be_buffer) if side == "LONG" else entry_p * (1.0 - total_be_buffer)
                         cur_stop = pos.get("hard_stop") or pos.get("soft_stop", 0.0)
                         should_lock = (side == "LONG" and cur_stop < be_price) or (side == "SHORT" and (cur_stop == 0.0 or cur_stop > be_price))
                         if should_lock:
@@ -4344,6 +4376,53 @@ class StrategyEngine:
                                     ))
                                 except Exception:
                                     pass
+
+                if is_half:
+                    # 🎯 MİKROYAPI REFORMU: ANTİ-KMNO DİNAMİK RUNNER KÂR KİLİDİ (5M Kontrolü)
+                    entry_p_pos = float(pos.get("entry_price", entry_p))
+                    runner_gain_pct = ((close_price - entry_p_pos) / entry_p_pos * 100.0) if side == "LONG" else ((entry_p_pos - close_price) / entry_p_pos * 100.0)
+                    peak_gain = max(float(pos.get("peak_runner_gain_pct", 0.0)), runner_gain_pct)
+                    pos["peak_runner_gain_pct"] = peak_gain
+                    
+                    lev = int(pos.get("leverage") or 5)
+                    current_roe_r = runner_gain_pct * lev
+                    peak_roe_r = max(float(pos.get("peak_runner_roe", 0.0)), current_roe_r, float(pos.get("max_mfe_roe", 0.0)))
+                    pos["peak_runner_roe"] = peak_roe_r
+
+                    pos_qty_r = float(pos.get("quantity") or 0.0)
+                    acc_funding_r = float(pos.get("accumulated_funding_fee") or 0.0)
+                    funding_buffer_pct_r = (acc_funding_r / (pos_qty_r * entry_p_pos)) if (pos_qty_r > 0 and entry_p_pos > 0) else 0.0
+                    fee_buffer_r = (float(COMMISSION_RATE) * 2.0) + 0.0002
+                    base_be_pct_r = max(0.003, fee_buffer_r + funding_buffer_pct_r)
+
+                    if ENABLE_DYNAMIC_RUNNER_PROFIT_LOCK:
+                        if peak_gain >= 3.5 or peak_roe_r >= 18.0:
+                            target_lock_pct = max(0.020, base_be_pct_r)
+                            lock_label = "🏆 Süper Ralli Kâr Kilidi (+%10 ROE)"
+                        elif peak_gain >= 2.0 or peak_roe_r >= 10.0:
+                            target_lock_pct = max(0.010, base_be_pct_r)
+                            lock_label = "🚀 Güçlü Trend Kâr Kilidi (+%5 ROE)"
+                        elif peak_gain >= 1.2 or peak_roe_r >= 6.0:
+                            target_lock_pct = max(0.006, base_be_pct_r)
+                            lock_label = "🎯 Dinamik Runner Kâr Kilidi (+%3 ROE)"
+                        elif peak_gain >= 0.6 or peak_roe_r >= 3.0:
+                            target_lock_pct = max(0.0035, base_be_pct_r)
+                            lock_label = "🛡️ Erken Kâr Kilidi (+%1.75 ROE)"
+                        else:
+                            target_lock_pct = base_be_pct_r
+                            lock_label = "🛡️ Fonlama Korumalı Breakeven"
+
+                        locked_stop = entry_p_pos * (1.0 + target_lock_pct) if side == "LONG" else entry_p_pos * (1.0 - target_lock_pct)
+                        cur_hard = float(pos.get("hard_stop") or 0.0)
+                        
+                        if side == "LONG" and locked_stop > cur_hard:
+                            pos["hard_stop"] = locked_stop
+                            pos["soft_stop"] = locked_stop
+                            pos["trail_status"] = f"{lock_label} (${locked_stop:.4f})"
+                        elif side == "SHORT" and (cur_hard == 0.0 or locked_stop < cur_hard):
+                            pos["hard_stop"] = locked_stop
+                            pos["soft_stop"] = locked_stop
+                            pos["trail_status"] = f"{lock_label} (${locked_stop:.4f})"
 
                 # 1c. DINAMIK ATR / BREAKEVEN STOP KONTROLU
                 active_stop = pos.get("hard_stop") or pos.get("soft_stop", 0.0)

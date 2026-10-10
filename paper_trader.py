@@ -795,12 +795,17 @@ class PaperTrader:
             pos["position_value"] = closed_val
             pos["quantity"] = closed_qty
             pos["entry_fee"] = round(entry_fee - portion_entry_fee, 4)
-            # Fee-Armor Breakeven: Komisyon kalkanı (+%0.30) ile net kâr garantisi
-            be_price = round(entry_p * 1.003, 8) if side == "LONG" else round(entry_p * 0.997, 8)
+            # 🛡️ True Net Breakeven: Komisyon + Fonlama Maliyeti Kalkanı
+            acc_funding = float(pos.get("accumulated_funding_fee", 0.0))
+            pos_notional = closed_qty * entry_p
+            funding_pct = (acc_funding / pos_notional) if pos_notional > 0 else 0.0
+            fee_buffer = (float(self.commission_rate) * 2.0) + 0.0002
+            total_be_pct = max(0.003, fee_buffer + funding_pct)
+            be_price = round(entry_p * (1.0 + total_be_pct), 8) if side == "LONG" else round(entry_p * (1.0 - total_be_pct), 8)
             pos["soft_stop"] = be_price
             pos["hard_stop"] = be_price
             pos["tp1_hit"] = True
-            pos["trail_status"] = "🎯 TP1 KİLİTLENDİ (%50 Alındı - Breakeven Korumalı)"
+            pos["trail_status"] = "🎯 TP1 KİLİTLENDİ (%50 Alındı - Fonlama Korumalı Breakeven)"
 
             exit_time_str = datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S")
             # Duration format
