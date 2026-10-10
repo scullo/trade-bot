@@ -1,0 +1,1637 @@
+{
+  "version": "6.0.0",
+  "last_update": 1791645047.294315,
+  "sources": {
+    "TREENEWS": {
+      "title": "TreeNews Fast Wire WebSocket",
+      "elo_rating": 100.0,
+      "type": "NEWS_WIRE",
+      "domain": "CRYPTO_MACRO",
+      "status": "HIGH_TRUST",
+      "quorum_weight": 1.5,
+      "total_news_count": 3,
+      "accurate_count": 3,
+      "fakeout_count": 0,
+      "avg_latency_ms": 120.0,
+      "pnl_impact_usd": 360.0
+    },
+    "SEC_EDGAR": {
+      "title": "SEC EDGAR Form 8-K / S-1 Resmi RSS",
+      "elo_rating": 98.0,
+      "type": "REGULATORY_OFFICIAL",
+      "domain": "REGULATION",
+      "status": "HIGH_TRUST",
+      "quorum_weight": 2.0,
+      "total_news_count": 0,
+      "accurate_count": 0,
+      "fakeout_count": 0,
+      "avg_latency_ms": 250.0,
+      "pnl_impact_usd": 0.0
+    },
+    "FED_OFFICIAL": {
+      "title": "Federal Reserve Board Press RSS",
+      "elo_rating": 98.0,
+      "type": "CENTRAL_BANK_OFFICIAL",
+      "domain": "MONETARY_POLICY",
+      "status": "HIGH_TRUST",
+      "quorum_weight": 2.0,
+      "total_news_count": 0,
+      "accurate_count": 0,
+      "fakeout_count": 0,
+      "avg_latency_ms": 280.0,
+      "pnl_impact_usd": 0.0
+    },
+    "WALTER_BLOOMBERG": {
+      "title": "Walter Bloomberg Terminal Terminal Feed",
+      "elo_rating": 85.0,
+      "type": "NEWS_WIRE",
+      "domain": "GLOBAL_MACRO",
+      "status": "ACTIVE",
+      "quorum_weight": 1.2,
+      "total_news_count": 0,
+      "accurate_count": 0,
+      "fakeout_count": 0,
+      "avg_latency_ms": 400.0,
+      "pnl_impact_usd": 0.0
+    },
+    "FINANCIAL_JUICE": {
+      "title": "FinancialJuice Live Real-time Audio/Wire",
+      "elo_rating": 80.0,
+      "type": "NEWS_WIRE",
+      "domain": "GLOBAL_MACRO",
+      "status": "ACTIVE",
+      "quorum_weight": 1.0,
+      "total_news_count": 0,
+      "accurate_count": 0,
+      "fakeout_count": 0,
+      "avg_latency_ms": 650.0,
+      "pnl_impact_usd": 0.0
+    },
+    "ANONTWITTER:@CRYPTOLEAKINSIDER": {
+      "title": "Kaynak: AnonTwitter:@CryptoLeakInsider",
+      "elo_rating": 60.0,
+      "type": "CANDIDATE_FEED",
+      "domain": "GENERAL",
+      "status": "ACTIVE",
+      "quorum_weight": 0.8,
+      "total_news_count": 0,
+      "accurate_count": 0,
+      "fakeout_count": 0,
+      "avg_latency_ms": 1000.0,
+      "pnl_impact_usd": 0.0
+    },
+    "ANONTWITTER": {
+      "title": "Kaynak: AnonTwitter",
+      "elo_rating": 60.0,
+      "type": "CANDIDATE_FEED",
+      "domain": "GENERAL",
+      "status": "ACTIVE",
+      "quorum_weight": 0.8,
+      "total_news_count": 0,
+      "accurate_count": 0,
+      "fakeout_count": 0,
+      "avg_latency_ms": 1000.0,
+      "pnl_impact_usd": 0.0
+    },
+    "WALTERBLOOMBERG": {
+      "title": "Kaynak: WalterBloomberg",
+      "elo_rating": 60.0,
+      "type": "CANDIDATE_FEED",
+      "domain": "GENERAL",
+      "status": "ACTIVE",
+      "quorum_weight": 0.8,
+      "total_news_count": 0,
+      "accurate_count": 0,
+      "fakeout_count": 0,
+      "avg_latency_ms": 1000.0,
+      "pnl_impact_usd": 0.0
+    },
+    "TREENEWS:TWITTER": {
+      "title": "Kaynak: TreeNews:Twitter",
+      "elo_rating": 60.0,
+      "type": "CANDIDATE_FEED",
+      "domain": "GENERAL",
+      "status": "ACTIVE",
+      "quorum_weight": 0.8,
+      "total_news_count": 0,
+      "accurate_count": 0,
+      "fakeout_count": 0,
+      "avg_latency_ms": 1000.0,
+      "pnl_impact_usd": 0.0
+    },
+    "ANON_LEAK_PUMP": {
+      "title": "Kaynak: ANON_LEAK_PUMP",
+      "elo_rating": 37.0,
+      "type": "CANDIDATE_FEED",
+      "domain": "GENERAL",
+      "status": "QUARANTINED",
+      "quorum_weight": 0.0,
+      "total_news_count": 2,
+      "accurate_count": 0,
+      "fakeout_count": 2,
+      "avg_latency_ms": 1000.0,
+      "pnl_impact_usd": -330.0
+    },
+    "@ELEANORTERRETT": {
+      "title": "Keşfedilen Asil Kaynak: @EleanorTerrett",
+      "elo_rating": 72.0,
+      "type": "PROMOTED_COMMUNITY_SOURCE",
+      "domain": "CRYPTO_ALPHA",
+      "status": "ACTIVE",
+      "quorum_weight": 1.0,
+      "total_news_count": 3,
+      "accurate_count": 3,
+      "fakeout_count": 0,
+      "avg_latency_ms": 450.0,
+      "pnl_impact_usd": 0.0
+    }
+  },
+  "discovered_citations": {
+    "REUTERS.COM": {
+      "entity_key": "REUTERS.COM",
+      "display_name": "reuters.com",
+      "entity_type": "DOMAIN_OUTLET",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS"
+      ],
+      "first_seen": 1791644559.9477124,
+      "last_seen": 1791645047.228349,
+      "sample_headlines": [
+        "BREAKING: SEC Commissioner Hester Peirce hints at S-1 progress, per @EleanorTerr",
+        "BREAKING: SEC Commissioner Hester Peirce hints at S-1 progress, per @EleanorTerr",
+        "BREAKING: SEC Commissioner Hester Peirce hints at S-1 progress, per @EleanorTerr"
+      ]
+    },
+    "REF_REUTERS": {
+      "entity_key": "REF_REUTERS",
+      "display_name": "reuters",
+      "entity_type": "NAMED_SOURCE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS"
+      ],
+      "first_seen": 1791644559.9477124,
+      "last_seen": 1791645047.228349,
+      "sample_headlines": [
+        "BREAKING: SEC Commissioner Hester Peirce hints at S-1 progress, per @EleanorTerr",
+        "BREAKING: SEC Commissioner Hester Peirce hints at S-1 progress, per @EleanorTerr",
+        "BREAKING: SEC Commissioner Hester Peirce hints at S-1 progress, per @EleanorTerr"
+      ]
+    },
+    "@SWARMS_CORP": {
+      "entity_key": "@SWARMS_CORP",
+      "display_name": "@swarms_corp",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.5866086,
+      "last_seen": 1791645045.3250053,
+      "sample_headlines": [
+        "swarms (@swarms_corp): Introducing RouteHub: A Lightning-Fast LLM Gateway\n\nRoute",
+        "swarms (@swarms_corp): Introducing RouteHub: A Lightning-Fast LLM Gateway\n\nRoute",
+        "swarms (@swarms_corp): Introducing RouteHub: A Lightning-Fast LLM Gateway\n\nRoute"
+      ]
+    },
+    "@COINDESK": {
+      "entity_key": "@COINDESK",
+      "display_name": "@CoinDesk",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 6,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.5929885,
+      "last_seen": 1791645045.334006,
+      "sample_headlines": [
+        "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we",
+        "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we",
+        "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we"
+      ]
+    },
+    "@PAYWARD": {
+      "entity_key": "@PAYWARD",
+      "display_name": "@Payward",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.5929885,
+      "last_seen": 1791645045.334006,
+      "sample_headlines": [
+        "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we",
+        "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we",
+        "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we"
+      ]
+    },
+    "@KRAKENFX": {
+      "entity_key": "@KRAKENFX",
+      "display_name": "@krakenfx",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.5929885,
+      "last_seen": 1791645045.334006,
+      "sample_headlines": [
+        "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we",
+        "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we",
+        "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we"
+      ]
+    },
+    "@JONATHANJACHYM": {
+      "entity_key": "@JONATHANJACHYM",
+      "display_name": "@JonathanJachym",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.5929885,
+      "last_seen": 1791645045.334006,
+      "sample_headlines": [
+        "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we",
+        "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we",
+        "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we"
+      ]
+    },
+    "@REBECCARETTIG1": {
+      "entity_key": "@REBECCARETTIG1",
+      "display_name": "@RebeccaRettig1",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.5929885,
+      "last_seen": 1791645045.334006,
+      "sample_headlines": [
+        "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we",
+        "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we",
+        "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we"
+      ]
+    },
+    "@RENATO_MARIOTTI": {
+      "entity_key": "@RENATO_MARIOTTI",
+      "display_name": "@renato_mariotti",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.5929885,
+      "last_seen": 1791645045.334006,
+      "sample_headlines": [
+        "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we",
+        "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we",
+        "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we"
+      ]
+    },
+    "@A1LON9": {
+      "entity_key": "@A1LON9",
+      "display_name": "@a1lon9",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.609747,
+      "last_seen": 1791645045.3545635,
+      "sample_headlines": [
+        "alon (@a1lon9): heard lots of good feedback about callout rewards yesterday\n\nmaj",
+        "alon (@a1lon9): heard lots of good feedback about callout rewards yesterday\n\nmaj",
+        "alon (@a1lon9): heard lots of good feedback about callout rewards yesterday\n\nmaj"
+      ]
+    },
+    "@ROBINHOODAPP": {
+      "entity_key": "@ROBINHOODAPP",
+      "display_name": "@RobinhoodApp",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.6270173,
+      "last_seen": 1791645045.3968673,
+      "sample_headlines": [
+        "Robinhood (@RobinhoodApp): Still time to enter before 10/23 🪐\n\nOur gold bar swee",
+        "Robinhood (@RobinhoodApp): Still time to enter before 10/23 🪐\n\nOur gold bar swee",
+        "Robinhood (@RobinhoodApp): Still time to enter before 10/23 🪐\n\nOur gold bar swee"
+      ]
+    },
+    "RBNHD.CO": {
+      "entity_key": "RBNHD.CO",
+      "display_name": "rbnhd.co",
+      "entity_type": "DOMAIN_OUTLET",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.6270173,
+      "last_seen": 1791645045.3968673,
+      "sample_headlines": [
+        "Robinhood (@RobinhoodApp): Still time to enter before 10/23 🪐\n\nOur gold bar swee",
+        "Robinhood (@RobinhoodApp): Still time to enter before 10/23 🪐\n\nOur gold bar swee",
+        "Robinhood (@RobinhoodApp): Still time to enter before 10/23 🪐\n\nOur gold bar swee"
+      ]
+    },
+    "@REALDONALDTRUMP": {
+      "entity_key": "@REALDONALDTRUMP",
+      "display_name": "@realDonaldTrump",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 10,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.640304,
+      "last_seen": 1791645045.5536373,
+      "sample_headlines": [
+        "Donald J. Trump (@realDonaldTrump): Robert Jeffress, senior pastor of First Bapt",
+        "Donald J. Trump (@realDonaldTrump): The American people are 'under attack' by US",
+        "Donald J. Trump (@realDonaldTrump): Mike Ditka was a great champion, both as a p"
+      ]
+    },
+    "DALLASNEWS.COM": {
+      "entity_key": "DALLASNEWS.COM",
+      "display_name": "dallasnews.com",
+      "entity_type": "DOMAIN_OUTLET",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.640304,
+      "last_seen": 1791645045.4120154,
+      "sample_headlines": [
+        "Donald J. Trump (@realDonaldTrump): Robert Jeffress, senior pastor of First Bapt",
+        "Donald J. Trump (@realDonaldTrump): Robert Jeffress, senior pastor of First Bapt",
+        "Donald J. Trump (@realDonaldTrump): Robert Jeffress, senior pastor of First Bapt"
+      ]
+    },
+    "@ELONMUSK": {
+      "entity_key": "@ELONMUSK",
+      "display_name": "@elonmusk",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 6,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.656395,
+      "last_seen": 1791645045.4392114,
+      "sample_headlines": [
+        "Elon Musk (@elonmusk): Grok @Bot",
+        "Elon Musk (@elonmusk): Join @TeslaSI if you’re interested in solving generalized",
+        "Elon Musk (@elonmusk): Grok @Bot"
+      ]
+    },
+    "@BOT": {
+      "entity_key": "@BOT",
+      "display_name": "@Bot",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.656395,
+      "last_seen": 1791645045.4283218,
+      "sample_headlines": [
+        "Elon Musk (@elonmusk): Grok @Bot",
+        "Elon Musk (@elonmusk): Grok @Bot",
+        "Elon Musk (@elonmusk): Grok @Bot"
+      ]
+    },
+    "@TESLASI": {
+      "entity_key": "@TESLASI",
+      "display_name": "@TeslaSI",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.6742013,
+      "last_seen": 1791645045.4392114,
+      "sample_headlines": [
+        "Elon Musk (@elonmusk): Join @TeslaSI if you’re interested in solving generalized",
+        "Elon Musk (@elonmusk): Join @TeslaSI if you’re interested in solving generalized",
+        "Elon Musk (@elonmusk): Join @TeslaSI if you’re interested in solving generalized"
+      ]
+    },
+    "REF_INTELLIGENCE": {
+      "entity_key": "REF_INTELLIGENCE",
+      "display_name": "intelligence",
+      "entity_type": "NAMED_SOURCE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.6742013,
+      "last_seen": 1791645045.4392114,
+      "sample_headlines": [
+        "Elon Musk (@elonmusk): Join @TeslaSI if you’re interested in solving generalized",
+        "Elon Musk (@elonmusk): Join @TeslaSI if you’re interested in solving generalized",
+        "Elon Musk (@elonmusk): Join @TeslaSI if you’re interested in solving generalized"
+      ]
+    },
+    "@CELO": {
+      "entity_key": "@CELO",
+      "display_name": "@Celo",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.6966827,
+      "last_seen": 1791645045.4547417,
+      "sample_headlines": [
+        "Celo (@Celo): When @Opera launched @MiniPay, the goal was a \"clean, familiar, co",
+        "Celo (@Celo): When @Opera launched @MiniPay, the goal was a \"clean, familiar, co",
+        "Celo (@Celo): When @Opera launched @MiniPay, the goal was a \"clean, familiar, co"
+      ]
+    },
+    "@OPERA": {
+      "entity_key": "@OPERA",
+      "display_name": "@Opera",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.6966827,
+      "last_seen": 1791645045.4547417,
+      "sample_headlines": [
+        "Celo (@Celo): When @Opera launched @MiniPay, the goal was a \"clean, familiar, co",
+        "Celo (@Celo): When @Opera launched @MiniPay, the goal was a \"clean, familiar, co",
+        "Celo (@Celo): When @Opera launched @MiniPay, the goal was a \"clean, familiar, co"
+      ]
+    },
+    "@MINIPAY": {
+      "entity_key": "@MINIPAY",
+      "display_name": "@MiniPay",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.6966827,
+      "last_seen": 1791645045.4547417,
+      "sample_headlines": [
+        "Celo (@Celo): When @Opera launched @MiniPay, the goal was a \"clean, familiar, co",
+        "Celo (@Celo): When @Opera launched @MiniPay, the goal was a \"clean, familiar, co",
+        "Celo (@Celo): When @Opera launched @MiniPay, the goal was a \"clean, familiar, co"
+      ]
+    },
+    "@SELFXYZ": {
+      "entity_key": "@SELFXYZ",
+      "display_name": "@Selfxyz",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.6966827,
+      "last_seen": 1791645045.4547417,
+      "sample_headlines": [
+        "Celo (@Celo): When @Opera launched @MiniPay, the goal was a \"clean, familiar, co",
+        "Celo (@Celo): When @Opera launched @MiniPay, the goal was a \"clean, familiar, co",
+        "Celo (@Celo): When @Opera launched @MiniPay, the goal was a \"clean, familiar, co"
+      ]
+    },
+    "@MURRAYSPARK100": {
+      "entity_key": "@MURRAYSPARK100",
+      "display_name": "@murrayspark100",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.6966827,
+      "last_seen": 1791645045.4547417,
+      "sample_headlines": [
+        "Celo (@Celo): When @Opera launched @MiniPay, the goal was a \"clean, familiar, co",
+        "Celo (@Celo): When @Opera launched @MiniPay, the goal was a \"clean, familiar, co",
+        "Celo (@Celo): When @Opera launched @MiniPay, the goal was a \"clean, familiar, co"
+      ]
+    },
+    "@WUBLOCKCHAIN": {
+      "entity_key": "@WUBLOCKCHAIN",
+      "display_name": "@WuBlockchain",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 6,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.7236764,
+      "last_seen": 1791645045.5797894,
+      "sample_headlines": [
+        "Wu Blockchain (@WuBlockchain): Weekly Project Updates: Polymarket Overhauls Unde",
+        "Wu Blockchain (@WuBlockchain): Vitalik Buterin: Without AI, Ethereum's Lean Road",
+        "Wu Blockchain (@WuBlockchain): Weekly Project Updates: Polymarket Overhauls Unde"
+      ]
+    },
+    "@LTCFOUNDATION": {
+      "entity_key": "@LTCFOUNDATION",
+      "display_name": "@LTCFoundation",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.7485356,
+      "last_seen": 1791645045.479305,
+      "sample_headlines": [
+        "Litecoin Foundation ⚡️ (@LTCFoundation): 'DeLorean to Accept Litecoin $LTC for U",
+        "Litecoin Foundation ⚡️ (@LTCFoundation): 'DeLorean to Accept Litecoin $LTC for U",
+        "Litecoin Foundation ⚡️ (@LTCFoundation): 'DeLorean to Accept Litecoin $LTC for U"
+      ]
+    },
+    "@CRYPTOTIMES_IO": {
+      "entity_key": "@CRYPTOTIMES_IO",
+      "display_name": "@CryptoTimes_io",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.7485356,
+      "last_seen": 1791645045.479305,
+      "sample_headlines": [
+        "Litecoin Foundation ⚡️ (@LTCFoundation): 'DeLorean to Accept Litecoin $LTC for U",
+        "Litecoin Foundation ⚡️ (@LTCFoundation): 'DeLorean to Accept Litecoin $LTC for U",
+        "Litecoin Foundation ⚡️ (@LTCFoundation): 'DeLorean to Accept Litecoin $LTC for U"
+      ]
+    },
+    "CRYPTOTIMES.IO": {
+      "entity_key": "CRYPTOTIMES.IO",
+      "display_name": "cryptotimes.io",
+      "entity_type": "DOMAIN_OUTLET",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.7485356,
+      "last_seen": 1791645045.479305,
+      "sample_headlines": [
+        "Litecoin Foundation ⚡️ (@LTCFoundation): 'DeLorean to Accept Litecoin $LTC for U",
+        "Litecoin Foundation ⚡️ (@LTCFoundation): 'DeLorean to Accept Litecoin $LTC for U",
+        "Litecoin Foundation ⚡️ (@LTCFoundation): 'DeLorean to Accept Litecoin $LTC for U"
+      ]
+    },
+    "@CARDANO": {
+      "entity_key": "@CARDANO",
+      "display_name": "@Cardano",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.7640727,
+      "last_seen": 1791645045.4912462,
+      "sample_headlines": [
+        "Cardano (@Cardano): In case you missed it, the recent Developer Spotlight is wit",
+        "Cardano (@Cardano): In case you missed it, the recent Developer Spotlight is wit",
+        "Cardano (@Cardano): In case you missed it, the recent Developer Spotlight is wit"
+      ]
+    },
+    "@MAXALEXWEBER": {
+      "entity_key": "@MAXALEXWEBER",
+      "display_name": "@maxalexweber",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.7640727,
+      "last_seen": 1791645045.4912462,
+      "sample_headlines": [
+        "Cardano (@Cardano): In case you missed it, the recent Developer Spotlight is wit",
+        "Cardano (@Cardano): In case you missed it, the recent Developer Spotlight is wit",
+        "Cardano (@Cardano): In case you missed it, the recent Developer Spotlight is wit"
+      ]
+    },
+    "@ODATANO_V4": {
+      "entity_key": "@ODATANO_V4",
+      "display_name": "@ODATANO_V4",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.7640727,
+      "last_seen": 1791645045.4912462,
+      "sample_headlines": [
+        "Cardano (@Cardano): In case you missed it, the recent Developer Spotlight is wit",
+        "Cardano (@Cardano): In case you missed it, the recent Developer Spotlight is wit",
+        "Cardano (@Cardano): In case you missed it, the recent Developer Spotlight is wit"
+      ]
+    },
+    "REF_SPOTLIGHT": {
+      "entity_key": "REF_SPOTLIGHT",
+      "display_name": "Spotlight",
+      "entity_type": "NAMED_SOURCE",
+      "citation_count": 6,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.7640727,
+      "last_seen": 1791645045.4912462,
+      "sample_headlines": [
+        "Cardano (@Cardano): In case you missed it, the recent Developer Spotlight is wit",
+        "Cardano (@Cardano): In case you missed it, the recent Developer Spotlight is wit",
+        "Cardano (@Cardano): In case you missed it, the recent Developer Spotlight is wit"
+      ]
+    },
+    "@CKBA_BUILD": {
+      "entity_key": "@CKBA_BUILD",
+      "display_name": "@ckba_build",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.7843444,
+      "last_seen": 1791645045.5040932,
+      "sample_headlines": [
+        "Common Knowledge Base Association (CKBA) (@ckba_build): If Lightning is fundamen",
+        "Common Knowledge Base Association (CKBA) (@ckba_build): If Lightning is fundamen",
+        "Common Knowledge Base Association (CKBA) (@ckba_build): If Lightning is fundamen"
+      ]
+    },
+    "NERVOS.ORG": {
+      "entity_key": "NERVOS.ORG",
+      "display_name": "nervos.org",
+      "entity_type": "DOMAIN_OUTLET",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.7843444,
+      "last_seen": 1791645045.5040932,
+      "sample_headlines": [
+        "Common Knowledge Base Association (CKBA) (@ckba_build): If Lightning is fundamen",
+        "Common Knowledge Base Association (CKBA) (@ckba_build): If Lightning is fundamen",
+        "Common Knowledge Base Association (CKBA) (@ckba_build): If Lightning is fundamen"
+      ]
+    },
+    "REF_INTO": {
+      "entity_key": "REF_INTO",
+      "display_name": "into",
+      "entity_type": "NAMED_SOURCE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.7843444,
+      "last_seen": 1791645045.5040932,
+      "sample_headlines": [
+        "Common Knowledge Base Association (CKBA) (@ckba_build): If Lightning is fundamen",
+        "Common Knowledge Base Association (CKBA) (@ckba_build): If Lightning is fundamen",
+        "Common Knowledge Base Association (CKBA) (@ckba_build): If Lightning is fundamen"
+      ]
+    },
+    "FOXBUSINESS.COM": {
+      "entity_key": "FOXBUSINESS.COM",
+      "display_name": "foxbusiness.com",
+      "entity_type": "DOMAIN_OUTLET",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.79723,
+      "last_seen": 1791645045.517958,
+      "sample_headlines": [
+        "Donald J. Trump (@realDonaldTrump): The American people are 'under attack' by US",
+        "Donald J. Trump (@realDonaldTrump): The American people are 'under attack' by US",
+        "Donald J. Trump (@realDonaldTrump): The American people are 'under attack' by US"
+      ]
+    },
+    "@COTINETWORK": {
+      "entity_key": "@COTINETWORK",
+      "display_name": "@COTInetwork",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.8113823,
+      "last_seen": 1791645045.529991,
+      "sample_headlines": [
+        "COTI Foundation (@COTInetwork): Introducing COTI 2.0\nPrivate Programmable Money\n",
+        "COTI Foundation (@COTInetwork): Introducing COTI 2.0\nPrivate Programmable Money\n",
+        "COTI Foundation (@COTInetwork): Introducing COTI 2.0\nPrivate Programmable Money\n"
+      ]
+    },
+    "COTI.IO": {
+      "entity_key": "COTI.IO",
+      "display_name": "coti.io",
+      "entity_type": "DOMAIN_OUTLET",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.8113823,
+      "last_seen": 1791645045.529991,
+      "sample_headlines": [
+        "COTI Foundation (@COTInetwork): Introducing COTI 2.0\nPrivate Programmable Money\n",
+        "COTI Foundation (@COTInetwork): Introducing COTI 2.0\nPrivate Programmable Money\n",
+        "COTI Foundation (@COTInetwork): Introducing COTI 2.0\nPrivate Programmable Money\n"
+      ]
+    },
+    "@INJECTIVE": {
+      "entity_key": "@INJECTIVE",
+      "display_name": "@injective",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.824034,
+      "last_seen": 1791645045.5421777,
+      "sample_headlines": [
+        "Injective 🥷 (@injective): Write this down ✍️\n\nInjective - The Network\n$INJ - The",
+        "Injective 🥷 (@injective): Write this down ✍️\n\nInjective - The Network\n$INJ - The",
+        "Injective 🥷 (@injective): Write this down ✍️\n\nInjective - The Network\n$INJ - The"
+      ]
+    },
+    "@STARKWARELTD": {
+      "entity_key": "@STARKWARELTD",
+      "display_name": "@StarkWareLtd",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.8471384,
+      "last_seen": 1791645045.566329,
+      "sample_headlines": [
+        "StarkWare 🥷 (@StarkWareLtd): The future of today's blockchains is becoming incre",
+        "StarkWare 🥷 (@StarkWareLtd): The future of today's blockchains is becoming incre",
+        "StarkWare 🥷 (@StarkWareLtd): The future of today's blockchains is becoming incre"
+      ]
+    },
+    "@VITALIKBUTERIN": {
+      "entity_key": "@VITALIKBUTERIN",
+      "display_name": "@VitalikButerin",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.8641224,
+      "last_seen": 1791645045.5797894,
+      "sample_headlines": [
+        "Wu Blockchain (@WuBlockchain): Vitalik Buterin: Without AI, Ethereum's Lean Road",
+        "Wu Blockchain (@WuBlockchain): Vitalik Buterin: Without AI, Ethereum's Lean Road",
+        "Wu Blockchain (@WuBlockchain): Vitalik Buterin: Without AI, Ethereum's Lean Road"
+      ]
+    },
+    "@BALAJIS": {
+      "entity_key": "@BALAJIS",
+      "display_name": "@balajis",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.8641224,
+      "last_seen": 1791645045.5797894,
+      "sample_headlines": [
+        "Wu Blockchain (@WuBlockchain): Vitalik Buterin: Without AI, Ethereum's Lean Road",
+        "Wu Blockchain (@WuBlockchain): Vitalik Buterin: Without AI, Ethereum's Lean Road",
+        "Wu Blockchain (@WuBlockchain): Vitalik Buterin: Without AI, Ethereum's Lean Road"
+      ]
+    },
+    "@CZ_BINANCE": {
+      "entity_key": "@CZ_BINANCE",
+      "display_name": "@cz_binance",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.8799856,
+      "last_seen": 1791645045.5910857,
+      "sample_headlines": [
+        "CZ 🔶 BNB (@cz_binance): Stay SAFU out there!\n\nFWIW, I am not against hardware wa",
+        "CZ 🔶 BNB (@cz_binance): Stay SAFU out there!\n\nFWIW, I am not against hardware wa",
+        "CZ 🔶 BNB (@cz_binance): Stay SAFU out there!\n\nFWIW, I am not against hardware wa"
+      ]
+    },
+    "@REALDONALDTRU": {
+      "entity_key": "@REALDONALDTRU",
+      "display_name": "@realDonaldTru",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.9004285,
+      "last_seen": 1791644973.9004285,
+      "sample_headlines": [
+        "Donald J. Trump (@realDonaldTrump): https:// truthsocial.com/@realDonaldTru mp/1"
+      ]
+    },
+    "TRUTHSOCIAL.COM": {
+      "entity_key": "TRUTHSOCIAL.COM",
+      "display_name": "truthsocial.com",
+      "entity_type": "DOMAIN_OUTLET",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791644973.9004285,
+      "last_seen": 1791644973.9004285,
+      "sample_headlines": [
+        "Donald J. Trump (@realDonaldTrump): https:// truthsocial.com/@realDonaldTru mp/1"
+      ]
+    },
+    "@ELEANORTERRETT": {
+      "entity_key": "@ELEANORTERRETT",
+      "display_name": "@EleanorTerrett",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 2,
+      "citing_wires": [
+        "TREENEWS",
+        "WALTER_BLOOMBERG"
+      ],
+      "first_seen": 1791645047.228349,
+      "last_seen": 1791645047.2315214,
+      "sample_headlines": [
+        "BREAKING: SEC Commissioner Hester Peirce hints at S-1 progress, per @EleanorTerr",
+        "ETF analyst confirms new filing details citing @EleanorTerrett on Fox Business"
+      ]
+    },
+    "@ERICBALCHUNAS": {
+      "entity_key": "@ERICBALCHUNAS",
+      "display_name": "@EricBalchunas",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:WIRE"
+      ],
+      "first_seen": 1791645047.2857053,
+      "last_seen": 1791645047.2857053,
+      "sample_headlines": [
+        "SEC filing confirms new advisor @EricBalchunas reports"
+      ]
+    }
+  },
+  "shadow_sandbox": {
+    "@REALDONALDTRUMP": {
+      "entity_key": "@REALDONALDTRUMP",
+      "display_name": "@realDonaldTrump",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791644973.8344548,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@COINDESK": {
+      "entity_key": "@COINDESK",
+      "display_name": "@CoinDesk",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645031.5859547,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@ELONMUSK": {
+      "entity_key": "@ELONMUSK",
+      "display_name": "@elonmusk",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645031.6609538,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@WUBLOCKCHAIN": {
+      "entity_key": "@WUBLOCKCHAIN",
+      "display_name": "@WuBlockchain",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645031.7107174,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "REF_SPOTLIGHT": {
+      "entity_key": "REF_SPOTLIGHT",
+      "display_name": "Spotlight",
+      "entity_type": "NAMED_SOURCE",
+      "enrolled_ts": 1791645031.7413192,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@SWARMS_CORP": {
+      "entity_key": "@SWARMS_CORP",
+      "display_name": "@swarms_corp",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.3250053,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@PAYWARD": {
+      "entity_key": "@PAYWARD",
+      "display_name": "@Payward",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.334006,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@KRAKENFX": {
+      "entity_key": "@KRAKENFX",
+      "display_name": "@krakenfx",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.334006,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@JONATHANJACHYM": {
+      "entity_key": "@JONATHANJACHYM",
+      "display_name": "@JonathanJachym",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.334006,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@REBECCARETTIG1": {
+      "entity_key": "@REBECCARETTIG1",
+      "display_name": "@RebeccaRettig1",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.334006,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@RENATO_MARIOTTI": {
+      "entity_key": "@RENATO_MARIOTTI",
+      "display_name": "@renato_mariotti",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.334006,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@A1LON9": {
+      "entity_key": "@A1LON9",
+      "display_name": "@a1lon9",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.3545635,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@ROBINHOODAPP": {
+      "entity_key": "@ROBINHOODAPP",
+      "display_name": "@RobinhoodApp",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.3968673,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "RBNHD.CO": {
+      "entity_key": "RBNHD.CO",
+      "display_name": "rbnhd.co",
+      "entity_type": "DOMAIN_OUTLET",
+      "enrolled_ts": 1791645045.3968673,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "DALLASNEWS.COM": {
+      "entity_key": "DALLASNEWS.COM",
+      "display_name": "dallasnews.com",
+      "entity_type": "DOMAIN_OUTLET",
+      "enrolled_ts": 1791645045.4120154,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@BOT": {
+      "entity_key": "@BOT",
+      "display_name": "@Bot",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.4283218,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@TESLASI": {
+      "entity_key": "@TESLASI",
+      "display_name": "@TeslaSI",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.4392114,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "REF_INTELLIGENCE": {
+      "entity_key": "REF_INTELLIGENCE",
+      "display_name": "intelligence",
+      "entity_type": "NAMED_SOURCE",
+      "enrolled_ts": 1791645045.4392114,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@CELO": {
+      "entity_key": "@CELO",
+      "display_name": "@Celo",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.4547417,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@OPERA": {
+      "entity_key": "@OPERA",
+      "display_name": "@Opera",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.4547417,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@MINIPAY": {
+      "entity_key": "@MINIPAY",
+      "display_name": "@MiniPay",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.4547417,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@SELFXYZ": {
+      "entity_key": "@SELFXYZ",
+      "display_name": "@Selfxyz",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.4547417,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@MURRAYSPARK100": {
+      "entity_key": "@MURRAYSPARK100",
+      "display_name": "@murrayspark100",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.4547417,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@LTCFOUNDATION": {
+      "entity_key": "@LTCFOUNDATION",
+      "display_name": "@LTCFoundation",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.479305,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@CRYPTOTIMES_IO": {
+      "entity_key": "@CRYPTOTIMES_IO",
+      "display_name": "@CryptoTimes_io",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.479305,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "CRYPTOTIMES.IO": {
+      "entity_key": "CRYPTOTIMES.IO",
+      "display_name": "cryptotimes.io",
+      "entity_type": "DOMAIN_OUTLET",
+      "enrolled_ts": 1791645045.479305,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@CARDANO": {
+      "entity_key": "@CARDANO",
+      "display_name": "@Cardano",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.4912462,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@MAXALEXWEBER": {
+      "entity_key": "@MAXALEXWEBER",
+      "display_name": "@maxalexweber",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.4912462,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@ODATANO_V4": {
+      "entity_key": "@ODATANO_V4",
+      "display_name": "@ODATANO_V4",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.4912462,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@CKBA_BUILD": {
+      "entity_key": "@CKBA_BUILD",
+      "display_name": "@ckba_build",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.5040932,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "NERVOS.ORG": {
+      "entity_key": "NERVOS.ORG",
+      "display_name": "nervos.org",
+      "entity_type": "DOMAIN_OUTLET",
+      "enrolled_ts": 1791645045.5040932,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "REF_INTO": {
+      "entity_key": "REF_INTO",
+      "display_name": "into",
+      "entity_type": "NAMED_SOURCE",
+      "enrolled_ts": 1791645045.5040932,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "FOXBUSINESS.COM": {
+      "entity_key": "FOXBUSINESS.COM",
+      "display_name": "foxbusiness.com",
+      "entity_type": "DOMAIN_OUTLET",
+      "enrolled_ts": 1791645045.517958,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@COTINETWORK": {
+      "entity_key": "@COTINETWORK",
+      "display_name": "@COTInetwork",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.529991,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "COTI.IO": {
+      "entity_key": "COTI.IO",
+      "display_name": "coti.io",
+      "entity_type": "DOMAIN_OUTLET",
+      "enrolled_ts": 1791645045.529991,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@INJECTIVE": {
+      "entity_key": "@INJECTIVE",
+      "display_name": "@injective",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.5421777,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@STARKWARELTD": {
+      "entity_key": "@STARKWARELTD",
+      "display_name": "@StarkWareLtd",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.566329,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@VITALIKBUTERIN": {
+      "entity_key": "@VITALIKBUTERIN",
+      "display_name": "@VitalikButerin",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.5797894,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@BALAJIS": {
+      "entity_key": "@BALAJIS",
+      "display_name": "@balajis",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.5797894,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@CZ_BINANCE": {
+      "entity_key": "@CZ_BINANCE",
+      "display_name": "@cz_binance",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645045.5910857,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "REUTERS.COM": {
+      "entity_key": "REUTERS.COM",
+      "display_name": "reuters.com",
+      "entity_type": "DOMAIN_OUTLET",
+      "enrolled_ts": 1791645047.228349,
+      "citing_wires": [
+        "TREENEWS"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "REF_REUTERS": {
+      "entity_key": "REF_REUTERS",
+      "display_name": "reuters",
+      "entity_type": "NAMED_SOURCE",
+      "enrolled_ts": 1791645047.228349,
+      "citing_wires": [
+        "TREENEWS"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@ELEANORTERRETT": {
+      "entity_key": "@ELEANORTERRETT",
+      "display_name": "@EleanorTerrett",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791645047.2315214,
+      "citing_wires": [
+        "TREENEWS",
+        "WALTER_BLOOMBERG"
+      ],
+      "status": "PROMOTED_TO_ACTIVE",
+      "shadow_events_count": 3,
+      "shadow_accurate_count": 3,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 100.0,
+      "is_promoted": true,
+      "promoted_ts": 1791645047.2719004
+    }
+  },
+  "attribution_history": [
+    {
+      "timestamp": 1791644428.595491,
+      "event_id": "EVT_1791644428595_TREENE",
+      "source": "TREENEWS",
+      "title": "BlackRock files updated S-1 for Solana Trust",
+      "price_pct_30s": 0.15,
+      "price_pct_300s": 0.25,
+      "is_accurate": true,
+      "is_fakeout": false,
+      "delta_elo": 6.5,
+      "old_elo": 92.0,
+      "new_elo": 98.5,
+      "status": "HIGH_TRUST",
+      "status_changed": false
+    },
+    {
+      "timestamp": 1791644428.603229,
+      "event_id": "EVT_1791644428603_ANON_L",
+      "source": "ANON_LEAK_PUMP",
+      "title": "RUMOR: Apple secretly buying 50,000 BTC",
+      "price_pct_30s": 0.1,
+      "price_pct_300s": -0.35,
+      "is_accurate": false,
+      "is_fakeout": true,
+      "delta_elo": -11.5,
+      "old_elo": 60.0,
+      "new_elo": 48.5,
+      "status": "ACTIVE",
+      "status_changed": false
+    },
+    {
+      "timestamp": 1791644428.6090348,
+      "event_id": "EVT_1791644428609_ANON_L",
+      "source": "ANON_LEAK_PUMP",
+      "title": "RUMOR: Gensler resigns immediately after secret meeting",
+      "price_pct_30s": 0.108,
+      "price_pct_300s": -0.462,
+      "is_accurate": false,
+      "is_fakeout": true,
+      "delta_elo": -11.5,
+      "old_elo": 48.5,
+      "new_elo": 37.0,
+      "status": "QUARANTINED",
+      "status_changed": true
+    },
+    {
+      "timestamp": 1791644980.786344,
+      "event_id": "EVT_1791644980786_TREENE",
+      "source": "TREENEWS",
+      "title": "BlackRock files updated S-1 for Solana Trust",
+      "price_pct_30s": 0.15,
+      "price_pct_300s": 0.25,
+      "is_accurate": true,
+      "is_fakeout": false,
+      "delta_elo": 6.5,
+      "old_elo": 98.5,
+      "new_elo": 100.0,
+      "status": "HIGH_TRUST",
+      "status_changed": false
+    },
+    {
+      "timestamp": 1791645045.984787,
+      "event_id": "EVT_1791645045984_TREENE",
+      "source": "TREENEWS",
+      "title": "BlackRock files updated S-1 for Solana Trust",
+      "price_pct_30s": 0.15,
+      "price_pct_300s": 0.25,
+      "is_accurate": true,
+      "is_fakeout": false,
+      "delta_elo": 6.5,
+      "old_elo": 100.0,
+      "new_elo": 100.0,
+      "status": "HIGH_TRUST",
+      "status_changed": false
+    },
+    {
+      "timestamp": 1791645046.0044432,
+      "event_id": "EVT_1791645046004_ANON_L",
+      "source": "ANON_LEAK_PUMP",
+      "title": "RUMOR: Apple secretly buying 50,000 BTC",
+      "price_pct_30s": 0.1,
+      "price_pct_300s": -0.35,
+      "is_accurate": false,
+      "is_fakeout": true,
+      "delta_elo": -11.5,
+      "old_elo": 60.0,
+      "new_elo": 48.5,
+      "status": "ACTIVE",
+      "status_changed": false
+    },
+    {
+      "timestamp": 1791645046.016409,
+      "event_id": "EVT_1791645046016_ANON_L",
+      "source": "ANON_LEAK_PUMP",
+      "title": "RUMOR: Gensler resigns immediately after secret meeting",
+      "price_pct_30s": 0.108,
+      "price_pct_300s": -0.462,
+      "is_accurate": false,
+      "is_fakeout": true,
+      "delta_elo": -11.5,
+      "old_elo": 48.5,
+      "new_elo": 37.0,
+      "status": "QUARANTINED",
+      "status_changed": true
+    }
+  ]
+}

@@ -90,7 +90,11 @@ class MacroNewsSentinel:
                 category = cat
                 break
 
-        # 2. Dinamik Makam ve Konuşmacı Sınıflandırması
+        # 2. Dinamik Makam ve Konuşmacı Sınıflandırması & Otomatik Liderlik Değişimi (Faz 6C)
+        try:
+            role_registry.detect_leadership_changes(title)
+        except Exception:
+            pass
         speaker_info = role_registry.classify_text_speaker(title)
 
         # 3. Kripto Etki Puanı (Hızlı Kuant Skorlama)

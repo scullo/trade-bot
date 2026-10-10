@@ -77,6 +77,8 @@ def run_phase6a_tests():
     # 3. TEST: Bilinmeyen Aday Kaynak ve Sahte Fitil (Fakeout / Trap) Cezası
     print("\n[ADIM 3] Bilinmeyen Kaynak Keşfi ve Fitil Tuzağı (Fakeout) Cezası...")
     bad_source = "ANON_LEAK_PUMP"
+    if bad_source in source_evolution_engine.sources:
+        del source_evolution_engine.sources[bad_source]
     bad_prof = source_evolution_engine.get_source_profile(bad_source)
     print(f"  ✓ Yeni Aday Kaynak Eklendi: {bad_source} | Başlangıç ELO: {bad_prof['elo_rating']} | Statü: {bad_prof['status']}")
     assert bad_prof["elo_rating"] == 60.0, "Aday kaynak başlangıç puanı 60.0 olmalı!"

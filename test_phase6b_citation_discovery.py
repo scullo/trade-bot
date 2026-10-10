@@ -29,6 +29,12 @@ def run_phase6b_tests():
     print("🕸️ [FAZ 6B TESTİ BAŞLIYOR] CITATION GRAPH CRAWLER & SHADOW SANDBOX")
     print("=" * 80)
 
+    # Test öncesi temiz başlangıç
+    for k in ["@ELEANORTERRETT", "@ERICBALCHUNAS"]:
+        source_evolution_engine.discovered_citations.pop(k, None)
+        source_evolution_engine.shadow_sandbox.pop(k, None)
+        source_evolution_engine.sources.pop(k, None)
+
     # 1. TEST: Metinlerden Alıntı Cımbızlama (NLP Citation Extraction)
     print("\n[ADIM 1] Doğrulanmış Haber Akışından Alıntı Cımbızlama...")
     sample_news_1 = "BREAKING: SEC Commissioner Hester Peirce hints at S-1 progress, per @EleanorTerrett via reuters.com"
