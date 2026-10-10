@@ -312,7 +312,20 @@ class ValkyrieAegisSentinel:
         except Exception:
             guard_healthy = False
 
-        is_all_macro_healthy = cal_healthy and cross_healthy and news_healthy and quorum_healthy and guard_healthy
+        # 6. Darwinian Source Evolution & Karantina Denetimi (Faz 6)
+        source_evo_healthy = False
+        source_cnt = 0
+        quarantined_cnt = 0
+        try:
+            from macro_source_evolution import source_evolution_engine
+            sources = source_evolution_engine.sources
+            source_cnt = len(sources)
+            quarantined_cnt = sum(1 for s in sources.values() if s.get("status") == "QUARANTINED" or float(s.get("elo_rating", 60.0)) < 45.0)
+            source_evo_healthy = (source_cnt >= 3)
+        except Exception:
+            source_evo_healthy = False
+
+        is_all_macro_healthy = cal_healthy and cross_healthy and news_healthy and quorum_healthy and guard_healthy and source_evo_healthy
 
         return {
             "calendar": {
@@ -338,6 +351,11 @@ class ValkyrieAegisSentinel:
             },
             "strategy_guard": {
                 "healthy": guard_healthy
+            },
+            "source_evolution": {
+                "healthy": source_evo_healthy,
+                "sources_count": source_cnt,
+                "quarantined_count": quarantined_cnt
             },
             "is_healthy": is_all_macro_healthy,
             "status_text": "TAM SAĞLIKLI (7/24 NÖBETTE 🟢)" if is_all_macro_healthy else "OTONOM ONARIM DEVREDE ⚠️"
@@ -534,6 +552,15 @@ class ValkyrieAegisSentinel:
                 del news_quorum.topic_clusters[k]
             if stale_keys:
                 actions_taken.append(f"🛡️ Byzantine Quorum masasında {len(stale_keys)} bayat konu kümesi temizlendi (RAM koruması).")
+        except Exception:
+            pass
+
+        # 19. Macro Oracle: Source Evolution Sicil Kurtarma (Hafıza / Kütük Sağlığı)
+        try:
+            from macro_source_evolution import source_evolution_engine
+            if len(source_evolution_engine.sources) == 0:
+                source_evolution_engine.load_registry()
+                actions_taken.append("🧬 Kaynak Evrimi motoru boş hafıza tespit edildi: Tohum sicili otonom onarıldı.")
         except Exception:
             pass
 
@@ -750,3 +777,6 @@ class ValkyrieAegisSentinel:
 🟢 <b>SENTINEL KARARI:</b> <b>{audit.get('status_text', 'KUSURSUZ')}</b>"""
 
         return msg
+
+# Global Singleton Örneği
+aegis_sentinel = ValkyrieAegisSentinel()

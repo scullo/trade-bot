@@ -144,6 +144,47 @@ class ExecutiveRoleRegistry:
         print(f">> [🏛️ MAKAMSAL DEVİR TESLİM] {role['title']} makamı güncellendi: Eski={old_holder} -> YENİ={new_person_name}. Gerekçe: {reason}")
         return True
 
+    def detect_leadership_changes(self, text: str) -> Optional[Dict[str, Any]]:
+        """
+        Gelen flaş haber başlığında resmi liderlik / makam devir teslimi olup olmadığını
+        otonom olarak inceler (Automated Roll-Call).
+        Örn: 'Senate confirms Paul Atkins as new SEC Chair' -> SEC_CHAIR makamını otomatik günceller.
+        """
+        import re
+        t_clean = text.strip()
+
+        # 1. SEC Başkanı Değişimi
+        sec_match = re.search(r"(?:Senate confirms|officially sworn in as|names|appoints)\s+([A-Za-z\s]+?)\s+as\s+(?:new\s+)?SEC\s+Chair", t_clean, re.IGNORECASE)
+        if sec_match:
+            new_name = sec_match.group(1).strip().title()
+            if len(new_name.split()) >= 2 and "Trump" not in new_name:
+                last_name = new_name.split()[-1]
+                aliases = [new_name, last_name, f"Chair {last_name}", f"Chairman {last_name}"]
+                self.update_role_holder("SEC_CHAIR", new_name, aliases, reason=f"Flaş Haber ile Atandı: {t_clean[:60]}")
+                return {"role_key": "SEC_CHAIR", "new_holder": new_name, "aliases": aliases}
+
+        # 2. Fed Başkanı Değişimi
+        fed_match = re.search(r"(?:Senate confirms|officially sworn in as|names|appoints)\s+([A-Za-z\s]+?)\s+as\s+(?:new\s+)?(?:Federal Reserve|Fed)\s+Chair", t_clean, re.IGNORECASE)
+        if fed_match:
+            new_name = fed_match.group(1).strip().title()
+            if len(new_name.split()) >= 2:
+                last_name = new_name.split()[-1]
+                aliases = [new_name, last_name, f"Chair {last_name}", f"Chairman {last_name}"]
+                self.update_role_holder("FED_CHAIR", new_name, aliases, reason=f"Flaş Haber ile Atandı: {t_clean[:60]}")
+                return {"role_key": "FED_CHAIR", "new_holder": new_name, "aliases": aliases}
+
+        # 3. Hazine Bakanı Değişimi
+        tres_match = re.search(r"(?:Senate confirms|officially sworn in as|names|appoints)\s+([A-Za-z\s]+?)\s+as\s+(?:new\s+)?Treasury\s+Secretary", t_clean, re.IGNORECASE)
+        if tres_match:
+            new_name = tres_match.group(1).strip().title()
+            if len(new_name.split()) >= 2:
+                last_name = new_name.split()[-1]
+                aliases = [new_name, last_name, f"Secretary {last_name}"]
+                self.update_role_holder("US_TREASURY_SEC", new_name, aliases, reason=f"Flaş Haber ile Atandı: {t_clean[:60]}")
+                return {"role_key": "US_TREASURY_SEC", "new_holder": new_name, "aliases": aliases}
+
+        return None
+
     def classify_text_speaker(self, text: str) -> Dict[str, Any]:
         """
         Metin içindeki konuşmacıyı / yetkiliyi tespit eder.

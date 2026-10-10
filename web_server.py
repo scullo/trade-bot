@@ -8545,9 +8545,9 @@ async function loadAdminMetrics() {
                     <div style="background:var(--card-bg, #111726); border:1px solid rgba(0,242,254,0.18); border-radius:14px; padding:18px 20px; box-shadow:0 4px 24px rgba(0,0,0,0.25); display:flex; flex-direction:column; gap:10px;">
                         <div style="border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:12px; margin-bottom:4px;">
                             <div style="font-size:12px; font-weight:800; color:var(--cyan); text-transform:uppercase; letter-spacing:0.8px; display:flex; align-items:center; gap:8px;">
-                                <span>🌐</span> 4. MAKRO İSTİHBARAT & SENTINEL MASASI (${(sys.category_scores && sys.category_scores.macro_oracle) || '5/5'})
+                                <span>🌐</span> 4. MAKRO İSTİHBARAT & SENTINEL MASASI (${(sys.category_scores && sys.category_scores.macro_oracle) || '6/6'})
                             </div>
-                            <div style="font-size:11px; color:#64748b; margin-top:3px;">Ekonomik takvim, çapraz piyasa radarı, TreeNews & Bizans mutabakatı</div>
+                            <div style="font-size:11px; color:#64748b; margin-top:3px;">Ekonomik takvim, çapraz piyasa radarı, TreeNews & Bizans mutabakatı, Darwinist kaynak evrimi</div>
                         </div>
 
                         ${itemRow('📅', 'Ekonomik Takvim (ForexFactory & Master)', 'USD/Kripto yüksek etkili veri akışı (CPI, FOMC, NFP) ve saniyelik geri sayım', (macro.calendar && macro.calendar.events_count ? macro.calendar.events_count + ' Kritik Olay' : 'Master Takvim Hazır'), pill(macro.calendar && macro.calendar.healthy ? 'TAKİPTE' : 'SENKRONİZE EDİLİYOR', macro.calendar && macro.calendar.healthy ? 'var(--green)' : 'var(--yellow)'))}
@@ -8555,6 +8555,7 @@ async function loadAdminMetrics() {
                         ${itemRow('⚡', 'Flaş Haber İstihbaratı (TreeNews / SEC / Fed)', 'TreeNews WebSocket, SEC EDGAR 8-K ve Federal Reserve RSS çoklu kaynak canlı dinleyicisi', (macro.news_sentinel && macro.news_sentinel.news_count ? macro.news_sentinel.news_count + ' Flaş Haber' : '100+ Haber Hafızada'), pill(macro.news_sentinel && macro.news_sentinel.healthy ? '7/24 DİNLİYOR' : 'SENKRON', macro.news_sentinel && macro.news_sentinel.healthy ? 'var(--green)' : 'var(--cyan)'))}
                         ${itemRow('🛡️', 'Byzantine Quorum & Anti-Manipülasyon', 'Tek kaynaklı sahte tweet ve tahtasız spoofing pompalamalarına karşı 3 kademeli savunma kalkanı', 'Çift Teyit & CVD Doğrulama', pill('BLOKAJ AKTİF', 'var(--cyan)'))}
                         ${itemRow('🚦', 'Strateji Koruma Kapısı & Pre-Event BE Kilidi', 'Yüksek etkili veriye 15dk kala True Net Breakeven stop kilidi, 5dk kala yeni emir dondurma ve Top 20 filtresi', 'T-15m BE & T-5m Freeze', pill('ZIRH HAZIR', 'var(--green)'))}
+                        ${itemRow('🧬', 'Darwinian Kaynak Evrimi & ELO Skor Masası', 'Piyasa fiyat tepkisine göre ELO güven puanlaması, kötü kaynakları otonom susturma ve Alıntı Grafiği', (macro.source_evolution && macro.source_evolution.sources_count ? macro.source_evolution.sources_count + ' Kaynak Sicilde' : 'Sicil Hazır'), pill(macro.source_evolution && macro.source_evolution.healthy ? 'EVRİM AKTİF' : 'KALİBRE', macro.source_evolution && macro.source_evolution.healthy ? 'var(--green)' : 'var(--cyan)'))}
                     </div>
 
                 </div>
@@ -8740,6 +8741,13 @@ async function loadAdminMetrics() {
 
             // Fed Başkanı Bilgisi
             const fedChair = roles.FED_CHAIR || { current_holder: 'Jerome Powell', market_weight: 1.0 };
+
+            // Faz 6: Otonom Kaynak Evrimi ve ELO Sicili
+            const sourceEvo = data.source_evolution || {};
+            const sourceLeaderboard = sourceEvo.leaderboard || [];
+            const shadowSandbox = sourceEvo.shadow_sandbox || [];
+            const discoveredCitations = sourceEvo.discovered_citations || [];
+            const recentAttributions = sourceEvo.recent_attributions || [];
 
             // HTML Şablonu
             container.innerHTML = `
@@ -9072,6 +9080,156 @@ async function loadAdminMetrics() {
                             </table>
                         </div>
 
+                    </div>
+
+                    <!-- 🧬 3. BÖLÜM: OTONOM HABER & KAYNAK EVRİMİ (DARWINIAN NEWS & SOURCE EVOLUTION DESK) -->
+                    <div style="grid-column: 1 / -1; margin-top:10px; background:linear-gradient(135deg, rgba(17,24,39,0.95), rgba(15,23,42,0.9)); border:1px solid rgba(168,85,247,0.25); border-radius:14px; padding:22px; box-shadow:0 6px 24px rgba(0,0,0,0.35);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:14px;">
+                            <div>
+                                <div style="font-size:15px; font-weight:800; color:#ffffff; display:flex; align-items:center; gap:8px;">
+                                    <span>🧬</span>
+                                    <span>OTONOM HABER &amp; KAYNAK EVRİMİ (DARWINIAN SOURCE INTELLIGENCE &amp; ELO DESK)</span>
+                                    <span style="font-size:10px; background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.3); padding:2px 8px; border-radius:6px; font-weight:800;">FAZ 6 EVRİM</span>
+                                </div>
+                                <div style="font-size:12px; color:#94a3b8; margin-top:4px;">
+                                    Piyasa fiyat tepkisi (t+30s, t+5m) ve kasa PnL'ine göre dinamik ELO puanlaması, kötü kaynakları otonom susturma (Auto-Pruning) ve Alıntı Grafiği ile yeni analist/hesap keşfi.
+                                </div>
+                            </div>
+
+                            <!-- KPI ROZETLERİ -->
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); padding:5px 12px; border-radius:8px; font-size:11px; font-family:'JetBrains Mono'; color:#10b981; font-weight:700;">
+                                    ● ${sourceEvo.high_trust_count || 3} YÜKSEK GÜVEN
+                                </div>
+                                <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); padding:5px 12px; border-radius:8px; font-size:11px; font-family:'JetBrains Mono'; color:#f87171; font-weight:700;">
+                                    🚨 ${sourceEvo.quarantined_count || 0} SUSTURULDU
+                                </div>
+                                <div style="background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); padding:5px 12px; border-radius:8px; font-size:11px; font-family:'JetBrains Mono'; color:#38bdf8; font-weight:700;">
+                                    👁️ ${sourceEvo.sandbox_count || 0} GÖLGE ADAY
+                                </div>
+                                <div style="background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.3); padding:5px 12px; border-radius:8px; font-size:11px; font-family:'JetBrains Mono'; color:#c084fc; font-weight:700;">
+                                    🕸️ ${discoveredCitations.length || 0} KEŞFEDİLEN ATIF
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- İKİ KOLONLU EVRİM KONSOLU -->
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(460px, 1fr)); gap:20px;">
+                            
+                            <!-- TABLO A: KAYNAK ELO REPUTATION LİDERLİK TABLOSU -->
+                            <div style="background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:16px;">
+                                <div style="font-size:12.5px; font-weight:800; color:#38bdf8; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                                    <span>🏆 CANLI KAYNAK ELO SIRALAMASI &amp; OY AĞIRLIKLARI</span>
+                                    <span style="font-size:10.5px; color:#64748b;">Baraj: ELO &lt; 45 Susturulur</span>
+                                </div>
+                                <table style="width:100%; border-collapse:collapse; font-size:11px; font-family:'JetBrains Mono'; text-align:left;">
+                                    <thead>
+                                        <tr style="color:#64748b; border-bottom:1px solid rgba(255,255,255,0.08); font-size:9.5px; text-transform:uppercase;">
+                                            <th style="padding:6px;">Kaynak</th>
+                                            <th style="padding:6px;">ELO Puanı</th>
+                                            <th style="padding:6px;">Statü</th>
+                                            <th style="padding:6px;">Oy Katsayısı</th>
+                                            <th style="padding:6px; text-align:center;">Doğru/Tuzak</th>
+                                            <th style="padding:6px; text-align:right;">PnL Katkısı</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${sourceLeaderboard.length === 0 ? `
+                                            <tr><td colspan="6" style="padding:20px; text-align:center; color:#64748b;">Kaynak sicili yükleniyor...</td></tr>
+                                        ` : sourceLeaderboard.map(s => {
+                                            const elo = Number(s.elo_rating || 60);
+                                            const isQuar = s.status === 'QUARANTINED' || elo < 45.0;
+                                            const isHigh = s.status === 'HIGH_TRUST' || elo >= 85.0;
+                                            const eloColor = isQuar ? '#f43f5e' : (isHigh ? '#10b981' : '#38bdf8');
+                                            const statusBadge = isQuar 
+                                                ? '<span style="background:rgba(239,68,68,0.18); color:#f87171; border:1px solid rgba(239,68,68,0.3); padding:1px 6px; border-radius:4px; font-weight:800;">SUSTURULDU 🚨</span>'
+                                                : (isHigh 
+                                                    ? '<span style="background:rgba(16,185,129,0.18); color:#34d399; border:1px solid rgba(16,185,129,0.3); padding:1px 6px; border-radius:4px; font-weight:800;">YÜKSEK GÜVEN ✅</span>'
+                                                    : '<span style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:1px 6px; border-radius:4px;">AKTİF</span>');
+                                            const pnl = Number(s.pnl_impact_usd || 0);
+                                            return `
+                                                <tr style="border-bottom:1px solid rgba(255,255,255,0.03); background:${isQuar ? 'rgba(239,68,68,0.04)' : 'transparent'};">
+                                                    <td style="padding:8px 6px; font-weight:700; color:#ffffff;">
+                                                        ${s.source_key || s.title}
+                                                    </td>
+                                                    <td style="padding:8px 6px; color:${eloColor}; font-weight:800;">
+                                                        ${elo.toFixed(1)}
+                                                    </td>
+                                                    <td style="padding:8px 6px;">${statusBadge}</td>
+                                                    <td style="padding:8px 6px; color:${isQuar ? '#64748b' : '#c084fc'}; font-weight:800;">
+                                                        ${Number(s.quorum_weight || 1.0).toFixed(1)}x
+                                                    </td>
+                                                    <td style="padding:8px 6px; text-align:center;">
+                                                        <span style="color:#10b981;">${s.accurate_count || 0}</span> / <span style="color:#f43f5e;">${s.fakeout_count || 0}</span>
+                                                    </td>
+                                                    <td style="padding:8px 6px; text-align:right; color:${pnl >= 0 ? '#10b981' : '#f43f5e'}; font-weight:700;">
+                                                        ${pnl >= 0 ? '+$' : '-$'}${Math.abs(pnl).toFixed(0)}
+                                                    </td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- TABLO B: GÖLGE GÖZLEM HAVUZU & ALINTI GRAFİĞİ -->
+                            <div style="background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:16px;">
+                                <div style="font-size:12.5px; font-weight:800; color:#c084fc; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                                    <span>👁️ GÖLGE GÖZLEM HAVUZU (SHADOW SANDBOX - 14 GÜN)</span>
+                                    <span style="font-size:10.5px; color:#64748b;">Eşik: %80+ Doğrulukla Terfi</span>
+                                </div>
+                                
+                                <table style="width:100%; border-collapse:collapse; font-size:11px; font-family:'JetBrains Mono'; text-align:left; margin-bottom:16px;">
+                                    <thead>
+                                        <tr style="color:#64748b; border-bottom:1px solid rgba(255,255,255,0.08); font-size:9.5px; text-transform:uppercase;">
+                                            <th style="padding:6px;">Aday Kişi / Kanal</th>
+                                            <th style="padding:6px;">Referans Ajanslar</th>
+                                            <th style="padding:6px; text-align:center;">Gölge Olay</th>
+                                            <th style="padding:6px; text-align:center;">Doğruluk (%)</th>
+                                            <th style="padding:6px; text-align:right;">Terfi Durumu</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${shadowSandbox.length === 0 ? `
+                                            <tr><td colspan="5" style="padding:16px; text-align:center; color:#64748b;">Şu an gölge gözlemde bekleyen yeni aday yok. Ajanslar tarandıkça buraya eklenecektir.</td></tr>
+                                        ` : shadowSandbox.map(c => {
+                                            const isProm = c.is_promoted || c.status === 'PROMOTED_TO_ACTIVE';
+                                            const acc = Number(c.shadow_accuracy_pct || 0);
+                                            return `
+                                                <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
+                                                    <td style="padding:7px 6px; font-weight:700; color:#ffffff;">${c.display_name || c.entity_key}</td>
+                                                    <td style="padding:7px 6px; color:#94a3b8; font-size:10px;">${(c.citing_wires || []).join(', ')}</td>
+                                                    <td style="padding:7px 6px; text-align:center;">${c.shadow_events_count || 0}</td>
+                                                    <td style="padding:7px 6px; text-align:center; color:${acc >= 80 ? '#10b981' : '#fbc531'}; font-weight:700;">%${acc.toFixed(0)}</td>
+                                                    <td style="padding:7px 6px; text-align:right;">
+                                                        ${isProm 
+                                                            ? '<span style="background:rgba(16,185,129,0.18); color:#34d399; border:1px solid rgba(16,185,129,0.3); padding:1px 5px; border-radius:4px; font-weight:800;">TERFİ ETTİ ✅</span>'
+                                                            : '<span style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:1px 5px; border-radius:4px;">GÖZLEMDE 👁️</span>'}
+                                                    </td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+
+                                <div style="border-top:1px solid rgba(255,255,255,0.06); padding-top:10px;">
+                                    <div style="font-size:11px; font-weight:700; color:#94a3b8; margin-bottom:6px;">🕸️ BÜLTENLERDE EN ÇOK ALINTILANAN REFERANSLAR (CITATION GRAPH TOP MENTIONS):</div>
+                                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                                        ${discoveredCitations.length === 0 ? `
+                                            <span style="color:#64748b; font-size:10.5px;">Henüz taranmış dış atıf yok.</span>
+                                        ` : discoveredCitations.slice(0, 8).map(cit => {
+                                            return `
+                                                <span style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:3px 8px; border-radius:6px; font-size:10.5px; font-family:'JetBrains Mono'; color:#cbd5e1;">
+                                                    <strong style="color:var(--cyan);">${cit.display_name || cit.entity_key}</strong> 
+                                                    <span style="color:#64748b;">(${cit.citation_count} atıf)</span>
+                                                </span>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
                     </div>
 
                 </div>
@@ -20772,6 +20930,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             from macro_news_sentinel import news_sentinel
             from macro_quorum import news_quorum
             from macro_roles import role_registry
+            from macro_source_evolution import source_evolution_engine
 
             cal_summary = calendar_manager.get_calendar_summary() if calendar_manager else {}
             all_events = list(calendar_manager.events) if calendar_manager else []
@@ -20780,6 +20939,14 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             quorum_logs = news_quorum.audit_history[-30:] if (news_quorum and hasattr(news_quorum, 'audit_history')) else []
             hud_info = macro_guard.get_macro_hud_telemetry() if macro_guard else {}
             roles_data = role_registry.data.get("roles", {}) if role_registry else {}
+
+            # Faz 6: Otonom Kaynak Evrimi ve ELO Sicili
+            sources_lb = source_evolution_engine.get_sources_leaderboard() if source_evolution_engine else []
+            sandbox_list = source_evolution_engine.get_shadow_sandbox_list() if source_evolution_engine else []
+            citations_lb = source_evolution_engine.get_discovered_citations_leaderboard()[:15] if source_evolution_engine else []
+            attributions_lb = source_evolution_engine.attribution_history[-15:] if source_evolution_engine else []
+            quarantined_count = sum(1 for s in sources_lb if s.get("status") == "QUARANTINED" or float(s.get("elo_rating", 60.0)) < 45.0)
+            high_trust_count = sum(1 for s in sources_lb if s.get("status") == "HIGH_TRUST" or float(s.get("elo_rating", 60.0)) >= 85.0)
 
             return json_compressed_response(request, {
                 "status": "ok",
@@ -20791,7 +20958,17 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "cross_asset": cross_data,
                 "news": news_feed,
                 "quorum": quorum_logs,
-                "roles": roles_data
+                "roles": roles_data,
+                "source_evolution": {
+                    "leaderboard": sources_lb,
+                    "shadow_sandbox": sandbox_list,
+                    "discovered_citations": citations_lb,
+                    "recent_attributions": attributions_lb,
+                    "total_sources": len(sources_lb),
+                    "quarantined_count": quarantined_count,
+                    "high_trust_count": high_trust_count,
+                    "sandbox_count": len(sandbox_list)
+                }
             })
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=500)
