@@ -129,14 +129,16 @@ class ForensicBlackboxManager:
         # 2. Dosya Adlandırma Standardı
         trade_category = "SHADOW" if is_shadow else "REAL"
         cr_upper = str(trade_record.get("close_reason") or "").upper()
-        # Başa-baş toleransı: |ROE| <= %0.35 veya Breakeven Koruması
-        is_breakeven = (abs(roe) <= 0.35) or ("BREAKEVEN" in cr_upper) or ("BAŞA-BAŞ" in cr_upper) or ("BAŞABAŞ" in cr_upper) or ("🛡️ BE" in cr_upper)
-        if is_breakeven:
-            outcome_tag = "BE"
-        elif roe > 0:
+        net_pnl_raw = float(trade_record.get("net_pnl") or trade_record.get("virtual_pnl_usd") or 0.0)
+
+        # 🏛️ MODEL 1: Birleşik Yaşam Döngüsü Uyumlu Sonuç Belirleme
+        # Eğer genel işlem net kârla kapandıysa (+ROE > 0.35%), 2. bacak breakeven ile çıkmış olsa dahi işlem KAZANAN (WIN) mühürlenir.
+        if net_pnl_raw > 0.0 and roe > 0.35:
             outcome_tag = "WIN"
-        else:
+        elif net_pnl_raw < -0.10 and roe < -0.35:
             outcome_tag = "LOSS"
+        else:
+            outcome_tag = "BE"
 
         roe_clean = f"PLUS{roe:.1f}" if roe >= 0 else f"MINUS{abs(roe):.1f}"
         diag_short = autopsy["diagnosis_code"].replace("_", "")[:12]

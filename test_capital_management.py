@@ -126,6 +126,8 @@ class TestCapitalManagement(unittest.TestCase):
         }
         self.paper_trader.open_positions["ETH/USDT"] = pos
 
+        initial_hist_count = len(self.paper_trader.history)
+
         async def run_test():
             # 3003.0 seviyesinde TP1 tetiklenmemeli çünkü kâr sadece %0.10 (< %0.90)
             await self.strategy.evaluate_tick("ETH/USDT", 3003.0, {})
@@ -134,8 +136,10 @@ class TestCapitalManagement(unittest.TestCase):
             # 3030.0 seviyesinde (+%1.0 kâr) TP1 başarıyla tetiklenmeli!
             await self.strategy.evaluate_tick("ETH/USDT", 3030.0, {})
             self.assertTrue(pos.get("is_half_closed", False))
-            self.assertIn("TRD-TEST-TP1", [h["id"] for h in self.paper_trader.history])
-            tp1_rec = self.paper_trader.history[-1]
+            # 🏛️ Model 1 (Birleşik Yaşam Döngüsü): TP1 açık pozisyonun alt bacağına yazılır, erken defter kaydı üretilmez
+            self.assertEqual(len(self.paper_trader.history), initial_hist_count)
+            self.assertEqual(len(pos.get("legs", [])), 1)
+            tp1_rec = pos["legs"][0]
             # Net PnL komisyon sonrası kesinlikle pozitif olmalı!
             self.assertGreater(tp1_rec["net_pnl"], 5.0)
 

@@ -17040,17 +17040,19 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                     const rMult = h.realized_r !== undefined ? h.realized_r : (roePct >= 0 ? +(roePct / 2).toFixed(1) : -1.0);
                     const mfe = Number(h.max_mfe_roe !== undefined ? h.max_mfe_roe : (h.mfe_roe !== undefined ? h.mfe_roe : Math.max(0, roePct)));
                     const mae = Number(h.max_mae_roe !== undefined ? h.max_mae_roe : (h.mae_roe !== undefined ? h.mae_roe : (roePct < 0 ? Math.abs(roePct) : 0.0)));
-                    const rowClass = isWin ? 'trade-row-win' : 'trade-row-loss';
+                    const hasSubLegs = Boolean(h.has_sub_legs || (h.sub_legs && h.sub_legs.length > 0));
+                    const idDisp = `<span style="background:rgba(255,255,255,0.05); padding:3px 7px; border-radius:6px; color:#e2e8f0; font-family:'JetBrains Mono'; font-size:11.5px; border:1px solid rgba(255,255,255,0.08); font-weight:700;">#${h.id || '-'}${hasSubLegs ? ' <span style="background:rgba(0,242,254,0.15); color:var(--cyan); padding:1px 4px; border-radius:3px; font-size:9.5px; margin-left:3px;" title="Birleşik Yaşam Döngüsü: Parçalı Kapanış">2P</span>' : ''}</span>`;
+                    const exitPDisp = hasSubLegs ? `$${formatSmartPrice(exitP)} <span style="font-size:10px; color:#38bdf8;" title="Parçalı çıkışların ağırlıklı ortalaması">(Ort.)</span>` : `$${formatSmartPrice(exitP)}`;
 
                     tableHtml += `
                     <tr class="${rowClass} forensic-table-compact">
-                        <td><span style="background:rgba(255,255,255,0.05); padding:3px 7px; border-radius:6px; color:#e2e8f0; font-family:'JetBrains Mono'; font-size:11.5px; border:1px solid rgba(255,255,255,0.08); font-weight:700;">#${h.id || '-'}</span></td>
+                        <td>${idDisp}</td>
                         <td style="color:#cbd5e1; font-size:12px; white-space:nowrap;">${exitTime}</td>
                         <td style="color:#94a3b8; font-size:12px; white-space:nowrap;"><span style="background:rgba(0,242,254,0.06); padding:2px 6px; border-radius:4px; border:1px solid rgba(0,242,254,0.15); color:#38bdf8;">⏱️ ${duration}</span></td>
                         <td><b style="color:#ffffff; font-size:13.5px; cursor:pointer;" onclick="openTradingViewModal('${symClean}')" title="${symClean} Göstergeli Grafiğini Aç">${symClean}</b></td>
                         <td><span class="pos-badge ${side === 'LONG' ? 'pos-long' : 'pos-short'}" style="font-size:11px; padding:2px 8px;">${(Number(lev) >= 7 ? '💎 ' : (Number(lev) <= 3 ? '🛡️ ' : ''))}${lev}x ${side}</span></td>
                         <td style="font-family:'JetBrains Mono';">$${formatSmartPrice(entryP)}</td>
-                        <td style="font-family:'JetBrains Mono';">$${formatSmartPrice(exitP)}</td>
+                        <td style="font-family:'JetBrains Mono';">${exitPDisp}</td>
                         <td style="text-align:right;">
                             <span class="history-pnl-pill ${isWin ? 'pnl-win' : 'pnl-loss'}" style="font-size:12.5px; font-weight:800;">
                                 ${netPnl >= 0 ? '+' : '-'}$${Math.abs(netPnl).toFixed(2)}
@@ -17749,11 +17751,57 @@ function downloadExcelReport() {
                         </div>`;
                     }
                 }
-                if (!snapHtml) {
-                    snapHtml = '<div style="color:#64748b; font-size:12px; grid-column:1/-1;">Bu işlem için anlık seviye verisi kaydedilmemiş.</div>';
+                let subLegsHtml = '';
+                if (item.sub_legs && Array.isArray(item.sub_legs) && item.sub_legs.length > 0) {
+                    const legs = item.sub_legs;
+                    let legsRows = legs.map((leg, idx) => {
+                        const isLegWin = Number(leg.net_pnl || 0) >= 0;
+                        const legPnl = Number(leg.net_pnl || 0);
+                        const legRoe = Number(leg.roe_pct || 0);
+                        const legName = leg.type === 'TP1_PARTIAL' ? '🎯 1. Çıkış (%50 TP1 Kâr Satışı)' : '🏁 2. Çıkış (%50 Runner Nihai Kapanış)';
+                        return `
+                            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:9px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); margin-bottom:6px;">
+                                <div>
+                                    <b style="color:#ffffff; font-size:12.5px;">${legName}</b>
+                                    <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono'; margin-top:2px;">
+                                        Fiyat: <span style="color:#38bdf8; font-weight:700;">$${formatSmartPrice(leg.exit_price)}</span> │ Saat: ${leg.exit_time || '-'} │ Marjin: $${leg.closed_margin || '-'}
+                                    </div>
+                                </div>
+                                <div style="text-align:right;">
+                                    <div style="font-weight:900; font-family:'JetBrains Mono'; color:${isLegWin ? '#10b981' : '#f87171'}; font-size:14px;">
+                                        ${legPnl >= 0 ? '+' : ''}${legPnl.toFixed(2)}$
+                                    </div>
+                                    <div style="font-size:11px; font-weight:700; color:${isLegWin ? '#34d399' : '#f87171'}; font-family:'JetBrains Mono';">
+                                        ${legRoe >= 0 ? '+' : ''}${legRoe.toFixed(1)}% ROE
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    subLegsHtml = `
+                        <div style="background:linear-gradient(135deg, rgba(16,185,129,0.08), rgba(6,182,212,0.06)); border:1.5px solid rgba(16,185,129,0.3); border-radius:12px; padding:14px; margin-bottom:18px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <span style="font-weight:900; color:#34d399; font-size:13px; letter-spacing:0.4px;">
+                                    🏛️ BİRLEŞİK YAŞAM DÖNGÜSÜ (PARÇALI ÇIKIŞ ANATOMİSİ)
+                                </span>
+                                <span style="background:rgba(16,185,129,0.2); color:#10b981; font-weight:800; font-size:11px; padding:2px 8px; border-radius:6px; font-family:'JetBrains Mono';">
+                                    ${isWin ? '🟢 KAZANAN İŞLEM (WIN)' : '🔴 STOP KORUMASI'}
+                                </span>
+                            </div>
+                            ${legsRows}
+                            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed rgba(255,255,255,0.15); padding-top:8px; margin-top:8px;">
+                                <span style="color:#cbd5e1; font-size:12px; font-weight:700;">Ağırlıklı Ortalama Çıkış & Net Kasa Etkisi:</span>
+                                <span style="font-family:'JetBrains Mono'; font-weight:900; color:${isWin ? '#10b981' : '#f87171'}; font-size:14px;">
+                                    ${netPnlVal >= 0 ? '+' : ''}${netPnlVal.toFixed(2)}$ (${roePctVal >= 0 ? '+' : ''}${roePctVal.toFixed(2)}% ROE)
+                                </span>
+                            </div>
+                        </div>
+                    `;
                 }
 
                 content.innerHTML = `
+                    ${subLegsHtml}
                     <!-- 1. DÖRT ANA KPI KARTI -->
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:12px; margin-bottom:18px;">
                         <div style="background:linear-gradient(135deg, rgba(17,24,39,0.8), rgba(15,23,42,0.95)); border:1px solid ${isWin ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}; border-radius:12px; padding:14px; text-align:center; box-shadow:0 4px 16px rgba(0,0,0,0.3);">

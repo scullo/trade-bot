@@ -250,14 +250,23 @@ class TelegramNotifier:
         exit_p = float(record.get('exit_price', 0.0))
 
         close_reason_raw = str(record.get("close_reason", ""))
-        is_stop = "Stop" in close_reason_raw or "Zarar" in close_reason_raw or net_pnl < -0.20
-        is_partial_tp1 = (record.get("id", "").endswith("-TP1") or "Dinamik Kâr" in close_reason_raw or "TP1" in close_reason_raw) and not is_stop
-        is_breakeven = ("Breakeven" in close_reason_raw or (record.get("is_half_closed") and abs(net_pnl) < 0.8)) and not is_partial_tp1
+        has_sub_legs = bool(record.get("has_sub_legs") or record.get("sub_legs"))
+        sub_legs = record.get("sub_legs") or []
+
+        is_stop = ("Stop" in close_reason_raw or "Zarar" in close_reason_raw or net_pnl < -0.20) and not (has_sub_legs and net_pnl >= 0)
+        is_partial_tp1 = (record.get("id", "").endswith("-TP1") or "Dinamik Kâr" in close_reason_raw or "TP1" in close_reason_raw) and not is_stop and not has_sub_legs
+        is_breakeven = ("Breakeven" in close_reason_raw or (record.get("is_half_closed") and abs(net_pnl) < 0.8)) and not is_partial_tp1 and not has_sub_legs
 
         if is_manual:
             header = "🚨🚨🚨 <b>MANUEL KAPANIŞ</b> 🚨🚨🚨"
             pnl_line = f"🕹️ <b>NET PnL:</b> <b>{net_pnl:+.2f} USDT ({roe:+.2f}% ROE)</b>"
             reason_text = "Operatör Müdahalesi"
+        elif has_sub_legs and net_pnl >= 0:
+            leg1_info = f"+${sub_legs[0]['net_pnl']:.2f}" if len(sub_legs) > 0 else ""
+            leg2_info = f"${sub_legs[1]['net_pnl']:+.2f}" if len(sub_legs) > 1 else ""
+            header = "🟢🟢🟢 <b>BİRLEŞİK KÂRLI TAM KAPANIŞ</b> 🚀🚀🚀"
+            pnl_line = f"🚀 <b>NET KÂR:</b> <b>+{abs(net_pnl):.2f} USDT (+%{abs(roe):.2f} ROE)</b> 🟢\n🏛️ <i>Detay: %50 TP1 ({leg1_info}) + %50 Runner ({leg2_info})</i>"
+            reason_text = "Birleşik Yaşam Döngüsü Başarıyla Tamamlandı"
         elif is_partial_tp1:
             header = "🟢🟢🟢 <b>DİNAMİK KÂR KİLİTLENDİ (%50)</b> 🟢🟢🟢"
             pnl_line = f"💰 <b>NET KÂR:</b> <b>+{abs(net_pnl):.2f} USDT (+%{abs(roe):.2f} ROE)</b> 🟢"

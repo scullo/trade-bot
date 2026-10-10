@@ -882,25 +882,26 @@ class StrategyEngine:
                         pass
 
             # 🖼️ VALKYRIE GÖRSEL ADLİ KARA KUTU & MİKROSKOBİK MUM OTOPSİSİ
-            # (Hem TP1 Kısmi Kâr Kilidi hem Tam Kapanışlar İçin %100 Görselleme)
-            try:
-                from forensic_blackbox_manager import forensic_blackbox_manager
-                sym = str(res.get("symbol", ""))
-                df_5m = None
-                if hasattr(self, 'market_data') and self.market_data and hasattr(self.market_data, 'candles_5m'):
-                    df_5m = self.market_data.candles_5m.get(sym)
-                    if df_5m is None or (hasattr(df_5m, 'empty') and df_5m.empty):
-                        clean_s = sym.replace('/USDT', 'USDT')
-                        df_5m = self.market_data.candles_5m.get(clean_s)
-                levels_snap = res.get("snapshot_levels") or {}
-                forensic_blackbox_manager.enqueue_closed_trade(
-                    trade_record=res,
-                    df_5m=df_5m,
-                    levels=levels_snap,
-                    is_shadow=False
-                )
-            except Exception as fb_err:
-                pass
+            # (Model 1: Birleşik Yaşam Döngüsü - Yalnızca nihai kapanışta tüm bacakları içeren tek kompozit görsel üretilir)
+            if not kwargs.get("is_partial", False):
+                try:
+                    from forensic_blackbox_manager import forensic_blackbox_manager
+                    sym = str(res.get("symbol", ""))
+                    df_5m = None
+                    if hasattr(self, 'market_data') and self.market_data and hasattr(self.market_data, 'candles_5m'):
+                        df_5m = self.market_data.candles_5m.get(sym)
+                        if df_5m is None or (hasattr(df_5m, 'empty') and df_5m.empty):
+                            clean_s = sym.replace('/USDT', 'USDT')
+                            df_5m = self.market_data.candles_5m.get(clean_s)
+                    levels_snap = res.get("snapshot_levels") or {}
+                    forensic_blackbox_manager.enqueue_closed_trade(
+                        trade_record=res,
+                        df_5m=df_5m,
+                        levels=levels_snap,
+                        is_shadow=False
+                    )
+                except Exception as fb_err:
+                    pass
         return res
 
     async def _safe_open_position(self, *args, **kwargs):

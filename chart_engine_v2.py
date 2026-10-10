@@ -190,6 +190,31 @@ class ForensicChartEngineV2:
             if local_exit_idx <= local_entry_idx:
                 local_exit_idx = min(slice_end - slice_start - 1, local_entry_idx + max(1, int(trade_record.get("candle_count", 3))))
 
+        # 🏛️ MODEL 1: BİRLEŞİK YAŞAM DÖNGÜSÜ (Alt-Bacak Eşleştirmesi)
+        sub_legs = trade_record.get("sub_legs") or []
+        local_tp1_idx = None
+        tp1_exit_p = 0.0
+        leg1_pnl = 0.0
+        leg2_pnl = 0.0
+        if not is_manual and sub_legs and len(sub_legs) >= 2:
+            tp1_time_str = sub_legs[0].get("exit_time", "")
+            tp1_exit_p = float(sub_legs[0].get("exit_price") or 0.0)
+            leg1_pnl = float(sub_legs[0].get("net_pnl") or 0.0)
+            leg2_pnl = float(sub_legs[1].get("net_pnl") or 0.0)
+            tp1_ts_sec = 0.0
+            if tp1_time_str:
+                try:
+                    tp1_ts_sec = datetime.strptime(tp1_time_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone(timedelta(hours=3))).timestamp()
+                except Exception:
+                    tp1_ts_sec = 0.0
+            if tp1_ts_sec > 0 and time_col:
+                tp1_ts_val = tp1_ts_sec * 1000.0 if float(timestamps[-1]) > 1e11 else tp1_ts_sec
+                diffs_tp1 = np.abs(np.array(timestamps, dtype=float) - tp1_ts_val)
+                tp1_idx = int(np.argmin(diffs_tp1))
+                local_tp1_idx = max(0, min(slice_end - slice_start - 1, tp1_idx - slice_start))
+            else:
+                local_tp1_idx = int((local_entry_idx + local_exit_idx) // 2)
+
         display_df = df_5m.iloc[slice_start:slice_end].copy().reset_index(drop=True)
         n_bars = len(display_df)
 
@@ -495,7 +520,72 @@ class ForensicChartEngineV2:
                 )
 
             # B. ÇIKIŞ İŞARETÇİSİ VE ROZETİ (Girişin Tam Zıt Kutusunda)
-            if exit_price > 0 and exit_candle is not None:
+            if local_tp1_idx is not None and tp1_exit_p > 0 and len(sub_legs) >= 2:
+                # 🏛️ MODEL 1: BİRLEŞİK YAŞAM DÖNGÜSÜ (2 PARÇALI ÇIKIŞ ÇİZİMİ)
+                # 1. Bacak: TP1 Kâr Satışı
+                tp1_candle = display_df.iloc[local_tp1_idx] if local_tp1_idx < len(display_df) else None
+                if tp1_candle is not None:
+                    tp1_low = float(tp1_candle['low'])
+                    tp1_high = float(tp1_candle['high'])
+                    ax_chart.plot(
+                        [local_tp1_idx, local_tp1_idx],
+                        [tp1_low - y_span * 0.02, tp1_high + y_span * 0.02],
+                        color='#10b981', linestyle='--', linewidth=1.5, alpha=0.75, zorder=6
+                    )
+                    ax_chart.scatter(
+                        [local_tp1_idx], [tp1_exit_p],
+                        color='#ffffff', s=130, marker='D',
+                        edgecolors='#10b981', linewidth=2.5, zorder=12
+                    )
+                    tp1_badge_y = tp1_high + y_span * 0.048 if entry_is_bottom else tp1_low - y_span * 0.048
+                    tp1_va = 'bottom' if entry_is_bottom else 'top'
+                    tp1_lbl = f"🎯 TP1 (%50): {fmt_price(tp1_exit_p)} (+${leg1_pnl:.2f})"
+                    ax_chart.text(
+                        local_tp1_idx, tp1_badge_y, tp1_lbl,
+                        color='#ffffff', fontsize=8.0, fontweight='bold', ha='center', va=tp1_va,
+                        bbox=dict(boxstyle='round,pad=0.28', facecolor='#090d16',
+                                  edgecolor='#10b981', linewidth=1.5, alpha=0.98),
+                        zorder=15
+                    )
+                    if entry_price > 0:
+                        ax_chart.plot(
+                            [local_entry_idx, local_tp1_idx], [entry_price, tp1_exit_p],
+                            color='#10b981', linestyle='--', linewidth=1.5, alpha=0.85, zorder=8
+                        )
+
+                # 2. Bacak: Runner / Nihai Çıkış
+                if exit_price > 0 and exit_candle is not None:
+                    x_low = float(exit_candle['low'])
+                    x_high = float(exit_candle['high'])
+                    leg2_col = '#10b981' if leg2_pnl >= 0 else ('#38bdf8' if abs(leg2_pnl) < 1.0 else '#ef4444')
+                    ax_chart.plot(
+                        [local_exit_idx, local_exit_idx],
+                        [x_low - y_span * 0.02, x_high + y_span * 0.02],
+                        color=leg2_col, linestyle='--', linewidth=1.5, alpha=0.75, zorder=6
+                    )
+                    ax_chart.scatter(
+                        [local_exit_idx], [exit_price],
+                        color='#ffffff', s=130, marker='o' if leg2_pnl >= 0 else 'X',
+                        edgecolors=leg2_col, linewidth=2.5, zorder=12
+                    )
+                    x_lbl = f"🏁 NİHAİ (%50): {fmt_price(exit_price)} (${leg2_pnl:+.2f})"
+                    y_exit_badge = x_high + y_span * 0.048 if entry_is_bottom else x_low - y_span * 0.048
+                    va_exit = 'bottom' if entry_is_bottom else 'top'
+                    tag_exit_x = min(n_bars - 1.0, max(0.5, local_exit_idx))
+                    ax_chart.text(
+                        tag_exit_x, y_exit_badge, x_lbl,
+                        color='#ffffff', fontsize=8.0, fontweight='bold', ha='center', va=va_exit,
+                        bbox=dict(boxstyle='round,pad=0.28', facecolor='#090d16',
+                                  edgecolor=leg2_col, linewidth=1.5, alpha=0.98),
+                        zorder=15
+                    )
+                    if tp1_exit_p > 0:
+                        ax_chart.plot(
+                            [local_tp1_idx, local_exit_idx], [tp1_exit_p, exit_price],
+                            color=leg2_col, linestyle=':', linewidth=1.5, alpha=0.85, zorder=8
+                        )
+
+            elif exit_price > 0 and exit_candle is not None:
                 x_low = float(exit_candle['low'])
                 x_high = float(exit_candle['high'])
 
@@ -860,15 +950,23 @@ class ForensicChartEngineV2:
             ax_hud.text(0.06, y_cursor, f"• Uç Hedefler: R5 {fmt_price(cam.get('R5'))} │ S5 {fmt_price(cam.get('S5'))}", color='#38bdf8', fontsize=7.6, zorder=5)
         else:
             y_cursor -= 0.035
-            raw_cr = str(close_reason).replace("🛡️", "").replace("⏳", "").replace("💥", "").strip()
-            cr_lines = textwrap.wrap(raw_cr, width=38)
-            if cr_lines:
-                ax_hud.text(0.06, y_cursor, f"Neden: {cr_lines[0]}", color='#ffffff', fontsize=8.2, fontweight='bold', zorder=5)
-                if len(cr_lines) > 1:
-                    y_cursor -= 0.024
-                    ax_hud.text(0.12, y_cursor, cr_lines[1], color='#cbd5e1', fontsize=7.6, zorder=5)
+            if sub_legs and len(sub_legs) >= 2:
+                ax_hud.text(0.06, y_cursor, "🏛️ BİRLEŞİK YAŞAM DÖNGÜSÜ:", color='#38bdf8', fontsize=8.2, fontweight='bold', zorder=5)
+                y_cursor -= 0.024
+                ax_hud.text(0.08, y_cursor, f"• Bacak 1 (%50 TP1): {fmt_price(tp1_exit_p)} ➔ +${leg1_pnl:.2f}", color='#34d399', fontsize=7.8, fontweight='bold', zorder=5)
+                y_cursor -= 0.024
+                leg2_col = '#34d399' if leg2_pnl >= 0 else '#f87171'
+                ax_hud.text(0.08, y_cursor, f"• Bacak 2 (%50 Runner): {fmt_price(exit_price)} ➔ ${leg2_pnl:+.2f}", color=leg2_col, fontsize=7.8, fontweight='bold', zorder=5)
             else:
-                ax_hud.text(0.06, y_cursor, "Neden: Standart Kapanış", color='#ffffff', fontsize=8.2, fontweight='bold', zorder=5)
+                raw_cr = str(close_reason).replace("🛡️", "").replace("⏳", "").replace("💥", "").strip()
+                cr_lines = textwrap.wrap(raw_cr, width=38)
+                if cr_lines:
+                    ax_hud.text(0.06, y_cursor, f"Neden: {cr_lines[0]}", color='#ffffff', fontsize=8.2, fontweight='bold', zorder=5)
+                    if len(cr_lines) > 1:
+                        y_cursor -= 0.024
+                        ax_hud.text(0.12, y_cursor, cr_lines[1], color='#cbd5e1', fontsize=7.6, zorder=5)
+                else:
+                    ax_hud.text(0.06, y_cursor, "Neden: Standart Kapanış", color='#ffffff', fontsize=8.2, fontweight='bold', zorder=5)
 
             y_cursor -= 0.030
             mfe_val = float(trade_record.get('max_mfe_roe') if trade_record.get('max_mfe_roe') is not None else (trade_record.get('max_mfe_pct') or 0.0))

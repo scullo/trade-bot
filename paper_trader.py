@@ -687,10 +687,15 @@ class PaperTrader:
             "side": side.upper(),
             "entry_price": float(entry_price),
             "margin": float(margin),
+            "initial_margin": float(margin),
             "leverage": int(active_leverage),
             "position_value": float(position_value),
+            "initial_position_value": float(position_value),
             "quantity": float(quantity),
+            "initial_quantity": float(quantity),
             "entry_fee": float(entry_fee),
+            "initial_entry_fee": float(entry_fee),
+            "legs": [],
             "entry_time": entry_time_str,
             "entry_timestamp": entry_timestamp,
             "soft_stop": float(soft_stop),
@@ -770,12 +775,13 @@ class PaperTrader:
                 exit_price = round(exit_price * (1.0 + slippage_pct), 8)
 
         if is_partial and not pos.get("is_half_closed", False):
-            # %50 TP1 Kapatma
-            closed_margin = margin * 0.5
+            # %50 TP1 Kapatma - Model 1: Birleşik Yaşam Döngüsü (Alt-Bacak 1)
+            init_margin = float(pos.get("initial_margin", margin))
+            closed_margin = init_margin * 0.5
             closed_val = pos.get("position_value", margin * 5.0) * 0.5
             closed_qty = pos.get("quantity", pos.get("position_size", 1.0)) * 0.5
             exit_fee = (closed_qty * exit_price) * self.commission_rate
-            portion_entry_fee = entry_fee * 0.5
+            portion_entry_fee = pos.get("entry_fee", entry_fee) * 0.5
 
             if side == "LONG":
                 gross_pnl = (exit_price - entry_p) * closed_qty
@@ -789,7 +795,7 @@ class PaperTrader:
 
             self.balance += net_pnl
 
-            # Kalan yariya Stop'u giris seviyesine (Breakeven) cek
+            # Kalan yarıya Stop'u giriş seviyesine (Breakeven) çek
             pos["is_half_closed"] = True
             pos["margin"] = closed_margin
             pos["position_value"] = closed_val
@@ -814,127 +820,68 @@ class PaperTrader:
             dur_hrs = dur_mins // 60
             dur_str = f"{dur_hrs}sa {dur_mins % 60}dk" if dur_hrs > 0 else f"{dur_mins}dk"
 
-            record = {
-                "id": pos["id"] + "-TP1",
-                "symbol": symbol,
-                "side": side,
-                "trade_type": pos.get("trade_type", "SCALP"),
-                "setup_id": pos.get("setup_id", ""),
-                "leverage": pos["leverage"],
-                "margin": round(closed_margin, 2),
-                "entry_price": round(entry_p, 8),
+            pos["tp1_exit_price"] = round(exit_price, 8)
+            pos["tp1_exit_time"] = exit_time_str
+            pos["tp1_pnl"] = round(net_pnl, 4)
+            pos["tp1_roe"] = round(roe_pct, 2)
+
+            leg1 = {
+                "leg_index": 1,
+                "type": "TP1_PARTIAL",
+                "ratio": 0.5,
                 "exit_price": round(exit_price, 8),
+                "exit_time": exit_time_str,
+                "duration": dur_str,
+                "closed_qty": closed_qty,
+                "closed_margin": round(closed_margin, 2),
                 "gross_pnl": round(gross_pnl, 4),
                 "fees": round(total_fees, 4),
                 "net_pnl": round(net_pnl, 4),
                 "roe_pct": round(roe_pct, 2),
-                "balance_after": round(self.balance, 2),
-                "entry_time": pos["entry_time"],
-                "exit_time": exit_time_str,
-                "duration": dur_str,
-                "reason": pos.get("reason", "Strateji Sinyali"),
-                "close_reason": close_reason,
-                "tp1": pos.get("tp1", 0.0),
-                "tp2": pos.get("tp2", 0.0),
-                "tp1_target": pos.get("tp1", 0.0),
-                "tp2_target": pos.get("tp2", 0.0),
-                "soft_stop": pos.get("soft_stop", 0.0),
-                "hard_stop": pos.get("hard_stop", 0.0),
-                "planned_stop": pos.get("hard_stop") or pos.get("soft_stop", 0.0),
-                "candle_count": max(1, int(dur_mins // 5)),
-                "trail_status": pos.get("trail_status", "-"),
-                "atr_pct": pos.get("atr_pct", 1.2),
-                "volume_surge": pos.get("volume_surge", 1.0),
-                "trend_regime": pos.get("trend_regime", "YATAY"),
-                "session": pos.get("session", "LONDRA"),
-                "session_tag": pos.get("session_tag", pos.get("session", "LONDRA")),
-                "confluence_score": pos.get("confluence_score", "2/4"),
-                "confluence_list": pos.get("confluence_list", []),
-                "htf_alignment": pos.get("htf_alignment", "TREND YÖNÜNDE"),
-                "rs_vs_btc": pos.get("rs_vs_btc", 0.0),
-                "decoupling_status": pos.get("decoupling_status", "⚪ NÖTR_TAKİPÇİ"),
-                "cvd_pct": pos.get("cvd_pct", 50.0),
-                "candle_velocity": pos.get("candle_velocity", 1.0),
-                "wick_ratio_pct": pos.get("wick_ratio_pct", 35.0),
-                "max_mfe_roe": pos.get("max_mfe_roe", 0.0),
-                "max_mae_roe": pos.get("max_mae_roe", 0.0),
-                "snapshot_levels": pos.get("snapshot_levels", {}),
-                "macro_climate": pos.get("macro_climate", "⚪ NÖTR"),
-                "dynamic_rs_score": pos.get("dynamic_rs_score", 0.0),
-                "entry_funding_rate": pos.get("entry_funding_rate", 0.0100),
-                "funding_status": pos.get("funding_status", "BALANCED"),
-                "entry_liq_volume_usd": pos.get("entry_liq_volume_usd", 0.0),
-                "liq_confirmed": pos.get("liq_confirmed", False),
-                "entry_cvd_pct": pos.get("entry_cvd_pct", 50.0),
-                "cvd_status": pos.get("cvd_status", "DENGELİ"),
-                "entry_cvd_delta": pos.get("entry_cvd_delta", 0.0),
-                "orderbook_imbalance": pos.get("orderbook_imbalance", 0.0),
-                "orderbook_ratio": pos.get("orderbook_ratio", 1.0),
-                "orderbook_bid_qty": pos.get("orderbook_bid_qty", 0.0),
-                "orderbook_ask_qty": pos.get("orderbook_ask_qty", 0.0),
-                "orderbook_wall_side": pos.get("orderbook_wall_side", "BALANCED"),
-                "orderbook_entropy": pos.get("orderbook_entropy", 0.70),
-                "depth_provider": pos.get("depth_provider", "none"),
-                "hurst_exponent": pos.get("hurst_exponent", 0.50),
-                "iceberg_ratio": pos.get("iceberg_ratio", 1.0),
-                "hmm_market_phase": pos.get("hmm_market_phase", "ACCUMULATION"),
-                "spot_basis_bps": pos.get("spot_basis_bps", 0.0),
-                "wall_age_sec": pos.get("wall_age_sec", 0.0),
-                "entry_spread_pct": pos.get("entry_spread_pct", 0.0),
-                "entry_slippage_pct": pos.get("entry_slippage_pct", 0.0),
-                "funding_fee": round(pos.get("accumulated_funding_fee", 0.0) * 0.5, 4),
-                "calculated_dollar_risk": pos.get("calculated_dollar_risk", 10.0),
-                "stoikov_micro_price": pos.get("stoikov_micro_price", entry_p),
-                "stoikov_drift_bps": pos.get("stoikov_drift_bps", 0.0),
-                "vpin_score": pos.get("vpin_score", 0.30),
-                "vpin_toxicity": pos.get("vpin_toxicity", "LOW"),
-                "kyles_lambda_ratio": pos.get("kyles_lambda_ratio", 1.0),
-                "deribit_gex_regime": pos.get("deribit_gex_regime", "NEUTRAL"),
-                "deribit_net_gex": pos.get("deribit_net_gex", 0.0),
-                "macro_btc_net_gex": pos.get("macro_btc_net_gex", 0.0),
-                "is_gex_proxy": pos.get("is_gex_proxy", False),
-                "hawkes_eta": pos.get("hawkes_eta", 0.15),
-                "local_hawkes_eta": pos.get("local_hawkes_eta", 0.0),
-                "macro_hawkes_eta": pos.get("macro_hawkes_eta", 0.15),
-                "hawkes_source": pos.get("hawkes_source", "GLOBAL_MACRO"),
-                "is_avalanche_active": pos.get("is_avalanche_active", False),
-                "is_macro_avalanche": pos.get("is_macro_avalanche", False),
-                "cvd_accel_60s": pos.get("cvd_accel_60s", 0.0),
-                "tri_modal_regime": pos.get("tri_modal_regime", "RANGING_PINGPONG"),
-                "coinbase_lead_lag_status": pos.get("coinbase_lead_lag_status", "NOT_LISTED"),
-                "coinbase_spread_bps": pos.get("coinbase_spread_bps", 0.0),
-                "coinbase_is_listed": pos.get("coinbase_is_listed", False),
-                "exit_slippage_pct": round(slippage_pct * 100.0, 3),
-                "is_liquidated": False
+                "close_reason": close_reason
             }
-            self.history.append(_sanitize_floats(record))
+            if "legs" not in pos or not isinstance(pos["legs"], list):
+                pos["legs"] = []
+            pos["legs"].append(leg1)
 
+            # 🏛️ MODEL 1: TP1 tek başına deftere bağımsız işlem olarak eklenmez!
+            # Pozisyon hala açık ve ikinci yarısı koşuyor. Defter kalıcılığı için açık pozisyon kaydedilir.
             self.save_history(critical=True)
-            print(f">> [TP1 %50 KAPATILDI] {symbol} Net: {net_pnl:+.2f}$ ({roe_pct:+.1f}%) | Kasa: {self.balance:.2f}$")
-            return record
+            print(f">> [TP1 %50 KÂR ALINDI - BİRLEŞİK YAŞAM DÖNGÜSÜ] {symbol} Net: {net_pnl:+.2f}$ ({roe_pct:+.1f}%) | Kalan %50 Breakeven ile Koşuyor | Kasa: {self.balance:.2f}$")
+
+            partial_event = dict(leg1)
+            partial_event.update({
+                "id": pos.get("id", "") + "-TP1",
+                "symbol": symbol,
+                "side": side,
+                "is_partial": True,
+                "remaining_margin": closed_margin,
+                "status": "PARTIAL_CLOSED"
+            })
+            return partial_event
 
         else:
-            # Tam Kapatma
+            # Tam Kapatma (Nihai Kapanış)
             qty = pos.get("quantity", pos.get("position_size", 1.0))
             pos_val = pos.get("position_value", margin * pos.get("leverage", 5))
             exit_fee = (qty * exit_price) * self.commission_rate
             accumulated_funding = float(pos.get("accumulated_funding_fee", 0.0))
-            total_fees = entry_fee + exit_fee + max(0.0, accumulated_funding)
+            total_fees_leg = entry_fee + exit_fee + max(0.0, accumulated_funding)
 
             if side == "LONG":
-                gross_pnl = (exit_price - entry_p) * qty
+                gross_pnl_leg = (exit_price - entry_p) * qty
             else:
-                gross_pnl = (entry_p - exit_price) * qty
+                gross_pnl_leg = (entry_p - exit_price) * qty
 
             # VDA-37: İzole Marjin Tasfiye Tavanı (Kayıp pozisyona yatırılan teminatı aşamaz)
-            is_liquidated = (gross_pnl - total_fees) <= -margin
-            net_pnl = max(-margin, gross_pnl - total_fees)
-            roe_pct = max(-100.0, (net_pnl / margin) * 100.0)
+            is_liquidated = (gross_pnl_leg - total_fees_leg) <= -margin
+            net_pnl_leg = max(-margin, gross_pnl_leg - total_fees_leg)
+            roe_pct_leg = max(-100.0, (net_pnl_leg / margin) * 100.0)
 
             if is_liquidated:
                 close_reason = close_reason + " [🚨 İZOLE MARJİN TASFİYESİ]"
 
-            self.balance += net_pnl
+            self.balance += net_pnl_leg
             
             # VDA-13: Otomatik sıfırlama yerine güvenli durdurma moduna geçiş
             if self.balance > 150000.0:
@@ -956,6 +903,44 @@ class PaperTrader:
             dur_hrs = dur_mins // 60
             dur_str = f"{dur_hrs}sa {dur_mins % 60}dk" if dur_hrs > 0 else f"{dur_mins}dk"
 
+            # 🏛️ MODEL 1: Birleşik Yaşam Döngüsü Hesabı
+            existing_legs = pos.get("legs", [])
+            if existing_legs and pos.get("is_half_closed", False):
+                leg_final = {
+                    "leg_index": len(existing_legs) + 1,
+                    "type": "RUNNER_FINAL",
+                    "ratio": 0.5,
+                    "exit_price": round(exit_price, 8),
+                    "exit_time": exit_time_str,
+                    "duration": dur_str,
+                    "closed_qty": qty,
+                    "closed_margin": round(margin, 2),
+                    "gross_pnl": round(gross_pnl_leg, 4),
+                    "fees": round(total_fees_leg, 4),
+                    "net_pnl": round(net_pnl_leg, 4),
+                    "roe_pct": round(roe_pct_leg, 2),
+                    "close_reason": close_reason
+                }
+                all_legs = list(existing_legs) + [leg_final]
+                total_initial_margin = round(pos.get("initial_margin", margin * 2.0), 2)
+                total_net_pnl = round(sum(l["net_pnl"] for l in all_legs), 4)
+                total_gross_pnl = round(sum(l["gross_pnl"] for l in all_legs), 4)
+                total_fees = round(sum(l["fees"] for l in all_legs), 4)
+                total_roe_pct = round((total_net_pnl / total_initial_margin) * 100.0, 2)
+                
+                tot_qty = sum(l.get("closed_qty", 0.0) for l in all_legs)
+                weighted_exit_price = round(sum(l["exit_price"] * l.get("closed_qty", 0.0) for l in all_legs) / tot_qty, 8) if tot_qty > 0 else round(exit_price, 8)
+                combined_close_reason = f"🎯 TP1: {all_legs[0]['net_pnl']:+.2f}$ + {close_reason}: {leg_final['net_pnl']:+.2f}$"
+            else:
+                all_legs = []
+                total_initial_margin = round(margin, 2)
+                total_net_pnl = round(net_pnl_leg, 4)
+                total_gross_pnl = round(gross_pnl_leg, 4)
+                total_fees = round(total_fees_leg, 4)
+                total_roe_pct = round(roe_pct_leg, 2)
+                weighted_exit_price = round(exit_price, 8)
+                combined_close_reason = close_reason
+
             record = {
                 "id": pos.get("id", f"{symbol}_{int(time.time())}"),
                 "symbol": symbol,
@@ -963,23 +948,28 @@ class PaperTrader:
                 "trade_type": pos.get("trade_type", "SCALP"),
                 "setup_id": pos.get("setup_id", ""),
                 "leverage": pos.get("leverage", 5),
-                "margin": round(margin, 2),
+                "margin": total_initial_margin,
                 "entry_price": round(entry_p, 8),
-                "exit_price": round(exit_price, 8),
-                "gross_pnl": round(gross_pnl, 4),
-                "fees": round(total_fees, 4),
-                "net_pnl": round(net_pnl, 4),
-                "roe_pct": round(roe_pct, 2),
+                "exit_price": weighted_exit_price,
+                "final_exit_price": round(exit_price, 8),
+                "gross_pnl": total_gross_pnl,
+                "fees": total_fees,
+                "net_pnl": total_net_pnl,
+                "roe_pct": total_roe_pct,
                 "balance_after": round(self.balance, 2),
                 "entry_time": pos.get("entry_time", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
                 "exit_time": exit_time_str,
                 "duration": dur_str,
                 "reason": pos.get("reason", "Strateji Sinyali"),
-                "close_reason": close_reason,
+                "close_reason": combined_close_reason,
+                "sub_legs": all_legs,
+                "has_sub_legs": bool(all_legs),
                 "tp1": pos.get("tp1", 0.0),
                 "tp2": pos.get("tp2", 0.0),
                 "tp1_target": pos.get("tp1", 0.0),
                 "tp2_target": pos.get("tp2", 0.0),
+                "tp1_exit_price": pos.get("tp1_exit_price", 0.0),
+                "tp1_exit_time": pos.get("tp1_exit_time", ""),
                 "soft_stop": pos.get("soft_stop", 0.0),
                 "hard_stop": pos.get("hard_stop", 0.0),
                 "planned_stop": pos.get("hard_stop") or pos.get("soft_stop", 0.0),
@@ -1053,5 +1043,5 @@ class PaperTrader:
 
             del self.open_positions[symbol]
             self.save_history(critical=True)
-            print(f">> [POZISYON KAPANDI] {symbol} Net: {net_pnl:+.2f}$ ({roe_pct:+.1f}%) | Kasa: {self.balance:.2f}$")
+            print(f">> [BİRLEŞİK POZİSYON KAPANDI] {symbol} Net: {total_net_pnl:+.2f}$ ({total_roe_pct:+.1f}%) | Kasa: {self.balance:.2f}$")
             return record
