@@ -98,11 +98,20 @@ class ByzantineNewsQuorum:
         # Bu kaynağı ekle
         self.topic_clusters[topic_key].append({"source": source, "ts": now, "title": title})
 
-        # Farklı bağımsız kaynakları say
+        # Farklı bağımsız kaynakları say ve ELO oy ağırlıklarını hesapla
         distinct_sources = list({item["source"].split(":")[0] for item in self.topic_clusters[topic_key]})
-        is_multi_confirmed = (len(distinct_sources) >= 2)
-
-        return is_multi_confirmed, distinct_sources
+        
+        try:
+            from macro_source_evolution import source_evolution_engine
+            # Karantinadaki kaynakları teyit sayımından çıkar
+            active_sources = [s for s in distinct_sources if not source_evolution_engine.is_source_quarantined(s)[0]]
+            total_weight = sum(source_evolution_engine.get_source_voting_weight(s) for s in active_sources)
+            # En az 2 bağımsız aktif kaynak veya yüksek ağırlıklı konsensüs
+            is_multi_confirmed = (len(active_sources) >= 2 and total_weight >= 1.2) or (total_weight >= 2.0)
+            return is_multi_confirmed, active_sources
+        except Exception:
+            is_multi_confirmed = (len(distinct_sources) >= 2)
+            return is_multi_confirmed, distinct_sources
 
     def evaluate_news_authenticity(
         self,
@@ -131,6 +140,27 @@ class ByzantineNewsQuorum:
 
         title_upper = title.upper()
         now_ts = time.time()
+
+        # ── 0. KADEME: DARWINIAN SOURCE EVOLUTION & KARANTİNA DENETİMİ (FAZ 6A) ──
+        try:
+            from macro_source_evolution import source_evolution_engine
+            is_quarantined, q_reason = source_evolution_engine.is_source_quarantined(source)
+            if is_quarantined:
+                audit_record = {
+                    "timestamp": now_ts,
+                    "title": title,
+                    "verdict": "REJECTED_QUARANTINED_SOURCE",
+                    "action_command": "IGNORE_NOISE",
+                    "reason": f"🚨 KAYNAK SUSTURULDU ({source}): {q_reason}",
+                    "is_approved_for_entry": False,
+                    "is_defensive_trigger": False,
+                    "confirmed_sources": []
+                }
+                self.audit_history.append(audit_record)
+                self.save_audit_history()
+                return audit_record
+        except Exception:
+            pass
 
         # ── 1. KADEME: SİYASETÇİ VE NLP GÜRÜLTÜ ELEMESİ ──
         spk = role_registry.classify_text_speaker(title)
