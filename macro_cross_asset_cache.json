@@ -11,14 +11,22 @@
     "price": 31108.75,
     "chg_24h": -0.67
   },
+  "sp500": {
+    "price": 7859.75,
+    "chg_24h": 0.43
+  },
+  "vix": {
+    "price": 14.84,
+    "chg_24h": -4.38
+  },
   "gold": {
     "price": 4216.3,
     "chg_24h": 1.43
   },
-  "btc_d": 59.09,
-  "usdt_d": 6.54,
-  "eth_btc": 0.03017,
-  "regime": "NEUTRAL (Dengeli / Karışık ⚖️)",
-  "regime_score": 0.0,
-  "last_sync_ts": 1791640695.1113384
+  "btc_d": 59.08,
+  "usdt_d": 6.52,
+  "eth_btc": 0.03029,
+  "regime": "RISK_ON (Küresel Boğa İştahı 🚀)",
+  "regime_score": 35.0,
+  "last_sync_ts": 1791661755.161889
 }

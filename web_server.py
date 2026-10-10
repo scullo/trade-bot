@@ -9164,46 +9164,86 @@ async function loadAdminMetrics() {
                     <div style="display:flex; flex-direction:column; gap:20px;">
                         
                         <!-- TABLO 3: CANLI FLAŞ HABER İSTİHBARATI & BYZANTINE QUORUM FEED -->
+                        <!-- TABLO 3: CANLI FLAŞ HABER İSTİHBARATI & BYZANTINE QUORUM FEED -->
                         <div style="background:var(--card-bg, #111726); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px; box-shadow:0 4px 20px rgba(0,0,0,0.25);">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:10px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:10px; flex-wrap:wrap; gap:8px;">
                                 <div style="font-size:13.5px; font-weight:800; color:#ffffff; display:flex; align-items:center; gap:8px;">
                                     <span>⚡</span>
                                     <span>CANLI FLAŞ HABERLER &amp; BYZANTINE TEYİT RADARI</span>
                                 </div>
-                                <span style="font-size:11px; color:#10b981; font-family:'JetBrains Mono';">7/24 Soket Aktif</span>
+                                <span style="font-size:11px; color:#10b981; font-family:'JetBrains Mono';">7/24 Canlı Soket &amp; Kripto RSS Aktif</span>
+                            </div>
+
+                            <!-- HIZLI HABER KAYNAK SÜZGECİ -->
+                            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;">
+                                <button onclick="setMacroNewsFilter('ALL')" id="mnpill-all" style="background:${(window.currentMacroNewsFilter || 'ALL') === 'ALL' ? 'rgba(0,242,254,0.18)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${(window.currentMacroNewsFilter || 'ALL') === 'ALL' ? 'rgba(0,242,254,0.45)' : 'rgba(255,255,255,0.08)'}; color:${(window.currentMacroNewsFilter || 'ALL') === 'ALL' ? 'var(--cyan)' : '#cbd5e1'}; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer; transition:all 0.15s;">⭐ Tümü (${newsList.length})</button>
+                                <button onclick="setMacroNewsFilter('CRYPTO')" id="mnpill-crypto" style="background:${(window.currentMacroNewsFilter || 'ALL') === 'CRYPTO' ? 'rgba(0,242,254,0.18)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${(window.currentMacroNewsFilter || 'ALL') === 'CRYPTO' ? 'rgba(0,242,254,0.45)' : 'rgba(255,255,255,0.08)'}; color:${(window.currentMacroNewsFilter || 'ALL') === 'CRYPTO' ? 'var(--cyan)' : '#cbd5e1'}; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.15s;">💎 Kripto Siteleri</button>
+                                <button onclick="setMacroNewsFilter('WIRE')" id="mnpill-wire" style="background:${(window.currentMacroNewsFilter || 'ALL') === 'WIRE' ? 'rgba(0,242,254,0.18)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${(window.currentMacroNewsFilter || 'ALL') === 'WIRE' ? 'rgba(0,242,254,0.45)' : 'rgba(255,255,255,0.08)'}; color:${(window.currentMacroNewsFilter || 'ALL') === 'WIRE' ? 'var(--cyan)' : '#cbd5e1'}; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.15s;">⚡ TreeNews &amp; X Wire</button>
+                                <button onclick="setMacroNewsFilter('OFFICIAL')" id="mnpill-official" style="background:${(window.currentMacroNewsFilter || 'ALL') === 'OFFICIAL' ? 'rgba(0,242,254,0.18)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${(window.currentMacroNewsFilter || 'ALL') === 'OFFICIAL' ? 'rgba(0,242,254,0.45)' : 'rgba(255,255,255,0.08)'}; color:${(window.currentMacroNewsFilter || 'ALL') === 'OFFICIAL' ? 'var(--cyan)' : '#cbd5e1'}; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.15s;">🏛️ Resmi (Fed/SEC)</button>
                             </div>
 
                             <div style="display:flex; flex-direction:column; gap:10px; max-height:480px; overflow-y:auto; padding-right:4px;">
-                                ${newsList.length === 0 ? `
-                                    <div style="text-align:center; padding:30px; color:#64748b; font-size:12px;">
-                                        Henüz flaş haber kaydedilmedi. Soketler ve RSS besleyicileri arka planda dinlemede.
-                                    </div>
-                                ` : newsList.slice(0, 15).map((item, idx) => {
-                                    const isOfficial = item.is_primary_official;
-                                    const isVer = item.is_verified;
-                                    const srcColor = isOfficial ? '#38bdf8' : (item.source === 'TREENEWS' ? '#10b981' : '#a855f7');
-                                    const sentScore = Number(item.sentiment_score || 0);
-                                    const sentColor = sentScore > 10 ? 'var(--green)' : (sentScore < -10 ? 'var(--red)' : '#94a3b8');
-                                    return `
-                                        <div onclick="openMacroNewsDetailModal(${idx})" style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-left:3px solid ${srcColor}; border-radius:9px; padding:10px 14px; transition:all 0.15s; cursor:pointer;" onmouseover="this.style.background='rgba(0,242,254,0.06)'; this.style.borderColor='rgba(0,242,254,0.35)';" onmouseout="this.style.background='rgba(255,255,255,0.02)'; this.style.borderColor='rgba(255,255,255,0.05)';">
-                                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:10.5px; font-family:'JetBrains Mono';">
-                                                <div style="display:flex; align-items:center; gap:6px;">
-                                                    <span style="color:${srcColor}; font-weight:800;">[${item.source}]</span>
-                                                    <span style="color:#64748b;">${item.time_tsi || 'Şimdi'}</span>
+                                ${(() => {
+                                    const actFilter = window.currentMacroNewsFilter || 'ALL';
+                                    const filteredList = newsList.filter(item => {
+                                        if (actFilter === 'ALL') return true;
+                                        const s = (item.source || '').toUpperCase();
+                                        if (actFilter === 'CRYPTO') {
+                                            return s.includes('COINDESK') || s.includes('COINTELEGRAPH') || s.includes('DECRYPT') || s.includes('THEBLOCK') || s.includes('BLOGS') || item.category === 'GENERAL_CRYPTO';
+                                        }
+                                        if (actFilter === 'WIRE') {
+                                            return s.includes('TREENEWS') || s.includes('TWITTER') || s.includes('WIRE');
+                                        }
+                                        if (actFilter === 'OFFICIAL') {
+                                            return item.is_primary_official || s.includes('FED') || s.includes('SEC');
+                                        }
+                                        return true;
+                                    });
+
+                                    if (filteredList.length === 0) {
+                                        return `
+                                            <div style="text-align:center; padding:30px; color:#64748b; font-size:12px;">
+                                                Seçilen filtre kriterine uygun flaş haber bulunamadı. Soketler ve RSS besleyicileri arka planda dinlemede.
+                                            </div>
+                                        `;
+                                    }
+
+                                    return filteredList.slice(0, 20).map((item) => {
+                                        const originalIdx = newsList.indexOf(item);
+                                        const isOfficial = item.is_primary_official;
+                                        const isVer = item.is_verified;
+                                        const sUpper = (item.source || '').toUpperCase();
+                                        let srcColor = '#a855f7';
+                                        if (sUpper.includes('COINDESK')) srcColor = '#f59e0b';
+                                        else if (sUpper.includes('COINTELEGRAPH')) srcColor = '#eab308';
+                                        else if (sUpper.includes('DECRYPT')) srcColor = '#06b6d4';
+                                        else if (sUpper.includes('THEBLOCK')) srcColor = '#8b5cf6';
+                                        else if (sUpper.includes('TREENEWS')) srcColor = '#10b981';
+                                        else if (isOfficial) srcColor = '#38bdf8';
+
+                                        const sentScore = Number(item.sentiment_score || 0);
+                                        const sentColor = sentScore > 10 ? 'var(--green)' : (sentScore < -10 ? 'var(--red)' : '#94a3b8');
+                                        return `
+                                            <div onclick="openMacroNewsDetailModal(${originalIdx >= 0 ? originalIdx : 0})" style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-left:3px solid ${srcColor}; border-radius:9px; padding:10px 14px; transition:all 0.15s; cursor:pointer;" onmouseover="this.style.background='rgba(0,242,254,0.06)'; this.style.borderColor='rgba(0,242,254,0.35)';" onmouseout="this.style.background='rgba(255,255,255,0.02)'; this.style.borderColor='rgba(255,255,255,0.05)';">
+                                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:10.5px; font-family:'JetBrains Mono';">
+                                                    <div style="display:flex; align-items:center; gap:6px;">
+                                                        <span style="color:${srcColor}; font-weight:800;">[${item.source}]</span>
+                                                        <span style="color:#64748b;">${item.time_tsi || 'Şimdi'}</span>
+                                                    </div>
+                                                    <div style="display:flex; align-items:center; gap:6px;">
+                                                        ${isOfficial ? `<span style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:1px 5px; border-radius:4px; font-size:9px; font-weight:800;">RESMİ</span>` : ''}
+                                                        ${isVer ? `<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:1px 5px; border-radius:4px; font-size:9px; font-weight:800;">ÇİFT TEYİT ✅</span>` : ''}
+                                                        <span style="color:${sentColor}; font-weight:800;">${sentScore > 0 ? '+' : ''}${sentScore.toFixed(0)}</span>
+                                                        <span style="background:rgba(0,242,254,0.1); color:var(--cyan); border:1px solid rgba(0,242,254,0.25); padding:1px 6px; border-radius:4px; font-size:9px; font-weight:800;">Detay ↗</span>
+                                                    </div>
                                                 </div>
-                                                <div style="display:flex; align-items:center; gap:6px;">
-                                                    ${isOfficial ? `<span style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:1px 5px; border-radius:4px; font-size:9px; font-weight:800;">RESMİ</span>` : ''}
-                                                    ${isVer ? `<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:1px 5px; border-radius:4px; font-size:9px; font-weight:800;">ÇİFT TEYİT ✅</span>` : ''}
-                                                    <span style="color:${sentColor}; font-weight:800;">${sentScore > 0 ? '+' : ''}${sentScore.toFixed(0)}</span>
-                                                    <span style="background:rgba(0,242,254,0.1); color:var(--cyan); border:1px solid rgba(0,242,254,0.25); padding:1px 6px; border-radius:4px; font-size:9px; font-weight:800;">Detay ↗</span>
+                                                <div style="font-size:12px; color:#e2e8f0; font-weight:600; line-height:1.4;">
+                                                    ${item.title}
                                                 </div>
                                             </div>
-                                            <div style="font-size:12px; color:#e2e8f0; font-weight:600; line-height:1.4;">
-                                                ${item.title}
-                                            </div>
-                                        </div>
-                                    `;
-                                }).join('')}
+                                        `;
+                                    }).join('');
+                                })()}
                             </div>
                         </div>
 
@@ -9214,7 +9254,7 @@ async function loadAdminMetrics() {
                                     <span>📊</span>
                                     <span>KÜRESEL MAKRO KORELASYON &amp; ETKİ ANALİZİ</span>
                                 </div>
-                                <span style="font-size:10.5px; background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.25); padding:2px 6px; border-radius:5px;">Yahoo Finance Canlı</span>
+                                <span style="font-size:10.5px; background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.25); padding:2px 6px; border-radius:5px;">Yahoo Finance &amp; On-Chain Canlı</span>
                             </div>
 
                             <table style="width:100%; border-collapse:collapse; font-size:11.5px; font-family:'JetBrains Mono'; text-align:left;">
@@ -9241,7 +9281,17 @@ async function loadAdminMetrics() {
                                         <td style="padding:8px 6px; color:${Number(cross.us10y ? cross.us10y.chg_24h : 0) >= 0 ? '#f43f5e' : '#10b981'}; font-weight:700;">
                                             ${Number(cross.us10y ? cross.us10y.chg_24h : 0) >= 0 ? '+' : ''}${Number(cross.us10y ? cross.us10y.chg_24h : 0).toFixed(2)}%
                                         </td>
-                                        <td style="padding:8px 6px; text-align:right; color:#10b981;">Faiz İndirim İştahı</td>
+                                        <td style="padding:8px 6px; text-align:right; color:#10b981;">Faiz İndirim İştahı (Düşüş Boğa)</td>
+                                    </tr>
+                                    <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                                        <td style="padding:8px 6px; font-weight:700; color:#ffffff;">VIX (Korku Endeksi)</td>
+                                        <td style="padding:8px 6px; font-weight:800; color:${Number(cross.vix ? cross.vix.price : 14.84) < 16.0 ? '#10b981' : '#f43f5e'};">${Number(cross.vix ? cross.vix.price : 14.84).toFixed(2)}</td>
+                                        <td style="padding:8px 6px; color:${Number(cross.vix ? cross.vix.chg_24h : 0) >= 0 ? '#f43f5e' : '#10b981'}; font-weight:700;">
+                                            ${Number(cross.vix ? cross.vix.chg_24h : 0) >= 0 ? '+' : ''}${Number(cross.vix ? cross.vix.chg_24h : 0).toFixed(2)}%
+                                        </td>
+                                        <td style="padding:8px 6px; text-align:right; color:${Number(cross.vix ? cross.vix.price : 14.84) < 16.0 ? '#10b981' : '#f43f5e'};">
+                                            ${Number(cross.vix ? cross.vix.price : 14.84) < 16.0 ? 'Korku Düşük (Sakin Boğa / Risk-On)' : 'Volatilite Şoku (Panik / De-Risking)'}
+                                        </td>
                                     </tr>
                                     <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
                                         <td style="padding:8px 6px; font-weight:700; color:#ffffff;">Nasdaq Futures (NQ)</td>
@@ -9252,12 +9302,26 @@ async function loadAdminMetrics() {
                                         <td style="padding:8px 6px; text-align:right; color:#cbd5e1;">Teknoloji / Risk-On</td>
                                     </tr>
                                     <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                                        <td style="padding:8px 6px; font-weight:700; color:#ffffff;">S&amp;P 500 Futures (ES)</td>
+                                        <td style="padding:8px 6px;">${Number(cross.sp500 ? cross.sp500.price : 7859).toLocaleString()}</td>
+                                        <td style="padding:8px 6px; color:${Number(cross.sp500 ? cross.sp500.chg_24h : 0) >= 0 ? '#10b981' : '#f43f5e'}; font-weight:700;">
+                                            ${Number(cross.sp500 ? cross.sp500.chg_24h : 0) >= 0 ? '+' : ''}${Number(cross.sp500 ? cross.sp500.chg_24h : 0).toFixed(2)}%
+                                        </td>
+                                        <td style="padding:8px 6px; text-align:right; color:#38bdf8;">Geniş Piyasa Kurumsal İştahı</td>
+                                    </tr>
+                                    <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
                                         <td style="padding:8px 6px; font-weight:700; color:#ffffff;">Ons Altın (XAU)</td>
                                         <td style="padding:8px 6px;">$${Number(cross.gold ? cross.gold.price : 4216).toLocaleString()}</td>
                                         <td style="padding:8px 6px; color:${Number(cross.gold ? cross.gold.chg_24h : 0) >= 0 ? '#10b981' : '#f43f5e'}; font-weight:700;">
                                             ${Number(cross.gold ? cross.gold.chg_24h : 0) >= 0 ? '+' : ''}${Number(cross.gold ? cross.gold.chg_24h : 0).toFixed(2)}%
                                         </td>
                                         <td style="padding:8px 6px; text-align:right; color:#fbc531;">Güvenli Liman Likiditesi</td>
+                                    </tr>
+                                    <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                                        <td style="padding:8px 6px; font-weight:700; color:#ffffff;">BTC Dominansı (BTC.D)</td>
+                                        <td style="padding:8px 6px;">%${Number(cross.btc_d || 59.08).toFixed(2)}</td>
+                                        <td style="padding:8px 6px; color:#38bdf8; font-weight:700;">Konsantre</td>
+                                        <td style="padding:8px 6px; text-align:right; color:#38bdf8;">Sermaye Dağılımı (Düşüş Altseason)</td>
                                     </tr>
                                     <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
                                         <td style="padding:8px 6px; font-weight:700; color:#ffffff;">USDT Dominansı</td>
@@ -9438,6 +9502,14 @@ async function loadAdminMetrics() {
             `;
         }
         window.renderMacroTabView = renderMacroTabView;
+
+        function setMacroNewsFilter(filterType) {
+            window.currentMacroNewsFilter = filterType;
+            if (typeof renderMacroTabView === 'function') {
+                renderMacroTabView();
+            }
+        }
+        window.setMacroNewsFilter = setMacroNewsFilter;
 
         // =========================================================================
         // ⚡ MACRO NEWS DETAIL MODAL & INTERACTIVE ACTIONS

@@ -1,6 +1,6 @@
 {
   "version": "6.0.0",
-  "last_update": 1791659443.9487422,
+  "last_update": 1791661787.1361797,
   "sources": {
     "TREENEWS": {
       "title": "TreeNews Fast Wire WebSocket",
@@ -343,12 +343,12 @@
       "entity_key": "@REALDONALDTRUMP",
       "display_name": "@realDonaldTrump",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 16,
+      "citation_count": 25,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791644973.640304,
-      "last_seen": 1791659443.8554373,
+      "last_seen": 1791661786.6777558,
       "sample_headlines": [
         "Donald J. Trump (@realDonaldTrump): Robert Jeffress, senior pastor of First Bapt",
         "Donald J. Trump (@realDonaldTrump): The American people are 'under attack' by US",
@@ -375,12 +375,12 @@
       "entity_key": "@ELONMUSK",
       "display_name": "@elonmusk",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 11,
+      "citation_count": 20,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791644973.656395,
-      "last_seen": 1791659443.9366822,
+      "last_seen": 1791661786.762627,
       "sample_headlines": [
         "Elon Musk (@elonmusk): Grok @Bot",
         "Elon Musk (@elonmusk): Join @TeslaSI if you’re interested in solving generalized",
@@ -519,12 +519,12 @@
       "entity_key": "@WUBLOCKCHAIN",
       "display_name": "@WuBlockchain",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 9,
+      "citation_count": 12,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791644973.7236764,
-      "last_seen": 1791659443.9191883,
+      "last_seen": 1791661786.7452965,
       "sample_headlines": [
         "Wu Blockchain (@WuBlockchain): Weekly Project Updates: Polymarket Overhauls Unde",
         "Wu Blockchain (@WuBlockchain): Vitalik Buterin: Without AI, Ethereum's Lean Road",
@@ -807,12 +807,12 @@
       "entity_key": "@CZ_BINANCE",
       "display_name": "@cz_binance",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 5,
+      "citation_count": 11,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791644973.8799856,
-      "last_seen": 1791659443.8309784,
+      "last_seen": 1791661786.6497455,
       "sample_headlines": [
         "CZ 🔶 BNB (@cz_binance): Stay SAFU out there!\n\nFWIW, I am not against hardware wa",
         "CZ 🔶 BNB (@cz_binance): Stay SAFU out there!\n\nFWIW, I am not against hardware wa",
@@ -881,14 +881,15 @@
       "entity_key": "@THEBLOCKCO",
       "display_name": "@TheBlockCo",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 2,
+      "citation_count": 5,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791645840.6188958,
-      "last_seen": 1791659443.8462605,
+      "last_seen": 1791661786.6677454,
       "sample_headlines": [
         "The Block (@TheBlockCo): THE BLOCK: US spot ether ETFs posted $542.1 million in ",
+        "The Block (@TheBlockCo): THE BLOCK: Kalshi is investigating three bets placed be",
         "The Block (@TheBlockCo): THE BLOCK: Kalshi is investigating three bets placed be"
       ]
     },
@@ -896,13 +897,15 @@
       "entity_key": "@SOLANAFNDN",
       "display_name": "@SolanaFndn",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 1,
+      "citation_count": 4,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791659443.7967181,
-      "last_seen": 1791659443.7967181,
+      "last_seen": 1791661786.614194,
       "sample_headlines": [
+        "Solana Foundation (@SolanaFndn): Prediction markets let you bet on a single outc",
+        "Solana Foundation (@SolanaFndn): Prediction markets let you bet on a single outc",
         "Solana Foundation (@SolanaFndn): Prediction markets let you bet on a single outc"
       ]
     },
@@ -910,13 +913,15 @@
       "entity_key": "@UMANG_VEERMA",
       "display_name": "@umang_veerma",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 1,
+      "citation_count": 4,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791659443.7967181,
-      "last_seen": 1791659443.7967181,
+      "last_seen": 1791661786.614194,
       "sample_headlines": [
+        "Solana Foundation (@SolanaFndn): Prediction markets let you bet on a single outc",
+        "Solana Foundation (@SolanaFndn): Prediction markets let you bet on a single outc",
         "Solana Foundation (@SolanaFndn): Prediction markets let you bet on a single outc"
       ]
     },
@@ -924,13 +929,15 @@
       "entity_key": "@AFSCOTT",
       "display_name": "@afscott",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 1,
+      "citation_count": 4,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791659443.7967181,
-      "last_seen": 1791659443.7967181,
+      "last_seen": 1791661786.614194,
       "sample_headlines": [
+        "Solana Foundation (@SolanaFndn): Prediction markets let you bet on a single outc",
+        "Solana Foundation (@SolanaFndn): Prediction markets let you bet on a single outc",
         "Solana Foundation (@SolanaFndn): Prediction markets let you bet on a single outc"
       ]
     },
@@ -938,13 +945,15 @@
       "entity_key": "YOUTUBE.COM",
       "display_name": "youtube.com",
       "entity_type": "DOMAIN_OUTLET",
-      "citation_count": 1,
+      "citation_count": 4,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791659443.80696,
-      "last_seen": 1791659443.80696,
+      "last_seen": 1791661786.6311877,
       "sample_headlines": [
+        "CZ 🔶 BNB (@cz_binance): \"SAFU\" came from this video: https://www.youtube.com/wat",
+        "CZ 🔶 BNB (@cz_binance): \"SAFU\" came from this video: https://www.youtube.com/wat",
         "CZ 🔶 BNB (@cz_binance): \"SAFU\" came from this video: https://www.youtube.com/wat"
       ]
     },
@@ -952,13 +961,15 @@
       "entity_key": "BINANCE.COM",
       "display_name": "binance.com",
       "entity_type": "DOMAIN_OUTLET",
-      "citation_count": 1,
+      "citation_count": 4,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791659443.8309784,
-      "last_seen": 1791659443.8309784,
+      "last_seen": 1791661786.6497455,
       "sample_headlines": [
+        "CZ 🔶 BNB (@cz_binance): Keep Your Crypto #SAFU in 2026\n\nRealizing the original a",
+        "CZ 🔶 BNB (@cz_binance): Keep Your Crypto #SAFU in 2026\n\nRealizing the original a",
         "CZ 🔶 BNB (@cz_binance): Keep Your Crypto #SAFU in 2026\n\nRealizing the original a"
       ]
     },
@@ -966,13 +977,15 @@
       "entity_key": "REF_TECHNICAL",
       "display_name": "technical",
       "entity_type": "NAMED_SOURCE",
-      "citation_count": 1,
+      "citation_count": 4,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791659443.8309784,
-      "last_seen": 1791659443.8309784,
+      "last_seen": 1791661786.6497455,
       "sample_headlines": [
+        "CZ 🔶 BNB (@cz_binance): Keep Your Crypto #SAFU in 2026\n\nRealizing the original a",
+        "CZ 🔶 BNB (@cz_binance): Keep Your Crypto #SAFU in 2026\n\nRealizing the original a",
         "CZ 🔶 BNB (@cz_binance): Keep Your Crypto #SAFU in 2026\n\nRealizing the original a"
       ]
     },
@@ -980,13 +993,15 @@
       "entity_key": "@PUMPFUN",
       "display_name": "@Pumpfun",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 1,
+      "citation_count": 4,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791659443.8631172,
-      "last_seen": 1791659443.8631172,
+      "last_seen": 1791661786.686288,
       "sample_headlines": [
+        "Pump.fun (@Pumpfun): if i ever say i'm comfy in spot it means i'm fully allocate",
+        "Pump.fun (@Pumpfun): if i ever say i'm comfy in spot it means i'm fully allocate",
         "Pump.fun (@Pumpfun): if i ever say i'm comfy in spot it means i'm fully allocate"
       ]
     },
@@ -994,13 +1009,15 @@
       "entity_key": "@KYBERNETWORK",
       "display_name": "@KyberNetwork",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 1,
+      "citation_count": 4,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791659443.872315,
-      "last_seen": 1791659443.872315,
+      "last_seen": 1791661786.6974282,
       "sample_headlines": [
+        "Kyber Network (@KyberNetwork): Not every token in your wallet needs to sit idle ",
+        "Kyber Network (@KyberNetwork): Not every token in your wallet needs to sit idle ",
         "Kyber Network (@KyberNetwork): Not every token in your wallet needs to sit idle "
       ]
     },
@@ -1008,13 +1025,15 @@
       "entity_key": "KYBERSWAP.COM",
       "display_name": "kyberswap.com",
       "entity_type": "DOMAIN_OUTLET",
-      "citation_count": 1,
+      "citation_count": 4,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791659443.872315,
-      "last_seen": 1791659443.872315,
+      "last_seen": 1791661786.6974282,
       "sample_headlines": [
+        "Kyber Network (@KyberNetwork): Not every token in your wallet needs to sit idle ",
+        "Kyber Network (@KyberNetwork): Not every token in your wallet needs to sit idle ",
         "Kyber Network (@KyberNetwork): Not every token in your wallet needs to sit idle "
       ]
     },
@@ -1022,27 +1041,34 @@
       "entity_key": "BLOCKCHAIN.COM",
       "display_name": "blockchain.com",
       "entity_type": "DOMAIN_OUTLET",
-      "citation_count": 1,
+      "citation_count": 13,
       "citing_wires": [
-        "TREENEWS:BLOGS"
+        "TREENEWS:BLOGS",
+        "COINTELEGRAPH",
+        "DECRYPT",
+        "THEBLOCK"
       ],
       "first_seen": 1791659443.8825996,
-      "last_seen": 1791659443.8825996,
+      "last_seen": 1791661787.130179,
       "sample_headlines": [
-        "CROWDFUNDINSIDER: Blockchain.com Seeks CFTC Approval to Launch US Prediction Mar"
+        "CROWDFUNDINSIDER: Blockchain.com Seeks CFTC Approval to Launch US Prediction Mar",
+        "CROWDFUNDINSIDER: Blockchain.com Seeks CFTC Approval to Launch US Prediction Mar",
+        "Blockchain.com pursues CFTC approval for prediction markets: CNBC"
       ]
     },
     "@GRAYSCALE": {
       "entity_key": "@GRAYSCALE",
       "display_name": "@Grayscale",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 1,
+      "citation_count": 4,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791659443.9007566,
-      "last_seen": 1791659443.9007566,
+      "last_seen": 1791661786.7286623,
       "sample_headlines": [
+        "Grayscale (@Grayscale): Artificial Intelligence usage is increasing, and token c",
+        "Grayscale (@Grayscale): Artificial Intelligence usage is increasing, and token c",
         "Grayscale (@Grayscale): Artificial Intelligence usage is increasing, and token c"
       ]
     },
@@ -1050,13 +1076,15 @@
       "entity_key": "@OPENAI",
       "display_name": "@OpenAI",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 1,
+      "citation_count": 4,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791659443.9007566,
-      "last_seen": 1791659443.9007566,
+      "last_seen": 1791661786.7286623,
       "sample_headlines": [
+        "Grayscale (@Grayscale): Artificial Intelligence usage is increasing, and token c",
+        "Grayscale (@Grayscale): Artificial Intelligence usage is increasing, and token c",
         "Grayscale (@Grayscale): Artificial Intelligence usage is increasing, and token c"
       ]
     },
@@ -1064,13 +1092,15 @@
       "entity_key": "GRAYSCALE.COM",
       "display_name": "grayscale.com",
       "entity_type": "DOMAIN_OUTLET",
-      "citation_count": 1,
+      "citation_count": 4,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791659443.9007566,
-      "last_seen": 1791659443.9007566,
+      "last_seen": 1791661786.7286623,
       "sample_headlines": [
+        "Grayscale (@Grayscale): Artificial Intelligence usage is increasing, and token c",
+        "Grayscale (@Grayscale): Artificial Intelligence usage is increasing, and token c",
         "Grayscale (@Grayscale): Artificial Intelligence usage is increasing, and token c"
       ]
     },
@@ -1078,13 +1108,15 @@
       "entity_key": "@_WOO_X",
       "display_name": "@_WOO_X",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 1,
+      "citation_count": 4,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791659443.9089093,
-      "last_seen": 1791659443.9089093,
+      "last_seen": 1791661786.7372909,
       "sample_headlines": [
+        "WOO X (@_WOO_X): ⏳ FINAL 48 HOURS: 300 USDT WOO X EU GIVEAWAY!\n\nDon't miss out o",
+        "WOO X (@_WOO_X): ⏳ FINAL 48 HOURS: 300 USDT WOO X EU GIVEAWAY!\n\nDon't miss out o",
         "WOO X (@_WOO_X): ⏳ FINAL 48 HOURS: 300 USDT WOO X EU GIVEAWAY!\n\nDon't miss out o"
       ]
     },
@@ -1092,13 +1124,15 @@
       "entity_key": "REF_BITCOIN",
       "display_name": "Bitcoin",
       "entity_type": "NAMED_SOURCE",
-      "citation_count": 1,
+      "citation_count": 4,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791659443.9191883,
-      "last_seen": 1791659443.9191883,
+      "last_seen": 1791661786.7452965,
       "sample_headlines": [
+        "Wu Blockchain (@WuBlockchain): Fake Ledger Phishing Site Tops Google Search Resu",
+        "Wu Blockchain (@WuBlockchain): Fake Ledger Phishing Site Tops Google Search Resu",
         "Wu Blockchain (@WuBlockchain): Fake Ledger Phishing Site Tops Google Search Resu"
       ]
     },
@@ -1106,13 +1140,15 @@
       "entity_key": "@COINBASEWALLET",
       "display_name": "@CoinbaseWallet",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 1,
+      "citation_count": 4,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791659443.9284568,
-      "last_seen": 1791659443.9284568,
+      "last_seen": 1791661786.753435,
       "sample_headlines": [
+        "Coinbase Wallet (@CoinbaseWallet): Time to log off for the weekend.\n\nBut first, ",
+        "Coinbase Wallet (@CoinbaseWallet): Time to log off for the weekend.\n\nBut first, ",
         "Coinbase Wallet (@CoinbaseWallet): Time to log off for the weekend.\n\nBut first, "
       ]
     },
@@ -1120,13 +1156,15 @@
       "entity_key": "@HOLOWORLDAI",
       "display_name": "@HoloworldAI",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 1,
+      "citation_count": 4,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791659443.9438868,
-      "last_seen": 1791659443.9438868,
+      "last_seen": 1791661786.7716484,
       "sample_headlines": [
+        "Holoworld AI (@HoloworldAI): This Week in Crypto, brought to you by Holoworld\n\nS",
+        "Holoworld AI (@HoloworldAI): This Week in Crypto, brought to you by Holoworld\n\nS",
         "Holoworld AI (@HoloworldAI): This Week in Crypto, brought to you by Holoworld\n\nS"
       ]
     },
@@ -1134,13 +1172,15 @@
       "entity_key": "@SOLANA",
       "display_name": "@solana",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 1,
+      "citation_count": 4,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791659443.9438868,
-      "last_seen": 1791659443.9438868,
+      "last_seen": 1791661786.7716484,
       "sample_headlines": [
+        "Holoworld AI (@HoloworldAI): This Week in Crypto, brought to you by Holoworld\n\nS",
+        "Holoworld AI (@HoloworldAI): This Week in Crypto, brought to you by Holoworld\n\nS",
         "Holoworld AI (@HoloworldAI): This Week in Crypto, brought to you by Holoworld\n\nS"
       ]
     },
@@ -1148,14 +1188,32 @@
       "entity_key": "@SECURITIZE",
       "display_name": "@Securitize",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 1,
+      "citation_count": 4,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791659443.9438868,
-      "last_seen": 1791659443.9438868,
+      "last_seen": 1791661786.7716484,
       "sample_headlines": [
+        "Holoworld AI (@HoloworldAI): This Week in Crypto, brought to you by Holoworld\n\nS",
+        "Holoworld AI (@HoloworldAI): This Week in Crypto, brought to you by Holoworld\n\nS",
         "Holoworld AI (@HoloworldAI): This Week in Crypto, brought to you by Holoworld\n\nS"
+      ]
+    },
+    "@AEROXYZ": {
+      "entity_key": "@AEROXYZ",
+      "display_name": "@aeroxyz",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791661729.36222,
+      "last_seen": 1791661786.609697,
+      "sample_headlines": [
+        "Aero (@aeroxyz): “What we are going to launch is our third DEX OS, the most ambi",
+        "Aero (@aeroxyz): “What we are going to launch is our third DEX OS, the most ambi",
+        "Aero (@aeroxyz): “What we are going to launch is our third DEX OS, the most ambi"
       ]
     }
   },
@@ -1806,6 +1864,322 @@
       "shadow_accuracy_pct": 100.0,
       "is_promoted": true,
       "promoted_ts": 1791645047.2719004
+    },
+    "@THEBLOCKCO": {
+      "entity_key": "@THEBLOCKCO",
+      "display_name": "@TheBlockCo",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791661729.4161024,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "BLOCKCHAIN.COM": {
+      "entity_key": "BLOCKCHAIN.COM",
+      "display_name": "blockchain.com",
+      "entity_type": "DOMAIN_OUTLET",
+      "enrolled_ts": 1791661729.5871005,
+      "citing_wires": [
+        "TREENEWS:BLOGS",
+        "COINTELEGRAPH"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@SOLANAFNDN": {
+      "entity_key": "@SOLANAFNDN",
+      "display_name": "@SolanaFndn",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791661755.9158177,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@UMANG_VEERMA": {
+      "entity_key": "@UMANG_VEERMA",
+      "display_name": "@umang_veerma",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791661755.9158177,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@AFSCOTT": {
+      "entity_key": "@AFSCOTT",
+      "display_name": "@afscott",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791661755.9158177,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "YOUTUBE.COM": {
+      "entity_key": "YOUTUBE.COM",
+      "display_name": "youtube.com",
+      "entity_type": "DOMAIN_OUTLET",
+      "enrolled_ts": 1791661755.9308124,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "BINANCE.COM": {
+      "entity_key": "BINANCE.COM",
+      "display_name": "binance.com",
+      "entity_type": "DOMAIN_OUTLET",
+      "enrolled_ts": 1791661755.9460096,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "REF_TECHNICAL": {
+      "entity_key": "REF_TECHNICAL",
+      "display_name": "technical",
+      "entity_type": "NAMED_SOURCE",
+      "enrolled_ts": 1791661755.9460096,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@PUMPFUN": {
+      "entity_key": "@PUMPFUN",
+      "display_name": "@Pumpfun",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791661755.9769902,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@KYBERNETWORK": {
+      "entity_key": "@KYBERNETWORK",
+      "display_name": "@KyberNetwork",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791661755.9851463,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "KYBERSWAP.COM": {
+      "entity_key": "KYBERSWAP.COM",
+      "display_name": "kyberswap.com",
+      "entity_type": "DOMAIN_OUTLET",
+      "enrolled_ts": 1791661755.9851463,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@GRAYSCALE": {
+      "entity_key": "@GRAYSCALE",
+      "display_name": "@Grayscale",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791661756.012146,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@OPENAI": {
+      "entity_key": "@OPENAI",
+      "display_name": "@OpenAI",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791661756.012146,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "GRAYSCALE.COM": {
+      "entity_key": "GRAYSCALE.COM",
+      "display_name": "grayscale.com",
+      "entity_type": "DOMAIN_OUTLET",
+      "enrolled_ts": 1791661756.012146,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@_WOO_X": {
+      "entity_key": "@_WOO_X",
+      "display_name": "@_WOO_X",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791661756.0211482,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "REF_BITCOIN": {
+      "entity_key": "REF_BITCOIN",
+      "display_name": "Bitcoin",
+      "entity_type": "NAMED_SOURCE",
+      "enrolled_ts": 1791661756.0291467,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@COINBASEWALLET": {
+      "entity_key": "@COINBASEWALLET",
+      "display_name": "@CoinbaseWallet",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791661756.0385203,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@HOLOWORLDAI": {
+      "entity_key": "@HOLOWORLDAI",
+      "display_name": "@HoloworldAI",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791661756.0561838,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@SOLANA": {
+      "entity_key": "@SOLANA",
+      "display_name": "@solana",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791661756.0561838,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@SECURITIZE": {
+      "entity_key": "@SECURITIZE",
+      "display_name": "@Securitize",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791661756.0561838,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@AEROXYZ": {
+      "entity_key": "@AEROXYZ",
+      "display_name": "@aeroxyz",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1791661786.609697,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
     }
   },
   "attribution_history": [

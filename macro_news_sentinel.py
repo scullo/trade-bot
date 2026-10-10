@@ -10,6 +10,7 @@ import json
 import time
 import asyncio
 import re
+import email.utils
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional
@@ -22,6 +23,22 @@ NEWS_HISTORY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ma
 TREENEWS_API_URL = "https://news.treeofalpha.com/api/news?limit=25"
 SEC_EDGAR_ATOM_URL = "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&output=atom"
 FED_PRESS_RSS_URL = "https://www.federalreserve.gov/feeds/press_all.xml"
+
+# Canlı Kripto Medya & Haber Siteleri RSS Kaynakları (24/7 Kesintisiz Akış)
+CRYPTO_MEDIA_RSS_URLS = {
+    "CoinDesk": "https://www.coindesk.com/arc/outboundfeeds/rss/",
+    "CoinTelegraph": "https://cointelegraph.com/rss",
+    "Decrypt": "https://decrypt.co/feed",
+    "TheBlock": "https://www.theblock.co/rss.xml"
+}
+
+# SEC Bildirimlerinde Doğrudan Kripto / Finans İlgisi Filtresi
+SEC_CRYPTO_KEYWORDS = [
+    "BITCOIN", "BTC", "ETH", "ETHEREUM", "CRYPTO", "DIGITAL ASSET", "ETF",
+    "COINBASE", "MICROSTRATEGY", "MARA", "RIOT", "GRAYSCALE", "BLACKROCK",
+    "FIDELITY", "ROBINHOOD", "CIRCLE", "BLOCKCHAIN", "MINING", "TOKEN",
+    "SECURITIES AND EXCHANGE", "LITIGATION", "COMMISSIONER", "ATKINS", "PEIRCE"
+]
 
 # Kategori Anahtar Kelimeleri
 CATEGORY_RULES = {
@@ -213,8 +230,46 @@ class MacroNewsSentinel:
             pass
         return new_items
 
+    async def fetch_crypto_media_rss(self) -> List[Dict[str, Any]]:
+        """Dünyanın en büyük kripto haber sitelerinden (CoinDesk, CoinTelegraph, Decrypt, The Block) canlı RSS beslemelerini çeker."""
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        new_items = []
+        try:
+            async with aiohttp.ClientSession() as session:
+                for site_name, rss_url in CRYPTO_MEDIA_RSS_URLS.items():
+                    try:
+                        async with session.get(rss_url, headers=headers, timeout=aiohttp.ClientTimeout(total=7)) as resp:
+                            if resp.status == 200:
+                                xml_text = await resp.text()
+                                root = ET.fromstring(xml_text)
+                                for item in root.findall(".//item")[:10]:
+                                    title_elem = item.find("title")
+                                    title = title_elem.text.strip() if title_elem is not None and title_elem.text else ""
+                                    if not title:
+                                        continue
+                                    link_elem = item.find("link")
+                                    link = link_elem.text.strip() if link_elem is not None and link_elem.text else ""
+                                    pub_elem = item.find("pubDate")
+                                    raw_ts = time.time()
+                                    if pub_elem is not None and pub_elem.text:
+                                        try:
+                                            raw_ts = email.utils.parsedate_to_datetime(pub_elem.text.strip()).timestamp()
+                                        except Exception:
+                                            pass
+
+                                    sig = self._create_signature(title, site_name)
+                                    if sig not in self.seen_signatures:
+                                        self.seen_signatures.add(sig)
+                                        parsed = self._analyze_headline(title, site_name, raw_ts, url=link)
+                                        new_items.append(parsed)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+        return new_items
+
     async def fetch_sec_edgar(self) -> List[Dict[str, Any]]:
-        """SEC EDGAR RSS resmi Form 8-K akışından kurumsal bildirimleri çeker."""
+        """SEC EDGAR RSS resmi Form 8-K akışından kurumsal bildirimleri çeker (Yalnızca Kripto/Finans odaklı)."""
         headers = {"User-Agent": "ValkyrieQuant/2.0 (quant_desk@valkyrie.ai)"}
         new_items = []
         try:
@@ -225,19 +280,33 @@ class MacroNewsSentinel:
                         root = ET.fromstring(xml_text)
                         # Atom namespace
                         ns = {"atom": "http://www.w3.org/2005/Atom"}
-                        for entry in root.findall("atom:entry", ns)[:10]:
+                        for entry in root.findall("atom:entry", ns)[:15]:
                             title_elem = entry.find("atom:title", ns)
                             title = title_elem.text.strip() if title_elem is not None and title_elem.text else ""
                             if not title:
+                                continue
+
+                            # Kripto Dışı Alakasız Şirketleri Filtrele (Medikal, otomotiv vb.)
+                            t_upper = title.upper()
+                            is_crypto_relevant = any(kw in t_upper for kw in SEC_CRYPTO_KEYWORDS)
+                            if not is_crypto_relevant:
                                 continue
                             
                             link_elem = entry.find("atom:link", ns)
                             link = link_elem.attrib.get("href", "") if link_elem is not None else "https://www.sec.gov/edgar/searchedgar/companysearch"
 
+                            updated_elem = entry.find("atom:updated", ns)
+                            raw_ts = time.time()
+                            if updated_elem is not None and updated_elem.text:
+                                try:
+                                    raw_ts = datetime.fromisoformat(updated_elem.text.replace("Z", "+00:00")).timestamp()
+                                except Exception:
+                                    pass
+
                             sig = self._create_signature(title, "SEC_EDGAR")
                             if sig not in self.seen_signatures:
                                 self.seen_signatures.add(sig)
-                                parsed = self._analyze_headline(f"[SEC 8-K RESMİ BİLDİRİM] {title}", "SEC_EDGAR", time.time(), url=link)
+                                parsed = self._analyze_headline(f"[SEC 8-K RESMİ BİLDİRİM] {title}", "SEC_EDGAR", raw_ts, url=link)
                                 new_items.append(parsed)
         except Exception:
             pass
@@ -262,18 +331,31 @@ class MacroNewsSentinel:
                             link_elem = item.find("link")
                             link = link_elem.text.strip() if link_elem is not None and link_elem.text else "https://www.federalreserve.gov/newsevents/pressreleases.htm"
 
+                            pub_elem = item.find("pubDate")
+                            raw_ts = time.time()
+                            if pub_elem is not None and pub_elem.text:
+                                try:
+                                    raw_ts = email.utils.parsedate_to_datetime(pub_elem.text.strip()).timestamp()
+                                except Exception:
+                                    pass
+
                             sig = self._create_signature(title, "FED_OFFICIAL")
                             if sig not in self.seen_signatures:
                                 self.seen_signatures.add(sig)
-                                parsed = self._analyze_headline(f"[FED RESMİ AÇIKLAMA] {title}", "FED_OFFICIAL", time.time(), url=link)
+                                parsed = self._analyze_headline(f"[FED RESMİ AÇIKLAMA] {title}", "FED_OFFICIAL", raw_ts, url=link)
                                 new_items.append(parsed)
         except Exception:
             pass
         return new_items
 
     async def sync_all_sources(self) -> int:
-        """Tüm kaynakları eşzamanlı olarak tarar ve hafızayı günceller."""
-        t_tasks = [self.fetch_treenews(), self.fetch_sec_edgar(), self.fetch_fed_press()]
+        """Tüm kaynakları (TreeNews, CoinDesk, CoinTelegraph, Decrypt, The Block, SEC, Fed) eşzamanlı tarar."""
+        t_tasks = [
+            self.fetch_treenews(),
+            self.fetch_crypto_media_rss(),
+            self.fetch_sec_edgar(),
+            self.fetch_fed_press()
+        ]
         results = await asyncio.gather(*t_tasks, return_exceptions=True)
 
         added_count = 0
