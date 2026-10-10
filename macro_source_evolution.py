@@ -18,6 +18,7 @@ import sys
 import os
 import json
 import time
+import re
 from typing import Dict, Any, List, Optional, Tuple
 
 REGISTRY_CACHE_FILE = os.path.join(os.path.dirname(__file__), "macro_sources_registry.json")
@@ -98,6 +99,8 @@ class SourceEvolutionEngine:
     def __init__(self, registry_file: str = REGISTRY_CACHE_FILE):
         self.registry_file = registry_file
         self.sources: Dict[str, Dict[str, Any]] = {}
+        self.discovered_citations: Dict[str, Dict[str, Any]] = {}
+        self.shadow_sandbox: Dict[str, Dict[str, Any]] = {}
         self.pending_attributions: Dict[str, Dict[str, Any]] = {} # Değerlendirme bekleyen olaylar
         self.attribution_history: List[Dict[str, Any]] = []
         self.load_registry()
@@ -109,6 +112,8 @@ class SourceEvolutionEngine:
                 with open(self.registry_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     self.sources = data.get("sources", {})
+                    self.discovered_citations = data.get("discovered_citations", {})
+                    self.shadow_sandbox = data.get("shadow_sandbox", {})
                     self.attribution_history = data.get("attribution_history", [])[-200:]
             except Exception as e:
                 print(f">> [EVOLUTION LOAD WARNING] {e}, varsayılan tohum yükleniyor.")
@@ -125,6 +130,8 @@ class SourceEvolutionEngine:
                     "version": "6.0.0",
                     "last_update": time.time(),
                     "sources": self.sources,
+                    "discovered_citations": self.discovered_citations,
+                    "shadow_sandbox": self.shadow_sandbox,
                     "attribution_history": self.attribution_history[-200:]
                 }, f, ensure_ascii=False, indent=2)
         except Exception as e:
@@ -346,6 +353,155 @@ class SourceEvolutionEngine:
         self.save_registry()
 
         return audit_record
+
+    def crawl_and_extract_citations(self, text: str, wire_source: str = "WIRE") -> List[Dict[str, Any]]:
+        """
+        Gelen haber metninden ve bültenlerden alıntı yapılan (@handle, domain, ajans)
+        kaynakları NLP ile tespit eder (Citation Graph Crawler).
+        3 farklı teyitli bültende atıf alan kaynakları 'Gölge Gözlem Havuzu'na (Shadow Sandbox) sevk eder.
+        """
+        wire_norm = wire_source.strip().upper()
+        citations_found = []
+
+        # 1. Twitter / X Handle tespiti (@handle)
+        handles = re.findall(r"@([A-Za-z0-9_]{3,25})", text)
+        for h in handles:
+            h_upper = f"@{h.upper()}"
+            if h_upper not in ["@GMAIL", "@YAHOO", "@HOTMAIL", "@TWITTER", "@X"]:
+                citations_found.append({"key": h_upper, "type": "TWITTER_HANDLE", "display": f"@{h}"})
+
+        # 2. Alan Adı / Domain Tespiti (reuters.com, wsj.com vb.)
+        domains = re.findall(r"\b([a-zA-Z0-9-]{3,30}\.(?:com|org|io|net|gov|co|news|media))\b", text, re.IGNORECASE)
+        for d in domains:
+            d_upper = d.upper()
+            if d_upper not in ["GOOGLE.COM", "TWITTER.COM", "X.COM", "T.CO", "BIT.LY"]:
+                citations_found.append({"key": d_upper, "type": "DOMAIN_OUTLET", "display": d.lower()})
+
+        # 3. İsimlendirilmiş Atıflar (via X, per Y, citing Z)
+        attributed = re.findall(r"(?:via|per|citing|according to)\s+([A-Za-z0-9_]{3,20})", text, re.IGNORECASE)
+        for a in attributed:
+            a_clean = a.strip().upper()
+            if a_clean not in ["THE", "A", "AN", "REPORTS", "SOURCES", "SOMEONE"]:
+                citations_found.append({"key": f"REF_{a_clean}", "type": "NAMED_SOURCE", "display": a.strip()})
+
+        enrolled_candidates = []
+        for c in citations_found:
+            ckey = c["key"]
+            if ckey in self.sources:
+                # Zaten asil kaynak listesinde mevcut
+                continue
+
+            if ckey not in self.discovered_citations:
+                self.discovered_citations[ckey] = {
+                    "entity_key": ckey,
+                    "display_name": c["display"],
+                    "entity_type": c["type"],
+                    "citation_count": 0,
+                    "citing_wires": [],
+                    "first_seen": time.time(),
+                    "last_seen": time.time(),
+                    "sample_headlines": []
+                }
+
+            ent = self.discovered_citations[ckey]
+            ent["citation_count"] += 1
+            ent["last_seen"] = time.time()
+            if wire_norm not in ent["citing_wires"]:
+                ent["citing_wires"].append(wire_norm)
+            if len(ent["sample_headlines"]) < 3:
+                ent["sample_headlines"].append(text[:80])
+
+            # OTONOM HAVUZA ALMA KURALI (DARWINIAN ADMISSION):
+            # En az 3 atıf alan veya en az 2 farklı haber kaynağından referans gösterilenler
+            if (ent["citation_count"] >= 3 or len(ent["citing_wires"]) >= 2) and ckey not in self.shadow_sandbox:
+                self.shadow_sandbox[ckey] = {
+                    "entity_key": ckey,
+                    "display_name": c["display"],
+                    "entity_type": c["type"],
+                    "enrolled_ts": time.time(),
+                    "citing_wires": list(ent["citing_wires"]),
+                    "status": "SHADOW_SANDBOX",
+                    "shadow_events_count": 0,
+                    "shadow_accurate_count": 0,
+                    "shadow_fakeout_count": 0,
+                    "shadow_accuracy_pct": 0.0,
+                    "is_promoted": False
+                }
+                enrolled_candidates.append(self.shadow_sandbox[ckey])
+
+        if citations_found:
+            self.save_registry()
+
+        return enrolled_candidates
+
+    def record_shadow_event(
+        self,
+        entity_key: str,
+        event_title: str,
+        is_accurate: bool,
+        is_fakeout: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Gölge Havuzdaki (Shadow Sandbox) bir kaynağın haber doğruluk takibini yapar.
+        Eğer doğruluk oranı >= %80 ve en az 3 olay tamamlanmışsa -> ASİL KAYNAĞA OTONOM TERFİ EDER!
+        """
+        norm_key = entity_key.strip().upper()
+        if norm_key not in self.shadow_sandbox:
+            return {"status": "NOT_IN_SHADOW_SANDBOX", "promoted": False}
+
+        rec = self.shadow_sandbox[norm_key]
+        rec["shadow_events_count"] = rec.get("shadow_events_count", 0) + 1
+        if is_accurate:
+            rec["shadow_accurate_count"] = rec.get("shadow_accurate_count", 0) + 1
+        if is_fakeout:
+            rec["shadow_fakeout_count"] = rec.get("shadow_fakeout_count", 0) + 1
+
+        total = rec["shadow_events_count"]
+        acc = rec["shadow_accurate_count"]
+        rec["shadow_accuracy_pct"] = round((acc / total * 100.0) if total > 0 else 0.0, 1)
+
+        # OTONOM TERFİ SÜZGEÇİ:
+        # En az 3 olay incelenmiş ve doğruluk >= %80 ise Asil Ağa terfi eder!
+        promoted = False
+        if total >= 3 and rec["shadow_accuracy_pct"] >= 80.0 and not rec.get("is_promoted", False):
+            promoted = True
+            rec["is_promoted"] = True
+            rec["status"] = "PROMOTED_TO_ACTIVE"
+            rec["promoted_ts"] = time.time()
+
+            # Asil Sicil Kütüğüne Ekle
+            self.sources[norm_key] = {
+                "title": f"Keşfedilen Asil Kaynak: {rec.get('display_name', norm_key)}",
+                "elo_rating": 72.0,  # Terfi eden güvenilir aday için başlangıç ELO
+                "type": "PROMOTED_COMMUNITY_SOURCE",
+                "domain": "CRYPTO_ALPHA",
+                "status": "ACTIVE",
+                "quorum_weight": 1.0,
+                "total_news_count": total,
+                "accurate_count": acc,
+                "fakeout_count": rec.get("shadow_fakeout_count", 0),
+                "avg_latency_ms": 450.0,
+                "pnl_impact_usd": 0.0
+            }
+
+        self.save_registry()
+        return {
+            "entity_key": norm_key,
+            "shadow_events_count": total,
+            "shadow_accuracy_pct": rec["shadow_accuracy_pct"],
+            "promoted": promoted,
+            "status": rec["status"]
+        }
+
+    def get_shadow_sandbox_list(self) -> List[Dict[str, Any]]:
+        """Gölge Gözlem Havuzundaki (Shadow Sandbox) aday kaynakları döner."""
+        return list(self.shadow_sandbox.values())
+
+    def get_discovered_citations_leaderboard(self) -> List[Dict[str, Any]]:
+        """Keşfedilen ve alıntı yapılan tüm hesapların frekans listesini döner."""
+        items = list(self.discovered_citations.values())
+        items.sort(key=lambda x: x.get("citation_count", 0), reverse=True)
+        return items
 
     def get_sources_leaderboard(self) -> List[Dict[str, Any]]:
         """Tüm kaynakların ELO skor tablosunu azalan sırada döner."""

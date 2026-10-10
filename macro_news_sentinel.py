@@ -116,6 +116,13 @@ class MacroNewsSentinel:
 
         is_primary_official = source in ["SEC_EDGAR", "FED_OFFICIAL"]
 
+        # Faz 6B: Alıntı Grafiği ve Otomatik Kaynak Keşfi (Citation Graph Crawler)
+        try:
+            from macro_source_evolution import source_evolution_engine
+            source_evolution_engine.crawl_and_extract_citations(title, source)
+        except Exception:
+            pass
+
         return {
             "title": title.strip(),
             "source": source,
