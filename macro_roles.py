@@ -19,19 +19,19 @@ DEFAULT_REGISTRY: Dict[str, Any] = {
     "roles": {
         "FED_CHAIR": {
             "title": "Federal Reserve Başkanı",
-            "current_holder": "Jerome Powell",
-            "alias_list": ["Powell", "Jerome Powell", "Fed Başkanı Powell", "Chair Powell"],
+            "current_holder": "Kevin Warsh",
+            "alias_list": ["Kevin Warsh", "Warsh", "Chair Warsh", "Chairman Warsh", "Fed Chair Warsh", "Federal Reserve Chair Kevin Warsh"],
             "market_weight": 1.0,  # En yüksek makro ağırlık
             "domain": "MONETARY_POLICY",
-            "past_holders": ["Janet Yellen", "Ben Bernanke", "Alan Greenspan"]
+            "past_holders": ["Jerome Powell", "Powell", "Jay Powell", "Janet Yellen", "Ben Bernanke", "Alan Greenspan"]
         },
         "SEC_CHAIR": {
             "title": "SEC (Menkul Kıymetler Komisyonu) Başkanı",
-            "current_holder": "Gary Gensler",
-            "alias_list": ["Gensler", "Gary Gensler", "SEC Başkanı", "Chair Gensler"],
+            "current_holder": "Paul Atkins",
+            "alias_list": ["Paul Atkins", "Atkins", "Paul S. Atkins", "Chair Atkins", "Chairman Atkins", "SEC Chair Atkins", "SEC Chairman"],
             "market_weight": 1.0,  # En yüksek regülasyon ağırlığı
             "domain": "REGULATION",
-            "past_holders": ["Jay Clayton", "Mary Jo White"]
+            "past_holders": ["Gary Gensler", "Gensler", "Jay Clayton", "Mary Jo White"]
         },
         "POTUS": {
             "title": "Amerika Birleşik Devletleri Başkanı",
@@ -43,11 +43,11 @@ DEFAULT_REGISTRY: Dict[str, Any] = {
         },
         "TREASURY_SECRETARY": {
             "title": "ABD Hazine Bakanı",
-            "current_holder": "Janet Yellen",
-            "alias_list": ["Yellen", "Janet Yellen", "Hazine Bakanı", "Treasury Secretary"],
+            "current_holder": "Scott Bessent",
+            "alias_list": ["Scott Bessent", "Bessent", "Secretary Bessent", "Treasury Secretary Scott Bessent"],
             "market_weight": 0.85, # Yüksek dolar likiditesi ve borç tavanı ağırlığı
             "domain": "LIQUIDITY_POLICY",
-            "past_holders": ["Steven Mnuchin", "Jack Lew"]
+            "past_holders": ["Janet Yellen", "Yellen", "Steven Mnuchin", "Jack Lew"]
         },
         "FOMC_VOTING_MEMBERS": {
             "title": "FOMC Oy Hakkına Sahip Fed Guvernörleri / Bölge Başkanları",

@@ -74,12 +74,13 @@ class MacroNewsSentinel:
         clean = re.sub(r"[^a-zA-Z0-9]", "", title.lower())[:60]
         return f"{source}:{clean}"
 
-    def _analyze_headline(self, title: str, source: str, raw_ts: float) -> Dict[str, Any]:
+    def _analyze_headline(self, title: str, source: str, raw_ts: float, url: str = "") -> Dict[str, Any]:
         """
         Gelen haber başlığını analiz eder:
         1. Kategori sınıflandırması (Makro, Regülasyon, Hack, Siyasi)
-        2. Dinamik Yetkili tespiti (Powell, Gensler, Trump)
+        2. Dinamik Yetkili tespiti (Kevin Warsh, Paul Atkins, Trump vb.)
         3. Duygu & Kripto Etki Puanı [-100, +100]
+        4. Orijinal Kaynak URL'si / Arama Bağlantısı
         """
         title_upper = title.upper()
         
@@ -127,9 +128,16 @@ class MacroNewsSentinel:
         except Exception:
             pass
 
+        # Orijinal Haber URL'si (Doğrudan link yoksa akıllı X/Web arama linki)
+        if not url:
+            import urllib.parse
+            clean_search = re.sub(r"\[.*?\]", "", title).strip()
+            url = f"https://x.com/search?q={urllib.parse.quote(clean_search[:65])}"
+
         return {
             "title": title.strip(),
             "source": source,
+            "url": url,
             "timestamp": raw_ts,
             "time_tsi": time_str,
             "category": category,
@@ -155,11 +163,12 @@ class MacroNewsSentinel:
                             raw_ms = item.get("time", int(time.time() * 1000))
                             raw_ts = raw_ms / 1000.0 if raw_ms > 1e11 else float(raw_ms)
                             src = f"TreeNews:{item.get('source', 'wire')}"
+                            link = item.get("link") or item.get("url") or ""
 
                             sig = self._create_signature(title, "TreeNews")
                             if sig not in self.seen_signatures:
                                 self.seen_signatures.add(sig)
-                                parsed = self._analyze_headline(title, src, raw_ts)
+                                parsed = self._analyze_headline(title, src, raw_ts, url=link)
                                 new_items.append(parsed)
         except Exception as e:
             # Sessiz ağ hatası toleransı
@@ -184,10 +193,13 @@ class MacroNewsSentinel:
                             if not title:
                                 continue
                             
+                            link_elem = entry.find("atom:link", ns)
+                            link = link_elem.attrib.get("href", "") if link_elem is not None else "https://www.sec.gov/edgar/searchedgar/companysearch"
+
                             sig = self._create_signature(title, "SEC_EDGAR")
                             if sig not in self.seen_signatures:
                                 self.seen_signatures.add(sig)
-                                parsed = self._analyze_headline(f"[SEC 8-K RESMİ BİLDİRİM] {title}", "SEC_EDGAR", time.time())
+                                parsed = self._analyze_headline(f"[SEC 8-K RESMİ BİLDİRİM] {title}", "SEC_EDGAR", time.time(), url=link)
                                 new_items.append(parsed)
         except Exception:
             pass
@@ -209,10 +221,13 @@ class MacroNewsSentinel:
                             if not title:
                                 continue
 
+                            link_elem = item.find("link")
+                            link = link_elem.text.strip() if link_elem is not None and link_elem.text else "https://www.federalreserve.gov/newsevents/pressreleases.htm"
+
                             sig = self._create_signature(title, "FED_OFFICIAL")
                             if sig not in self.seen_signatures:
                                 self.seen_signatures.add(sig)
-                                parsed = self._analyze_headline(f"[FED RESMİ AÇIKLAMA] {title}", "FED_OFFICIAL", time.time())
+                                parsed = self._analyze_headline(f"[FED RESMİ AÇIKLAMA] {title}", "FED_OFFICIAL", time.time(), url=link)
                                 new_items.append(parsed)
         except Exception:
             pass

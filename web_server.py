@@ -1101,10 +1101,11 @@ HTML_PAGE = """
             width: 255px;
             flex-shrink: 0;
             position: sticky;
-            top: 20px;
+            top: 15px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
+            max-height: calc(100vh - 30px);
             transition: width 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
             z-index: 40;
         }
@@ -1184,20 +1185,44 @@ HTML_PAGE = """
             justify-content: center;
         }
 
-        /* SIDEBAR VERTICAL NAV STRIP */
+        /* SIDEBAR VERTICAL NAV STRIP (KAYDIRILABİLİR LİSTE) */
         .dashboard-sidebar .nav-tab-strip {
             display: flex;
             flex-direction: column;
             align-items: stretch;
-            gap: 5px;
+            gap: 4px;
             background: rgba(13, 18, 30, 0.9);
             border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-            padding: 8px;
+            padding: 8px 6px;
             border-radius: 16px;
             margin-bottom: 0;
-            overflow: visible;
+            overflow-y: auto;
+            overflow-x: hidden;
+            flex: 1 1 auto;
+            min-height: 0;
+            max-height: calc(100vh - 210px);
             backdrop-filter: blur(16px);
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 242, 254, 0.4) rgba(255, 255, 255, 0.03);
+        }
+
+        .dashboard-sidebar .nav-tab-strip::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .dashboard-sidebar .nav-tab-strip::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 4px;
+        }
+
+        .dashboard-sidebar .nav-tab-strip::-webkit-scrollbar-thumb {
+            background: rgba(0, 242, 254, 0.35);
+            border-radius: 4px;
+        }
+
+        .dashboard-sidebar .nav-tab-strip::-webkit-scrollbar-thumb:hover {
+            background: var(--cyan, #00f2fe);
         }
 
         .dashboard-sidebar .nav-tab-btn {
@@ -4253,6 +4278,102 @@ HTML_PAGE = """
                     </button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- =========================================================================
+         VALKYRIE MACRO NEWS FORENSIC DETAIL & INTEL MODAL
+         ========================================================================= -->
+    <div id="macro-news-detail-modal-overlay" class="modal-overlay" style="display:none; z-index:10080;" onclick="if(event.target===this) closeMacroNewsDetailModal()">
+        <div class="modal-card" style="max-width:680px; width:95%; text-align:left; border:1px solid rgba(0,242,254,0.35); box-shadow:0 25px 70px rgba(0,0,0,0.95), 0 0 35px rgba(0,242,254,0.15); padding:24px; border-radius:16px; background:linear-gradient(180deg, #0e1628 0%, #090e1c 100%);">
+            
+            <!-- MODAL HEADER -->
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:14px; margin-bottom:18px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:40px; height:40px; border-radius:12px; background:rgba(0,242,254,0.15); border:1.5px solid var(--cyan); display:flex; align-items:center; justify-content:center; font-size:20px;">
+                        ⚡
+                    </div>
+                    <div>
+                        <div style="font-size:16px; font-weight:800; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif; display:flex; align-items:center; gap:8px;">
+                            <span>FLAŞ HABER İSTİHBARAT &amp; ADLİ TEYİT DETAYI</span>
+                            <span id="mnews-modal-source-badge" style="font-size:10px; font-family:'JetBrains Mono'; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:6px; font-weight:800;">[KAYNAK]</span>
+                        </div>
+                        <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono'; margin-top:3px;" id="mnews-modal-ts-text">
+                            Yayın Zamanı: --:--:-- TSİ
+                        </div>
+                    </div>
+                </div>
+                <button onclick="closeMacroNewsDetailModal()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); color:#94a3b8; width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:800; display:flex; align-items:center; justify-content:center;">✕</button>
+            </div>
+
+            <!-- HABER TAM BAŞLIĞI -->
+            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-left:4px solid var(--cyan); border-radius:12px; padding:16px; margin-bottom:18px;">
+                <div style="font-size:11px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">📰 Orijinal Başlık &amp; Bildirim Metni</div>
+                <div id="mnews-modal-title" style="font-size:14px; font-weight:700; color:#ffffff; line-height:1.5; font-family:'Plus Jakarta Sans',sans-serif;">
+                    Haber başlığı yükleniyor...
+                </div>
+            </div>
+
+            <!-- ADLİ ANALİZ KARTLARI (3'LÜ GRID) -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:18px;">
+                
+                <!-- 1. SENTIMENT VE YÖN SKORU -->
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:12px;">
+                    <div style="font-size:10.5px; color:#64748b; font-family:'JetBrains Mono';">NLP SENTIMENT PUANI</div>
+                    <div id="mnews-modal-sentiment" style="font-size:17px; font-weight:800; margin-top:4px; font-family:'JetBrains Mono'; color:#10b981;">+0.0</div>
+                    <div id="mnews-modal-category" style="font-size:10px; color:#94a3b8; margin-top:2px;">Kategori: GENEL</div>
+                </div>
+
+                <!-- 2. MAKAM VE YETKİLİ ETKİSİ -->
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:12px;">
+                    <div style="font-size:10.5px; color:#64748b; font-family:'JetBrains Mono';">YETKİLİ &amp; MAKAM ETKİSİ</div>
+                    <div id="mnews-modal-speaker" style="font-size:13px; font-weight:800; margin-top:4px; color:#ffffff;">Genel Piyasa</div>
+                    <div id="mnews-modal-speaker-weight" style="font-size:10px; color:var(--cyan); margin-top:2px;">0.1x Ağırlık</div>
+                </div>
+
+                <!-- 3. BYZANTINE MUTABAKAT & ONAY -->
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:12px;">
+                    <div style="font-size:10.5px; color:#64748b; font-family:'JetBrains Mono';">BYZANTINE QUORUM DURUMU</div>
+                    <div id="mnews-modal-quorum-verdict" style="font-size:12px; font-weight:800; margin-top:4px; color:#38bdf8;">Çift Teyit Bekleniyor</div>
+                    <div id="mnews-modal-entry-perm" style="font-size:10px; color:#94a3b8; margin-top:2px;">Yeni İşlem: Korumalı</div>
+                </div>
+
+            </div>
+
+            <!-- KAYNAK VE ELO REPUTATION BİLGİSİ -->
+            <div style="background:rgba(168,85,247,0.05); border:1px solid rgba(168,85,247,0.2); border-radius:12px; padding:12px 16px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div>
+                    <div style="font-size:11px; font-weight:800; color:#c084fc;">🧬 Kaynak Güvenilirliği (Darwinian ELO Engine)</div>
+                    <div style="font-size:11.5px; color:#cbd5e1; margin-top:2px;" id="mnews-modal-elo-info">
+                        Kaynak: <strong style="color:#ffffff;">TreeNews</strong> • ELO: <strong style="color:#10b981;">98.5</strong> • Quorum Oy Ağırlığı: <strong style="color:var(--cyan);">1.5x</strong>
+                    </div>
+                </div>
+                <div id="mnews-modal-status-badge" style="font-size:10px; font-weight:800; padding:3px 8px; border-radius:6px; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3);">
+                    YÜKSEK GÜVEN ✅
+                </div>
+            </div>
+
+            <!-- BUTONLAR VE AKSİYONLAR -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-top:1px solid rgba(255,255,255,0.08); padding-top:16px;">
+                <div style="display:flex; gap:8px;">
+                    <button id="mnews-btn-copy" onclick="copyMacroNewsHeadline()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); color:#cbd5e1; padding:9px 14px; border-radius:8px; font-size:11.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                        <span>📋 Başlığı Kopyala</span>
+                    </button>
+                    <button id="mnews-btn-search" onclick="searchMacroNewsOnX()" style="background:rgba(29,161,242,0.12); border:1px solid rgba(29,161,242,0.3); color:#38bdf8; padding:9px 14px; border-radius:8px; font-size:11.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                        <span>🔍 X / Twitter'da Ara</span>
+                    </button>
+                </div>
+
+                <div style="display:flex; gap:8px;">
+                    <button onclick="closeMacroNewsDetailModal()" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; padding:9px 16px; border-radius:8px; font-size:11.5px; font-weight:700; cursor:pointer;">
+                        Kapat
+                    </button>
+                    <a id="mnews-btn-external" href="#" target="_blank" rel="noopener noreferrer" style="text-decoration:none; background:linear-gradient(135deg, #00f2fe, #4facfe); border:none; color:#0b0f19; padding:9px 18px; border-radius:8px; font-size:11.5px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 16px rgba(0,242,254,0.35);">
+                        <span>🔗 Orijinal Habere / Kaynağa Git</span>
+                    </a>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -8625,10 +8746,15 @@ async function loadAdminMetrics() {
             const badgeEl = document.getElementById('hud-macro-news-badge');
             if (newsEl) {
                 if (latestNews) {
+                    window.currentHudLatestNews = latestNews;
                     const timeStr = latestNews.time_tsi ? `[${latestNews.time_tsi}] ` : '';
                     newsEl.innerText = `${timeStr}${latestNews.title}`;
-                    newsEl.title = latestNews.title;
+                    newsEl.title = `${latestNews.title} (Detay için tıklayın 🔍)`;
+                    newsEl.style.cursor = 'pointer';
+                    newsEl.onclick = () => { if (typeof openMacroNewsDetailModal === 'function') openMacroNewsDetailModal(latestNews); };
                     if (badgeEl) {
+                        badgeEl.style.cursor = 'pointer';
+                        badgeEl.onclick = () => { if (typeof openMacroNewsDetailModal === 'function') openMacroNewsDetailModal(latestNews); };
                         if (latestNews.is_primary_official) {
                             badgeEl.innerText = 'RESMİ BİLDİRİM';
                             badgeEl.style.color = '#38bdf8';
@@ -8648,7 +8774,13 @@ async function loadAdminMetrics() {
                     }
                 } else {
                     newsEl.innerText = '7/24 Flaş istihbarat soketleri dinleniyor (TreeNews, SEC 8-K, Fed RSS)...';
-                    if (badgeEl) badgeEl.innerText = 'CANLI DİNLİYOR';
+                    newsEl.style.cursor = 'default';
+                    newsEl.onclick = null;
+                    if (badgeEl) {
+                        badgeEl.innerText = 'CANLI DİNLİYOR';
+                        badgeEl.style.cursor = 'default';
+                        badgeEl.onclick = null;
+                    }
                 }
             }
 
@@ -8729,6 +8861,7 @@ async function loadAdminMetrics() {
             const crossRegime = hud.cross_asset_regime || {};
             const assets = crossRegime.assets || {};
             const newsList = data.news || [];
+            window.currentMacroNewsFeed = newsList;
             const quorumList = data.quorum || [];
             const roles = data.roles || {};
             const newsBias = hud.news_bias || {};
@@ -8984,14 +9117,14 @@ async function loadAdminMetrics() {
                                     <div style="text-align:center; padding:30px; color:#64748b; font-size:12px;">
                                         Henüz flaş haber kaydedilmedi. Soketler ve RSS besleyicileri arka planda dinlemede.
                                     </div>
-                                ` : newsList.slice(0, 15).map(item => {
+                                ` : newsList.slice(0, 15).map((item, idx) => {
                                     const isOfficial = item.is_primary_official;
                                     const isVer = item.is_verified;
                                     const srcColor = isOfficial ? '#38bdf8' : (item.source === 'TREENEWS' ? '#10b981' : '#a855f7');
                                     const sentScore = Number(item.sentiment_score || 0);
                                     const sentColor = sentScore > 10 ? 'var(--green)' : (sentScore < -10 ? 'var(--red)' : '#94a3b8');
                                     return `
-                                        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-left:3px solid ${srcColor}; border-radius:9px; padding:10px 14px; transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
+                                        <div onclick="openMacroNewsDetailModal(${idx})" style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-left:3px solid ${srcColor}; border-radius:9px; padding:10px 14px; transition:all 0.15s; cursor:pointer;" onmouseover="this.style.background='rgba(0,242,254,0.06)'; this.style.borderColor='rgba(0,242,254,0.35)';" onmouseout="this.style.background='rgba(255,255,255,0.02)'; this.style.borderColor='rgba(255,255,255,0.05)';">
                                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:10.5px; font-family:'JetBrains Mono';">
                                                 <div style="display:flex; align-items:center; gap:6px;">
                                                     <span style="color:${srcColor}; font-weight:800;">[${item.source}]</span>
@@ -9001,6 +9134,7 @@ async function loadAdminMetrics() {
                                                     ${isOfficial ? `<span style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:1px 5px; border-radius:4px; font-size:9px; font-weight:800;">RESMİ</span>` : ''}
                                                     ${isVer ? `<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:1px 5px; border-radius:4px; font-size:9px; font-weight:800;">ÇİFT TEYİT ✅</span>` : ''}
                                                     <span style="color:${sentColor}; font-weight:800;">${sentScore > 0 ? '+' : ''}${sentScore.toFixed(0)}</span>
+                                                    <span style="background:rgba(0,242,254,0.1); color:var(--cyan); border:1px solid rgba(0,242,254,0.25); padding:1px 6px; border-radius:4px; font-size:9px; font-weight:800;">Detay ↗</span>
                                                 </div>
                                             </div>
                                             <div style="font-size:12px; color:#e2e8f0; font-weight:600; line-height:1.4;">
@@ -9236,6 +9370,164 @@ async function loadAdminMetrics() {
             `;
         }
         window.renderMacroTabView = renderMacroTabView;
+
+        // =========================================================================
+        // ⚡ MACRO NEWS DETAIL MODAL & INTERACTIVE ACTIONS
+        // =========================================================================
+        let activeMacroNewsModalItem = null;
+        window.activeMacroNewsModalItem = activeMacroNewsModalItem;
+
+        function openMacroNewsDetailModal(target) {
+            let item = null;
+            if (typeof target === 'number') {
+                if (window.currentMacroNewsFeed && window.currentMacroNewsFeed[target]) {
+                    item = window.currentMacroNewsFeed[target];
+                }
+            } else if (typeof target === 'object' && target !== null) {
+                item = target;
+            }
+            if (!item) return;
+
+            window.activeMacroNewsModalItem = item;
+
+            const overlay = document.getElementById('macro-news-detail-modal-overlay');
+            if (!overlay) return;
+
+            // 1. Üst Başlık ve Zaman
+            const badgeEl = document.getElementById('mnews-modal-source-badge');
+            if (badgeEl) badgeEl.innerText = `[${item.source || 'KAYNAK'}]`;
+
+            const tsEl = document.getElementById('mnews-modal-ts-text');
+            if (tsEl) {
+                const tsStr = item.time_tsi ? `${item.time_tsi} TSİ` : (item.timestamp ? new Date(item.timestamp * 1000).toLocaleTimeString('tr-TR') : 'Şimdi');
+                tsEl.innerText = `Yayın Zamanı: ${tsStr} • Durum: Aktif Kayıt`;
+            }
+
+            // 2. Tam Manşet
+            const titleEl = document.getElementById('mnews-modal-title');
+            if (titleEl) titleEl.innerText = item.title || 'Başlık bilgisi yok';
+
+            // 3. NLP Sentiment Skoru
+            const sentEl = document.getElementById('mnews-modal-sentiment');
+            const sentScore = Number(item.sentiment_score || 0);
+            if (sentEl) {
+                sentEl.innerText = `${sentScore > 0 ? '+' : ''}${sentScore.toFixed(1)}`;
+                sentEl.style.color = sentScore > 10 ? 'var(--green)' : (sentScore < -10 ? 'var(--red)' : '#cbd5e1');
+            }
+
+            const catEl = document.getElementById('mnews-modal-category');
+            if (catEl) catEl.innerText = `Kategori: ${item.category || (item.source === 'SEC_EDGAR' ? 'SEC REGÜLASYON' : 'MAKRO PİYASA')}`;
+
+            // 4. Yetkili & Makam
+            const speakerEl = document.getElementById('mnews-modal-speaker');
+            const spkWeightEl = document.getElementById('mnews-modal-speaker-weight');
+            if (speakerEl) {
+                speakerEl.innerText = item.speaker || item.role_holder || (item.is_primary_official ? 'Resmi Makam / Fed' : 'Genel Piyasa Kaynağı');
+            }
+            if (spkWeightEl) {
+                const w = item.market_weight !== undefined ? item.market_weight : (item.is_primary_official ? 1.0 : 0.1);
+                spkWeightEl.innerText = `${w}x Makam Ağırlığı`;
+            }
+
+            // 5. Byzantine Quorum
+            const quorumEl = document.getElementById('mnews-modal-quorum-verdict');
+            const entryEl = document.getElementById('mnews-modal-entry-perm');
+            if (quorumEl) {
+                if (item.is_verified) {
+                    quorumEl.innerText = 'Çift Teyit Mutabakatı Sağlandı ✅';
+                    quorumEl.style.color = '#10b981';
+                } else if (item.is_primary_official) {
+                    quorumEl.innerText = 'Resmi Birinci Ağız Bildirimi 🏛️';
+                    quorumEl.style.color = '#38bdf8';
+                } else {
+                    quorumEl.innerText = 'Tek Kaynak / Savunma Modu 🛡️';
+                    quorumEl.style.color = '#fbc531';
+                }
+            }
+            if (entryEl) {
+                entryEl.innerText = item.is_verified ? 'Yeni İşlem İzni: AÇIK 🟢' : (item.is_primary_official ? 'Piyasa Etkisi: YÜKSEK ⚡' : 'Kalkan: 30s Pompalama Koruması 🛡️');
+            }
+
+            // 6. ELO ve İtibar
+            const eloEl = document.getElementById('mnews-modal-elo-info');
+            const statusBadgeEl = document.getElementById('mnews-modal-status-badge');
+            if (eloEl) {
+                const src = item.source || 'GENEL';
+                const elo = Number(item.source_elo || (src === 'SEC_EDGAR' ? 99.0 : (src === 'FED_PRESS' ? 98.0 : 85.0))).toFixed(1);
+                eloEl.innerHTML = `Kaynak: <strong style="color:#ffffff;">${src}</strong> • ELO Skoru: <strong style="color:#10b981;">${elo}</strong> • Quorum Oy Ağırlığı: <strong style="color:var(--cyan);">${item.vote_multiplier || '1.0x'}</strong>`;
+            }
+            if (statusBadgeEl) {
+                if (item.is_primary_official) {
+                    statusBadgeEl.innerText = 'RESMİ MAKAM 🏛️';
+                    statusBadgeEl.style.color = '#38bdf8';
+                    statusBadgeEl.style.background = 'rgba(56,189,248,0.15)';
+                    statusBadgeEl.style.borderColor = 'rgba(56,189,248,0.3)';
+                } else if (item.is_verified) {
+                    statusBadgeEl.innerText = 'YÜKSEK GÜVEN ✅';
+                    statusBadgeEl.style.color = '#10b981';
+                    statusBadgeEl.style.background = 'rgba(16,185,129,0.15)';
+                    statusBadgeEl.style.borderColor = 'rgba(16,185,129,0.3)';
+                } else {
+                    statusBadgeEl.innerText = 'SAVUNMA MODU 🛡️';
+                    statusBadgeEl.style.color = '#fbc531';
+                    statusBadgeEl.style.background = 'rgba(251,197,49,0.15)';
+                    statusBadgeEl.style.borderColor = 'rgba(251,197,49,0.3)';
+                }
+            }
+
+            // 7. Orijinal Link veya Ağ Araması
+            const extBtn = document.getElementById('mnews-btn-external');
+            if (extBtn) {
+                if (item.url && item.url.startsWith('http')) {
+                    extBtn.href = item.url;
+                    extBtn.innerHTML = '<span>🔗 Orijinal Habere / Kaynağa Git ↗</span>';
+                } else {
+                    extBtn.href = `https://x.com/search?q=${encodeURIComponent(item.title || '')}`;
+                    extBtn.innerHTML = '<span>🔍 Kaynağı X / Ağda Ara ↗</span>';
+                }
+            }
+
+            overlay.style.display = 'flex';
+        }
+        window.openMacroNewsDetailModal = openMacroNewsDetailModal;
+
+        function closeMacroNewsDetailModal() {
+            const overlay = document.getElementById('macro-news-detail-modal-overlay');
+            if (overlay) overlay.style.display = 'none';
+            window.activeMacroNewsModalItem = null;
+        }
+        window.closeMacroNewsDetailModal = closeMacroNewsDetailModal;
+
+        function copyMacroNewsHeadline() {
+            const item = window.activeMacroNewsModalItem;
+            if (!item || !item.title) return;
+            const textToCopy = `${item.title} [Kaynak: ${item.source || 'Valkyrie News'}]`;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const btn = document.getElementById('mnews-btn-copy');
+                if (btn) {
+                    const original = btn.innerHTML;
+                    btn.innerHTML = '<span>✅ Kopyalandı!</span>';
+                    btn.style.borderColor = '#10b981';
+                    btn.style.color = '#10b981';
+                    setTimeout(() => {
+                        btn.innerHTML = original;
+                        btn.style.borderColor = 'rgba(255,255,255,0.15)';
+                        btn.style.color = '#cbd5e1';
+                    }, 2000);
+                }
+            }).catch(e => {
+                console.error("Clipboard copy failed:", e);
+            });
+        }
+        window.copyMacroNewsHeadline = copyMacroNewsHeadline;
+
+        function searchMacroNewsOnX() {
+            const item = window.activeMacroNewsModalItem;
+            if (!item || !item.title) return;
+            const searchUrl = `https://x.com/search?q=${encodeURIComponent(item.title)}`;
+            window.open(searchUrl, '_blank', 'noopener,noreferrer');
+        }
+        window.searchMacroNewsOnX = searchMacroNewsOnX;
 
         let currentActiveMainTab = 'cockpit';
         window.currentActiveMainTab = currentActiveMainTab;
@@ -17598,6 +17890,7 @@ cam_s5 = prev_c - (nz(cam_r5, prev_c) - prev_c)
                 closeConfirmModal();
                 closeTelemetryModal();
                 closeShadowCoinDetail();
+                if (typeof closeMacroNewsDetailModal === 'function') closeMacroNewsDetailModal();
             }
         });
 
