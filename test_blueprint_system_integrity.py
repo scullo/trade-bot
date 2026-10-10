@@ -146,25 +146,27 @@ class TestBlueprintSystemIntegrity(unittest.TestCase):
         self.assertEqual(pos['tri_modal_regime'], "DIRECTIONAL_EXPANSION")
         self.assertEqual(pos['hawkes_eta'], 0.22)
 
-        # TP1 Kapanışı Testi
+        # TP1 Kapanışı Testi (Model 1: Birleşik Yaşam Döngüsü - Leg 1 pozisyona işlenir, deftere parça yazılmaz)
         tp1_res = self.trader.close_position("BTC/USDT", exit_price=65800.0, close_reason="TP1_HALF_TAKE_PROFIT", is_partial=True)
         self.assertTrue(tp1_res)
-        self.assertEqual(len(self.trader.history), 1)
-        h_tp1 = self.trader.history[0]
-        self.assertEqual(h_tp1['stoikov_drift_bps'], 6.15)
-        self.assertEqual(h_tp1['deribit_gex_regime'], "POSITIVE_GAMMA_PIN")
-        self.assertEqual(h_tp1['hawkes_eta'], 0.22)
-        self.assertEqual(h_tp1['tri_modal_regime'], "DIRECTIONAL_EXPANSION")
+        self.assertEqual(len(self.trader.history), 0)
+        open_pos = self.trader.open_positions.get("BTC/USDT")
+        self.assertIsNotNone(open_pos)
+        self.assertEqual(len(open_pos.get("legs", [])), 1)
 
-        # Full Close Kapanışı Testi
+        # Full Close Kapanışı Testi (Nihai Birleşik Kapanış - Leg 1 ve Leg 2 tek kayıtta birleşir)
         full_res = self.trader.close_position("BTC/USDT", exit_price=66500.0, close_reason="TP2_RUNNER_FULL_CLOSE")
         self.assertTrue(full_res)
-        self.assertEqual(len(self.trader.history), 2)
-        h_full = self.trader.history[1]
-        self.assertEqual(h_full['stoikov_drift_bps'], 6.15)
-        self.assertEqual(h_full['vpin_toxicity'], "LOW")
-        self.assertEqual(h_full['kyles_lambda_ratio'], 0.85)
-        self.assertEqual(h_full['cvd_accel_60s'], 450.0)
+        self.assertEqual(len(self.trader.history), 1)
+        h_unified = self.trader.history[0]
+        self.assertTrue(h_unified.get('has_sub_legs', False))
+        self.assertEqual(len(h_unified.get('sub_legs', [])), 2)
+        self.assertEqual(h_unified['stoikov_drift_bps'], 6.15)
+        self.assertEqual(h_unified['deribit_gex_regime'], "POSITIVE_GAMMA_PIN")
+        self.assertEqual(h_unified['hawkes_eta'], 0.22)
+        self.assertEqual(h_unified['tri_modal_regime'], "DIRECTIONAL_EXPANSION")
+        self.assertEqual(h_unified['kyles_lambda_ratio'], 0.85)
+        self.assertEqual(h_unified['cvd_accel_60s'], 450.0)
 
     def test_02_aegis_sentinel_blueprint_audit_healthy(self):
         """2. Aegis Sentinel Blueprint sensör denetimi tam sağlıklı senaryo."""

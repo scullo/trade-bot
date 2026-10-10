@@ -5991,7 +5991,7 @@ HTML_PAGE = """
             </div>
         </div>
 
-        <!-- 5 KPI ÖZET KARTI -->
+        <!-- 5 KPI ÖZET KARTI (ANLIK REJİM & TÜM ZAMANLAR KÜMÜLATİF) -->
         <div class="cockpit-kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-bottom:20px;">
             <div class="cockpit-kpi-card" style="border-top:3px solid #10b981;">
                 <div class="kpi-card-head">
@@ -5999,8 +5999,10 @@ HTML_PAGE = """
                     <span class="kpi-card-icon" style="font-size:10px; font-weight:800; color:#10b981; font-family:'JetBrains Mono'; background:rgba(16,185,129,0.12); padding:2px 6px; border-radius:4px; border:1px solid rgba(16,185,129,0.3);">HERO</span>
                 </div>
                 <div class="kpi-card-val" id="shadow-kpi-saved" style="color:#10b981;">$0.00</div>
-                <div class="kpi-card-sub"><span id="shadow-kpi-hero-count">0</span> Stop İşlemi Engellendi</div>
-                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">Kalkanların koruduğu gerçek sermaye</div>
+                <div class="kpi-card-sub"><span id="shadow-kpi-hero-count">0</span> Stop İşlemi Engellendi (Son 1.000)</div>
+                <div id="shadow-kpi-saved-alltime-box" style="font-size:11px; color:#10b981; font-family:'JetBrains Mono'; margin-top:6px; background:rgba(16,185,129,0.08); padding:4px 8px; border-radius:6px; border:1px solid rgba(16,185,129,0.25);" title="Tüm aylık arşivler ve geçmiş dahil kümülatif kurtarılan sermaye">
+                    🏛️ Tüm Zamanlar: <span id="shadow-kpi-saved-alltime" style="font-weight:800;">+$0.00</span> (<span id="shadow-kpi-hero-alltime">0</span> Stop)
+                </div>
             </div>
 
             <div class="cockpit-kpi-card" style="border-top:3px solid #f43f5e;">
@@ -6009,8 +6011,10 @@ HTML_PAGE = """
                     <span class="kpi-card-icon" style="font-size:10px; font-weight:800; color:#f43f5e; font-family:'JetBrains Mono'; background:rgba(244,63,94,0.12); padding:2px 6px; border-radius:4px; border:1px solid rgba(244,63,94,0.3);">SPOIL</span>
                 </div>
                 <div class="kpi-card-val" id="shadow-kpi-missed" style="color:#f43f5e;">$0.00</div>
-                <div class="kpi-card-sub"><span id="shadow-kpi-spoiler-count">0</span> Kazanan İşlem Engellendi</div>
-                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">Filtrelerin kaçırdığı potansiyel TP kazancı</div>
+                <div class="kpi-card-sub"><span id="shadow-kpi-spoiler-count">0</span> Kazanan İşlem Engellendi (Son 1.000)</div>
+                <div id="shadow-kpi-missed-alltime-box" style="font-size:11px; color:#f43f5e; font-family:'JetBrains Mono'; margin-top:6px; background:rgba(244,63,94,0.08); padding:4px 8px; border-radius:6px; border:1px solid rgba(244,63,94,0.25);" title="Tüm aylık arşivler dahil filtrelerin kaçırdığı kümülatif TP kazancı">
+                    🏛️ Tüm Zamanlar: <span id="shadow-kpi-missed-alltime" style="font-weight:800;">-$0.00</span> (<span id="shadow-kpi-spoiler-alltime">0</span> Fırsat)
+                </div>
             </div>
 
             <div class="cockpit-kpi-card" style="border-top:3px solid #f59e0b;">
@@ -6019,8 +6023,10 @@ HTML_PAGE = """
                     <span class="kpi-card-icon" style="font-size:10px; font-weight:800; color:#f59e0b; font-family:'JetBrains Mono'; background:rgba(245,158,11,0.12); padding:2px 6px; border-radius:4px; border:1px solid rgba(245,158,11,0.3);">INDEX</span>
                 </div>
                 <div class="kpi-card-val" id="shadow-kpi-sei" style="color:#f59e0b;">%100.0</div>
-                <div class="kpi-card-sub">Kurtarılan / Toplam Etki Oranı</div>
-                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">&ge; %70 Elit Kurumsal Koruma Seviyesi</div>
+                <div class="kpi-card-sub">Son 1.000 İşlem Rejimi</div>
+                <div id="shadow-kpi-sei-alltime-box" style="font-size:11px; color:#f59e0b; font-family:'JetBrains Mono'; margin-top:6px; background:rgba(245,158,11,0.08); padding:4px 8px; border-radius:6px; border:1px solid rgba(245,158,11,0.25);" title="Tüm zamanların kümülatif kalkan verimlilik endeksi">
+                    🏛️ Tüm Zamanlar SEI: <span id="shadow-kpi-sei-alltime" style="font-weight:800;">%0.0</span>
+                </div>
             </div>
 
             <div class="cockpit-kpi-card" style="border-top:3px solid #06b6d4;">
@@ -6029,8 +6035,10 @@ HTML_PAGE = """
                     <span class="kpi-card-icon" style="font-size:10px; font-weight:800; color:#06b6d4; font-family:'JetBrains Mono'; background:rgba(6,182,212,0.12); padding:2px 6px; border-radius:4px; border:1px solid rgba(6,182,212,0.3);">ALPHA</span>
                 </div>
                 <div class="kpi-card-val" id="shadow-kpi-alpha" style="color:#06b6d4;">$0.00</div>
-                <div class="kpi-card-sub">Kurtarılan Zarar - Kaçan Kâr</div>
-                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">Sistem filtrelerinin net kâr katkısı</div>
+                <div class="kpi-card-sub">Kurtarılan Zarar - Kaçan Kâr (Son 1.000)</div>
+                <div id="shadow-kpi-alpha-alltime-box" style="font-size:11px; color:#06b6d4; font-family:'JetBrains Mono'; margin-top:6px; background:rgba(6,182,212,0.08); padding:4px 8px; border-radius:6px; border:1px solid rgba(6,182,212,0.25);" title="Tüm zamanların kümülatif net filtre kâr katkısı">
+                    🏛️ Tüm Zamanlar Net Alfa: <span id="shadow-kpi-alpha-alltime" style="font-weight:800;">+$0.00</span>
+                </div>
             </div>
 
             <div class="cockpit-kpi-card" style="border-top:3px solid #a855f7;">
@@ -6039,8 +6047,10 @@ HTML_PAGE = """
                     <span class="kpi-card-icon" style="font-size:10px; font-weight:800; color:#a855f7; font-family:'JetBrains Mono'; background:rgba(168,85,247,0.12); padding:2px 6px; border-radius:4px; border:1px solid rgba(168,85,247,0.3);">LIVE</span>
                 </div>
                 <div class="kpi-card-val" id="shadow-kpi-active" style="color:#a855f7;">0 Aktif</div>
-                <div class="kpi-card-sub"><span id="shadow-kpi-total-tracked">0</span> Toplam Sinyal Taraması</div>
-                <div style="font-size:11px; color:#64748b; font-family:'JetBrains Mono', monospace; margin-top:3px;">Anlık tick ve 5M mum teyidiyle takipte</div>
+                <div class="kpi-card-sub"><span id="shadow-kpi-total-tracked">0</span> Aktif Bellek (Son 1.000)</div>
+                <div id="shadow-kpi-total-alltime-box" style="font-size:11px; color:#a855f7; font-family:'JetBrains Mono'; margin-top:6px; background:rgba(168,85,247,0.08); padding:4px 8px; border-radius:6px; border:1px solid rgba(168,85,247,0.25);" title="Tüm aylık arşivler ve aktif hafıza dahil toplam kayıt">
+                    🏛️ Toplam Kümülatif: <span id="shadow-kpi-total-alltime" style="font-weight:800;">0</span> İşlem
+                </div>
             </div>
         </div>
 
@@ -8654,6 +8664,41 @@ async function loadAdminMetrics() {
 
                 const totalEl = document.getElementById('shadow-kpi-total-tracked');
                 if (totalEl) totalEl.innerText = summ.total_shadow_trades || ((summ.completed_shadow_trades || 0) + (summ.active_shadow_trades || activePos.length));
+
+                // All-Time Cumulative Kuant İstatistikleri
+                const allTime = summ.all_time || {};
+                const atSaved = Number(allTime.total_saved_loss_usd != null ? allTime.total_saved_loss_usd : summ.total_saved_loss_usd || 0);
+                const atHero = Number(allTime.hero_count != null ? allTime.hero_count : summ.hero_count || 0);
+                const atMissed = Number(allTime.total_missed_profit_usd != null ? allTime.total_missed_profit_usd : summ.total_missed_profit_usd || 0);
+                const atSpoiler = Number(allTime.spoiler_count != null ? allTime.spoiler_count : summ.spoiler_count || 0);
+                const atSei = allTime.shield_efficiency_index != null ? Number(allTime.shield_efficiency_index) : (summ.shield_efficiency_index != null ? summ.shield_efficiency_index : 100);
+                const atAlpha = Number(allTime.net_shield_alpha_usd != null ? allTime.net_shield_alpha_usd : summ.net_shield_alpha_usd || 0);
+                const atTotal = Number(allTime.total_trades != null ? allTime.total_trades : summ.total_shadow_trades || 0);
+
+                const atSavedEl = document.getElementById('shadow-kpi-saved-alltime');
+                if (atSavedEl) atSavedEl.innerText = `+$${atSaved.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                const atHeroEl = document.getElementById('shadow-kpi-hero-alltime');
+                if (atHeroEl) atHeroEl.innerText = atHero.toLocaleString();
+
+                const atMissedEl = document.getElementById('shadow-kpi-missed-alltime');
+                if (atMissedEl) atMissedEl.innerText = `-$${atMissed.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                const atSpoilerEl = document.getElementById('shadow-kpi-spoiler-alltime');
+                if (atSpoilerEl) atSpoilerEl.innerText = atSpoiler.toLocaleString();
+
+                const atSeiEl = document.getElementById('shadow-kpi-sei-alltime');
+                if (atSeiEl) {
+                    atSeiEl.innerText = `%${atSei.toFixed(1)}`;
+                    atSeiEl.style.color = atSei >= 70 ? '#10b981' : (atSei <= 35 ? '#f43f5e' : '#f59e0b');
+                }
+
+                const atAlphaEl = document.getElementById('shadow-kpi-alpha-alltime');
+                if (atAlphaEl) {
+                    atAlphaEl.innerText = `${atAlpha >= 0 ? '+$' : '-$'}${Math.abs(atAlpha).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                    atAlphaEl.style.color = atAlpha >= 0 ? '#06b6d4' : '#f43f5e';
+                }
+
+                const atTotalEl = document.getElementById('shadow-kpi-total-alltime');
+                if (atTotalEl) atTotalEl.innerText = atTotal.toLocaleString();
 
                 updateShadowBadge();
 
@@ -19684,7 +19729,18 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             elif layer == "slow":
                 res = await loop.run_in_executor(None, lambda: calib.run_slow_structural_cycle(force=True))
             else:
-                res = await loop.run_in_executor(None, lambda: calib.run_cycle(force=True))
+                if strategy and hasattr(strategy, "run_autonomous_calibration"):
+                    res = await loop.run_in_executor(None, lambda: strategy.run_autonomous_calibration(force=True, layer="all"))
+                else:
+                    fast_res = await loop.run_in_executor(None, lambda: calib.run_fast_risk_cycle(force=True))
+                    slow_res = await loop.run_in_executor(None, lambda: calib.run_slow_structural_cycle(force=True))
+                    res = {
+                        "executed": fast_res.get("executed", False) or slow_res.get("executed", False),
+                        "fast_risk": fast_res,
+                        "slow_structural": slow_res,
+                        "changes_applied": fast_res.get("changes_applied", 0) + slow_res.get("changes_applied", 0),
+                        "approved_coins": slow_res.get("approved_coins", [])
+                    }
             if res.get("executed") and res.get("changes_applied", 0) > 0 and strategy:
                 strategy.calibrated_coin_dna = calib._load_current_calibrated_dna()
             return web.json_response({

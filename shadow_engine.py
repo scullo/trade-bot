@@ -95,6 +95,11 @@ class ShadowExecutionEngine:
         # Hafızadaki geçmişi yükle
         self.load_history()
 
+        # Tüm zamanlar kümülatif sayaç (arşivler dahil tüm tarihçe)
+        self.cumulative_stats_file = os.path.join(os.path.dirname(self.history_file), "shadow_cumulative_stats.json")
+        self.cumulative_stats: Dict[str, Any] = {}
+        self.load_or_compute_cumulative_stats()
+
     # ──────────────────────────────────────────────────────────────────────────
     # STANDART SEMBOL VE YÖN NORMALİZASYONU (VDA-12 & VDA-17)
     # ──────────────────────────────────────────────────────────────────────────
@@ -781,8 +786,140 @@ class ShadowExecutionEngine:
         )
 
         self.completed_trades.append(pos)
+        self._update_cumulative_stats(pos)
         self.save_history(critical=True)
         return pos
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # TÜM ZAMANLAR KÜMÜLATİF SAYAÇ VE ARŞİV ENTEGRASYONU (ALL-TIME CUMULATIVE)
+    # ──────────────────────────────────────────────────────────────────────────
+    def load_or_compute_cumulative_stats(self) -> dict:
+        """
+        Tüm zamanların kümülatif gölge işlem istatistiklerini (arşivler dahil) yükler veya hesaplar.
+        Hafif JSON önbellek (shadow_cumulative_stats.json) sayesinde sunucu RAM ve CPU tüketmez.
+        """
+        if os.path.exists(self.cumulative_stats_file):
+            try:
+                with open(self.cumulative_stats_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, dict) and data.get("total_trades", 0) > 0:
+                        self.cumulative_stats = data
+                        return self.cumulative_stats
+            except Exception as e:
+                print(f">> [GÖLGE KÜMÜLATİF ÖNBELLEK OKUMA HATA] {e}")
+
+        # Eğer önbellek yoksa veya boşsa, mevcut arşiv dosyalarından ve aktif hafızadan hesapla
+        return self._recompute_cumulative_stats()
+
+    def _recompute_cumulative_stats(self) -> dict:
+        """Tüm aylık arşiv dosyalarını ve aktif gölge işlemlerini tarayarak tekilleştirilmiş kümülatif istatistikleri üretir."""
+        import glob
+        base_dir = os.path.dirname(self.history_file)
+        archive_files = glob.glob(os.path.join(base_dir, "shadow_archive_*.json"))
+        all_files = archive_files + ([self.history_file] if os.path.exists(self.history_file) else [])
+
+        seen_ids = set()
+        total_trades = 0
+        total_saved = 0.0
+        total_missed = 0.0
+        hero_count = 0
+        spoiler_count = 0
+        neutral_count = 0
+
+        for af in all_files:
+            try:
+                with open(af, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    trades = data.get("completed", [])
+                    for t in trades:
+                        tid = t.get("id") or t.get("shadow_id")
+                        if tid and tid in seen_ids:
+                            continue
+                        if tid:
+                            seen_ids.add(tid)
+                        total_trades += 1
+                        verdict = str(t.get("verdict", "")).upper()
+                        imp = abs(float(t.get("impact_usd", t.get("virtual_pnl_usd", 0.0)) or 0.0))
+                        if verdict == "HERO_SHIELD":
+                            hero_count += 1
+                            total_saved += imp
+                        elif verdict == "SPOILER_SHIELD":
+                            spoiler_count += 1
+                            total_missed += imp
+                        else:
+                            neutral_count += 1
+            except Exception as e:
+                print(f">> [GÖLGE ARŞİV HESAPLAMA HATA] {af}: {e}")
+
+        tot_imp = total_saved + total_missed
+        sei = round((total_saved / tot_imp) * 100.0, 1) if tot_imp > 0 else 100.0
+        self.cumulative_stats = {
+            "total_trades": total_trades,
+            "total_saved_loss_usd": round(total_saved, 2),
+            "total_missed_profit_usd": round(total_missed, 2),
+            "net_shield_alpha_usd": round(total_saved - total_missed, 2),
+            "hero_count": hero_count,
+            "spoiler_count": spoiler_count,
+            "neutral_count": neutral_count,
+            "shield_efficiency_index": sei,
+            "updated_at": datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        try:
+            tmp = self.cumulative_stats_file + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(self.cumulative_stats, f, ensure_ascii=False, indent=2)
+            os.replace(tmp, self.cumulative_stats_file)
+        except Exception as e:
+            print(f">> [GÖLGE KÜMÜLATİF YAZMA HATA] {e}")
+
+        return self.cumulative_stats
+
+    def _update_cumulative_stats(self, pos: dict):
+        """Yeni kapanan bir işlemi kümülatif sayaca ekler ve diske yansıtır."""
+        if not self.cumulative_stats:
+            self.load_or_compute_cumulative_stats()
+
+        verdict = str(pos.get("verdict", "")).upper()
+        imp = abs(float(pos.get("impact_usd", pos.get("virtual_pnl_usd", 0.0)) or 0.0))
+
+        tot_trades = int(self.cumulative_stats.get("total_trades", len(self.completed_trades))) + 1
+        hero_cnt = int(self.cumulative_stats.get("hero_count", 0))
+        spoil_cnt = int(self.cumulative_stats.get("spoiler_count", 0))
+        neut_cnt = int(self.cumulative_stats.get("neutral_count", 0))
+        tot_saved = float(self.cumulative_stats.get("total_saved_loss_usd", 0.0))
+        tot_missed = float(self.cumulative_stats.get("total_missed_profit_usd", 0.0))
+
+        if verdict == "HERO_SHIELD":
+            hero_cnt += 1
+            tot_saved += imp
+        elif verdict == "SPOILER_SHIELD":
+            spoil_cnt += 1
+            tot_missed += imp
+        else:
+            neut_cnt += 1
+
+        tot_imp = tot_saved + tot_missed
+        sei = round((tot_saved / tot_imp) * 100.0, 1) if tot_imp > 0 else 100.0
+        self.cumulative_stats = {
+            "total_trades": tot_trades,
+            "total_saved_loss_usd": round(tot_saved, 2),
+            "total_missed_profit_usd": round(tot_missed, 2),
+            "net_shield_alpha_usd": round(tot_saved - tot_missed, 2),
+            "hero_count": hero_cnt,
+            "spoiler_count": spoil_cnt,
+            "neutral_count": neut_cnt,
+            "shield_efficiency_index": sei,
+            "updated_at": datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        try:
+            tmp = self.cumulative_stats_file + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(self.cumulative_stats, f, ensure_ascii=False, indent=2)
+            os.replace(tmp, self.cumulative_stats_file)
+        except Exception:
+            pass
 
     # ──────────────────────────────────────────────────────────────────────────
     # PERFORMANS ÖZETİ VE METRİKLER (KPIs)
@@ -810,6 +947,19 @@ class ShadowExecutionEngine:
             shield_savings[s_name] = shield_savings.get(s_name, 0.0) + abs(t.get("virtual_pnl_usd", 0.0))
         top_hero_shields = sorted(shield_savings.items(), key=lambda x: x[1], reverse=True)[:3]
 
+        # Tüm zamanlar kümülatif karne (tüm arşivleri içerir)
+        cum = self.cumulative_stats if self.cumulative_stats else self.load_or_compute_cumulative_stats()
+        all_time_stats = {
+            "total_trades": int(cum.get("total_trades", total_completed)),
+            "total_saved_loss_usd": float(cum.get("total_saved_loss_usd", round(total_saved_loss, 2))),
+            "total_missed_profit_usd": float(cum.get("total_missed_profit_usd", round(total_missed_profit, 2))),
+            "net_shield_alpha_usd": float(cum.get("net_shield_alpha_usd", round(net_shield_alpha, 2))),
+            "hero_count": int(cum.get("hero_count", len(hero_trades))),
+            "spoiler_count": int(cum.get("spoiler_count", len(spoiler_trades))),
+            "neutral_count": int(cum.get("neutral_count", len(neutral_trades))),
+            "shield_efficiency_index": float(cum.get("shield_efficiency_index", sei_score))
+        }
+
         return {
             "total_shadow_trades": total_completed + active_count,
             "active_shadow_trades": active_count,
@@ -822,7 +972,8 @@ class ShadowExecutionEngine:
             "net_shield_alpha_usd": round(net_shield_alpha, 2),
             "shield_efficiency_index": sei_score,
             "top_hero_shields": top_hero_shields,
-            "tracked_symbols_count": len(set(t.get("symbol") for t in completed + list(self.active_positions.values())))
+            "tracked_symbols_count": len(set(t.get("symbol") for t in completed + list(self.active_positions.values()))),
+            "all_time": all_time_stats
         }
 
     # ──────────────────────────────────────────────────────────────────────────
