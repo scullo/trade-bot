@@ -4340,6 +4340,47 @@ HTML_PAGE = """
 
             </div>
 
+            <!-- 🧠 VALKYRIE AI ADLİ İSTİHBARAT & DETAYLI PİYASA YORUMU -->
+            <div style="background:linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9)); border:1px solid rgba(0, 242, 254, 0.3); border-radius:12px; padding:16px; margin-bottom:18px; box-shadow:0 4px 20px rgba(0, 242, 254, 0.08);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <div style="font-size:12px; font-weight:800; color:var(--cyan); display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:16px;">🧠</span>
+                        <span>YAPAY ZEKA (AI) ADLİ İSTİHBARAT &amp; PİYASA YORUMU</span>
+                    </div>
+                    <span id="mnews-modal-impact-badge" style="font-size:10px; font-weight:800; padding:2px 8px; border-radius:6px; background:rgba(0,242,254,0.15); color:var(--cyan); border:1px solid rgba(0,242,254,0.3);">
+                        NÖTR / RUTİN AKIŞ
+                    </span>
+                </div>
+
+                <!-- 1. HABERİN NE OLDUĞU (ÖZET & ANLAM) -->
+                <div style="margin-bottom:10px;">
+                    <div style="font-size:10.5px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px;">📰 Bu Haber Nedir &amp; Ne Anlama Geliyor?</div>
+                    <div id="mnews-modal-ai-summary" style="font-size:12.5px; color:#ffffff; line-height:1.5; margin-top:3px; font-weight:600;">
+                        Haber metni taranıyor...
+                    </div>
+                </div>
+
+                <!-- 2. YAPAY ZEKA KUANT YORUMU & ETKİ ANALİZİ -->
+                <div style="margin-bottom:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:10px;">
+                    <div style="font-size:10.5px; font-weight:800; color:#c084fc; text-transform:uppercase; letter-spacing:0.5px;">🤖 Kuant Masası &amp; Piyasa Etkisi</div>
+                    <div id="mnews-modal-ai-interpretation" style="font-size:12px; color:#cbd5e1; line-height:1.5; margin-top:3px;">
+                        Piyasa etkisi ve likidite akışı hesaplanıyor...
+                    </div>
+                </div>
+
+                <!-- 3. PUANLAMA MANTIĞI & BOT AKSİYONU (2'Lİ GRID) -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:11px;">
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:8px 10px; border-radius:7px;">
+                        <div style="color:#64748b; font-size:9.5px; font-weight:800; font-family:'JetBrains Mono';">PUANLAMA GEREKÇESİ (NEDEN BU PUAN?)</div>
+                        <div id="mnews-modal-score-explanation" style="color:#ffffff; font-weight:600; margin-top:3px; font-size:11.5px; line-height:1.4;">Metin anahtar kelimeleri incelendi.</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:8px 10px; border-radius:7px;">
+                        <div style="color:#64748b; font-size:9.5px; font-weight:800; font-family:'JetBrains Mono';">BOT STRATEJİ AKSİYONU</div>
+                        <div id="mnews-modal-strategy-action" style="color:#10b981; font-weight:700; margin-top:3px; font-size:11.5px; line-height:1.4;">Standart rejimde işlem serbest.</div>
+                    </div>
+                </div>
+            </div>
+
             <!-- KAYNAK VE ELO REPUTATION BİLGİSİ -->
             <div style="background:rgba(168,85,247,0.05); border:1px solid rgba(168,85,247,0.2); border-radius:12px; padding:12px 16px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                 <div>
@@ -9329,12 +9370,19 @@ async function loadAdminMetrics() {
                                         ` : shadowSandbox.map(c => {
                                             const isProm = c.is_promoted || c.status === 'PROMOTED_TO_ACTIVE';
                                             const acc = Number(c.shadow_accuracy_pct || 0);
+                                            const evCount = Number(c.shadow_events_count || 0);
+                                            const accBadge = evCount > 0 
+                                                ? `<span style="color:${acc >= 80 ? '#10b981' : '#fbc531'}; font-weight:700;">%${acc.toFixed(0)}</span>`
+                                                : `<span style="color:#64748b; font-size:10px;">İzleniyor ⏳</span>`;
+                                            const evBadge = evCount > 0 
+                                                ? `${evCount}`
+                                                : `<span style="color:#64748b; font-size:10px;">0 (İlk Olay Bekleniyor)</span>`;
                                             return `
                                                 <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
                                                     <td style="padding:7px 6px; font-weight:700; color:#ffffff;">${c.display_name || c.entity_key}</td>
                                                     <td style="padding:7px 6px; color:#94a3b8; font-size:10px;">${(c.citing_wires || []).join(', ')}</td>
-                                                    <td style="padding:7px 6px; text-align:center;">${c.shadow_events_count || 0}</td>
-                                                    <td style="padding:7px 6px; text-align:center; color:${acc >= 80 ? '#10b981' : '#fbc531'}; font-weight:700;">%${acc.toFixed(0)}</td>
+                                                    <td style="padding:7px 6px; text-align:center;">${evBadge}</td>
+                                                    <td style="padding:7px 6px; text-align:center;">${accBadge}</td>
                                                     <td style="padding:7px 6px; text-align:right;">
                                                         ${isProm 
                                                             ? '<span style="background:rgba(16,185,129,0.18); color:#34d399; border:1px solid rgba(16,185,129,0.3); padding:1px 5px; border-radius:4px; font-weight:800;">TERFİ ETTİ ✅</span>'
@@ -9422,11 +9470,70 @@ async function loadAdminMetrics() {
             const speakerEl = document.getElementById('mnews-modal-speaker');
             const spkWeightEl = document.getElementById('mnews-modal-speaker-weight');
             if (speakerEl) {
-                speakerEl.innerText = item.speaker || item.role_holder || (item.is_primary_official ? 'Resmi Makam / Fed' : 'Genel Piyasa Kaynağı');
+                let spkName = item.speaker || item.actual_entity || item.role_holder;
+                if (!spkName || spkName === 'Resmi Makam / Fed') {
+                    if (item.source === 'SEC_EDGAR') {
+                        spkName = item.actual_entity ? `SEC EDGAR • ${item.actual_entity}` : 'SEC Kurumsal Dosyalama (EDGAR)';
+                    } else if (item.source === 'FED_OFFICIAL' || item.source === 'FED_PRESS') {
+                        spkName = 'Federal Reserve Basın Masası (FOMC)';
+                    } else if (item.is_primary_official) {
+                        spkName = 'Resmi Makam / Düzenleyici Kurum';
+                    } else {
+                        spkName = 'Genel Piyasa Kaynağı / Bülten';
+                    }
+                }
+                speakerEl.innerText = spkName;
             }
             if (spkWeightEl) {
                 const w = item.market_weight !== undefined ? item.market_weight : (item.is_primary_official ? 1.0 : 0.1);
                 spkWeightEl.innerText = `${w}x Makam Ağırlığı`;
+            }
+
+            // 4.5 YAPAY ZEKA (AI) ADLİ İSTİHBARAT & DETAYLI PİYASA YORUMU
+            const aiSumEl = document.getElementById('mnews-modal-ai-summary');
+            if (aiSumEl) {
+                aiSumEl.innerText = item.ai_summary || "Haber metni taranıyor...";
+            }
+
+            const aiInterpEl = document.getElementById('mnews-modal-ai-interpretation');
+            if (aiInterpEl) {
+                aiInterpEl.innerText = item.ai_interpretation || "Piyasa etkisi ve likidite akışı kuant masası tarafından hesaplanıyor...";
+            }
+
+            const scoreExpEl = document.getElementById('mnews-modal-score-explanation');
+            if (scoreExpEl) {
+                scoreExpEl.innerText = item.score_explanation || "Metin içi anahtar kelimeler ve makro ağırlık referans alınmıştır.";
+            }
+
+            const stratActEl = document.getElementById('mnews-modal-strategy-action');
+            if (stratActEl) {
+                stratActEl.innerText = item.strategy_action || "Standart rejimde işlem serbest.";
+                if (item.impact_direction === 'BULLISH' || (item.sentiment_score && item.sentiment_score > 15)) {
+                    stratActEl.style.color = '#10b981';
+                } else if (item.impact_direction === 'BEARISH' || (item.sentiment_score && item.sentiment_score < -15)) {
+                    stratActEl.style.color = '#f43f5e';
+                } else {
+                    stratActEl.style.color = '#38bdf8';
+                }
+            }
+
+            const impactBadgeEl = document.getElementById('mnews-modal-impact-badge');
+            if (impactBadgeEl) {
+                const impactText = item.market_impact || (item.impact_direction === 'BULLISH' ? 'BOĞA İVMESİ 🚀' : (item.impact_direction === 'BEARISH' ? 'AYI BASKISI ⚠️' : 'NÖTR / RUTİN AKIŞ'));
+                impactBadgeEl.innerText = impactText;
+                if (item.impact_direction === 'BULLISH' || impactText.includes('BOĞA') || impactText.includes('POZİTİF')) {
+                    impactBadgeEl.style.color = '#10b981';
+                    impactBadgeEl.style.background = 'rgba(16,185,129,0.15)';
+                    impactBadgeEl.style.borderColor = 'rgba(16,185,129,0.3)';
+                } else if (item.impact_direction === 'BEARISH' || impactText.includes('AYI') || impactText.includes('NEGATİF') || impactText.includes('RİSK')) {
+                    impactBadgeEl.style.color = '#f43f5e';
+                    impactBadgeEl.style.background = 'rgba(244,63,94,0.15)';
+                    impactBadgeEl.style.borderColor = 'rgba(244,63,94,0.3)';
+                } else {
+                    impactBadgeEl.style.color = 'var(--cyan)';
+                    impactBadgeEl.style.background = 'rgba(0,242,254,0.15)';
+                    impactBadgeEl.style.borderColor = 'rgba(0,242,254,0.3)';
+                }
             }
 
             // 5. Byzantine Quorum

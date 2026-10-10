@@ -16,6 +16,7 @@ from typing import List, Dict, Any, Optional
 import aiohttp
 
 from macro_roles import role_registry
+from macro_ai_interpreter import ai_interpreter
 
 NEWS_HISTORY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "macro_news_history.json")
 TREENEWS_API_URL = "https://news.treeofalpha.com/api/news?limit=25"
@@ -24,15 +25,26 @@ FED_PRESS_RSS_URL = "https://www.federalreserve.gov/feeds/press_all.xml"
 
 # Kategori Anahtar Kelimeleri
 CATEGORY_RULES = {
-    "REGULATION": ["SEC", "ETF", "GENSLER", "LAWSUIT", "DAVA", "COMMISSION", "REGULATION", "CFTC", "DOJ", "BINANCE", "COINBASE", "RIPPLE", "XRP"],
-    "MACRO_DATA": ["CPI", "TÜFE", "INFLATION", "FOMC", "POWELL", "FED", "RATE CUT", "FAİZ", "NFP", "JOBS", "UNEMPLOYMENT", "PPI", "GDP"],
-    "EXPLOIT_HACK": ["HACK", "EXPLOIT", "STOLEN", "DRAINED", "VULNERABILITY", "ATTACK", "SALDIRI", "VULNERABILITY"],
+    "REGULATION": ["SEC", "ETF", "GENSLER", "LAWSUIT", "DAVA", "COMMISSION", "REGULATION", "CFTC", "DOJ", "BINANCE", "COINBASE", "RIPPLE", "XRP", "ATKINS", "COMMISSIONER"],
+    "MACRO_DATA": ["CPI", "TÜFE", "INFLATION", "FOMC", "POWELL", "WARSH", "FED", "RATE CUT", "FAİZ", "NFP", "JOBS", "UNEMPLOYMENT", "PPI", "GDP", "TREASURY", "BESSENT"],
+    "EXPLOIT_HACK": ["HACK", "EXPLOIT", "STOLEN", "DRAINED", "VULNERABILITY", "ATTACK", "SALDIRI", "PHISHING", "DRAIN"],
     "POLITICAL": ["TRUMP", "BIDEN", "WHITE HOUSE", "BEYAZ SARAY", "PRESIDENT", "CONGRESS", "SENATE", "ELECTION", "TARİFE", "TARIFF"],
 }
 
-# Hızlı Duygu & Etki Puanı Kütüphanesi (Fast Sentiment Scoring)
-BULLISH_KEYWORDS = ["APPROVED", "APPROVAL", "ONAYLANDI", "RATE CUT", "FAİZ İNDİRİMİ", "BEAT", "LOWER INFLATION", "INFLOW", "GİRİŞ", "ACQUIRE", "RESERVE", "REZERV", "WIN", "KAZANDI"]
-BEARISH_KEYWORDS = ["SUED", "LAWSUIT", "DAVA", "REJECTED", "REDDEDİLDİ", "BAN", "YASAK", "HIKE", "FAİZ ARTIRIMI", "HACK", "EXPLOIT", "OUTFLOW", "ÇIKIŞ", "FINE", "CEZA", "CRASH", "DUMP"]
+# Hızlı Duygu & Etki Puanı Kütüphanesi (Genişletilmiş Kuant Sözlüğü)
+BULLISH_KEYWORDS = [
+    "APPROVED", "APPROVAL", "ONAYLANDI", "RATE CUT", "FAİZ İNDİRİMİ", "BEAT",
+    "LOWER INFLATION", "INFLOW", "INFLOWS", "GİRİŞ", "ACQUIRE", "ACQUIRES", "RESERVE", "REZERV", "WIN", "KAZANDI",
+    "STAKING", "PARTNERSHIP", "MAINNET", "UPGRADE", "ALL TIME HIGH", "ATH", "RECORD HIGH", "ACCUMULATION",
+    "NET INFLOW", "SEC CLEARS", "DISMISSED", "ETF APPROVAL", "ETFS", "TREASURY BUY", "AIRDROP", "LISTING",
+    "RALLY", "SURGE", "BREAKOUT", "BULLISH", "BOĞA", "GÜVERCİN", "DOVISH", "INFLOW OF", "EXPANSION", "BUYING"
+]
+BEARISH_KEYWORDS = [
+    "SUED", "LAWSUIT", "DAVA", "REJECTED", "REJECTS", "REDDEDİLDİ", "BAN", "BANNED", "YASAK", "HIKE", "RATE HIKE",
+    "FAİZ ARTIRIMI", "HACK", "HACKED", "EXPLOIT", "EXPLOITED", "OUTFLOW", "OUTFLOWS", "ÇIKIŞ", "FINE", "CEZA", "CRASH", "DUMP",
+    "PHISHING", "INSOLVENT", "INSOLVENCY", "BANKRUPT", "BANKRUPTCY", "CHAPTER 11", "SEC SUES", "SUBPOENA", "PROBE",
+    "INVESTIGATION", "SANCTION", "DELAYED", "NET OUTFLOW", "DOWNGRADED", "SECURITY BREACH", "BEARISH", "AYI", "ŞAHİN", "HAWKISH"
+]
 
 class MacroNewsSentinel:
     """Çok Kaynaklı Flaş Haber ve Birincil İstihbarat Bekçisi."""
@@ -45,15 +57,24 @@ class MacroNewsSentinel:
         self.load_history()
 
     def load_history(self) -> None:
-        """Geçmiş haber kayıtlarını yükle."""
+        """Geçmiş haber kayıtlarını yükle ve yapay zeka istihbaratını zenginleştir."""
         if os.path.exists(self.history_file):
             try:
                 with open(self.history_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     self.news_items = data.get("news", [])
+                    has_upgrades = False
                     for item in self.news_items:
                         sig = self._create_signature(item.get("title", ""), item.get("source", ""))
                         self.seen_signatures.add(sig)
+                        # Yapay zeka yorumu eksikse otomatik tamamla
+                        if not item.get("ai_summary") or not item.get("ai_interpretation") or item.get("speaker") == "Resmi Makam / Fed":
+                            ai_data = ai_interpreter.analyze_news_ai(item)
+                            item.update(ai_data)
+                            item["speaker"] = ai_data.get("actual_entity", item.get("speaker", "Genel Piyasa"))
+                            has_upgrades = True
+                    if has_upgrades:
+                        self.save_history()
             except Exception as e:
                 print(f">> [HABER GEÇMİŞİ OKUMA UYARI] {e}")
 
@@ -134,6 +155,16 @@ class MacroNewsSentinel:
             clean_search = re.sub(r"\[.*?\]", "", title).strip()
             url = f"https://x.com/search?q={urllib.parse.quote(clean_search[:65])}"
 
+        # 🧠 Yapay Zeka Adli İstihbarat & Kuant Analiz Motoru
+        temp_item = {
+            "title": title.strip(),
+            "source": source,
+            "sentiment_score": round(final_score, 1),
+            "speaker_info": speaker_info,
+            "category": category
+        }
+        ai_data = ai_interpreter.analyze_news_ai(temp_item)
+
         return {
             "title": title.strip(),
             "source": source,
@@ -143,8 +174,15 @@ class MacroNewsSentinel:
             "category": category,
             "sentiment_score": round(final_score, 1),
             "speaker_info": speaker_info,
+            "speaker": ai_data.get("actual_entity", speaker_info.get("role_title", "Genel Piyasa")),
             "is_primary_official": is_primary_official,
-            "is_verified": is_primary_official or (speaker_info.get("has_official") and speaker_info.get("market_weight", 0) >= 0.8)
+            "is_verified": is_primary_official or (speaker_info.get("has_official") and speaker_info.get("market_weight", 0) >= 0.8),
+            "ai_summary": ai_data.get("ai_summary", ""),
+            "ai_interpretation": ai_data.get("ai_interpretation", ""),
+            "market_impact": ai_data.get("market_impact", ""),
+            "impact_direction": ai_data.get("impact_direction", "NEUTRAL"),
+            "score_explanation": ai_data.get("score_explanation", ""),
+            "strategy_action": ai_data.get("strategy_action", "")
         }
 
     async def fetch_treenews(self) -> List[Dict[str, Any]]:
