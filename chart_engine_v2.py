@@ -9,6 +9,7 @@ içeren ultra-premium kompozit infografik üretir.
 import io
 import os
 import re
+import textwrap
 import numpy as np
 import pandas as pd
 from datetime import datetime, timezone, timedelta
@@ -112,13 +113,20 @@ class ForensicChartEngineV2:
             or trade_record.get("close_reason") == "MANUEL_ANLIK_SNAPSHOT_KONTROLÜ"
         )
 
-        is_profit = (net_pnl > 0) or (roe_pct > 0)
-        theme_pnl_col = self.COLOR_GREEN if is_profit else (self.COLOR_RED if roe_pct < 0 else '#94a3b8')
+        close_reason = str(trade_record.get("close_reason") or "Pozisyon Kapatıldı")
+        cr_upper = close_reason.upper()
+        is_breakeven = (abs(roe_pct) <= 0.35) or ("BREAKEVEN" in cr_upper) or ("BAŞA-BAŞ" in cr_upper) or ("BAŞABAŞ" in cr_upper) or ("BE " in cr_upper) or ("BE)" in cr_upper)
+        is_profit = not is_breakeven and ((net_pnl > 0) or (roe_pct > 0))
+        if is_breakeven:
+            theme_pnl_col = '#38bdf8'  # Kuant açık mavi (Breakeven koruma rengi)
+        elif is_profit:
+            theme_pnl_col = self.COLOR_GREEN
+        else:
+            theme_pnl_col = self.COLOR_RED
 
         entry_time_str = str(trade_record.get("entry_time", ""))
         exit_time_str = str(trade_record.get("exit_time", ""))
         duration_str = str(trade_record.get("duration", "Bilinmiyor"))
-        close_reason = str(trade_record.get("close_reason") or "Pozisyon Kapatıldı")
         setup_id = str(trade_record.get("setup_id") or trade_record.get("reason") or "SETUP_QUANT")
 
         # ---------------------------------------------------------------------
@@ -298,8 +306,8 @@ class ForensicChartEngineV2:
         chart_max = max(scale_anchors)
         y_span = max(chart_max - chart_min, 1e-6)
 
-        padded_min = chart_min - y_span * 0.05
-        padded_max = chart_max + y_span * 0.07
+        padded_min = chart_min - y_span * 0.09
+        padded_max = chart_max + y_span * 0.11
 
         # ---------------------------------------------------------------------
         # 6. CAMARILLA TAKTİKSEL KORİDOR GÖLGELENDİRMESİ
@@ -351,16 +359,15 @@ class ForensicChartEngineV2:
         # ---------------------------------------------------------------------
         if len(vwap_series) == n_bars and cur_vwap > 0:
             ax_chart.plot(range(n_bars), vwap_series, color='#38bdf8', linestyle='-', linewidth=1.7, alpha=0.90, label='VWAP', zorder=5)
-            ax_chart.text(n_bars - 0.4, cur_vwap, f" VWAP: {fmt_price(cur_vwap)}", color='#38bdf8', fontsize=7.2, fontweight='bold', va='center', zorder=7)
 
         # ---------------------------------------------------------------------
-        # 8. KURUMSAL SEVİYE ÖZET BİLGİ ROZETİ (SOL ÜST)
+        # 8. KURUMSAL SEVİYE ÖZET BİLGİ ROZETİ (SOL ÜST - AXES KİLİTLİ)
         # ---------------------------------------------------------------------
         institutional_tag = f"■ PIVOT (P): {fmt_price(p_val)}   ■ VWAP: {fmt_price(cur_vwap)}   ■ mPOC: {fmt_price(mpoc_val)}" if mpoc_val > 0 else f"■ PIVOT (P): {fmt_price(p_val)}   ■ VWAP: {fmt_price(cur_vwap)}"
-        ax_chart.text(0.5, padded_max - y_span * 0.035, institutional_tag,
+        ax_chart.text(0.015, 0.965, institutional_tag, transform=ax_chart.transAxes,
                       color='#cbd5e1', fontsize=7.8, fontweight='bold',
                       bbox=dict(boxstyle='round,pad=0.25', facecolor='#090d16', edgecolor='#334155', linewidth=0.8, alpha=0.90),
-                      zorder=7)
+                      zorder=18)
 
         # ---------------------------------------------------------------------
         # 9. GİRİŞ & ÇIKIŞ VEYA CANLI RADAR İŞARETÇİLERİ
@@ -399,9 +406,13 @@ class ForensicChartEngineV2:
 
         else:
             # =================================================================
-            # KAPALI İŞLEM: KUSURSUZ GİRİŞ, ÇIKIŞ VE MAFE İZİ
+            # KAPALI İŞLEM: KUSURSUZ GİRİŞ, ÇIKIŞ VE MAFE İZİ (ÇAKIŞMA ÖNLEYİCİ MİMARİ)
             # =================================================================
             entry_col = self.COLOR_GREEN if side == "LONG" else self.COLOR_RED
+            exit_col = theme_pnl_col
+
+            e_candle = display_df.iloc[local_entry_idx] if (entry_price > 0 and local_entry_idx < len(display_df)) else None
+            exit_candle = display_df.iloc[local_exit_idx] if (exit_price > 0 and local_exit_idx < len(display_df)) else None
 
             # 1. MAFE Koridoru
             if local_exit_idx > local_entry_idx and entry_price > 0:
@@ -409,72 +420,139 @@ class ForensicChartEngineV2:
                 if not trade_sub_df.empty:
                     trade_high = float(trade_sub_df['high'].max())
                     trade_low = float(trade_sub_df['low'].min())
-                    corridor_color = self.COLOR_GREEN if is_profit else self.COLOR_RED
+                    corridor_color = theme_pnl_col
 
                     rect_mafe = patches.Rectangle(
                         (local_entry_idx - 0.4, trade_low),
                         (local_exit_idx - local_entry_idx + 0.8),
                         (trade_high - trade_low),
                         facecolor=corridor_color, edgecolor=corridor_color,
-                        linewidth=1.2, linestyle='--', alpha=0.08, zorder=2
+                        linewidth=1.2, linestyle='--', alpha=0.07, zorder=2
                     )
                     ax_chart.add_patch(rect_mafe)
 
                     mfe_y = trade_high if side == "LONG" else trade_low
                     ax_chart.plot([local_entry_idx, local_exit_idx], [mfe_y, mfe_y],
-                                  color='#38bdf8', linestyle=':', linewidth=1.0, alpha=0.7, zorder=3)
+                                  color='#38bdf8', linestyle=':', linewidth=1.0, alpha=0.6, zorder=3)
                     ax_chart.text(local_entry_idx + 0.5, mfe_y,
                                   f"▲ MFE ({fmt_price(mfe_y)})",
-                                  color='#38bdf8', fontsize=7.5, fontweight='bold', va='bottom', zorder=6)
+                                  color='#38bdf8', fontsize=7.2, fontweight='bold', va='bottom', zorder=6)
 
-            # 2. Giriş Mumu İşaretçisi
-            if entry_price > 0:
-                e_candle = display_df.iloc[local_entry_idx]
-                ax_chart.plot([local_entry_idx, local_entry_idx],
-                              [float(e_candle['low']) - y_span * 0.03, float(e_candle['high']) + y_span * 0.03],
-                              color=entry_col, linestyle='--', linewidth=1.5, alpha=0.85, zorder=6)
+            # 2. Dikey Zıt-Kutup Konumlandırması (Opposite-Pole Placement)
+            # LONG işleminde: Giriş destekte/altta yer alır, Çıkış ise KESİNLİKLE üstte yer alır.
+            # SHORT işleminde: Giriş dirençte/üstte yer alır, Çıkış ise KESİNLİKLE altta yer alır.
+            # Bu geometrik kural; giriş ve çıkış fiyatları tıpatıp eşit (Breakeven) veya birbirine
+            # çok yakın olsa dahi, iki etiketin yatayda veya dikeyde BİRBİRİNİ ÖRTMESİNİ İMKANSIZ KILAR!
+            entry_is_bottom = (side == "LONG")
 
-                ax_chart.scatter([local_entry_idx], [entry_price],
-                                 color='#ffffff', s=130, edgecolors=entry_col, linewidth=2.8, zorder=8)
+            # A. GİRİŞ İŞARETÇİSİ VE ROZETİ
+            if entry_price > 0 and e_candle is not None:
+                c_low = float(e_candle['low'])
+                c_high = float(e_candle['high'])
+
+                # Dikey lazer rehber çizgisi
+                ax_chart.plot(
+                    [local_entry_idx, local_entry_idx],
+                    [c_low - y_span * 0.02, c_high + y_span * 0.02],
+                    color=entry_col, linestyle='--', linewidth=1.5, alpha=0.75, zorder=6
+                )
+                # Giriş Fiyat Noktası (Parıldayan kurumsal halka)
+                ax_chart.scatter(
+                    [local_entry_idx], [entry_price],
+                    color='#ffffff', s=120, marker='o', edgecolors=entry_col, linewidth=2.5, zorder=12
+                )
 
                 e_time_disp = entry_time_str.split(" ")[-1] if " " in entry_time_str else ""
-                e_lbl = f"★ {side} GİRİŞ: {fmt_price(entry_price)} ({e_time_disp})"
-                tag_x = local_entry_idx - 1.5 if local_entry_idx > 5 else local_entry_idx + 1.5
-                ha_align = 'right' if local_entry_idx > 5 else 'left'
+                e_lbl = f"▲ LONG GİRİŞ: {fmt_price(entry_price)} ({e_time_disp})" if side == "LONG" else f"▼ SHORT GİRİŞ: {fmt_price(entry_price)} ({e_time_disp})"
 
-                ax_chart.text(tag_x, entry_price, e_lbl,
-                              color='#ffffff', fontsize=8.6, fontweight='bold', ha=ha_align, va='center',
-                              bbox=dict(boxstyle='round,pad=0.35', facecolor='#090d16',
-                                        edgecolor=entry_col, linewidth=1.5, alpha=0.98),
-                              zorder=10)
+                if entry_is_bottom:
+                    y_entry_badge = c_low - y_span * 0.048
+                    va_entry = 'top'
+                    ax_chart.plot([local_entry_idx, local_entry_idx], [y_entry_badge, c_low],
+                                  color=entry_col, linestyle=':', linewidth=1.2, alpha=0.8, zorder=7)
+                else:
+                    y_entry_badge = c_high + y_span * 0.048
+                    va_entry = 'bottom'
+                    ax_chart.plot([local_entry_idx, local_entry_idx], [c_high, y_entry_badge],
+                                  color=entry_col, linestyle=':', linewidth=1.2, alpha=0.8, zorder=7)
 
-            # 3. Çıkış Mumu İşaretçisi
-            if exit_price > 0:
-                exit_col = theme_pnl_col
-                exit_candle = display_df.iloc[local_exit_idx]
+                if local_entry_idx < 8:
+                    tag_entry_x = max(0.5, local_entry_idx + 0.3)
+                    ha_entry = 'left'
+                elif local_entry_idx > n_bars - 8:
+                    tag_entry_x = min(n_bars - 1.0, local_entry_idx - 0.3)
+                    ha_entry = 'right'
+                else:
+                    tag_entry_x = local_entry_idx
+                    ha_entry = 'center'
 
-                ax_chart.plot([local_exit_idx, local_exit_idx],
-                              [float(exit_candle['low']) - y_span * 0.03, float(exit_candle['high']) + y_span * 0.03],
-                              color=exit_col, linestyle='--', linewidth=1.5, alpha=0.85, zorder=6)
+                ax_chart.text(
+                    tag_entry_x, y_entry_badge, e_lbl,
+                    color='#ffffff', fontsize=8.4, fontweight='bold', ha=ha_entry, va=va_entry,
+                    bbox=dict(boxstyle='round,pad=0.32', facecolor='#090d16',
+                              edgecolor=entry_col, linewidth=1.5, alpha=0.98),
+                    zorder=15
+                )
 
-                marker_shape = 'o' if is_profit else 'X'
-                ax_chart.scatter([local_exit_idx], [exit_price],
-                                 color='#ffffff', s=140, marker=marker_shape,
-                                 edgecolors=exit_col, linewidth=2.8, zorder=8)
+            # B. ÇIKIŞ İŞARETÇİSİ VE ROZETİ (Girişin Tam Zıt Kutusunda)
+            if exit_price > 0 and exit_candle is not None:
+                x_low = float(exit_candle['low'])
+                x_high = float(exit_candle['high'])
 
-                x_lbl = f"★ ÇIKIŞ: {fmt_price(exit_price)} ({roe_pct:+.1f}% ROE)"
-                tag_exit_x = local_exit_idx - 1.8 if local_exit_idx > 4 else local_exit_idx + 1.8
-                ha_exit_align = 'right' if local_exit_idx > 4 else 'left'
-                ax_chart.text(tag_exit_x, exit_price, x_lbl,
-                              color='#ffffff', fontsize=8.6, fontweight='bold', ha=ha_exit_align, va='center',
-                              bbox=dict(boxstyle='round,pad=0.35', facecolor='#090d16',
-                                        edgecolor=exit_col, linewidth=1.5, alpha=0.98),
-                              zorder=10)
+                # Dikey lazer rehber çizgisi
+                ax_chart.plot(
+                    [local_exit_idx, local_exit_idx],
+                    [x_low - y_span * 0.02, x_high + y_span * 0.02],
+                    color=exit_col, linestyle='--', linewidth=1.5, alpha=0.75, zorder=6
+                )
+                # Çıkış Fiyat Noktası (Kârda 'o', Zararda 'X', Başa-başta 'D')
+                marker_shape = 'D' if is_breakeven else ('o' if is_profit else 'X')
+                ax_chart.scatter(
+                    [local_exit_idx], [exit_price],
+                    color='#ffffff', s=130, marker=marker_shape,
+                    edgecolors=exit_col, linewidth=2.5, zorder=12
+                )
 
-                # Yörünge Bağlantı Çizgisi
+                x_prefix = "▼" if entry_is_bottom else "▲"
+                x_lbl = f"{x_prefix} ÇIKIŞ: {fmt_price(exit_price)} ({roe_pct:+.1f}% ROE)"
+
+                if entry_is_bottom:
+                    # Giriş altta olduğundan ÇIKIŞ KESİNLİKLE ÜSTTE yer alır
+                    y_exit_badge = x_high + y_span * 0.048
+                    va_exit = 'bottom'
+                    ax_chart.plot([local_exit_idx, local_exit_idx], [x_high, y_exit_badge],
+                                  color=exit_col, linestyle=':', linewidth=1.2, alpha=0.8, zorder=7)
+                else:
+                    # Giriş üstte olduğundan ÇIKIŞ KESİNLİKLE ALTTA yer alır
+                    y_exit_badge = x_low - y_span * 0.048
+                    va_exit = 'top'
+                    ax_chart.plot([local_exit_idx, local_exit_idx], [y_exit_badge, x_low],
+                                  color=exit_col, linestyle=':', linewidth=1.2, alpha=0.8, zorder=7)
+
+                if local_exit_idx > n_bars - 8:
+                    tag_exit_x = min(n_bars - 1.0, local_exit_idx - 0.3)
+                    ha_exit = 'right'
+                elif local_exit_idx < 8:
+                    tag_exit_x = max(0.5, local_exit_idx + 0.3)
+                    ha_exit = 'left'
+                else:
+                    tag_exit_x = local_exit_idx
+                    ha_exit = 'center'
+
+                ax_chart.text(
+                    tag_exit_x, y_exit_badge, x_lbl,
+                    color='#ffffff', fontsize=8.4, fontweight='bold', ha=ha_exit, va=va_exit,
+                    bbox=dict(boxstyle='round,pad=0.32', facecolor='#090d16',
+                              edgecolor=exit_col, linewidth=1.5, alpha=0.98),
+                    zorder=15
+                )
+
+                # Yörünge Bağlantı Çizgisi (İşlem Girişinden Çıkışına Kusursuz Yol)
                 if entry_price > 0:
-                    ax_chart.plot([local_entry_idx, local_exit_idx], [entry_price, exit_price],
-                                  color=exit_col, linestyle='--', linewidth=2.0, alpha=0.9, zorder=7)
+                    ax_chart.plot(
+                        [local_entry_idx, local_exit_idx], [entry_price, exit_price],
+                        color=exit_col, linestyle='--', linewidth=1.8, alpha=0.85, zorder=8
+                    )
 
         # ---------------------------------------------------------------------
         # 10. KURUMSAL SEVİYELER & SAĞ MARJ ROZETLERİ (ÇAKIŞMA ÖNLEYİCİ)
@@ -501,7 +579,9 @@ class ForensicChartEngineV2:
         add_lvl(levels.get('mval'), self.COLOR_CYAN, 'mVAL Taban', ':')
         add_lvl(levels.get('mvah'), self.COLOR_CYAN, 'mVAH Tavan', ':')
 
-        # Kurumsal AVWAP Seviyeleri (Tepe & Dip)
+        # Kurumsal AVWAP & Seans VWAP Seviyeleri
+        if cur_vwap > 0:
+            add_lvl(cur_vwap, '#38bdf8', 'Seans VWAP', '--')
         if tepe_avwap > 0:
             add_lvl(tepe_avwap, self.COLOR_RED, 'Tepe AVWAP', '--')
         if dip_avwap > 0:
@@ -520,7 +600,7 @@ class ForensicChartEngineV2:
         visible_levels.sort(key=lambda x: x['price'])
 
         # Sağ Marj Rozet Çakışma Önleyici (Anti-Collision Pill Placement)
-        min_label_gap = y_span * 0.024
+        min_label_gap = y_span * 0.028
         adjusted_y_positions = []
         for l_item in visible_levels:
             target_y = l_item['price']
@@ -575,7 +655,7 @@ class ForensicChartEngineV2:
 
         # Sağ Skala Üzerinde Anlık / Kapanış Fiyat Rozeti (TradingView Stili)
         cur_active_price = entry_price if is_manual else exit_price
-        cur_p_color = self.COLOR_CYAN if is_manual else (self.COLOR_GREEN if is_profit else self.COLOR_RED)
+        cur_p_color = self.COLOR_CYAN if is_manual else theme_pnl_col
         if cur_active_price > 0:
             ax_chart.text(
                 n_bars + 0.3, cur_active_price, f" ▶ {fmt_price(cur_active_price)} ",
@@ -780,8 +860,15 @@ class ForensicChartEngineV2:
             ax_hud.text(0.06, y_cursor, f"• Uç Hedefler: R5 {fmt_price(cam.get('R5'))} │ S5 {fmt_price(cam.get('S5'))}", color='#38bdf8', fontsize=7.6, zorder=5)
         else:
             y_cursor -= 0.035
-            clean_close_reason = _clean_str(close_reason, 36)
-            ax_hud.text(0.06, y_cursor, f"Neden: {clean_close_reason}", color='#ffffff', fontsize=8.2, fontweight='bold', zorder=5)
+            raw_cr = str(close_reason).replace("🛡️", "").replace("⏳", "").replace("💥", "").strip()
+            cr_lines = textwrap.wrap(raw_cr, width=38)
+            if cr_lines:
+                ax_hud.text(0.06, y_cursor, f"Neden: {cr_lines[0]}", color='#ffffff', fontsize=8.2, fontweight='bold', zorder=5)
+                if len(cr_lines) > 1:
+                    y_cursor -= 0.024
+                    ax_hud.text(0.12, y_cursor, cr_lines[1], color='#cbd5e1', fontsize=7.6, zorder=5)
+            else:
+                ax_hud.text(0.06, y_cursor, "Neden: Standart Kapanış", color='#ffffff', fontsize=8.2, fontweight='bold', zorder=5)
 
             y_cursor -= 0.030
             mfe_val = float(trade_record.get('max_mfe_roe') if trade_record.get('max_mfe_roe') is not None else (trade_record.get('max_mfe_pct') or 0.0))
@@ -795,12 +882,12 @@ class ForensicChartEngineV2:
             fees_text = f"Toplam Komisyon: ${fees_val:.3f} │ Fonlama: ${funding_fee_val:.3f}"
             ax_hud.text(0.06, y_cursor, fees_text, color='#94a3b8', fontsize=7.6, zorder=5)
 
-        y_cursor -= 0.050
+        y_cursor -= 0.046
         # 5. AI ADLİ OTOPSİ / RADAR TEŞHİSİ
         sec5_title = "── VALKYRIE AI RADAR TEŞHİSİ ──" if is_manual else "── VALKYRIE AI OTOPSİ TEŞHİSİ ──"
         ax_hud.text(0.06, y_cursor, sec5_title, color='#ec4899', fontsize=8.2, fontweight='bold', zorder=5)
 
-        y_cursor -= 0.038
+        y_cursor -= 0.036
         if is_manual:
             diag_badge = "[CANLI PİYASA RADARI - AKTİF İZLEME]"
             diag_color = self.COLOR_CYAN
@@ -823,12 +910,23 @@ class ForensicChartEngineV2:
             advice = autopsy.get("actionable_advice", "")
 
         for f in findings[:2]:
-            y_cursor -= 0.032
-            ax_hud.text(0.07, y_cursor, f"• {_clean_str(f, 44)}", color='#e2e8f0', fontsize=7.3, zorder=5)
+            clean_f = _clean_str(f, 90)
+            f_lines = textwrap.wrap(clean_f, width=40)
+            if f_lines:
+                y_cursor -= 0.026
+                ax_hud.text(0.07, y_cursor, f"• {f_lines[0]}", color='#e2e8f0', fontsize=7.2, zorder=5)
+                for fl in f_lines[1:2]:
+                    y_cursor -= 0.022
+                    ax_hud.text(0.10, y_cursor, fl, color='#cbd5e1', fontsize=7.0, zorder=5)
 
         if advice:
-            y_cursor -= 0.038
-            ax_hud.text(0.06, y_cursor, f"Tavsiye: {_clean_str(advice, 44)}", color='#38bdf8', fontsize=7.2, fontweight='bold', zorder=5)
+            y_cursor -= 0.032
+            clean_adv = _clean_str(advice, 90)
+            adv_lines = textwrap.wrap(clean_adv, width=40)
+            ax_hud.text(0.06, y_cursor, f"Tavsiye: {adv_lines[0]}", color='#38bdf8', fontsize=7.2, fontweight='bold', zorder=5)
+            if len(adv_lines) > 1:
+                y_cursor -= 0.022
+                ax_hud.text(0.12, y_cursor, adv_lines[1], color='#38bdf8', fontsize=7.0, zorder=5)
 
         # Buffer'a kaydet (Pure OO Canvas - Thread-Safe & Sıfır Kilitlenme)
         buf = io.BytesIO()
