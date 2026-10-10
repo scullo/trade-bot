@@ -8826,8 +8826,8 @@ async function loadAdminMetrics() {
                 if (latestNews) {
                     window.currentHudLatestNews = latestNews;
                     const timeStr = latestNews.time_tsi ? `[${latestNews.time_tsi}] ` : '';
-                    const cleanTr = (latestNews.title_tr || latestNews.title || '').split('\n').join(' ').split('\r').join(' ').trim();
-                    const cleanEn = (latestNews.title || '').split('\n').join(' ').split('\r').join(' ').trim();
+                    const cleanTr = (latestNews.title_tr || latestNews.title || '').split(String.fromCharCode(10)).join(' ').split(String.fromCharCode(13)).join(' ').trim();
+                    const cleanEn = (latestNews.title || '').split(String.fromCharCode(10)).join(' ').split(String.fromCharCode(13)).join(' ').trim();
                     newsEl.innerText = `${timeStr}${cleanTr}`;
                     newsEl.title = `${cleanTr} (Orijinal: ${cleanEn}) [Detay için tıklayın 🔍]`;
                     newsEl.style.cursor = 'pointer';
