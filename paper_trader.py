@@ -157,6 +157,10 @@ class PaperTrader:
                     self.balance = gh_balance
                     self.open_positions = gh_positions
                     self.history = gh_history
+                    try:
+                        self.save_local_history()
+                    except Exception:
+                        pass
                 loaded = True
                 print(f">> [GITHUB PERSISTENCE] trade_history.json GitHub'dan yuklendi ({len(self.history)} islem, SHA: {self._github_sha[:8] if self._github_sha else 'None'}) Bakiye: {self.balance}")
             except Exception as e:
