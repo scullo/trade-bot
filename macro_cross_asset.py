@@ -300,5 +300,18 @@ class MacroCrossAssetRadar:
             "last_sync_ts": self.data.get("last_sync_ts", 0.0)
         }
 
+    def get_macro_regime(self) -> Dict[str, Any]:
+        """Kompakt makro rejim ve bileşik skoru döner."""
+        return {
+            "regime": self.data.get("regime", "NEUTRAL (Dengeli / Karışık ⚖️)"),
+            "composite_score": float(self.data.get("regime_score", 0.0)),
+            "assets": {
+                "DXY": {"value": self.data.get("dxy", {}).get("price", 102.2)},
+                "US10Y": {"value": self.data.get("us10y", {}).get("price", 5.24)},
+                "USDT.D": {"value": self.data.get("usdt_d", 6.54)},
+                "BTC.D": {"value": self.data.get("btc_d", 59.09)}
+            }
+        }
+
 # Global Singleton Örneği
 cross_asset_radar = MacroCrossAssetRadar()

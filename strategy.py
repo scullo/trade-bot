@@ -61,7 +61,11 @@ from config import (
     ENABLE_AMMUNITION_CONFLUENCE, AMMUNITION_SURGE_THRESHOLD_USD, STALE_NETFLOW_TIMEOUT_SEC
 )
 
-
+try:
+    from macro_strategy_guard import macro_guard
+except Exception as e:
+    macro_guard = None
+    print(f">> [MAKRO GUARD UYARI] Yüklenemedi: {e}")
 
 class StrategyEngine:
     def __init__(self, paper_trader, notifier, market_data=None):
@@ -525,6 +529,13 @@ class StrategyEngine:
             status = "⚪ YATAY KONSOLİDASYON"
             desc = f"BTC 1S: %{btc_range_1h:.2f}, 4S: %{btc_chg_4h:+.2f}, ETH 1S: %{eth_range_1h:.2f}. Piyasa seviye arıyor."
 
+        macro_hud = {}
+        if macro_guard is not None:
+            try:
+                macro_hud = macro_guard.get_macro_hud_telemetry()
+            except Exception:
+                pass
+
         return {
             "regime": str(regime),
             "macro_regime": str(regime),
@@ -542,7 +553,8 @@ class StrategyEngine:
             "eth_lead_pct": float(eth_lead_pct),
             "btc_chg_5m": float(btc_chg_5m),
             "btc_price": float(btc_close),
-            "eth_price": float(eth_close)
+            "eth_price": float(eth_close),
+            "macro_oracle": macro_hud
         }
 
     def _enrich_persona_with_dna(self, res: dict, symbol: str, clean_sym: str) -> dict:
@@ -1010,6 +1022,13 @@ class StrategyEngine:
         if symbol not in self.paper_trader.open_positions:
             return
 
+        # ── 0a. MAKRO PRE-EVENT BE KİLİDİ (<15DK KALA VERİ KORUMASI) ──
+        if macro_guard is not None:
+            try:
+                macro_guard.enforce_pre_event_defenses(self.paper_trader.open_positions, self.paper_trader)
+            except Exception:
+                pass
+
         # 🎯 TELEMETRİ: Anlık milisaniyelik MFE (Zirve Kâr) ve MAE (Dip Zarar) takibini güncelle
         if hasattr(self.paper_trader, "update_tick_telemetry"):
             try:
@@ -1432,6 +1451,27 @@ class StrategyEngine:
     async def _handle_open(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None):
         # ── 0. KURUMSAL BUZDAĞI (ICEBERG SNIPER) ERKEN TESPİTİ ──
         is_ice_sniper_order = any("Iceberg_Offense" in str(c) for c in (confluence_list or [])) or ("Buzdağı Hücumu" in reason) or ("Buzdağı Arkası" in reason)
+
+        # ── 0-MAKRO: VALKYRIE MACRO ORACLE & NEWS SENTINEL KAPISI ──
+        if macro_guard is not None:
+            spread_pct = 0.0
+            if self.market_data and hasattr(self.market_data, 'get_symbol_spread'):
+                try:
+                    spread_pct = float(self.market_data.get_symbol_spread(symbol) or 0.0)
+                except Exception:
+                    spread_pct = 0.0
+            macro_eval = macro_guard.evaluate_macro_entry_permission(
+                symbol=symbol,
+                side=side,
+                setup_id=setup_id,
+                reason=reason,
+                spread_pct=spread_pct
+            )
+            if not macro_eval.get("allowed", True):
+                rej_msg = macro_eval.get("reason", "Makro filtre engelledi.")
+                print(f">> [RED - MAKRO ORACLE] {symbol}: {rej_msg}")
+                self.log_rejection(symbol, reason, rej_msg)
+                return {"error": macro_eval.get("error", "MACRO_GATE_REJECTED"), "reason": rej_msg}
 
         # ── 0a. ZARAR DURDURMA SONRASI SOĞUMA VE ÇİFTE ZARAR DEVRE KESİCİSİ ──
         is_fakeout_reclaim = "Fakeout Reclaim" in reason or "FAKEOUT_RECLAIM" in setup_id
@@ -3927,6 +3967,28 @@ class StrategyEngine:
                     print(f">> [UYARI - BALİNA NETFLOW RADARI İSTİSNA] {symbol}: {e}")
                 except Exception:
                     pass
+
+        # ── 3c. MAKRO SETUP TEŞVİK VE RUNNER GENİŞLETMESİ (SETUP 2: RANGE BREAKOUT) ──
+        if macro_guard is not None:
+            try:
+                m_boost = macro_guard.apply_macro_setup_boost(
+                    symbol=symbol,
+                    side=side,
+                    setup_id=setup_id,
+                    reason=reason,
+                    base_margin=dyn_margin,
+                    base_tp1=tp1,
+                    base_tp2=tp2 or tp1,
+                    entry_price=entry_price
+                )
+                if m_boost.get("boosted", False):
+                    dyn_margin = m_boost["margin"]
+                    tp2 = m_boost["tp2"]
+                    if confluence_list is not None and isinstance(confluence_list, list):
+                        confluence_list.append("Macro_Shock_Breakout_Runner_Boost")
+                    print(f">> [🚀 MAKRO SETUP BOOST] {symbol} ({side}): {m_boost.get('reason')}")
+            except Exception:
+                pass
 
         macro_clim = self.get_macro_climate()
         res = await self._safe_open_position(

@@ -342,3 +342,4 @@ class MacroCalendarManager:
 
 # Global Singleton Örneği
 macro_calendar = MacroCalendarManager()
+calendar_manager = macro_calendar

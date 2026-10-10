@@ -254,5 +254,30 @@ class MacroNewsSentinel:
         )
         return recent_candidates[0]
 
+    def get_news_bias(self) -> Dict[str, Any]:
+        """Son haberlerin kümülatif duygu ve yönelimini hesaplar."""
+        recent = self.news_items[-20:] if self.news_items else []
+        if not recent:
+            return {"bias": "NEUTRAL", "score": 0.0, "bullish_count": 0, "bearish_count": 0}
+
+        scores = [float(n.get("sentiment_score", 0.0)) for n in recent]
+        avg_score = sum(scores) / len(scores) if scores else 0.0
+        bull_cnt = sum(1 for s in scores if s > 15.0)
+        bear_cnt = sum(1 for s in scores if s < -15.0)
+
+        bias = "NEUTRAL"
+        if avg_score >= 20.0:
+            bias = "BULLISH"
+        elif avg_score <= -20.0:
+            bias = "BEARISH"
+
+        return {
+            "bias": bias,
+            "score": round(avg_score, 1),
+            "bullish_count": bull_cnt,
+            "bearish_count": bear_cnt
+        }
+
 # Global Singleton Örneği
 macro_news = MacroNewsSentinel()
+news_sentinel = macro_news
