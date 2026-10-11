@@ -9041,22 +9041,30 @@ async function loadAdminMetrics() {
                             <span>🌍 KÜRESEL ÇAPRAZ PİYASA RADARI</span>
                             <span style="background:rgba(16,185,129,0.12); color:#10b981; padding:2px 6px; border-radius:5px; font-size:10px;">CROSS-ASSET</span>
                         </div>
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; font-family:'JetBrains Mono';">
+                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:10px; font-family:'JetBrains Mono';">
                             <div style="background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:7px;">
-                                <div style="font-size:10px; color:#64748b;">DOLAR ENDEKSİ (DXY)</div>
-                                <div style="font-size:14px; font-weight:800; color:#ffffff;">${Number(assets.DXY ? assets.DXY.value : (cross.dxy ? cross.dxy.price : 102.23)).toFixed(2)}</div>
+                                <div style="font-size:9.5px; color:#64748b;">DOLAR (DXY)</div>
+                                <div style="font-size:13px; font-weight:800; color:#ffffff;">${Number(assets.DXY ? assets.DXY.value : (cross.dxy ? cross.dxy.price : 102.23)).toFixed(2)}</div>
                             </div>
                             <div style="background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:7px;">
-                                <div style="font-size:10px; color:#64748b;">ABD 10Y TAHVİL</div>
-                                <div style="font-size:14px; font-weight:800; color:#38bdf8;">%${Number(assets.US10Y ? assets.US10Y.value : (cross.us10y ? cross.us10y.price : 5.24)).toFixed(2)}</div>
+                                <div style="font-size:9.5px; color:#64748b;">ABD 10Y TAHVİL</div>
+                                <div style="font-size:13px; font-weight:800; color:#38bdf8;">%${Number(assets.US10Y ? assets.US10Y.value : (cross.us10y ? cross.us10y.price : 5.24)).toFixed(2)}</div>
+                            </div>
+                            <div style="background:rgba(249,115,22,0.08); border:1px solid rgba(249,115,22,0.28); padding:6px 10px; border-radius:7px;">
+                                <div style="font-size:9.5px; color:#f97316; font-weight:700;">🛢️ BRENT PETROL</div>
+                                <div style="font-size:13px; font-weight:800; color:#f97316;">$${Number(cross.brent ? cross.brent.price : 104.72).toFixed(1)} <span style="font-size:9.5px; font-weight:700; color:#ef4444;">(${cross.brent && cross.brent.chg_24h > 0 ? '+' : ''}${cross.brent ? cross.brent.chg_24h : 4.12}%)</span></div>
                             </div>
                             <div style="background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:7px;">
-                                <div style="font-size:10px; color:#64748b;">USDT DOMİNANSI</div>
-                                <div style="font-size:14px; font-weight:800; color:#10b981;">%${Number(assets.USDT_D ? assets.USDT_D.value : (cross.usdt_d || 6.54)).toFixed(2)}</div>
+                                <div style="font-size:9.5px; color:#64748b;">USDT DOMİNANS</div>
+                                <div style="font-size:13px; font-weight:800; color:#10b981;">%${Number(assets.USDT_D ? assets.USDT_D.value : (cross.usdt_d || 6.54)).toFixed(2)}</div>
                             </div>
                             <div style="background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:7px;">
-                                <div style="font-size:10px; color:#64748b;">BTC DOMİNANSI</div>
-                                <div style="font-size:14px; font-weight:800; color:#fbc531;">%${Number(assets.BTC_D ? assets.BTC_D.value : (cross.btc_d || 59.09)).toFixed(2)}</div>
+                                <div style="font-size:9.5px; color:#64748b;">BTC DOMİNANS</div>
+                                <div style="font-size:13px; font-weight:800; color:#fbc531;">%${Number(assets.BTC_D ? assets.BTC_D.value : (cross.btc_d || 59.09)).toFixed(2)}</div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:7px;">
+                                <div style="font-size:9.5px; color:#64748b;">VIX KORKU</div>
+                                <div style="font-size:13px; font-weight:800; color:${cross.vix && cross.vix.price > 20 ? '#ef4444' : '#ffffff'};">${Number(cross.vix ? cross.vix.price : 14.84).toFixed(1)}</div>
                             </div>
                         </div>
                         <div style="font-size:11px; color:#94a3b8; margin-top:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:6px; display:flex; justify-content:space-between;">
@@ -9196,6 +9204,7 @@ async function loadAdminMetrics() {
                             <!-- HIZLI HABER KAYNAK SÜZGECİ -->
                             <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;">
                                 <button onclick="setMacroNewsFilter('ALL')" id="mnpill-all" style="background:${(window.currentMacroNewsFilter || 'ALL') === 'ALL' ? 'rgba(0,242,254,0.18)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${(window.currentMacroNewsFilter || 'ALL') === 'ALL' ? 'rgba(0,242,254,0.45)' : 'rgba(255,255,255,0.08)'}; color:${(window.currentMacroNewsFilter || 'ALL') === 'ALL' ? 'var(--cyan)' : '#cbd5e1'}; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer; transition:all 0.15s;">⭐ Tümü (${newsList.length})</button>
+                                <button onclick="setMacroNewsFilter('GEOPOLITICAL')" id="mnpill-geopolitical" style="background:${(window.currentMacroNewsFilter || 'ALL') === 'GEOPOLITICAL' ? 'rgba(239,68,68,0.22)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${(window.currentMacroNewsFilter || 'ALL') === 'GEOPOLITICAL' ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.08)'}; color:${(window.currentMacroNewsFilter || 'ALL') === 'GEOPOLITICAL' ? '#f87171' : '#cbd5e1'}; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer; transition:all 0.15s;">🚨 Jeopolitik &amp; Petrol</button>
                                 <button onclick="setMacroNewsFilter('CRYPTO')" id="mnpill-crypto" style="background:${(window.currentMacroNewsFilter || 'ALL') === 'CRYPTO' ? 'rgba(0,242,254,0.18)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${(window.currentMacroNewsFilter || 'ALL') === 'CRYPTO' ? 'rgba(0,242,254,0.45)' : 'rgba(255,255,255,0.08)'}; color:${(window.currentMacroNewsFilter || 'ALL') === 'CRYPTO' ? 'var(--cyan)' : '#cbd5e1'}; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.15s;">💎 Kripto Siteleri</button>
                                 <button onclick="setMacroNewsFilter('WIRE')" id="mnpill-wire" style="background:${(window.currentMacroNewsFilter || 'ALL') === 'WIRE' ? 'rgba(0,242,254,0.18)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${(window.currentMacroNewsFilter || 'ALL') === 'WIRE' ? 'rgba(0,242,254,0.45)' : 'rgba(255,255,255,0.08)'}; color:${(window.currentMacroNewsFilter || 'ALL') === 'WIRE' ? 'var(--cyan)' : '#cbd5e1'}; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.15s;">⚡ TreeNews &amp; X Wire</button>
                                 <button onclick="setMacroNewsFilter('OFFICIAL')" id="mnpill-official" style="background:${(window.currentMacroNewsFilter || 'ALL') === 'OFFICIAL' ? 'rgba(0,242,254,0.18)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${(window.currentMacroNewsFilter || 'ALL') === 'OFFICIAL' ? 'rgba(0,242,254,0.45)' : 'rgba(255,255,255,0.08)'}; color:${(window.currentMacroNewsFilter || 'ALL') === 'OFFICIAL' ? 'var(--cyan)' : '#cbd5e1'}; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.15s;">🏛️ Resmi (Fed/SEC)</button>
@@ -9207,6 +9216,9 @@ async function loadAdminMetrics() {
                                     const filteredList = newsList.filter(item => {
                                         if (actFilter === 'ALL') return true;
                                         const s = (item.source || '').toUpperCase();
+                                        if (actFilter === 'GEOPOLITICAL') {
+                                            return item.category === 'GEOPOLITICAL' || s.includes('BBC') || s.includes('ALJAZEERA') || s.includes('OILPRICE') || s.includes('FOREXLIVE');
+                                        }
                                         if (actFilter === 'CRYPTO') {
                                             return s.includes('COINDESK') || s.includes('COINTELEGRAPH') || s.includes('DECRYPT') || s.includes('THEBLOCK') || s.includes('BLOGS') || item.category === 'GENERAL_CRYPTO';
                                         }
@@ -9238,6 +9250,10 @@ async function loadAdminMetrics() {
                                         else if (sUpper.includes('DECRYPT')) srcColor = '#06b6d4';
                                         else if (sUpper.includes('THEBLOCK')) srcColor = '#8b5cf6';
                                         else if (sUpper.includes('TREENEWS')) srcColor = '#10b981';
+                                        else if (sUpper.includes('BBC')) srcColor = '#ef4444';
+                                        else if (sUpper.includes('ALJAZEERA')) srcColor = '#f97316';
+                                        else if (sUpper.includes('OILPRICE')) srcColor = '#ea580c';
+                                        else if (sUpper.includes('FOREXLIVE')) srcColor = '#38bdf8';
                                         else if (isOfficial) srcColor = '#38bdf8';
 
                                         const sentScore = Number(item.sentiment_score || 0);

@@ -24,13 +24,22 @@ TREENEWS_API_URL = "https://news.treeofalpha.com/api/news?limit=25"
 SEC_EDGAR_ATOM_URL = "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&output=atom"
 FED_PRESS_RSS_URL = "https://www.federalreserve.gov/feeds/press_all.xml"
 
-# Canlı Kripto Medya & Haber Siteleri RSS Kaynakları (24/7 Kesintisiz Akış)
-CRYPTO_MEDIA_RSS_URLS = {
+# Canlı Kripto, Küresel Makro & Jeopolitik RSS Kaynakları (24/7 Kesintisiz Akış)
+GLOBAL_MEDIA_RSS_URLS = {
+    # 1. Kripto Haber Siteleri
     "CoinDesk": "https://www.coindesk.com/arc/outboundfeeds/rss/",
     "CoinTelegraph": "https://cointelegraph.com/rss",
     "Decrypt": "https://decrypt.co/feed",
-    "TheBlock": "https://www.theblock.co/rss.xml"
+    "TheBlock": "https://www.theblock.co/rss.xml",
+    # 2. Küresel Makro & Flaş Telgraf Masası
+    "ForexLive": "https://www.forexlive.com/feed/news",
+    # 3. Enerji & Petrol Piyasası
+    "OilPrice": "https://oilprice.com/rss/main",
+    # 4. Sıcak Jeopolitik Çatışma & Dünya Gündemi
+    "BBC_World": "https://feeds.bbci.co.uk/news/world/rss.xml",
+    "AlJazeera_ME": "https://www.aljazeera.com/xml/rss/all.xml"
 }
+CRYPTO_MEDIA_RSS_URLS = GLOBAL_MEDIA_RSS_URLS
 
 # SEC Bildirimlerinde Doğrudan Kripto / Finans İlgisi Filtresi
 SEC_CRYPTO_KEYWORDS = [
@@ -40,13 +49,13 @@ SEC_CRYPTO_KEYWORDS = [
     "SECURITIES AND EXCHANGE", "LITIGATION", "COMMISSIONER", "ATKINS", "PEIRCE"
 ]
 
-# Kategori Anahtar Kelimeleri
+# Kategori Anahtar Kelimeleri (Öncelik Sırasına Göre)
 CATEGORY_RULES = {
+    "GEOPOLITICAL": ["WAR", "SAVAŞ", "MISSILE", "FÜZE", "DRONE", "İHA", "STRIKE", "VURULDU", "SALDIRI", "ATTACK", "AIRPORT", "HAVALİMANI", "SAUDI", "ARABİSTAN", "HOUTHI", "HUSİ", "IRAN", "İRAN", "ISRAEL", "İSRAİL", "MIDDLE EAST", "ORTADOĞU", "EXPLOSION", "PATLAMA", "OIL TANKER", "PETROL", "CRUDE OIL", "CASUALTIES", "KILLED", "ÖLÜ"],
     "REGULATION": ["SEC", "ETF", "GENSLER", "LAWSUIT", "DAVA", "COMMISSION", "REGULATION", "CFTC", "DOJ", "BINANCE", "COINBASE", "RIPPLE", "XRP", "ATKINS", "COMMISSIONER"],
     "MACRO_DATA": ["CPI", "TÜFE", "INFLATION", "FOMC", "POWELL", "WARSH", "FED", "RATE CUT", "FAİZ", "NFP", "JOBS", "UNEMPLOYMENT", "PPI", "GDP", "TREASURY", "BESSENT"],
-    "EXPLOIT_HACK": ["HACK", "EXPLOIT", "STOLEN", "DRAINED", "VULNERABILITY", "ATTACK", "SALDIRI", "PHISHING", "DRAIN"],
+    "EXPLOIT_HACK": ["HACK", "EXPLOIT", "STOLEN", "DRAINED", "VULNERABILITY", "CYBER ATTACK", "SİBER SALDIRI", "PHISHING", "DRAIN"],
     "POLITICAL": ["TRUMP", "BIDEN", "WHITE HOUSE", "BEYAZ SARAY", "PRESIDENT", "CONGRESS", "SENATE", "ELECTION", "TARİFE", "TARIFF"],
-    "GEOPOLITICAL": ["WAR", "SAVAŞ", "MISSILE", "FÜZE", "DRONE", "İHA", "STRIKE", "VURULDU", "SALDIRI", "AIRPORT", "HAVALİMANI", "SAUDI", "ARABİSTAN", "HOUTHI", "HUSİ", "IRAN", "İRAN", "ISRAEL", "İSRAİL", "MIDDLE EAST", "ORTADOĞU", "EXPLOSION", "PATLAMA", "OIL TANKER", "PETROL"]
 }
 
 # Hızlı Duygu & Etki Puanı Kütüphanesi (Genişletilmiş Kuant Sözlüğü)
@@ -63,7 +72,8 @@ BEARISH_KEYWORDS = [
     "PHISHING", "INSOLVENT", "INSOLVENCY", "BANKRUPT", "BANKRUPTCY", "CHAPTER 11", "SEC SUES", "SUBPOENA", "PROBE",
     "INVESTIGATION", "SANCTION", "DELAYED", "NET OUTFLOW", "DOWNGRADED", "SECURITY BREACH", "BEARISH", "AYI", "ŞAHİN", "HAWKISH",
     "MISSILE", "STRIKE", "WAR", "ATTACK", "AIRPORT STRUCK", "CASUALTIES", "ESCALATION", "MILITARY STRIKE",
-    "FÜZE", "SAVAŞ", "SALDIRI", "VURULDU", "PATLAMA", "EXPLOSION", "AIRSPACE CLOSED", "GEOPOLITICAL SHOCK"
+    "FÜZE", "SAVAŞ", "SALDIRI", "VURULDU", "PATLAMA", "EXPLOSION", "AIRSPACE CLOSED", "GEOPOLITICAL SHOCK",
+    "HOUTHI", "HUSİ", "KILLED", "INJURED", "DEADLY", "CRISIS", "KRİZ", "ÖLÜ"
 ]
 
 TRANSLATION_CACHE: Dict[str, str] = {}
@@ -280,39 +290,48 @@ class MacroNewsSentinel:
         return new_items
 
     async def fetch_crypto_media_rss(self) -> List[Dict[str, Any]]:
-        """Dünyanın en büyük kripto haber sitelerinden (CoinDesk, CoinTelegraph, Decrypt, The Block) canlı RSS beslemelerini çeker."""
+        """Dünyanın en büyük kripto, makro ve jeopolitik haber sitelerinden paralel canlı RSS beslemelerini çeker."""
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         new_items = []
+
+        async def _fetch_single_rss(session: aiohttp.ClientSession, site_name: str, rss_url: str):
+            results = []
+            try:
+                async with session.get(rss_url, headers=headers, timeout=aiohttp.ClientTimeout(total=7)) as resp:
+                    if resp.status == 200:
+                        xml_text = await resp.text()
+                        root = ET.fromstring(xml_text)
+                        for item in root.findall(".//item")[:10]:
+                            title_elem = item.find("title")
+                            title = title_elem.text.strip() if title_elem is not None and title_elem.text else ""
+                            if not title:
+                                continue
+                            link_elem = item.find("link")
+                            link = link_elem.text.strip() if link_elem is not None and link_elem.text else ""
+                            pub_elem = item.find("pubDate")
+                            raw_ts = time.time()
+                            if pub_elem is not None and pub_elem.text:
+                                try:
+                                    raw_ts = email.utils.parsedate_to_datetime(pub_elem.text.strip()).timestamp()
+                                except Exception:
+                                    pass
+
+                            sig = self._create_signature(title, site_name)
+                            if sig not in self.seen_signatures:
+                                self.seen_signatures.add(sig)
+                                parsed = self._analyze_headline(title, site_name, raw_ts, url=link)
+                                results.append(parsed)
+            except Exception:
+                pass
+            return results
+
         try:
             async with aiohttp.ClientSession() as session:
-                for site_name, rss_url in CRYPTO_MEDIA_RSS_URLS.items():
-                    try:
-                        async with session.get(rss_url, headers=headers, timeout=aiohttp.ClientTimeout(total=7)) as resp:
-                            if resp.status == 200:
-                                xml_text = await resp.text()
-                                root = ET.fromstring(xml_text)
-                                for item in root.findall(".//item")[:10]:
-                                    title_elem = item.find("title")
-                                    title = title_elem.text.strip() if title_elem is not None and title_elem.text else ""
-                                    if not title:
-                                        continue
-                                    link_elem = item.find("link")
-                                    link = link_elem.text.strip() if link_elem is not None and link_elem.text else ""
-                                    pub_elem = item.find("pubDate")
-                                    raw_ts = time.time()
-                                    if pub_elem is not None and pub_elem.text:
-                                        try:
-                                            raw_ts = email.utils.parsedate_to_datetime(pub_elem.text.strip()).timestamp()
-                                        except Exception:
-                                            pass
-
-                                    sig = self._create_signature(title, site_name)
-                                    if sig not in self.seen_signatures:
-                                        self.seen_signatures.add(sig)
-                                        parsed = self._analyze_headline(title, site_name, raw_ts, url=link)
-                                        new_items.append(parsed)
-                    except Exception:
-                        pass
+                tasks = [_fetch_single_rss(session, s_name, s_url) for s_name, s_url in GLOBAL_MEDIA_RSS_URLS.items()]
+                gathered = await asyncio.gather(*tasks, return_exceptions=True)
+                for res in gathered:
+                    if isinstance(res, list) and res:
+                        new_items.extend(res)
         except Exception:
             pass
         return new_items

@@ -67,6 +67,58 @@
       "avg_latency_ms": 650.0,
       "pnl_impact_usd": 0.0
     },
+    "BBC_WORLD": {
+      "title": "BBC World News Geopolitical Conflict Wire",
+      "elo_rating": 90.0,
+      "type": "GEOPOLITICAL_OFFICIAL",
+      "domain": "GEOPOLITICS_WAR",
+      "status": "HIGH_TRUST",
+      "quorum_weight": 1.6,
+      "total_news_count": 1,
+      "accurate_count": 1,
+      "fakeout_count": 0,
+      "avg_latency_ms": 320.0,
+      "pnl_impact_usd": 150.0
+    },
+    "ALJAZEERA_ME": {
+      "title": "Al Jazeera Middle East Breaking Geopolitical Wire",
+      "elo_rating": 88.0,
+      "type": "GEOPOLITICAL_OFFICIAL",
+      "domain": "MIDDLE_EAST_CONFLICT",
+      "status": "HIGH_TRUST",
+      "quorum_weight": 1.5,
+      "total_news_count": 1,
+      "accurate_count": 1,
+      "fakeout_count": 0,
+      "avg_latency_ms": 350.0,
+      "pnl_impact_usd": 120.0
+    },
+    "OILPRICE": {
+      "title": "OilPrice.com Global Energy & Crude Intelligence",
+      "elo_rating": 89.0,
+      "type": "ENERGY_DESK",
+      "domain": "CRUDE_OIL_ENERGY",
+      "status": "HIGH_TRUST",
+      "quorum_weight": 1.5,
+      "total_news_count": 1,
+      "accurate_count": 1,
+      "fakeout_count": 0,
+      "avg_latency_ms": 400.0,
+      "pnl_impact_usd": 180.0
+    },
+    "FOREXLIVE": {
+      "title": "ForexLive Real-Time FX & Macro Wire",
+      "elo_rating": 85.0,
+      "type": "NEWS_WIRE",
+      "domain": "GLOBAL_MACRO",
+      "status": "ACTIVE",
+      "quorum_weight": 1.2,
+      "total_news_count": 1,
+      "accurate_count": 1,
+      "fakeout_count": 0,
+      "avg_latency_ms": 380.0,
+      "pnl_impact_usd": 90.0
+    },
     "ANONTWITTER:@CRYPTOLEAKINSIDER": {
       "title": "Kaynak: AnonTwitter:@CryptoLeakInsider",
       "elo_rating": 60.0,
