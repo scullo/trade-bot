@@ -1591,13 +1591,13 @@ class StrategyEngine:
             if cvd_data:
                 ratio_60s = float(cvd_data.get('ratio_60s', 50.0))
                 # Long için: Taker Alıcı oranı %42'nin altındaysa (yani %58'den fazla agresif satıcı varsa)
-                if side == "LONG" and ratio_60s < float(TAKER_BUY_RATIO_MIN_LONG):
+                if not is_ice_sniper_order and side == "LONG" and ratio_60s < float(TAKER_BUY_RATIO_MIN_LONG):
                     rej_msg = f"🛡️ Zıt Taker Akış Kalkanı: Son 60s Taker Alıcı oranı %{ratio_60s:.1f} (< %{TAKER_BUY_RATIO_MIN_LONG:.1f}). Pasif tahta desteğine rağmen agresif market satıcıları piyasayı süpürüyor. LONG engellendi."
                     print(f">> [RED - ZIT TAKER LONG] {symbol}: {rej_msg}")
                     self.log_rejection(symbol, reason, rej_msg, taker_buy_ratio=ratio_60s)
                     return {"error": "OPPOSING_TAKER_FLOW_LONG_BLOCKED"}
                 # Short için: Taker Alıcı oranı %58'in üstündeyse (yani %58'den fazla agresif alıcı varsa)
-                elif side == "SHORT" and ratio_60s > float(TAKER_BUY_RATIO_MAX_SHORT):
+                elif not is_ice_sniper_order and side == "SHORT" and ratio_60s > float(TAKER_BUY_RATIO_MAX_SHORT):
                     rej_msg = f"🛡️ Zıt Taker Akış Kalkanı: Son 60s Taker Alıcı oranı %{ratio_60s:.1f} (> %{TAKER_BUY_RATIO_MAX_SHORT:.1f}). Agresif market alıcıları yükseliş baskısı uygularken SHORT engellendi."
                     print(f">> [RED - ZIT TAKER SHORT] {symbol}: {rej_msg}")
                     self.log_rejection(symbol, reason, rej_msg, taker_buy_ratio=ratio_60s)
@@ -3320,6 +3320,14 @@ class StrategyEngine:
         base_floor = 0.25 if is_ice_sniper_order else 0.35
         min_stop_floor = base_floor * (1.0 if is_ice_sniper_order else min(1.25, sweep_mult))
         effective_stop_pct = max(min_stop_floor, min(MAX_ENTRY_STOP_DIST_PCT, safe_atr_pct * (0.35 if is_ice_sniper_order else 0.65) * stop_mult))
+
+        # Hafta Sonu Nöbetçi Kalkanı (Aşama 2): OTC tezgah üstü piyasaları kapalıyken sahte iğnelere karşı 1.50x stop tamponu
+        if macro_guard and hasattr(macro_guard, 'institutional') and macro_guard.institutional:
+            if getattr(macro_guard.institutional, 'is_weekend_mode', lambda: False)():
+                effective_stop_pct = min(MAX_ENTRY_STOP_DIST_PCT * 1.25, effective_stop_pct * 1.50)
+                if confluence_list is not None and isinstance(confluence_list, list) and "🛡️_Hafta_Sonu_Nöbetçi_Tamponu" not in confluence_list:
+                    confluence_list.append("🛡️_Hafta_Sonu_Nöbetçi_Tamponu")
+
         stop_dist = entry_price * (effective_stop_pct / 100.0)
         min_allowed_stop_dist = entry_price * 0.0020
 

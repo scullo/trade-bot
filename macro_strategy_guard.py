@@ -28,6 +28,16 @@ from macro_news_sentinel import news_sentinel
 from macro_quorum import news_quorum
 from config import TOP_LIQUIDITY_SYMBOLS, COMMISSION_RATE
 
+try:
+    from macro_institutional_engine import institutional_engine
+except Exception:
+    institutional_engine = None
+
+try:
+    from macro_evolution_engine import macro_evolution_engine
+except Exception:
+    macro_evolution_engine = None
+
 class MacroStrategyGuard:
     """Kuant Strateji Motoru ile Makro İstihbarat Arasındaki Köprü ve Karar Masası."""
 
@@ -36,6 +46,8 @@ class MacroStrategyGuard:
         self.cross_asset = cross_asset_radar
         self.news_sentinel = news_sentinel
         self.quorum = news_quorum
+        self.institutional = institutional_engine
+        self.evolution = macro_evolution_engine
         self.last_be_ratchet_ts = 0.0
         self.ratchet_interval_sec = 5.0
         self.override_shock_regime: Optional[str] = None  # Testler veya acil durum simülasyonu için
@@ -193,7 +205,10 @@ class MacroStrategyGuard:
         """
         now = time.time()
         is_imm, imm_ev = self.calendar.is_event_imminent(window_minutes=15.0)
-        if not is_imm or not imm_ev or not open_positions:
+        inst_locked = bool(self.institutional and getattr(self.institutional, 'true_net_breakeven_locked', False))
+        inst_interrupt = bool(self.institutional and getattr(self.institutional, 'emergency_macro_interrupt', False))
+
+        if (not is_imm and not inst_locked and not inst_interrupt) or not open_positions:
             return []
 
         # Saniyede birden çok kez gereksiz tetiklenmeyi önle
@@ -202,9 +217,16 @@ class MacroStrategyGuard:
         self.last_be_ratchet_ts = now
 
         secured_positions = []
-        ev_title = imm_ev.get("title", "Makro Veri")
-        secs_left = imm_ev.get("seconds_left", 0)
-        mins_left = secs_left // 60
+        if inst_interrupt:
+            ev_title = f"EMERGENCY_MACRO_INTERRUPT ({getattr(self.institutional, 'interrupt_reason', 'CDS Şoku')})"
+            mins_left = 0
+        elif inst_locked:
+            ev_title = "TRUE_NET_BREAKEVEN_PREVENTIVE_LOCK"
+            mins_left = 0
+        else:
+            ev_title = imm_ev.get("title", "Makro Veri") if imm_ev else "Makro Olay"
+            secs_left = imm_ev.get("seconds_left", 0) if imm_ev else 0
+            mins_left = secs_left // 60
 
         fee_buffer = (float(COMMISSION_RATE) * 2.0) + 0.0002
 
@@ -283,6 +305,26 @@ class MacroStrategyGuard:
         5. Makro Şok Altında Top 20 Likidite Filtresi
         6. 8 Trade Setup ile Etkileşim & Susturma (Muting) Matrisi
         """
+        # ── 0. SUB-MILLISECOND EMERGENCY MACRO INTERRUPT (AŞAMA 3) ──
+        if self.institutional and getattr(self.institutional, 'emergency_macro_interrupt', False):
+            reason_text = getattr(self.institutional, 'interrupt_reason', 'Sovereign CDS / Getiri Eğrisi kritik eşiği aştı.')
+            return {
+                "allowed": False,
+                "error": "BLOCK_EMERGENCY_MACRO_INTERRUPT",
+                "reason": f"🚨 Sub-ms Makro Kesme Aktif (EMERGENCY_MACRO_INTERRUPT): {reason_text} Tüm yeni pozisyon açılışları derhal kilitlendi."
+            }
+
+        # ── 0b. TIER 4 MEMECOIN SUSTURMA / KILL SWITCH (AŞAMA 3) ──
+        if self.institutional and getattr(self.institutional, 'tier4_memecoins_muted', False):
+            clean_sym = symbol.replace(':USDT', '').replace('/', '').replace('USDT', '').upper()
+            tier4_coins = {"DOGE", "PEPE", "SHIB", "WIF", "BONK", "FLOKI", "MEME", "BOME", "1000PEPE", "1000BONK", "1000FLOKI"}
+            if clean_sym in tier4_coins:
+                return {
+                    "allowed": False,
+                    "error": "BLOCK_TIER4_MEMECOIN_MUTED",
+                    "reason": f"🔇 Tier 4 Memecoin Susturuldu: Makro oynaklık ve fırtına kalkanı devrede; {clean_sym} için spekülatif işlemler kilitlendi."
+                }
+
         # ── 1. FLASH-SHOCK KALKANI (VERİ ANI İLK 60 SANİYE) ──
         is_flash, flash_ev = self.calendar.is_flash_shock_active(window_seconds=60.0)
         if is_flash and flash_ev:
@@ -441,6 +483,22 @@ class MacroStrategyGuard:
                 "runner_mode": True,
                 "score_bonus": 15,
                 "reason": "🩸 AYI MAKRO ŞOKU + S4 BREAKDOWN: 1.25x Marjin ve Hawkes Runner modu (+%20 TP2) devrede."
+            }
+
+        # ── 4. ZIT KUANT ALFA & BANKA ELO AĞIRLIKLARI (AŞAMA 4) ──
+        if self.evolution and getattr(self.evolution, 'contrarian_mode_enabled', False):
+            contrarian_margin = round(base_margin * 1.45, 2)
+            tp2_dist = abs(base_tp2 - entry_price) if (base_tp2 > 0 and entry_price > 0) else 0.0
+            tp_delta = tp2_dist * 1.25 if side == "LONG" else -tp2_dist * 1.25
+            boosted_tp2 = round(entry_price + tp_delta, 4) if (tp2_dist > 0 and entry_price > 0) else base_tp2
+            return {
+                "boosted": True,
+                "margin": contrarian_margin,
+                "tp1": base_tp1,
+                "tp2": boosted_tp2,
+                "runner_mode": True,
+                "score_bonus": 20,
+                "reason": "🎯 ZIT KUANT TERS ALFA (Contrarian Inverse Alpha): Bank of America / Zayıf kurumların tersine pozisyonda 1.45x Alfa marjini uygulandı."
             }
 
         return {
