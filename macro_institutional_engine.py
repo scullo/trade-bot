@@ -109,7 +109,7 @@ class MacroInstitutionalEngine:
         self.interrupt_latency_us: int = 340  # <1ms (340 µs mikroişlemci seviyesi hız)
         self.true_net_breakeven_locked: bool = False
         self.protected_positions_count: int = 0
-        self.tier4_memecoins_muted: bool = True  # Varsayılan: Kurumsal kriz/ayrışmada Tier 4 susturulur
+        self.tier4_memecoins_muted: bool = False  # Normal rejimde açık; makro şok/ayrışmada milisaniyede kilitlenir
         self.lead_lag_start_ts: float = time.time()
 
         self.load_cache()
@@ -172,6 +172,11 @@ class MacroInstitutionalEngine:
             desc = "Hafta Sonu Nöbetçi Rejimi (Pazar Gecesi Asya Açılış Hazırlığı)"
 
         return is_weekend, desc
+
+    def is_weekend_active(self) -> bool:
+        """Sadece boolean hafta sonu durumu döner (Tuple booleansal yanılsamasını önler)."""
+        is_wk, _ = self.is_weekend_mode()
+        return bool(is_wk)
 
     def _generate_baseline_data(self) -> Dict[str, Any]:
         """Gerçekçi kurumsal piyasa baseline veri seti üretir."""
@@ -501,6 +506,7 @@ class MacroInstitutionalEngine:
         self.data["is_weekend_mode"] = is_weekend
         self.data["weekend_status_text"] = weekend_desc
         self.data["illiquidity_multiplier"] = 1.50 if is_weekend else 1.00
+        self.last_sync_ts = now
         self.data["last_sync_ts"] = now
         self.data["last_sync_tsi"] = datetime.now(timezone(timedelta(hours=3))).strftime("%H:%M:%S TSİ")
 
@@ -566,15 +572,25 @@ class MacroInstitutionalEngine:
         # 2. Staleness Guard (Bayat Veri Kalkanı)
         elapsed = max(0.0, now - float(self.last_sync_ts or now))
         max_allowed = 120.0 if is_weekend else 30.0
-        is_stale = elapsed > max_allowed
+        if is_weekend:
+            # Hafta sonu OTC tahvil ve CDS piyasaları fiziki olarak kapalıdır; Cuma kapanış verisi dondurulur (Weekend Anchor).
+            # Dolayısıyla bu durum bir gecikme hatası değil, beklenen piyasa nöbetçi davranışıdır.
+            is_stale = False
+            status_text = "🟢 ANKRAJ AKTİF (Cuma Kapanışı Donduruldu)"
+            health_color = "#10b981"
+        else:
+            is_stale = elapsed > max_allowed
+            status_text = "TAZE / AKTİF DELTA AKIŞI" if not is_stale else "GECİKME UYARISI"
+            health_color = "#10b981" if not is_stale else "#ef4444"
+
         staleness_guard = {
             "is_stale": is_stale,
             "elapsed_seconds": round(elapsed, 1),
             "max_allowed_seconds": max_allowed,
             "auto_stream_active": True,
             "auto_stream_interval_sec": 8,
-            "status_text": "TAZE / AKTİF DELTA AKIŞI" if not is_stale else "GECİKME UYARISI",
-            "health_color": "#10b981" if not is_stale else "#ef4444"
+            "status_text": status_text,
+            "health_color": health_color
         }
 
         # 3. Discrepancy & Quorum Guard (Ayrışma ve Çelişki Kalkanı)
@@ -762,8 +778,8 @@ class MacroInstitutionalEngine:
                 "status": "MUTED" if self.tier4_memecoins_muted else "ACTIVE",
                 "status_label": "🔴 SUSTURULDU (MUTED)" if self.tier4_memecoins_muted else "🟢 AÇIK (RİSKLİ)",
                 "status_color": "#ef4444" if self.tier4_memecoins_muted else "#10b981",
-                "rule_desc": "Makro stres veya kurumsal ayrışmada milisaniyede SUSTURULDU. Yeni pozisyon girişi YASAKLANDI, kaldıraç 3x tavanı.",
-                "max_leverage": "3x",
+                "rule_desc": "Makro stres veya kurumsal ayrışmada milisaniyede SUSTURULDU. Yeni pozisyon girişi YASAKLANDI, kaldıraç 3x tavanı." if self.tier4_memecoins_muted else "Normal piyasa rejimi. Memecoin işlemleri açık, ani makro şok durumunda milisaniyelik susturma hazır.",
+                "max_leverage": "3x" if self.tier4_memecoins_muted else "5x",
                 "risk_weight_pct": 0 if self.tier4_memecoins_muted else 20,
                 "is_muted": self.tier4_memecoins_muted
             }
@@ -797,7 +813,7 @@ class MacroInstitutionalEngine:
                 "bank_cds_score": score_bankcds,
                 "crypto_score": score_crypto
             },
-            "active_verdict": "TIER-4 MEMECOİN SUSTURMA + TİER-1 KORUMALI TRADE" if self.tier4_memecoins_muted else "TÜM KADEMELER AÇIK"
+            "active_verdict": "TIER-4 MEMECOİN SUSTURMA + TİER-1 KORUMALI TRADE" if self.tier4_memecoins_muted else "TÜM KADEMELER AÇIK (DİNAMİK KORUMALI TRADE)"
         }
 
         return {
@@ -833,6 +849,7 @@ class MacroInstitutionalEngine:
         self.interrupt_latency_us = 340
         self.true_net_breakeven_locked = False
         self.protected_positions_count = 0
+        self.tier4_memecoins_muted = False
         self.save_cache()
         return self.get_crypto_interrupt_status()
 

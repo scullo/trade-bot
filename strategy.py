@@ -3323,7 +3323,14 @@ class StrategyEngine:
 
         # Hafta Sonu Nöbetçi Kalkanı (Aşama 2): OTC tezgah üstü piyasaları kapalıyken sahte iğnelere karşı 1.50x stop tamponu
         if macro_guard and hasattr(macro_guard, 'institutional') and macro_guard.institutional:
-            if getattr(macro_guard.institutional, 'is_weekend_mode', lambda: False)():
+            inst = macro_guard.institutional
+            is_wk = False
+            if hasattr(inst, 'is_weekend_active') and callable(getattr(inst, 'is_weekend_active')):
+                is_wk = inst.is_weekend_active()
+            elif hasattr(inst, 'is_weekend_mode') and callable(getattr(inst, 'is_weekend_mode')):
+                wk_res = inst.is_weekend_mode()
+                is_wk = wk_res[0] if isinstance(wk_res, tuple) else bool(wk_res)
+            if is_wk:
                 effective_stop_pct = min(MAX_ENTRY_STOP_DIST_PCT * 1.25, effective_stop_pct * 1.50)
                 if confluence_list is not None and isinstance(confluence_list, list) and "🛡️_Hafta_Sonu_Nöbetçi_Tamponu" not in confluence_list:
                     confluence_list.append("🛡️_Hafta_Sonu_Nöbetçi_Tamponu")

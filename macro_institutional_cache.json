@@ -398,18 +398,18 @@
           "BONKUSDT"
         ],
         "avg_beta": 2.65,
-        "status": "MUTED",
-        "status_label": "🔴 SUSTURULDU (MUTED)",
-        "status_color": "#ef4444",
-        "rule_desc": "Makro stres veya kurumsal ayrışmada milisaniyede SUSTURULDU. Yeni pozisyon girişi YASAKLANDI, kaldıraç 3x tavanı.",
-        "max_leverage": "3x",
-        "risk_weight_pct": 0,
-        "is_muted": true
+        "status": "ACTIVE",
+        "status_label": "🟢 AÇIK (RİSKLİ)",
+        "status_color": "#10b981",
+        "rule_desc": "Normal piyasa rejimi. Memecoin işlemleri açık, ani makro şok durumunda milisaniyelik susturma hazır.",
+        "max_leverage": "5x",
+        "risk_weight_pct": 20,
+        "is_muted": false
       }
     ],
     "tri_desk_consensus": {
-      "unified_score": 41.8,
-      "consensus_stance": "SAVUNMA TEYAKKUZU",
+      "unified_score": 52.4,
+      "consensus_stance": "DENGELİ / NÖTR",
       "stance_color": "#f59e0b",
       "weights": {
         "wallstreet_desk_pct": 10,
@@ -419,9 +419,9 @@
       "desk_scores": {
         "wallstreet_score": 64.0,
         "bank_cds_score": 47.6,
-        "crypto_score": 18.0
+        "crypto_score": 52.0
       },
-      "active_verdict": "TIER-4 MEMECOİN SUSTURMA + TİER-1 KORUMALI TRADE"
+      "active_verdict": "TÜM KADEMELER AÇIK (DİNAMİK KORUMALI TRADE)"
     }
   }
 }
