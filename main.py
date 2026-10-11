@@ -130,6 +130,20 @@ async def main():
     # Telegram /kasa ve kasa İnteraktif Komut Dinleyicisini Başlat
     asyncio.create_task(notifier.start_command_listener(trader_manager, market_data=market_data))
 
+    # ⚡ 7/24 Otonom Makro Flaş Haber & RSS Canlı Akış Watchdog'u (TreeNews, CoinDesk, SEC, Fed)
+    async def macro_news_stream_watchdog():
+        await asyncio.sleep(5)
+        while True:
+            try:
+                from macro_news_sentinel import news_sentinel
+                if news_sentinel and not getattr(news_sentinel, 'is_syncing', False):
+                    await news_sentinel.sync_all_sources()
+            except Exception:
+                pass
+            await asyncio.sleep(20)
+
+    asyncio.create_task(macro_news_stream_watchdog())
+
     # 🧬 Çift Ufuklu Otonom Kuant Kalibratörü Watchdog'u (8S Hızlı Risk + 48S Yapısal Kuant)
     async def autonomous_calibration_watchdog():
         await asyncio.sleep(60)  # Başlangıçta 1 dakika ısınma

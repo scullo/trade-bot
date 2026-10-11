@@ -1,6 +1,6 @@
 {
   "version": "6.0.0",
-  "last_update": 1791661787.1361797,
+  "last_update": 1791713180.3133268,
   "sources": {
     "TREENEWS": {
       "title": "TreeNews Fast Wire WebSocket",
@@ -283,12 +283,12 @@
       "entity_key": "@KRAKENFX",
       "display_name": "@krakenfx",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 4,
+      "citation_count": 5,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791644973.5929885,
-      "last_seen": 1791645840.6482673,
+      "last_seen": 1791713175.706576,
       "sample_headlines": [
         "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we",
         "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we",
@@ -363,12 +363,12 @@
       "entity_key": "@ROBINHOODAPP",
       "display_name": "@RobinhoodApp",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 4,
+      "citation_count": 5,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791644973.6270173,
-      "last_seen": 1791645840.687755,
+      "last_seen": 1791713175.706576,
       "sample_headlines": [
         "Robinhood (@RobinhoodApp): Still time to enter before 10/23 🪐\n\nOur gold bar swee",
         "Robinhood (@RobinhoodApp): Still time to enter before 10/23 🪐\n\nOur gold bar swee",
@@ -395,12 +395,12 @@
       "entity_key": "@REALDONALDTRUMP",
       "display_name": "@realDonaldTrump",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 25,
+      "citation_count": 28,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791644973.640304,
-      "last_seen": 1791661786.6777558,
+      "last_seen": 1791713179.2566013,
       "sample_headlines": [
         "Donald J. Trump (@realDonaldTrump): Robert Jeffress, senior pastor of First Bapt",
         "Donald J. Trump (@realDonaldTrump): The American people are 'under attack' by US",
@@ -427,12 +427,12 @@
       "entity_key": "@ELONMUSK",
       "display_name": "@elonmusk",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 20,
+      "citation_count": 22,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791644973.656395,
-      "last_seen": 1791661786.762627,
+      "last_seen": 1791713174.1544118,
       "sample_headlines": [
         "Elon Musk (@elonmusk): Grok @Bot",
         "Elon Musk (@elonmusk): Join @TeslaSI if you’re interested in solving generalized",
@@ -443,12 +443,12 @@
       "entity_key": "@BOT",
       "display_name": "@Bot",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 4,
+      "citation_count": 6,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791644973.656395,
-      "last_seen": 1791645840.721247,
+      "last_seen": 1791713174.1544118,
       "sample_headlines": [
         "Elon Musk (@elonmusk): Grok @Bot",
         "Elon Musk (@elonmusk): Grok @Bot",
@@ -571,12 +571,12 @@
       "entity_key": "@WUBLOCKCHAIN",
       "display_name": "@WuBlockchain",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 12,
+      "citation_count": 15,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791644973.7236764,
-      "last_seen": 1791661786.7452965,
+      "last_seen": 1791713178.779705,
       "sample_headlines": [
         "Wu Blockchain (@WuBlockchain): Weekly Project Updates: Polymarket Overhauls Unde",
         "Wu Blockchain (@WuBlockchain): Vitalik Buterin: Without AI, Ethereum's Lean Road",
@@ -889,14 +889,15 @@
       "entity_key": "TRUTHSOCIAL.COM",
       "display_name": "truthsocial.com",
       "entity_type": "DOMAIN_OUTLET",
-      "citation_count": 1,
+      "citation_count": 2,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791644973.9004285,
-      "last_seen": 1791644973.9004285,
+      "last_seen": 1791713177.44023,
       "sample_headlines": [
-        "Donald J. Trump (@realDonaldTrump): https:// truthsocial.com/@realDonaldTru mp/1"
+        "Donald J. Trump (@realDonaldTrump): https:// truthsocial.com/@realDonaldTru mp/1",
+        "Donald J. Trump (@realDonaldTrump): https://strangely-ruling-deer.edgecompute.ap"
       ]
     },
     "@ELEANORTERRETT": {
@@ -1224,12 +1225,12 @@
       "entity_key": "@SOLANA",
       "display_name": "@solana",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 4,
+      "citation_count": 5,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791659443.9438868,
-      "last_seen": 1791661786.7716484,
+      "last_seen": 1791713169.3133404,
       "sample_headlines": [
         "Holoworld AI (@HoloworldAI): This Week in Crypto, brought to you by Holoworld\n\nS",
         "Holoworld AI (@HoloworldAI): This Week in Crypto, brought to you by Holoworld\n\nS",
@@ -1256,16 +1257,562 @@
       "entity_key": "@AEROXYZ",
       "display_name": "@aeroxyz",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 3,
+      "citation_count": 4,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791661729.36222,
-      "last_seen": 1791661786.609697,
+      "last_seen": 1791713176.3356836,
       "sample_headlines": [
         "Aero (@aeroxyz): “What we are going to launch is our third DEX OS, the most ambi",
         "Aero (@aeroxyz): “What we are going to launch is our third DEX OS, the most ambi",
         "Aero (@aeroxyz): “What we are going to launch is our third DEX OS, the most ambi"
+      ]
+    },
+    "@AXIEINFINITY": {
+      "entity_key": "@AXIEINFINITY",
+      "display_name": "@AxieInfinity",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713168.7272491,
+      "last_seen": 1791713168.7272491,
+      "sample_headlines": [
+        "Axie Infinity (@AxieInfinity): Axie history quiz 📚\n\nWhen did the Axie Infinity p"
+      ]
+    },
+    "@BACKPACK": {
+      "entity_key": "@BACKPACK",
+      "display_name": "@Backpack",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713169.3133404,
+      "last_seen": 1791713169.3133404,
+      "sample_headlines": [
+        "Solana (@solana): Armani Ferrante, CEO of @Backpack, on why Solana is becoming t"
+      ]
+    },
+    "@ARMANIFERRANTE": {
+      "entity_key": "@ARMANIFERRANTE",
+      "display_name": "@armaniferrante",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713169.3133404,
+      "last_seen": 1791713169.3133404,
+      "sample_headlines": [
+        "Solana (@solana): Armani Ferrante, CEO of @Backpack, on why Solana is becoming t"
+      ]
+    },
+    "@KYLESAMANI": {
+      "entity_key": "@KYLESAMANI",
+      "display_name": "@KyleSamani",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713169.3133404,
+      "last_seen": 1791713169.3133404,
+      "sample_headlines": [
+        "Solana (@solana): Armani Ferrante, CEO of @Backpack, on why Solana is becoming t"
+      ]
+    },
+    "@FETCH_AI": {
+      "entity_key": "@FETCH_AI",
+      "display_name": "@Fetch_ai",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713169.7813385,
+      "last_seen": 1791713169.7813385,
+      "sample_headlines": [
+        "Fetch.ai (@Fetch_ai): 3 exciting partnerships coming your way 🔥\n\nAll boosting ag"
+      ]
+    },
+    "REF_PARTNERSHIPS": {
+      "entity_key": "REF_PARTNERSHIPS",
+      "display_name": "partnerships",
+      "entity_type": "NAMED_SOURCE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713169.7813385,
+      "last_seen": 1791713169.7813385,
+      "sample_headlines": [
+        "Fetch.ai (@Fetch_ai): 3 exciting partnerships coming your way 🔥\n\nAll boosting ag"
+      ]
+    },
+    "@0XETHAN": {
+      "entity_key": "@0XETHAN",
+      "display_name": "@0xEthan",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713171.721925,
+      "last_seen": 1791713171.721925,
+      "sample_headlines": [
+        "Wu Blockchain (@WuBlockchain): Bubblemaps Estimates Crypto Influencer Ethan Made"
+      ]
+    },
+    "@GETSWARMED": {
+      "entity_key": "@GETSWARMED",
+      "display_name": "@GetSwarmed",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713172.1678567,
+      "last_seen": 1791713172.1678567,
+      "sample_headlines": [
+        "Swarm Network (@GetSwarmed): Slowly but surely.  Privacy is becoming a standard "
+      ]
+    },
+    "@FOURDOTMEMEZH": {
+      "entity_key": "@FOURDOTMEMEZH",
+      "display_name": "@fourdotmemezh",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713172.6086805,
+      "last_seen": 1791713172.6086805,
+      "sample_headlines": [
+        "Four.meme-華語 (@fourdotmemezh): 📢 http://Four.Meme Product Update: A Seamless Pat"
+      ]
+    },
+    "@PANCAKESWAP": {
+      "entity_key": "@PANCAKESWAP",
+      "display_name": "@PancakeSwap",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713172.6086805,
+      "last_seen": 1791713172.6086805,
+      "sample_headlines": [
+        "Four.meme-華語 (@fourdotmemezh): 📢 http://Four.Meme Product Update: A Seamless Pat"
+      ]
+    },
+    "@BINANCE": {
+      "entity_key": "@BINANCE",
+      "display_name": "@binance",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713174.7406547,
+      "last_seen": 1791713174.7406547,
+      "sample_headlines": [
+        "Wu Blockchain (@WuBlockchain): Michael Saylor :AI will amplify the scarcity of p"
+      ]
+    },
+    "@SAYLOR": {
+      "entity_key": "@SAYLOR",
+      "display_name": "@saylor",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713174.7406547,
+      "last_seen": 1791713174.7406547,
+      "sample_headlines": [
+        "Wu Blockchain (@WuBlockchain): Michael Saylor :AI will amplify the scarcity of p"
+      ]
+    },
+    "@PONSDOTFAMILY": {
+      "entity_key": "@PONSDOTFAMILY",
+      "display_name": "@ponsdotfamily",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713175.1647959,
+      "last_seen": 1791713175.1647959,
+      "sample_headlines": [
+        "Pons (@ponsdotfamily): Launch tokens paired with Stock Tokens on Pons\n\n$NVDA, $S"
+      ]
+    },
+    "@ARBITRUM": {
+      "entity_key": "@ARBITRUM",
+      "display_name": "@arbitrum",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713175.706576,
+      "last_seen": 1791713175.706576,
+      "sample_headlines": [
+        "Arbitrum (@arbitrum): On Arbitrum this week: \n\nThe programmable economy is rapid"
+      ]
+    },
+    "@PAXOS": {
+      "entity_key": "@PAXOS",
+      "display_name": "@Paxos",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713175.706576,
+      "last_seen": 1791713175.706576,
+      "sample_headlines": [
+        "Arbitrum (@arbitrum): On Arbitrum this week: \n\nThe programmable economy is rapid"
+      ]
+    },
+    "@GLOBAL_DOLLAR": {
+      "entity_key": "@GLOBAL_DOLLAR",
+      "display_name": "@global_dollar",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713175.706576,
+      "last_seen": 1791713175.706576,
+      "sample_headlines": [
+        "Arbitrum (@arbitrum): On Arbitrum this week: \n\nThe programmable economy is rapid"
+      ]
+    },
+    "@OKX": {
+      "entity_key": "@OKX",
+      "display_name": "@OKX",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713175.706576,
+      "last_seen": 1791713175.706576,
+      "sample_headlines": [
+        "Arbitrum (@arbitrum): On Arbitrum this week: \n\nThe programmable economy is rapid"
+      ]
+    },
+    "@FABLESFI": {
+      "entity_key": "@FABLESFI",
+      "display_name": "@fablesfi",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713175.706576,
+      "last_seen": 1791713175.706576,
+      "sample_headlines": [
+        "Arbitrum (@arbitrum): On Arbitrum this week: \n\nThe programmable economy is rapid"
+      ]
+    },
+    "@LADDER_MARKETS": {
+      "entity_key": "@LADDER_MARKETS",
+      "display_name": "@ladder_markets",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713175.706576,
+      "last_seen": 1791713175.706576,
+      "sample_headlines": [
+        "Arbitrum (@arbitrum): On Arbitrum this week: \n\nThe programmable economy is rapid"
+      ]
+    },
+    "@SIERRAISMONEY": {
+      "entity_key": "@SIERRAISMONEY",
+      "display_name": "@SierraIsMoney",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713175.706576,
+      "last_seen": 1791713175.706576,
+      "sample_headlines": [
+        "Arbitrum (@arbitrum): On Arbitrum this week: \n\nThe programmable economy is rapid"
+      ]
+    },
+    "@0XFLUID": {
+      "entity_key": "@0XFLUID",
+      "display_name": "@0xfluid",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713175.706576,
+      "last_seen": 1791713175.706576,
+      "sample_headlines": [
+        "Arbitrum (@arbitrum): On Arbitrum this week: \n\nThe programmable economy is rapid"
+      ]
+    },
+    "@SMYKJAIN": {
+      "entity_key": "@SMYKJAIN",
+      "display_name": "@smykjain",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713175.706576,
+      "last_seen": 1791713175.706576,
+      "sample_headlines": [
+        "Arbitrum (@arbitrum): On Arbitrum this week: \n\nThe programmable economy is rapid"
+      ]
+    },
+    "@DUNE": {
+      "entity_key": "@DUNE",
+      "display_name": "@Dune",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713175.706576,
+      "last_seen": 1791713175.706576,
+      "sample_headlines": [
+        "Arbitrum (@arbitrum): On Arbitrum this week: \n\nThe programmable economy is rapid"
+      ]
+    },
+    "@XSTOCKSFI": {
+      "entity_key": "@XSTOCKSFI",
+      "display_name": "@xStocksFi",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713175.706576,
+      "last_seen": 1791713175.706576,
+      "sample_headlines": [
+        "Arbitrum (@arbitrum): On Arbitrum this week: \n\nThe programmable economy is rapid"
+      ]
+    },
+    "@ENSOBUILD": {
+      "entity_key": "@ENSOBUILD",
+      "display_name": "@EnsoBuild",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713175.706576,
+      "last_seen": 1791713175.706576,
+      "sample_headlines": [
+        "Arbitrum (@arbitrum): On Arbitrum this week: \n\nThe programmable economy is rapid"
+      ]
+    },
+    "@GMX_IO": {
+      "entity_key": "@GMX_IO",
+      "display_name": "@GMX_IO",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713175.706576,
+      "last_seen": 1791713175.706576,
+      "sample_headlines": [
+        "Arbitrum (@arbitrum): On Arbitrum this week: \n\nThe programmable economy is rapid"
+      ]
+    },
+    "@GAUNTLET_XYZ": {
+      "entity_key": "@GAUNTLET_XYZ",
+      "display_name": "@gauntlet_xyz",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713175.706576,
+      "last_seen": 1791713175.706576,
+      "sample_headlines": [
+        "Arbitrum (@arbitrum): On Arbitrum this week: \n\nThe programmable economy is rapid"
+      ]
+    },
+    "@0XPROJECT": {
+      "entity_key": "@0XPROJECT",
+      "display_name": "@0xProject",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713175.706576,
+      "last_seen": 1791713175.706576,
+      "sample_headlines": [
+        "Arbitrum (@arbitrum): On Arbitrum this week: \n\nThe programmable economy is rapid"
+      ]
+    },
+    "@FUNCTIONSPACEHQ": {
+      "entity_key": "@FUNCTIONSPACEHQ",
+      "display_name": "@functionspaceHQ",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713175.706576,
+      "last_seen": 1791713175.706576,
+      "sample_headlines": [
+        "Arbitrum (@arbitrum): On Arbitrum this week: \n\nThe programmable economy is rapid"
+      ]
+    },
+    "@ZETACHAIN": {
+      "entity_key": "@ZETACHAIN",
+      "display_name": "@ZetaChain",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713178.179935,
+      "last_seen": 1791713178.179935,
+      "sample_headlines": [
+        "ZetaChain 🟩 (@ZetaChain): would you let your AI introduce you to strangers if it"
+      ]
+    },
+    "@ANUMAAI": {
+      "entity_key": "@ANUMAAI",
+      "display_name": "@AnumaAI",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713178.179935,
+      "last_seen": 1791713178.179935,
+      "sample_headlines": [
+        "ZetaChain 🟩 (@ZetaChain): would you let your AI introduce you to strangers if it"
+      ]
+    },
+    "ZETACHAIN.COM": {
+      "entity_key": "ZETACHAIN.COM",
+      "display_name": "zetachain.com",
+      "entity_type": "DOMAIN_OUTLET",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713178.179935,
+      "last_seen": 1791713178.179935,
+      "sample_headlines": [
+        "ZetaChain 🟩 (@ZetaChain): would you let your AI introduce you to strangers if it"
+      ]
+    },
+    "@STAR_OKX": {
+      "entity_key": "@STAR_OKX",
+      "display_name": "@star_okx",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713178.779705,
+      "last_seen": 1791713178.779705,
+      "sample_headlines": [
+        "Wu Blockchain (@WuBlockchain): Star Xu: How Did USDe Leverage Loops Trigger the "
+      ]
+    },
+    "@NEW_ERA_FINANCE": {
+      "entity_key": "@NEW_ERA_FINANCE",
+      "display_name": "@new_era_finance",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713178.779705,
+      "last_seen": 1791713178.779705,
+      "sample_headlines": [
+        "Wu Blockchain (@WuBlockchain): Star Xu: How Did USDe Leverage Loops Trigger the "
+      ]
+    },
+    "@GUNBYGUNZ": {
+      "entity_key": "@GUNBYGUNZ",
+      "display_name": "@GUNbyGUNZ",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713179.720107,
+      "last_seen": 1791713179.720107,
+      "sample_headlines": [
+        "GUNZ Official (@GUNbyGUNZ): 🛡️ FREE Kestrel anti-cheat for our Legendary and Anc"
+      ]
+    },
+    "@APTOSLABS": {
+      "entity_key": "@APTOSLABS",
+      "display_name": "@AptosLabs",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713180.308081,
+      "last_seen": 1791713180.308081,
+      "sample_headlines": [
+        "Aptos Labs (@AptosLabs): Lead with the product. Let the chain stay in the backgr"
+      ]
+    },
+    "@SEDALL_ASANTE": {
+      "entity_key": "@SEDALL_ASANTE",
+      "display_name": "@sedall_asante",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713180.308081,
+      "last_seen": 1791713180.308081,
+      "sample_headlines": [
+        "Aptos Labs (@AptosLabs): Lead with the product. Let the chain stay in the backgr"
+      ]
+    },
+    "@DECIBELTRADE": {
+      "entity_key": "@DECIBELTRADE",
+      "display_name": "@DecibelTrade",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713180.308081,
+      "last_seen": 1791713180.308081,
+      "sample_headlines": [
+        "Aptos Labs (@AptosLabs): Lead with the product. Let the chain stay in the backgr"
+      ]
+    },
+    "@APTOS": {
+      "entity_key": "@APTOS",
+      "display_name": "@Aptos",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1791713180.308081,
+      "last_seen": 1791713180.308081,
+      "sample_headlines": [
+        "Aptos Labs (@AptosLabs): Lead with the product. Let the chain stay in the backgr"
       ]
     }
   },

@@ -9317,16 +9317,28 @@ async function loadAdminMetrics() {
             }
         }
         let macroOracleAutoPollingInterval = null;
+        let macroOracleCountdownSec = 10;
         function initMacroOracleAutoPolling() {
             if (window.macroOracleAutoPollingInterval) return;
+            window.macroOracleCountdownSec = 10;
             window.macroOracleAutoPollingInterval = setInterval(() => {
                 const tab = document.getElementById('main-tab-content-macro');
                 if (tab && !tab.classList.contains('hidden') && tab.style.display !== 'none') {
-                    if (typeof renderMacroTabView === 'function') {
-                        renderMacroTabView(false);
+                    window.macroOracleCountdownSec--;
+                    const timerEl = document.getElementById('macro-auto-stream-timer');
+                    if (timerEl) {
+                        timerEl.innerText = `${Math.max(0, window.macroOracleCountdownSec)}s`;
                     }
+                    if (window.macroOracleCountdownSec <= 0) {
+                        window.macroOracleCountdownSec = 10;
+                        if (typeof renderMacroTabView === 'function') {
+                            renderMacroTabView(true);
+                        }
+                    }
+                } else {
+                    window.macroOracleCountdownSec = 10;
                 }
-            }, 8000);
+            }, 1000);
         }
         window.initMacroOracleAutoPolling = initMacroOracleAutoPolling;
 
@@ -9336,8 +9348,11 @@ async function loadAdminMetrics() {
 
             initMacroOracleAutoPolling();
 
+            const existingScroll = document.getElementById('macro-live-news-scroll-list');
+            const prevScrollTop = existingScroll ? existingScroll.scrollTop : 0;
+
             const now = Date.now();
-            if (forceRefresh || !macroOracleDataCache || (now - lastMacroOracleFetchTs > 8000)) {
+            if (forceRefresh || !macroOracleDataCache || (now - lastMacroOracleFetchTs > 6000)) {
                 try {
                     const res = await fetch('/api/macro_oracle');
                     const json = await res.json();
@@ -9399,6 +9414,7 @@ async function loadAdminMetrics() {
                         <div style="display:flex; align-items:center; gap:6px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.25); padding:6px 12px; border-radius:8px; font-size:11px; font-family:'JetBrains Mono'; color:#10b981;">
                             <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#10b981; box-shadow:0 0 8px #10b981;"></span>
                             <span>CANLI AKIŞ: ForexFactory • TreeNews • SEC EDGAR • Fed RSS</span>
+                            <span id="macro-auto-stream-timer" style="background:rgba(16,185,129,0.22); border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:5px; font-weight:900; margin-left:4px; color:#10b981;">${window.macroOracleCountdownSec || 10}s</span>
                         </div>
                         <button id="btn-macro-sync-trigger" onclick="triggerMacroSync()" style="background:rgba(0,242,254,0.14); color:#00f2fe; border:1px solid rgba(0,242,254,0.35); padding:7px 14px; border-radius:8px; font-size:11.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.15s;">
                             <span>🔄 Anında Senkronize Et</span>
@@ -9628,7 +9644,7 @@ async function loadAdminMetrics() {
                                 <button onclick="setMacroNewsFilter('OFFICIAL')" id="mnpill-official" style="background:${(window.currentMacroNewsFilter || 'ALL') === 'OFFICIAL' ? 'rgba(0,242,254,0.18)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${(window.currentMacroNewsFilter || 'ALL') === 'OFFICIAL' ? 'rgba(0,242,254,0.45)' : 'rgba(255,255,255,0.08)'}; color:${(window.currentMacroNewsFilter || 'ALL') === 'OFFICIAL' ? 'var(--cyan)' : '#cbd5e1'}; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all 0.15s;">🏛️ Resmi (Fed/SEC)</button>
                             </div>
 
-                            <div style="display:flex; flex-direction:column; gap:10px; max-height:480px; overflow-y:auto; padding-right:4px;">
+                            <div id="macro-live-news-scroll-list" style="display:flex; flex-direction:column; gap:10px; max-height:480px; overflow-y:auto; padding-right:4px;">
                                 ${(() => {
                                     const actFilter = window.currentMacroNewsFilter || 'ALL';
                                     const filteredList = newsList.filter(item => {
@@ -9958,6 +9974,11 @@ async function loadAdminMetrics() {
 
                 </div>
             `;
+
+            const scrollEl = document.getElementById('macro-live-news-scroll-list');
+            if (scrollEl && prevScrollTop > 0) {
+                scrollEl.scrollTop = prevScrollTop;
+            }
         }
         window.renderMacroTabView = renderMacroTabView;
 
@@ -23940,6 +23961,12 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             cal_summary = calendar_manager.get_calendar_summary() if calendar_manager else {}
             all_events = list(calendar_manager.events) if calendar_manager else []
             cross_data = cross_asset_radar.get_macro_summary() if cross_asset_radar else {}
+            
+            # Otonom Canlı Akış: Kullanıcı 'Senkronize Et' demeden 20 saniyede bir arka planda taze haberleri çek
+            now_t = time.time()
+            if news_sentinel and (now_t - getattr(news_sentinel, 'last_sync_ts', 0) > 20.0) and not getattr(news_sentinel, 'is_syncing', False):
+                asyncio.create_task(news_sentinel.sync_all_sources())
+
             news_feed = news_sentinel.get_latest_news(limit=50) if news_sentinel else []
             quorum_logs = news_quorum.audit_history[-30:] if (news_quorum and hasattr(news_quorum, 'audit_history')) else []
             hud_info = macro_guard.get_macro_hud_telemetry() if macro_guard else {}
@@ -24159,6 +24186,21 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
     await runner.setup()
     site = web.TCPSite(runner, host, port)
     await site.start()
+
+    # 7/24 Kesintisiz Otonom Makro Flaş Haber & RSS Taraması (Sıfır Tıklama Canlı Akış)
+    async def macro_news_auto_stream_daemon():
+        await asyncio.sleep(2)
+        while True:
+            try:
+                from macro_news_sentinel import news_sentinel
+                if news_sentinel and not getattr(news_sentinel, 'is_syncing', False):
+                    await news_sentinel.sync_all_sources()
+            except Exception:
+                pass
+            await asyncio.sleep(20)
+
+    asyncio.create_task(macro_news_auto_stream_daemon())
+
     print(f">> [VALKYRIE QUANT DESK •READY]: http://{host}:{port}")
 
 async def broadcast_tick(symbol, price):

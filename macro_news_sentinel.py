@@ -6,6 +6,7 @@ yalan haber manipülasyonunu engelleyen ve dashboard'a canlı flaş haber sağla
 """
 
 import os
+import sys
 import json
 import time
 import asyncio
@@ -15,6 +16,9 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional
 import aiohttp
+
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 from macro_roles import role_registry
 from macro_ai_interpreter import ai_interpreter
@@ -121,6 +125,7 @@ class MacroNewsSentinel:
         self.news_items: List[Dict[str, Any]] = []
         self.seen_signatures: set = set()
         self.last_sync_ts: float = 0.0
+        self.is_syncing: bool = False
         self.load_history()
 
     def load_history(self) -> None:
@@ -418,30 +423,39 @@ class MacroNewsSentinel:
 
     async def sync_all_sources(self) -> int:
         """Tüm kaynakları (TreeNews, CoinDesk, CoinTelegraph, Decrypt, The Block, SEC, Fed) eşzamanlı tarar."""
-        t_tasks = [
-            self.fetch_treenews(),
-            self.fetch_crypto_media_rss(),
-            self.fetch_sec_edgar(),
-            self.fetch_fed_press()
-        ]
-        results = await asyncio.gather(*t_tasks, return_exceptions=True)
+        if self.is_syncing:
+            return 0
+        self.is_syncing = True
+        try:
+            t_tasks = [
+                self.fetch_treenews(),
+                self.fetch_crypto_media_rss(),
+                self.fetch_sec_edgar(),
+                self.fetch_fed_press()
+            ]
+            results = await asyncio.gather(*t_tasks, return_exceptions=True)
 
-        added_count = 0
-        for res in results:
-            if isinstance(res, list) and res:
-                for item in res:
-                    self.news_items.append(item)
-                    added_count += 1
+            added_count = 0
+            for res in results:
+                if isinstance(res, list) and res:
+                    for item in res:
+                        self.news_items.append(item)
+                        added_count += 1
 
-        if added_count > 0:
-            # Kronolojik sırala ve diske kaydet
-            self.news_items.sort(key=lambda x: x["timestamp"])
-            self.news_items = self.news_items[-100:]  # Son 100 haber
             self.last_sync_ts = time.time()
-            self.save_history()
-            print(f">> [⚡ FLAŞ İSTİHBARAT] {added_count} taze haber/bildirim hafızaya işlendi.")
+            if added_count > 0:
+                # Kronolojik sırala ve diske kaydet
+                self.news_items.sort(key=lambda x: x["timestamp"])
+                self.news_items = self.news_items[-100:]  # Son 100 haber
+                self.save_history()
+                try:
+                    print(f">> [FLAS ISTIHBARAT] {added_count} taze haber/bildirim hafizaya islendi.")
+                except Exception:
+                    pass
 
-        return added_count
+            return added_count
+        finally:
+            self.is_syncing = False
 
     def get_latest_news(self, limit: int = 15) -> List[Dict[str, Any]]:
         """En güncel haberleri döner (Yeni haber en başta)."""
