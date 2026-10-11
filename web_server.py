@@ -3741,6 +3741,91 @@ HTML_PAGE = """
             background: rgba(0, 242, 254, 0.12);
             border-color: var(--cyan);
         }
+
+        /* 🏛️ VALKYRIE WALL STREET TICKER TAPE & TERMINAL STYLES */
+        @keyframes wallstreetMarqueeScroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .wallstreet-marquee-wrap {
+            position: relative;
+            background: linear-gradient(90deg, #090e1c 0%, #0d1629 50%, #090e1c 100%);
+            border: 1px solid rgba(0, 242, 254, 0.28);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 6px 25px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+            margin-bottom: 20px;
+        }
+        .wallstreet-marquee-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.35);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 11px;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            color: #94a3b8;
+        }
+        .wallstreet-marquee-track-container {
+            overflow: hidden;
+            white-space: nowrap;
+            padding: 10px 0;
+            position: relative;
+        }
+        .wallstreet-marquee-track {
+            display: inline-flex;
+            width: max-content;
+            animation: wallstreetMarqueeScroll 45s linear infinite;
+        }
+        .wallstreet-marquee-track:hover {
+            animation-play-state: paused;
+        }
+        .wallstreet-ticker-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 8px;
+            padding: 6px 14px;
+            margin: 0 5px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+        .wallstreet-ticker-pill:hover {
+            background: rgba(0, 242, 254, 0.12);
+            border-color: rgba(0, 242, 254, 0.4);
+            transform: translateY(-1px);
+        }
+        .wallstreet-clock-card {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(10, 15, 29, 0.9));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 14px 16px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+        .wallstreet-clock-card:hover {
+            border-color: rgba(0, 242, 254, 0.35);
+            box-shadow: 0 4px 20px rgba(0, 242, 254, 0.08);
+        }
+        .wallstreet-asset-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            padding: 12px 14px;
+            transition: all 0.15s ease;
+        }
+        .wallstreet-asset-card:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(0, 242, 254, 0.3);
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 <body>
@@ -5125,6 +5210,12 @@ HTML_PAGE = """
                     <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></span>
                     <span class="tab-btn-text">10. Makro İstihbarat</span>
                     <span class="tab-badge-sub" id="nav-macro-badge" style="background:rgba(251,197,49,0.15); color:#fbc531; border:1px solid rgba(251,197,49,0.3);">Oracle 7/24</span>
+                </button>
+
+                <button class="nav-tab-btn" id="tab-btn-wallstreet" onclick="switchMainTab('wallstreet')" title="11. Wall Street & Küresel Terminal Desk (New York, Londra, Tokyo, Frankfurt, Emtia)">
+                    <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 10h18M5 10v11M9 10v11M15 10v11M19 10v11M12 2l9 8H3l9-8z"/></svg></span>
+                    <span class="tab-btn-text">11. Wall Street Desk</span>
+                    <span class="tab-badge-sub" id="nav-wallstreet-badge" style="background:rgba(0,242,254,0.15); color:var(--cyan); border:1px solid rgba(0,242,254,0.3);">NYSE Canlı</span>
                 </button>
             </div>
 
@@ -7591,6 +7682,15 @@ HTML_PAGE = """
         </div>
     </div>
 
+    <!-- =========================================================================
+         11. SEKME: VALKYRIE WALL STREET & GLOBAL TERMINAL DESK
+         ========================================================================= -->
+    <div id="main-tab-content-wallstreet" class="main-tab-content" style="display:none; padding: 6px 0 30px 0;">
+        <div id="wallstreet-tab-view-container">
+            <!-- Dynamically populated by renderWallStreetTabView() -->
+        </div>
+    </div>
+
         </main>
     </div><!-- END DASHBOARD-MAIN-LAYOUT -->
 
@@ -9551,6 +9651,348 @@ async function loadAdminMetrics() {
             }
         }
         window.setMacroNewsFilter = setMacroNewsFilter;
+
+        // =========================================================================
+        // 🏛️ VALKYRIE WALL STREET & GLOBAL TERMINAL DESK JS ENGINE
+        // =========================================================================
+        let wallStreetDataCache = window.wallStreetDataCache || null;
+        window.wallStreetDataCache = wallStreetDataCache;
+        let lastWallStreetFetchTs = window.lastWallStreetFetchTs || 0;
+        window.lastWallStreetFetchTs = lastWallStreetFetchTs;
+        let currentWallStreetFilter = 'all';
+        window.currentWallStreetFilter = currentWallStreetFilter;
+
+        function setWallStreetFilter(filterType) {
+            window.currentWallStreetFilter = filterType;
+            currentWallStreetFilter = filterType;
+            if (typeof renderWallStreetTabView === 'function') {
+                renderWallStreetTabView(false);
+            }
+        }
+        window.setWallStreetFilter = setWallStreetFilter;
+
+        async function syncWallStreetData() {
+            const btn = document.getElementById('btn-wallstreet-sync');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span>⏳ Senkronize Ediliyor...</span>';
+            }
+            try {
+                const res = await fetch('/api/macro_sync', { method: 'POST' });
+                const json = await res.json();
+                await renderWallStreetTabView(true);
+            } catch(e) {
+                console.error("Wall Street sync error:", e);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>🔄 Anlık Veri Yenile</span>';
+                }
+            }
+        }
+        window.syncWallStreetData = syncWallStreetData;
+
+        async function renderWallStreetTabView(forceRefresh = false) {
+            const container = document.getElementById('wallstreet-tab-view-container');
+            if (!container) return;
+
+            if (window.wallStreetDataCache && !wallStreetDataCache) {
+                wallStreetDataCache = window.wallStreetDataCache;
+            }
+            if (window.lastWallStreetFetchTs && !lastWallStreetFetchTs) {
+                lastWallStreetFetchTs = window.lastWallStreetFetchTs;
+            }
+
+            const now = Date.now();
+            if (forceRefresh || !wallStreetDataCache || (now - lastWallStreetFetchTs > 10000)) {
+                try {
+                    const res = await fetch('/api/wallstreet_terminal');
+                    const json = await res.json();
+                    if (json && json.status === 'ok' && json.data) {
+                        wallStreetDataCache = json.data;
+                        window.wallStreetDataCache = json.data;
+                        lastWallStreetFetchTs = now;
+                        window.lastWallStreetFetchTs = now;
+                    }
+                } catch(e) {
+                    console.error("Wall Street fetch error:", e);
+                }
+            }
+
+            const data = wallStreetDataCache || window.wallStreetDataCache || {};
+            const sessions = data.sessions || [];
+            const regions = data.regions || {};
+            const marqueeTape = data.marquee_tape || [];
+            const correlations = data.correlations || {};
+            const syncTime = data.last_sync_tsi || "Şimdi";
+            const activeFilter = window.currentWallStreetFilter || 'all';
+
+            const formatVal = (num, category) => {
+                const n = Number(num || 0);
+                if (category === 'RATES') return `%${n.toFixed(3)}`;
+                if (category === 'FX') return n.toFixed(4);
+                if (category === 'CURRENCY') return n.toFixed(3);
+                if (n >= 1000) return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                return n.toFixed(2);
+            };
+
+            const renderPillItem = (item) => {
+                const isPos = item.is_positive;
+                const chgSign = item.chg_24h > 0 ? '+' : '';
+                const chgColor = item.chg_24h > 0 ? '#10b981' : (item.chg_24h < 0 ? '#f43f5e' : '#cbd5e1');
+                const chgArrow = item.chg_24h > 0 ? '▲' : (item.chg_24h < 0 ? '▼' : '●');
+                const badgeHtml = item.badge ? `<span style="background:rgba(244,63,94,0.18); color:#f43f5e; border:1px solid rgba(244,63,94,0.3); padding:1px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:4px;">${item.badge}</span>` : '';
+                return `
+                    <div class="wallstreet-ticker-pill" title="${item.display_name} (${item.symbol})">
+                        <span>${item.flag}</span>
+                        <strong style="color:#ffffff;">${item.symbol}</strong>
+                        <span style="color:#94a3b8; font-size:10.5px;">${item.display_name}</span>
+                        <span style="color:#ffffff; font-weight:700;">${formatVal(item.price, '')}</span>
+                        <span style="color:${chgColor}; font-weight:800;">${chgArrow} ${chgSign}${item.chg_24h}%</span>
+                        ${badgeHtml}
+                    </div>
+                `;
+            };
+
+            const marqueeTrackHtml = marqueeTape.map(renderPillItem).join('');
+
+            const renderClocksHtml = () => {
+                if (!sessions || sessions.length === 0) return '<div style="color:#94a3b8; font-size:12px;">Seans saatleri yükleniyor...</div>';
+                return sessions.map(s => {
+                    const isOpen = s.is_open;
+                    const badgeBg = isOpen ? 'rgba(16,185,129,0.15)' : 'rgba(244,63,94,0.12)';
+                    const badgeBorder = isOpen ? 'rgba(16,185,129,0.35)' : 'rgba(244,63,94,0.25)';
+                    const badgeColor = isOpen ? '#10b981' : '#f43f5e';
+                    const dotColor = isOpen ? '#10b981' : '#f43f5e';
+                    const dotAnim = isOpen ? 'animation:pulse 1s infinite alternate;' : '';
+                    return `
+                        <div class="wallstreet-clock-card">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="font-size:20px;">${s.flag}</span>
+                                    <div>
+                                        <div style="font-size:13.5px; font-weight:800; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif;">${s.name}</div>
+                                        <div style="font-size:10.5px; color:#64748b; font-family:'JetBrains Mono';">${s.city}</div>
+                                    </div>
+                                </div>
+                                <span style="background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeBorder}; padding:2px 8px; border-radius:6px; font-size:10.5px; font-weight:800; display:flex; align-items:center; gap:5px;">
+                                    <span style="width:6px; height:6px; border-radius:50%; background:${dotColor}; ${dotAnim}"></span>
+                                    <span>${isOpen ? 'AÇIK 🟢' : 'KAPALI 🔴'}</span>
+                                </span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06); font-family:'JetBrains Mono'; font-size:11px;">
+                                <span style="color:#94a3b8;">${s.hours_tsi}</span>
+                                <span style="color:${isOpen ? '#38bdf8' : '#cbd5e1'}; font-weight:700;">⏱️ ${s.countdown}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            };
+
+            const renderRegionSection = (title, icon, items) => {
+                if (!items || items.length === 0) return '';
+                const cardsHtml = items.map(it => {
+                    const isPos = it.is_positive;
+                    const chgSign = it.chg_24h > 0 ? '+' : '';
+                    const chgColor = it.chg_24h > 0 ? '#10b981' : (it.chg_24h < 0 ? '#f43f5e' : '#cbd5e1');
+                    const chgBg = it.chg_24h > 0 ? 'rgba(16,185,129,0.12)' : (it.chg_24h < 0 ? 'rgba(244,63,94,0.12)' : 'rgba(255,255,255,0.05)');
+                    const chgBorder = it.chg_24h > 0 ? 'rgba(16,185,129,0.3)' : (it.chg_24h < 0 ? 'rgba(244,63,94,0.3)' : 'rgba(255,255,255,0.1)');
+                    const chgArrow = it.chg_24h > 0 ? '▲' : (it.chg_24h < 0 ? '▼' : '●');
+                    const badgeHtml = it.badge ? `<div style="margin-top:6px; font-size:10px; font-weight:800; background:rgba(244,63,94,0.15); color:#f43f5e; border:1px solid rgba(244,63,94,0.3); padding:2px 8px; border-radius:5px; display:inline-block;">${it.badge}</div>` : '';
+
+                    return `
+                        <div class="wallstreet-asset-card">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                                <div style="display:flex; align-items:center; gap:6px;">
+                                    <span style="font-size:17px;">${it.flag}</span>
+                                    <div>
+                                        <div style="font-size:13px; font-weight:800; color:#ffffff;">${it.name}</div>
+                                        <div style="font-size:10px; color:#64748b; font-family:'JetBrains Mono';">${it.symbol} • ${it.sub}</div>
+                                    </div>
+                                </div>
+                                <span style="font-size:9.5px; font-family:'JetBrains Mono'; font-weight:800; color:#38bdf8; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:1px 6px; border-radius:5px;">
+                                    ${it.category}
+                                </span>
+                            </div>
+
+                            <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:10px;">
+                                <div>
+                                    <div style="font-size:18px; font-weight:900; color:#ffffff; font-family:'JetBrains Mono';">
+                                        ${formatVal(it.price, it.category)}
+                                    </div>
+                                </div>
+                                <div style="text-align:right;">
+                                    <span style="display:inline-block; font-size:12px; font-weight:800; font-family:'JetBrains Mono'; color:${chgColor}; background:${chgBg}; border:1px solid ${chgBorder}; padding:2px 8px; border-radius:6px;">
+                                        ${chgArrow} ${chgSign}${it.chg_24h}%
+                                    </span>
+                                </div>
+                            </div>
+                            ${badgeHtml}
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:16px 18px; margin-bottom:20px;">
+                        <div style="font-size:14px; font-weight:800; color:#ffffff; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                            <span>${icon}</span>
+                            <span>${title}</span>
+                            <span style="font-size:11px; font-family:'JetBrains Mono'; color:#64748b; font-weight:700;">(${items.length} Gösterge)</span>
+                        </div>
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">
+                            ${cardsHtml}
+                        </div>
+                    </div>
+                `;
+            };
+
+            const renderAllRegions = () => {
+                let html = '';
+                if (activeFilter === 'all' || activeFilter === 'america') {
+                    html += renderRegionSection('AMERİKA MASASI (Wall Street & New York Desk)', '🇺🇸', regions.america || []);
+                }
+                if (activeFilter === 'all' || activeFilter === 'europe') {
+                    html += renderRegionSection('AVRUPA MASASI (Frankfurt, Londra & Paris)', '🇪🇺', regions.europe || []);
+                }
+                if (activeFilter === 'all' || activeFilter === 'asia') {
+                    html += renderRegionSection('ASYA - PASİFİK MASASI (Tokyo, Hong Kong & Şanghay)', '🇯🇵', regions.asia || []);
+                }
+                if (activeFilter === 'all' || activeFilter === 'commodities_me') {
+                    html += renderRegionSection('EMTİA, ENERJİ & ORTADOĞU/AFRİKA KORİDORU', '🌍', regions.commodities_me || []);
+                }
+                return html;
+            };
+
+            const btcSp = correlations.btc_sp500 || {};
+            const btcDxy = correlations.btc_dxy || {};
+            const btcGold = correlations.btc_gold || {};
+            const oilShock = correlations.oil_shock || {};
+
+            container.innerHTML = `
+                <!-- ÜST BAŞLIK VE KONTROL KARTI -->
+                <div style="background:linear-gradient(135deg, rgba(15,23,42,0.95), rgba(10,15,29,0.98)); border:1px solid rgba(0,242,254,0.25); border-radius:14px; padding:18px 22px; margin-bottom:20px; box-shadow:0 8px 32px rgba(0,0,0,0.4); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
+                    <div style="display:flex; align-items:center; gap:14px;">
+                        <div style="width:46px; height:46px; border-radius:12px; background:rgba(0,242,254,0.12); border:1.5px solid var(--cyan); display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 0 16px rgba(0,242,254,0.25);">
+                            🏛️
+                        </div>
+                        <div>
+                            <div style="font-size:18px; font-weight:900; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif; display:flex; align-items:center; gap:10px;">
+                                <span>VALKYRIE WALL STREET &amp; KÜRESEL TERMINAL DESK</span>
+                                <span style="font-size:10px; font-family:'JetBrains Mono'; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:6px; font-weight:800;">NYSE / GLOBAL CANLI</span>
+                            </div>
+                            <div style="font-size:12px; color:#94a3b8; margin-top:3px;">
+                                New York, Londra, Tokyo, Frankfurt ve Emtia Piyasaları Canlı Takip &amp; Kripto Risk İştahı Masası
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <div style="font-size:11px; font-family:'JetBrains Mono'; color:#94a3b8; background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.08); padding:6px 12px; border-radius:8px;">
+                            ⏱️ Son Senkron: <b style="color:#ffffff;">${syncTime}</b>
+                        </div>
+                        <button id="btn-wallstreet-sync" onclick="syncWallStreetData()" style="background:linear-gradient(135deg, rgba(0,242,254,0.18), rgba(79,172,254,0.28)); border:1px solid var(--cyan); color:#ffffff; font-size:11.5px; font-weight:800; padding:7px 14px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.15s;">
+                            <span>🔄 Anlık Veri Yenile</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 🔴 CANLI TIMES SQUARE KAYAN YAZI BANDI -->
+                <div class="wallstreet-marquee-wrap">
+                    <div class="wallstreet-marquee-header">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444; box-shadow:0 0 10px #ef4444; animation:pulse 1s infinite;"></span>
+                            <span style="color:#ffffff; font-weight:900; letter-spacing:0.5px;">🔴 CANLI WALL STREET &amp; KÜRESEL TICKER BANDI</span>
+                            <span style="color:var(--cyan); font-weight:700;">(25 KÜRESEL VARLIK &amp; EMTİA)</span>
+                        </div>
+                        <div style="font-size:10px; color:#64748b;">
+                            ⏸️ DURAKLATMAK İÇİN ÜZERİNE GELİN
+                        </div>
+                    </div>
+
+                    <div class="wallstreet-marquee-track-container">
+                        <div class="wallstreet-marquee-track">
+                            ${marqueeTrackHtml}
+                            ${marqueeTrackHtml}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🌍 DÜNYA BORSA SEANS SAATLERİ (4 BÜYÜK MERKEZ) -->
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:13px; font-weight:800; color:#cbd5e1; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                        <span>🌐</span>
+                        <span>DÜNYA BORSA SEANS SAATLERİ (TSİ BAZINDA GERÇEK ZAMANLI)</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:12px;">
+                        ${renderClocksHtml()}
+                    </div>
+                </div>
+
+                <!-- KITA & BÖLGE FİLTRE BUTONLARI -->
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:18px;">
+                    <button onclick="setWallStreetFilter('all')" class="news-filter-pill ${activeFilter === 'all' ? 'active' : ''}">🌐 Tümü (${marqueeTape.length})</button>
+                    <button onclick="setWallStreetFilter('america')" class="news-filter-pill ${activeFilter === 'america' ? 'active' : ''}">🇺🇸 Amerika (${(regions.america || []).length})</button>
+                    <button onclick="setWallStreetFilter('europe')" class="news-filter-pill ${activeFilter === 'europe' ? 'active' : ''}">🇪🇺 Avrupa (${(regions.europe || []).length})</button>
+                    <button onclick="setWallStreetFilter('asia')" class="news-filter-pill ${activeFilter === 'asia' ? 'active' : ''}">🇯🇵 Asya - Pasifik (${(regions.asia || []).length})</button>
+                    <button onclick="setWallStreetFilter('commodities_me')" class="news-filter-pill ${activeFilter === 'commodities_me' ? 'active' : ''}">🌍 Emtia &amp; Körfez (${(regions.commodities_me || []).length})</button>
+                </div>
+
+                <!-- BÖLGESEL ENDEKS KARTLARI -->
+                ${renderAllRegions()}
+
+                <!-- 🧠 MAKRO KORELASYON & KRİPTO KUANT BETA MASASI -->
+                <div style="background:linear-gradient(135deg, rgba(30,41,59,0.7), rgba(15,23,42,0.9)); border:1px solid rgba(0,242,254,0.3); border-radius:14px; padding:18px 22px; margin-top:24px; box-shadow:0 6px 24px rgba(0,242,254,0.08);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <div style="font-size:14px; font-weight:800; color:var(--cyan); display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:18px;">🧠</span>
+                            <span>VALKYRIE MAKRO KORELASYON &amp; KRİPTO KUANT BETA MATRİSİ</span>
+                        </div>
+                        <span style="font-size:10.5px; font-weight:800; font-family:'JetBrains Mono'; background:rgba(0,242,254,0.12); color:var(--cyan); border:1px solid rgba(0,242,254,0.3); padding:3px 8px; border-radius:6px;">
+                            ÇAPRAZ PİYASA KUANT RADARI
+                        </span>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px;">
+                        <!-- 1. BTC / S&P 500 -->
+                        <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:12px 14px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-size:11px; font-weight:800; color:#38bdf8;">📊 ${btcSp.title || 'BTC / S&P 500'}</span>
+                                <span style="font-size:13px; font-weight:900; font-family:'JetBrains Mono'; color:#10b981;">${btcSp.beta || '+0.68'}</span>
+                            </div>
+                            <div style="font-size:11px; color:#cbd5e1; margin-top:6px; line-height:1.4;">${btcSp.desc || 'Pozitif Risk-On Beta'}</div>
+                        </div>
+
+                        <!-- 2. BTC / DXY -->
+                        <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:12px 14px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-size:11px; font-weight:800; color:#f43f5e;">💵 ${btcDxy.title || 'BTC / DXY'}</span>
+                                <span style="font-size:13px; font-weight:900; font-family:'JetBrains Mono'; color:#f43f5e;">${btcDxy.beta || '-0.74'}</span>
+                            </div>
+                            <div style="font-size:11px; color:#cbd5e1; margin-top:6px; line-height:1.4;">${btcDxy.desc || 'Ters Likidite Korelasyonu'}</div>
+                        </div>
+
+                        <!-- 3. BTC / ALTIN -->
+                        <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:12px 14px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-size:11px; font-weight:800; color:#fbc531;">🥇 ${btcGold.title || 'BTC / Altın'}</span>
+                                <span style="font-size:13px; font-weight:900; font-family:'JetBrains Mono'; color:#fbc531;">${btcGold.beta || '+0.42'}</span>
+                            </div>
+                            <div style="font-size:11px; color:#cbd5e1; margin-top:6px; line-height:1.4;">${btcGold.desc || 'Dijital Değer Saklama Sığınağı'}</div>
+                        </div>
+
+                        <!-- 4. PETROL ŞOKU & ENFLASYON -->
+                        <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:12px 14px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-size:11px; font-weight:800; color:#c084fc;">🛢️ Petrol Şoku &amp; Enflasyon</span>
+                                <span style="font-size:11px; font-weight:800; font-family:'JetBrains Mono'; color:${oilShock.is_shock ? '#f43f5e' : '#10b981'};">${oilShock.level || 'NORMAL'}</span>
+                            </div>
+                            <div style="font-size:11px; color:#cbd5e1; margin-top:6px; line-height:1.4;">${oilShock.desc || 'Akut petrol sıçramaları enflasyon riskini tetikler.'}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        window.renderWallStreetTabView = renderWallStreetTabView;
 
         // =========================================================================
         // ⚡ MACRO NEWS DETAIL MODAL & INTERACTIVE ACTIONS
@@ -12195,7 +12637,8 @@ async function loadAdminMetrics() {
                 'institutional': document.getElementById('tab-btn-institutional'),
                 'health': document.getElementById('tab-btn-health'),
                 'admin': document.getElementById('tab-btn-admin'),
-                'macro': document.getElementById('tab-btn-macro')
+                'macro': document.getElementById('tab-btn-macro'),
+                'wallstreet': document.getElementById('tab-btn-wallstreet')
             };
             const tabContents = {
                 'cockpit': document.getElementById('main-tab-content-cockpit'),
@@ -12212,7 +12655,8 @@ async function loadAdminMetrics() {
                 'institutional': document.getElementById('main-tab-content-institutional'),
                 'health': document.getElementById('main-tab-content-health'),
                 'admin': document.getElementById('main-tab-content-admin'),
-                'macro': document.getElementById('main-tab-content-macro')
+                'macro': document.getElementById('main-tab-content-macro'),
+                'wallstreet': document.getElementById('main-tab-content-wallstreet')
             };
 
             for (const key in tabButtons) {
@@ -12301,6 +12745,8 @@ async function loadAdminMetrics() {
                     loadAdminMetrics();
                 } else if (tabName === 'macro') {
                     renderMacroTabView();
+                } else if (tabName === 'wallstreet') {
+                    renderWallStreetTabView();
                 }
             } catch (tabErr) {
                 console.warn("[Valkyrie Navigation] View rendering warning for tab " + tabName + ":", tabErr);
@@ -21533,6 +21979,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             quarantined_count = sum(1 for s in sources_lb if s.get("status") == "QUARANTINED" or float(s.get("elo_rating", 60.0)) < 45.0)
             high_trust_count = sum(1 for s in sources_lb if s.get("status") == "HIGH_TRUST" or float(s.get("elo_rating", 60.0)) >= 85.0)
 
+            wallstreet_data = cross_asset_radar.get_global_terminal_data() if cross_asset_radar else {}
+
             return json_compressed_response(request, {
                 "status": "ok",
                 "hud_ticker": hud_info,
@@ -21541,6 +21989,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                     "events": all_events
                 },
                 "cross_asset": cross_data,
+                "wallstreet": wallstreet_data,
                 "news": news_feed,
                 "quorum": quorum_logs,
                 "roles": roles_data,
@@ -21558,6 +22007,14 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
+    async def api_wallstreet_terminal(request):
+        try:
+            from macro_cross_asset import cross_asset_radar
+            data = cross_asset_radar.get_global_terminal_data() if cross_asset_radar else {}
+            return json_compressed_response(request, {"status": "ok", "data": data})
+        except Exception as e:
+            return web.json_response({"status": "error", "message": str(e)}, status=500)
+
     async def api_macro_sync(request):
         try:
             from macro_calendar import calendar_manager
@@ -21565,15 +22022,16 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             from macro_news_sentinel import news_sentinel
 
             t1 = asyncio.create_task(calendar_manager.sync_calendar())
-            t2 = asyncio.create_task(cross_asset_radar.sync_cross_assets())
+            t2 = asyncio.create_task(cross_asset_radar.sync_cross_assets(force=True))
             t3 = asyncio.create_task(news_sentinel.sync_all_sources())
             await asyncio.gather(t1, t2, t3, return_exceptions=True)
 
-            return web.json_response({"status": "ok", "message": "Makro veri kaynakları senkronize edildi."})
+            return web.json_response({"status": "ok", "message": "Makro ve Wall Street veri kaynakları senkronize edildi."})
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
     app.router.add_get('/api/macro_oracle', api_macro_oracle)
+    app.router.add_get('/api/wallstreet_terminal', api_wallstreet_terminal)
     app.router.add_post('/api/macro_sync', api_macro_sync)
     app.router.add_get('/api/debug_fetch', api_debug_fetch)
 
