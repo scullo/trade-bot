@@ -10809,13 +10809,64 @@ async function loadAdminMetrics() {
         }
         window.syncInstitutionalData = syncInstitutionalData;
 
+        async function triggerMacroInterruptSim() {
+            try {
+                if (typeof showToast === 'function') showToast("⚡ Simüle Makro Şok Kesmesi tetikleniyor (<1ms)...");
+                const res = await fetch('/api/institutional_trigger_interrupt', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ reason: "Simüle Wall Street S&P Düzeltmesi & Türkiye CDS Sıçraması" })
+                });
+                const json = await res.json();
+                if (json && json.status === 'ok') {
+                    if (typeof showToast === 'function') showToast("🚨 KRİTİK KESME AKTİF! Tier-4 Memecoinler susturuldu, True Net Breakeven kilitlendi.");
+                    await renderInstitutionalRatingsTabView(true);
+                }
+            } catch(e) {
+                console.error("Trigger interrupt error:", e);
+                if (typeof showToast === 'function') showToast("Kesme tetikleme hatası: " + e.message);
+            }
+        }
+        window.triggerMacroInterruptSim = triggerMacroInterruptSim;
+
+        async function resetMacroInterrupt() {
+            try {
+                if (typeof showToast === 'function') showToast("🟢 Makro Kesme sıfırlanıyor, normal seansa dönülüyor...");
+                const res = await fetch('/api/institutional_reset_interrupt', { method: 'POST' });
+                const json = await res.json();
+                if (json && json.status === 'ok') {
+                    if (typeof showToast === 'function') showToast("✅ KESME SIFIRLANDI: Sistem normal operasyon bandına döndü.");
+                    await renderInstitutionalRatingsTabView(true);
+                }
+            } catch(e) {
+                console.error("Reset interrupt error:", e);
+                if (typeof showToast === 'function') showToast("Kesme sıfırlama hatası: " + e.message);
+            }
+        }
+        window.resetMacroInterrupt = resetMacroInterrupt;
+
+        async function toggleTier4Mute() {
+            try {
+                if (typeof showToast === 'function') showToast("🔇 Tier 4 Memecoin susturma durumu güncelleniyor...");
+                const res = await fetch('/api/institutional_toggle_tier4_mute', { method: 'POST' });
+                const json = await res.json();
+                if (json && json.status === 'ok') {
+                    if (typeof showToast === 'function') showToast("🔄 Tier 4 Memecoin durumu başarıyla güncellendi.");
+                    await renderInstitutionalRatingsTabView(true);
+                }
+            } catch(e) {
+                console.error("Toggle tier 4 error:", e);
+                if (typeof showToast === 'function') showToast("Tier 4 güncelleme hatası: " + e.message);
+            }
+        }
+        window.toggleTier4Mute = toggleTier4Mute;
+
         async function renderInstitutionalRatingsTabView(forceRefresh = false) {
             const container = document.getElementById('institutional_ratings-tab-view-container');
             if (!container) return;
-
             initInstitutionalAutoStream();
 
-            if (window.institutionalDataCache && !institutionalDataCache) {
+            if (window.institutionalDataCache) {
                 institutionalDataCache = window.institutionalDataCache;
             }
             if (window.lastInstitutionalFetchTs && !lastInstitutionalFetchTs) {
@@ -11085,7 +11136,159 @@ async function loadAdminMetrics() {
                 `;
             };
 
-            // 4. FİLTRE BUTONLARI RENDER
+            // 4b. KRİPTO MİLİSANİYELİK KESME VERİYOLU & 4 KADEMELİ BETA MOTORU RENDER
+            const renderCryptoInterruptPanelHtml = () => {
+                const ci = data.crypto_interrupt || {};
+                const bus = ci.interrupt_bus || {};
+                const leadLag = ci.lead_lag_radar || {};
+                const tiers = ci.beta_tiers || [];
+                const triDesk = ci.tri_desk_consensus || {};
+
+                const isInterruptActive = bus.is_active === true;
+                const busLevelColor = bus.level_color || (isInterruptActive ? '#ef4444' : '#10b981');
+                const busLevelLabel = bus.level_label || (isInterruptActive ? '🚨 KRİTİK KESME AKTİF (DEVRE KESİCİ)' : '🟢 NORMAL KESİNTİSİZ AKIŞ');
+                const latencyDisplay = bus.latency_display || '340 µs (<0.4 ms mikroişlemci hızı)';
+                const reasonText = bus.reason || 'Tüm makro ve CDS parametreleri güvenli operasyon bandında.';
+                const isTbLocked = bus.true_net_breakeven_locked === true;
+
+                // Tier kartları
+                const tierCardsHtml = tiers.map(t => {
+                    const isMuted = t.is_muted === true;
+                    const cardBg = isMuted ? 'rgba(239,68,68,0.1)' : 'rgba(0,0,0,0.3)';
+                    const cardBorder = isMuted ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(255,255,255,0.08)';
+                    const statusColor = t.status_color || '#10b981';
+                    const coinsStr = (t.coins || []).map(c => `<span style="background:rgba(255,255,255,0.07); padding:1px 6px; border-radius:4px; font-family:'JetBrains Mono'; font-size:10px; color:#ffffff;">${c}</span>`).join(' ');
+
+                    return `
+                        <div class="beta-tier-card" style="background:${cardBg}; border:${cardBorder}; border-radius:10px; padding:12px 14px; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 14px rgba(0,0,0,0.25);">
+                            <div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                    <div style="font-size:12px; font-weight:800; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif;">
+                                        ${t.tier_name}
+                                    </div>
+                                    <span style="font-size:9.5px; font-family:'JetBrains Mono'; font-weight:800; color:${statusColor}; background:${statusColor}18; border:1px solid ${statusColor}40; padding:2px 7px; border-radius:4px;">
+                                        ${t.status_label}
+                                    </span>
+                                </div>
+                                <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px;">
+                                    ${coinsStr}
+                                </div>
+                                <div style="font-size:10.5px; color:#94a3b8; line-height:1.4; margin-bottom:8px;">
+                                    ${t.rule_desc}
+                                </div>
+                            </div>
+                            <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.05); border-radius:6px; padding:5px 8px; display:flex; justify-content:space-between; align-items:center; font-family:'JetBrains Mono'; font-size:10px;">
+                                <span style="color:#64748b;">Beta: <b style="color:#38bdf8;">β ${t.avg_beta}</b></span>
+                                <span style="color:#64748b;">Kaldıraç: <b style="color:#f59e0b;">${t.max_leverage}</b></span>
+                                <span style="color:#64748b;">Risk: <b style="color:#ffffff;">%${t.risk_weight_pct}</b></span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div id="institutional-crypto-interrupt-panel" style="background:linear-gradient(135deg, rgba(17,24,39,0.96), rgba(10,15,29,0.98)); border:1.5px solid ${isInterruptActive ? '#ef4444' : 'rgba(239,68,68,0.35)'}; border-radius:14px; padding:18px 20px; margin-bottom:20px; box-shadow:0 8px 30px ${isInterruptActive ? 'rgba(239,68,68,0.25)' : 'rgba(0,0,0,0.4)'};">
+                        
+                        <!-- Panel Başlık & Eylemler -->
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08);">
+                            <div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="font-size:18px;">🚨</span>
+                                    <span style="font-size:14.5px; font-weight:900; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif;">
+                                        KRİPTO MİLİSANİYELİK KESME VERİYOLU &amp; 4 KADEMELİ BETA MÜDAHALE MOTORU
+                                    </span>
+                                    <span style="font-size:10px; font-family:'JetBrains Mono'; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:2px 7px; border-radius:4px; font-weight:800;">
+                                        SUB-MS EVENT-DRIVEN BUS
+                                    </span>
+                                </div>
+                                <div style="font-size:11.5px; color:#94a3b8; margin-top:2px;">
+                                    Banka / CDS Şoklarında &lt;1ms Kesme Devreye Girer; Lead-Lag Arbitrajıyla Pozisyonları True Net Breakeven'a Kilitler ve Memecoinleri Susturur.
+                                </div>
+                            </div>
+
+                            <!-- İnteraktif Müdahale Butonları -->
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <button id="btn-trigger-macro-interrupt" onclick="triggerMacroInterruptSim()" style="background:linear-gradient(135deg, rgba(239,68,68,0.25), rgba(185,28,28,0.35)); border:1px solid #ef4444; color:#ffffff; font-size:11px; font-weight:800; padding:6px 12px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.15s;">
+                                    <span>⚡ Simüle Şok Kesmesi Tetikle</span>
+                                </button>
+                                <button id="btn-reset-macro-interrupt" onclick="resetMacroInterrupt()" style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); color:#10b981; font-size:11px; font-weight:800; padding:6px 12px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.15s;">
+                                    <span>🟢 Kesmeyi Sıfırla</span>
+                                </button>
+                                <button id="btn-toggle-tier4-mute" onclick="toggleTier4Mute()" style="background:rgba(168,85,247,0.15); border:1px solid rgba(168,85,247,0.4); color:#a855f7; font-size:11px; font-weight:800; padding:6px 12px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.15s;">
+                                    <span>🔇 Tier-4 Memecoin Sustur/Aç</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 3 Sütunlu Üst Gösterge Gridi -->
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px; margin-bottom:16px;">
+                            
+                            <!-- 1. Kesme Veriyolu Kartı -->
+                            <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.08); border-left:4px solid ${busLevelColor}; border-radius:10px; padding:12px 14px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                    <span style="font-size:10px; font-family:'JetBrains Mono'; color:#64748b; font-weight:700;">DEVRE KESİCİ KESME HATTI</span>
+                                    <span style="font-size:9.5px; font-family:'JetBrains Mono'; color:${busLevelColor}; font-weight:800; background:${busLevelColor}15; border:1px solid ${busLevelColor}30; padding:1px 6px; border-radius:4px;">${busLevelLabel}</span>
+                                </div>
+                                <div style="font-size:12px; font-weight:800; color:#ffffff; margin-bottom:4px;">
+                                    ${reasonText}
+                                </div>
+                                <div style="font-size:10.5px; font-family:'JetBrains Mono'; color:#94a3b8; display:flex; justify-content:space-between; margin-top:8px;">
+                                    <span>Gecikme: <b style="color:#38bdf8;">${latencyDisplay}</b></span>
+                                    <span>True Net BE: <b style="${isTbLocked ? 'color:#10b981;' : 'color:#94a3b8;'}">${isTbLocked ? '🔒 KİLİTLİ' : 'STANDART'}</b></span>
+                                </div>
+                            </div>
+
+                            <!-- 2. Lead-Lag Zaman Arbitraj Penceresi -->
+                            <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.08); border-left:4px solid ${leadLag.status_color || '#38bdf8'}; border-radius:10px; padding:12px 14px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                    <span style="font-size:10px; font-family:'JetBrains Mono'; color:#64748b; font-weight:700;">LEAD-LAG ARBİTRAJ PENCERESİ</span>
+                                    <span style="font-size:9.5px; font-family:'JetBrains Mono'; color:${leadLag.status_color || '#38bdf8'}; font-weight:800; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.25); padding:1px 6px; border-radius:4px;">${leadLag.status || 'MONITORING'}</span>
+                                </div>
+                                <div style="font-size:11.5px; color:#ffffff; margin-bottom:4px;">
+                                    S&amp;P 500 &amp; UST ➔ Binance Vadeli (30s - 120s İletim Gecikmesi)
+                                </div>
+                                <div style="font-size:10px; color:#94a3b8; line-height:1.3; margin-bottom:6px;">
+                                    ${leadLag.action_taken || 'Pre-emptive True Net Breakeven Kilidi Devrede'}
+                                </div>
+                                <div style="display:flex; justify-content:space-between; font-size:10px; font-family:'JetBrains Mono'; color:#64748b;">
+                                    <span>Kalan Pencere: <b style="color:#f59e0b;">${leadLag.remaining_seconds || 120} sn</b></span>
+                                    <span>Şok Şiddeti: <b style="color:#ef4444;">${leadLag.shock_magnitude_pct || '0.00%'}</b></span>
+                                </div>
+                            </div>
+
+                            <!-- 3. Üç Masalı Birleşik Müdahale Konsensüsü -->
+                            <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.08); border-left:4px solid ${triDesk.stance_color || '#f59e0b'}; border-radius:10px; padding:12px 14px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                    <span style="font-size:10px; font-family:'JetBrains Mono'; color:#64748b; font-weight:700;">3 MASALI BİRLEŞİK MÜDAHALE KONSENSÜSÜ</span>
+                                    <span style="font-size:12px; font-family:'JetBrains Mono'; color:${triDesk.stance_color || '#f59e0b'}; font-weight:900;">${triDesk.unified_score || 51.2} / 100</span>
+                                </div>
+                                <div style="font-size:11.5px; font-weight:800; color:#ffffff; margin-bottom:4px;">
+                                    ${triDesk.consensus_stance || 'SAVUNMA TEYAKKUZU'} • <span style="font-size:10.5px; color:#a855f7;">${triDesk.active_verdict || 'TIER-4 SUSTURMA'}</span>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; font-size:9.5px; font-family:'JetBrains Mono'; color:#64748b; margin-top:8px;">
+                                    <span>Wall Street: <b style="color:#38bdf8;">%${triDesk.weights?.wallstreet_desk_pct || 35}</b></span>
+                                    <span>Banka/CDS: <b style="color:#a855f7;">%${triDesk.weights?.bank_cds_desk_pct || 40}</b></span>
+                                    <span>Kripto: <b style="color:#10b981;">%${triDesk.weights?.crypto_desk_pct || 25}</b></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4 Kademeli Kripto Varlık Beta Kümeleri Matrisi (Tier 1-4) -->
+                        <div style="margin-top:10px;">
+                            <div style="font-size:11px; font-family:'JetBrains Mono'; font-weight:800; color:#94a3b8; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                                <span>🛡️ 4 KADEMELİ KRİPTO BETA KÜMELEME MATRİSİ (TIER 1-4 KORUMA POLİTİKASI)</span>
+                                <span style="font-size:10px; color:#64748b;">Memecoinler Makro Şokta Anında Susturulur</span>
+                            </div>
+                            <div id="crypto-beta-tiers-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:10px;">
+                                ${tierCardsHtml}
+                            </div>
+                        </div>
+
+                    </div>
+                `;
+            };
+
+            // 5. FİLTRE BUTONLARI RENDER
             const renderFilterButtonsHtml = () => {
                 const filters = [
                     { key: 'all', label: 'TÜMÜ', count: reports.length },
@@ -11247,6 +11450,9 @@ async function loadAdminMetrics() {
 
                 <!-- 4. TIER-1 BANKALAR KONSENSÜS TERMOMETRESİ -->
                 ${renderThermometerHtml()}
+
+                <!-- 4b. KRİPTO MİLİSANİYELİK KESME VERİYOLU & 4 KADEMELİ BETA MÜDAHALE MOTORU (AŞAMA 3) -->
+                ${renderCryptoInterruptPanelHtml()}
 
                 <!-- 5. AKILLI ENDEKS FİLTRE BUTONLARI -->
                 ${renderFilterButtonsHtml()}
@@ -23325,6 +23531,42 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
+    async def api_institutional_interrupt(request):
+        try:
+            from macro_institutional_engine import institutional_engine
+            interrupt_data = institutional_engine.get_crypto_interrupt_status() if institutional_engine else {}
+            return json_compressed_response(request, interrupt_data)
+        except Exception as e:
+            return web.json_response({"status": "error", "message": str(e)}, status=500)
+
+    async def api_institutional_trigger_interrupt(request):
+        try:
+            from macro_institutional_engine import institutional_engine
+            body = await request.json() if request.can_read_body else {}
+            reason = body.get("reason", "Manuel/Simüle Makro Şok Kesmesi")
+            data = institutional_engine.trigger_emergency_interrupt(reason) if institutional_engine else {}
+            return web.json_response({"status": "ok", "message": "Milisaniyelik Makro Kesme Devreye Alındı (EMERGENCY_MACRO_INTERRUPT)", "data": data})
+        except Exception as e:
+            return web.json_response({"status": "error", "message": str(e)}, status=500)
+
+    async def api_institutional_reset_interrupt(request):
+        try:
+            from macro_institutional_engine import institutional_engine
+            data = institutional_engine.reset_emergency_interrupt() if institutional_engine else {}
+            return web.json_response({"status": "ok", "message": "Makro Kesme Sıfırlandı, Normal Seansa Dönüldü", "data": data})
+        except Exception as e:
+            return web.json_response({"status": "error", "message": str(e)}, status=500)
+
+    async def api_institutional_toggle_tier4_mute(request):
+        try:
+            from macro_institutional_engine import institutional_engine
+            body = await request.json() if request.can_read_body else {}
+            mute_val = body.get("mute")
+            data = institutional_engine.toggle_tier4_mute(mute_val) if institutional_engine else {}
+            return web.json_response({"status": "ok", "message": "Tier 4 Memecoin Susturma Durumu Güncellendi", "data": data})
+        except Exception as e:
+            return web.json_response({"status": "error", "message": str(e)}, status=500)
+
     async def api_macro_sync(request):
         try:
             from macro_calendar import calendar_manager
@@ -23347,8 +23589,12 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
     app.router.add_get('/api/wallstreet_terminal', api_wallstreet_terminal)
     app.router.add_get('/api/institutional_intel', api_institutional_intel)
     app.router.add_get('/api/institutional_health', api_institutional_health)
+    app.router.add_get('/api/institutional_interrupt', api_institutional_interrupt)
     app.router.add_post('/api/institutional_self_heal', api_institutional_self_heal)
     app.router.add_post('/api/institutional_toggle_weekend', api_institutional_toggle_weekend)
+    app.router.add_post('/api/institutional_trigger_interrupt', api_institutional_trigger_interrupt)
+    app.router.add_post('/api/institutional_reset_interrupt', api_institutional_reset_interrupt)
+    app.router.add_post('/api/institutional_toggle_tier4_mute', api_institutional_toggle_tier4_mute)
     app.router.add_post('/api/macro_sync', api_macro_sync)
     app.router.add_get('/api/debug_fetch', api_debug_fetch)
 

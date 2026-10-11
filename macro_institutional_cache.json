@@ -224,7 +224,7 @@
       "event_title": "Fitch Türkiye 2. Yarıyıl Kredi Notu Değerlendirmesi",
       "importance": "CRITICAL",
       "expected_action": "Olası 1 Kademe Not Artışı (BB- ➔ BB)",
-      "countdown": "25 Gün 15 Saat",
+      "countdown": "25 Gün 14 Saat",
       "is_imminent": false,
       "badge": "PLANLI İNCELEME"
     },
@@ -240,7 +240,7 @@
       "event_title": "Moody's Türkiye Kredi Notu ve Görünüm İncelemesi",
       "importance": "CRITICAL",
       "expected_action": "Kredi Notu Yükseltme Beklentisi (B1 ➔ Ba3)",
-      "countdown": "60 Gün 15 Saat",
+      "countdown": "60 Gün 14 Saat",
       "is_imminent": false,
       "badge": "PLANLI İNCELEME"
     },
@@ -256,7 +256,7 @@
       "event_title": "S&P Global Türkiye Ülke Riski ve Not Raporu",
       "importance": "HIGH",
       "expected_action": "Görünümün Pozitife Revize Edilmesi",
-      "countdown": "39 Gün 15 Saat",
+      "countdown": "39 Gün 14 Saat",
       "is_imminent": false,
       "badge": "PLANLI İNCELEME"
     },
@@ -272,7 +272,7 @@
       "event_title": "Moody's ABD Federal Borç Tavanı & Bütçe İncelemesi",
       "importance": "CRITICAL",
       "expected_action": "Aaa Notunun Olası İndirimi (Kritik Küresel Risk)",
-      "countdown": "34 Gün 15 Saat",
+      "countdown": "34 Gün 14 Saat",
       "is_imminent": false,
       "badge": "PLANLI İNCELEME"
     }
@@ -292,7 +292,136 @@
   "is_weekend_mode": true,
   "weekend_status_text": "Hafta Sonu Nöbetçi Rejimi (Pazar Gecesi Asya Açılış Hazırlığı)",
   "illiquidity_multiplier": 1.5,
-  "last_sync_ts": 1791706664.5923612,
-  "last_sync_tsi": "11:17:44 TSİ",
-  "total_monitored_sources": 12
+  "last_sync_ts": 1791709320.512827,
+  "last_sync_tsi": "12:02:00 TSİ",
+  "total_monitored_sources": 12,
+  "crypto_interrupt": {
+    "status": "ok",
+    "timestamp": "12:02:00 TSİ",
+    "is_weekend_mode": true,
+    "interrupt_bus": {
+      "is_active": true,
+      "level": "CRITICAL_HALT",
+      "level_label": "🚨 KRİTİK KESME AKTİF (DEVRE KESİCİ)",
+      "level_color": "#ef4444",
+      "reason": "Simüle Wall Street S&P Düzeltmesi & Türkiye CDS Sıçraması",
+      "latency_us": 312,
+      "latency_display": "312 µs (<0.4 ms mikroişlemci hızı)",
+      "last_trigger_tsi": "12:02:00 TSİ",
+      "true_net_breakeven_locked": true,
+      "protected_positions_count": 6,
+      "circuit_breaker_armed": true,
+      "memory_flag": "EMERGENCY_MACRO_INTERRUPT"
+    },
+    "lead_lag_radar": {
+      "lead_asset": "S&P 500 E-mini Futures (ES) & 10Y UST",
+      "lag_asset": "Binance Kripto Vadeli Tahtaları (BTC/ETH & Altcoins)",
+      "status": "WINDOW_ACTIVE (ARBITRAJ DEVREDE)",
+      "status_color": "#ef4444",
+      "lead_lag_window_total_sec": 120,
+      "remaining_seconds": 120,
+      "shock_magnitude_pct": "-1.85%",
+      "transmission_delay_ms": 42000,
+      "transmission_delay_desc": "Wall Street şokunun kripto tahtasına tipik gecikmeli iletim süresi: 30 - 120 saniye",
+      "action_taken": "Pre-emptive True Net Breakeven Kilidi Devrede - Açık pozisyonlar koruma altında."
+    },
+    "beta_tiers": [
+      {
+        "tier_id": 1,
+        "tier_code": "TIER_1_MACRO_ANCHOR",
+        "tier_name": "Tier 1: Makro Çapa Lokomotifler",
+        "coins": [
+          "BTCUSDT",
+          "ETHUSDT"
+        ],
+        "avg_beta": 1.0,
+        "status": "ACTIVE",
+        "status_label": "🟢 AKTİF (KONTROLLÜ)",
+        "status_color": "#10b981",
+        "rule_desc": "Makro korelasyonu en sağlam grup; asla körü körüne kapatılmaz. Stop mesafesi %15 genişletildi, trend takibi açık.",
+        "max_leverage": "15x - 20x",
+        "risk_weight_pct": 100,
+        "is_muted": false
+      },
+      {
+        "tier_id": 2,
+        "tier_code": "TIER_2_LARGE_L1_L2",
+        "tier_name": "Tier 2: Büyük Katman 1 & 2",
+        "coins": [
+          "SOLUSDT",
+          "BNBUSDT",
+          "AVAXUSDT",
+          "NEARUSDT",
+          "SUIUSDT",
+          "ADAUSDT"
+        ],
+        "avg_beta": 1.38,
+        "status": "CAUTION",
+        "status_label": "🟡 TEMKİNLİ MOD",
+        "status_color": "#f59e0b",
+        "rule_desc": "Yüksek beta duyarlılığı. Risk katsayısı %70'e düşürüldü, yeni marjin eklemeleri sınırlandırıldı.",
+        "max_leverage": "7x",
+        "risk_weight_pct": 70,
+        "is_muted": false
+      },
+      {
+        "tier_id": 3,
+        "tier_code": "TIER_3_HIGH_BETA_SECTOR",
+        "tier_name": "Tier 3: DeFi, Yapay Zeka & Altyapı",
+        "coins": [
+          "LINKUSDT",
+          "UNIUSDT",
+          "FETUSDT",
+          "RENDERUSDT",
+          "INJUSDT",
+          "AAVEUSDT"
+        ],
+        "avg_beta": 1.85,
+        "status": "LEVERAGE_CAPPED",
+        "status_label": "🟠 KALDIRAÇ TAVANI (5x)",
+        "status_color": "#ea580c",
+        "rule_desc": "Sektörel volatilite sönümlemesi. Maksimum kaldıraç 5x ile tavanlandı, sahte fitil koruması devrede.",
+        "max_leverage": "5x",
+        "risk_weight_pct": 50,
+        "is_muted": false
+      },
+      {
+        "tier_id": 4,
+        "tier_code": "TIER_4_SPECULATIVE_MEME",
+        "tier_name": "Tier 4: Spekülatif Memecoinler",
+        "coins": [
+          "DOGEUSDT",
+          "PEPEUSDT",
+          "SHIBUSDT",
+          "WIFUSDT",
+          "FLOKIUSDT",
+          "BONKUSDT"
+        ],
+        "avg_beta": 2.65,
+        "status": "MUTED",
+        "status_label": "🔴 SUSTURULDU (MUTED)",
+        "status_color": "#ef4444",
+        "rule_desc": "Makro stres veya kurumsal ayrışmada milisaniyede SUSTURULDU. Yeni pozisyon girişi YASAKLANDI, kaldıraç 3x tavanı.",
+        "max_leverage": "3x",
+        "risk_weight_pct": 0,
+        "is_muted": true
+      }
+    ],
+    "tri_desk_consensus": {
+      "unified_score": 41.8,
+      "consensus_stance": "SAVUNMA TEYAKKUZU",
+      "stance_color": "#f59e0b",
+      "weights": {
+        "wallstreet_desk_pct": 10,
+        "bank_cds_desk_pct": 65,
+        "crypto_desk_pct": 25
+      },
+      "desk_scores": {
+        "wallstreet_score": 64.0,
+        "bank_cds_score": 47.6,
+        "crypto_score": 18.0
+      },
+      "active_verdict": "TIER-4 MEMECOİN SUSTURMA + TİER-1 KORUMALI TRADE"
+    }
+  }
 }
