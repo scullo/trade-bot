@@ -184,6 +184,8 @@ class ForensicBlackboxManager:
             "close_reason": str(trade_record.get("close_reason") or ""),
             "duration": str(trade_record.get("duration") or ""),
             "candle_count": int(trade_record.get("candle_count") or 1),
+            "source_trade_id": str(trade_record.get("id") or ""),
+            "exit_time": str(trade_record.get("exit_time") or ""),
             "date": date_folder,
             "created_at": now_dt.strftime("%Y-%m-%d %H:%M:%S"),
             "png_path": png_path if has_image else None,

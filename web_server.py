@@ -24239,6 +24239,77 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
 
     asyncio.create_task(macro_news_auto_stream_daemon())
 
+    # 🖼️ ADLİ KARA KUTU GERİ DOLDURMA (BACKFILL) DAEMON'U
+    # Render diski geçicidir (ephemeral): her deploy/restart sonrası forensic_blackbox/ klasörü silinir.
+    # İşlem defteri ise kalıcıdır. Bu daemon, defterde olup katalogda görseli olmayan kapanmış işlemleri
+    # Binance'ten o zaman aralığına ait 5m mumları çekerek yeniden çizer.
+    async def forensic_backfill_daemon():
+        await asyncio.sleep(15)
+        while True:
+            try:
+                from forensic_blackbox_manager import forensic_blackbox_manager as fbm
+                hist = list(getattr(trader_manager, 'history', []) or [])[-60:]
+                known = set()
+                for e in fbm.catalog:
+                    if e.get("source_trade_id"):
+                        known.add(e["source_trade_id"])
+                    known.add(f"{e.get('symbol')}|{e.get('exit_time')}")
+                tz3 = timezone(timedelta(hours=3))
+                done = 0
+                for t in reversed(hist):
+                    if done >= 6:
+                        break
+                    if t.get("is_partial"):
+                        continue
+                    sym = str(t.get("symbol", ""))
+                    tid = str(t.get("id") or "")
+                    key = f"{sym}|{t.get('exit_time')}"
+                    if (tid and tid in known) or key in known:
+                        continue
+                    try:
+                        et = datetime.strptime(str(t.get("entry_time"))[:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=tz3)
+                        start_ms = int((et.timestamp() - 60 * 5 * 60) * 1000)
+                    except Exception:
+                        start_ms = None
+                    clean = sym.replace("/USDT", "").replace(":USDT", "").replace("USDT", "").replace("/", "")
+                    q = f"&startTime={start_ms}" if start_ms else ""
+                    urls = [
+                        f"https://fapi.binance.com/fapi/v1/klines?symbol={clean}USDT&interval=5m&limit=200{q}",
+                        f"https://data-api.binance.vision/api/v3/klines?symbol={clean.replace('1000', '')}USDT&interval=5m&limit=200{q}",
+                    ]
+                    df = None
+                    async with aiohttp.ClientSession() as sess:
+                        for u in urls:
+                            try:
+                                async with sess.get(u, timeout=aiohttp.ClientTimeout(total=5)) as r:
+                                    if r.status == 200:
+                                        raw = await r.json()
+                                        if isinstance(raw, list) and len(raw) > 5:
+                                            df = pd.DataFrame(raw, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'ct', 'qav', 'nt', 'tb', 'tq', 'ig'])
+                                            for c in ['timestamp', 'open', 'high', 'low', 'close', 'volume']:
+                                                df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0.0)
+                                            df['quote_volume'] = pd.to_numeric(df['qav'], errors='coerce').fillna(0.0)
+                                            break
+                            except Exception:
+                                pass
+                    if df is None and market_data and hasattr(market_data, 'candles_5m'):
+                        df = market_data.candles_5m.get(sym)
+                    rec = dict(t)
+                    snap = await asyncio.to_thread(fbm.process_closed_trade_sync, rec, df, rec.get("snapshot_levels") or {}, False)
+                    known.add(key)
+                    if tid:
+                        known.add(tid)
+                    if snap:
+                        done += 1
+                    await asyncio.sleep(1.5)
+                if done:
+                    print(f">> [ADLI KARA KUTU BACKFILL] {done} kapanmış işlem için görsel yeniden üretildi.")
+            except Exception as e:
+                print(f"[FORENSIC BACKFILL] hata: {e}")
+            await asyncio.sleep(60)
+
+    asyncio.create_task(forensic_backfill_daemon())
+
     print(f">> [VALKYRIE QUANT DESK •READY]: http://{host}:{port}")
 
 async def broadcast_tick(symbol, price):
