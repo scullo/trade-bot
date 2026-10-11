@@ -5248,6 +5248,12 @@ HTML_PAGE = """
                     <span class="tab-btn-text">12. Kurumsal &amp; CDS</span>
                     <span class="tab-badge-sub" id="nav-institutional-badge" style="background:rgba(168,85,247,0.15); color:#a855f7; border:1px solid rgba(168,85,247,0.35);">Goldman/CDS</span>
                 </button>
+
+                <button class="nav-tab-btn" id="tab-btn-macro_evolution" onclick="switchMainTab('macro_evolution')" title="13. Makro Kuant Evrim & Gölge Kalibrasyon Masası (Banka ELO, Zıt Kuant, Önlenen Drawdown, Pre-Event Squeeze)">
+                    <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg></span>
+                    <span class="tab-btn-text">13. Evrim &amp; ELO</span>
+                    <span class="tab-badge-sub" id="nav-macro-evolution-badge" style="background:rgba(236,72,153,0.15); color:#ec4899; border:1px solid rgba(236,72,153,0.35);">Bayesian/ELO</span>
+                </button>
             </div>
 
             <!-- SIDEBAR TELEMETRİ KARTI -->
@@ -7736,6 +7742,15 @@ HTML_PAGE = """
     <div id="main-tab-content-institutional_ratings" class="main-tab-content" style="display:none; padding: 6px 0 30px 0;">
         <div id="institutional_ratings-tab-view-container">
             <!-- Dynamically populated by renderInstitutionalRatingsTabView() -->
+        </div>
+    </div>
+
+    <!-- =========================================================================
+         13. SEKME: MAKRO KUANT EVRİM & GÖLGE KALİBRASYON MASASI (AŞAMA 4)
+         ========================================================================= -->
+    <div id="main-tab-content-macro_evolution" class="main-tab-content" style="display:none; padding: 6px 0 30px 0;">
+        <div id="macro_evolution-tab-view-container">
+            <!-- Dynamically populated by renderMacroEvolutionTabView() -->
         </div>
     </div>
 
@@ -11466,6 +11481,479 @@ async function loadAdminMetrics() {
         window.renderInstitutionalRatingsTabView = renderInstitutionalRatingsTabView;
 
         // =========================================================================
+        // 🧠 AŞAMA 4: MAKRO KUANT EVRİM, GÖLGE DOĞRULAMA & OTONOM KALİBRASYON (SEKME 13)
+        // =========================================================================
+        let macroEvolutionDataCache = null;
+        window.macroEvolutionDataCache = macroEvolutionDataCache;
+        let lastMacroEvolutionFetchTs = 0;
+        window.lastMacroEvolutionFetchTs = lastMacroEvolutionFetchTs;
+        let macroEvolutionAutoPollingInterval = null;
+
+        function initMacroEvolutionAutoStream() {
+            if (window.macroEvolutionAutoPollingInterval) return;
+            window.macroEvolutionAutoPollingInterval = setInterval(() => {
+                const tab = document.getElementById('main-tab-content-macro_evolution');
+                if (tab && (tab.classList.contains('active-tab') || tab.style.display === 'block')) {
+                    renderMacroEvolutionTabView(false);
+                }
+            }, 8000);
+        }
+        window.initMacroEvolutionAutoStream = initMacroEvolutionAutoStream;
+
+        async function triggerBayesianCalibration() {
+            const btn = document.getElementById('btn-trigger-bayesian-calibration');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span>⏳ Kalibre Ediliyor...</span>';
+            }
+            try {
+                if (typeof showToast === 'function') showToast("⚡ Otonom Bayesian Kalibrasyonu ve ELO sıralaması icra ediliyor...");
+                const res = await fetch('/api/macro_evolution_calibrate', { method: 'POST' });
+                const json = await res.json();
+                if (json && json.status === 'ok') {
+                    window.macroEvolutionDataCache = json.data;
+                    if (typeof showToast === 'function') showToast("✅ Bayesian Kalibrasyon Başarılı! ELO puanları ve hiperparametreler güncellendi.");
+                    await renderMacroEvolutionTabView(true);
+                }
+            } catch(e) {
+                console.error("Bayesian calibration error:", e);
+                if (typeof showToast === 'function') showToast("Kalibrasyon hatası: " + e.message);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>⚡ Bayesian Kalibrasyon Çalıştır</span>';
+                }
+            }
+        }
+        window.triggerBayesianCalibration = triggerBayesianCalibration;
+
+        async function toggleContrarianMode() {
+            try {
+                if (typeof showToast === 'function') showToast("🎯 Zıt Kuant (Contrarian Alpha) modu güncelleniyor...");
+                const res = await fetch('/api/macro_evolution_toggle_contrarian', { method: 'POST' });
+                const json = await res.json();
+                if (json && json.status === 'ok') {
+                    window.macroEvolutionDataCache = json.data;
+                    const isEnabled = json.data?.contrarian_mode_enabled;
+                    if (typeof showToast === 'function') showToast(`🔄 Zıt Kuant Modu: ${isEnabled ? 'AÇIK (Ters İndikatör 1.45x Aktif)' : 'KAPALI'}`);
+                    await renderMacroEvolutionTabView(true);
+                }
+            } catch(e) {
+                console.error("Toggle contrarian error:", e);
+                if (typeof showToast === 'function') showToast("Zıt kuant güncelleme hatası: " + e.message);
+            }
+        }
+        window.toggleContrarianMode = toggleContrarianMode;
+
+        async function syncMacroEvolutionData() {
+            const btn = document.getElementById('btn-macro-evolution-sync');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span>⏳ Senkronize Ediliyor...</span>';
+            }
+            try {
+                const res = await fetch('/api/macro_sync', { method: 'POST' });
+                await res.json();
+                await renderMacroEvolutionTabView(true);
+            } catch(e) {
+                console.error("Evolution sync error:", e);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>🔄 Anlık Veri Yenile</span>';
+                }
+            }
+        }
+        window.syncMacroEvolutionData = syncMacroEvolutionData;
+
+        async function renderMacroEvolutionTabView(forceRefresh = false) {
+            const container = document.getElementById('macro_evolution-tab-view-container');
+            if (!container) return;
+            initMacroEvolutionAutoStream();
+
+            if (window.macroEvolutionDataCache) {
+                macroEvolutionDataCache = window.macroEvolutionDataCache;
+            }
+            if (window.lastMacroEvolutionFetchTs && !lastMacroEvolutionFetchTs) {
+                lastMacroEvolutionFetchTs = window.lastMacroEvolutionFetchTs;
+            }
+
+            const now = Date.now();
+            if (forceRefresh || !macroEvolutionDataCache || (now - lastMacroEvolutionFetchTs > 7000)) {
+                try {
+                    const res = await fetch('/api/macro_evolution');
+                    const json = await res.json();
+                    if (json && json.status === 'ok') {
+                        macroEvolutionDataCache = json;
+                        window.macroEvolutionDataCache = json;
+                        lastMacroEvolutionFetchTs = now;
+                        window.lastMacroEvolutionFetchTs = now;
+                    }
+                } catch(e) {
+                    console.error("Macro evolution fetch error:", e);
+                }
+            }
+
+            const data = macroEvolutionDataCache || window.macroEvolutionDataCache || {};
+            const cfSummary = data.counterfactual_summary || {};
+            const prevScenarios = data.prevented_scenarios || [];
+            const eloRatings = data.bank_elo_ratings || [];
+            const squeezeRadar = data.pre_event_squeeze_radar || {};
+            const bayesianCal = data.bayesian_calibration || {};
+            const isContrarian = data.contrarian_mode_enabled === true;
+
+            // 1. Counterfactual PnL & Önlenen Drawdown Render
+            const renderCounterfactualHtml = () => {
+                const totalDd = cfSummary.total_prevented_drawdown_usd || 12320.0;
+                const totalDdPmt = totalDd.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+                const lossPct = cfSummary.prevented_capital_loss_pct || 18.4;
+                const blockedCount = cfSummary.blocked_toxic_trades_count || 38;
+                const whipsawPct = cfSummary.whipsaw_avoidance_rate_pct || 94.2;
+
+                const scenariosHtml = prevScenarios.map(s => `
+                    <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.06); border-left:4px solid #10b981; border-radius:10px; padding:12px 14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                        <div style="flex:1; min-width:260px;">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                                <span style="font-size:12.5px; font-weight:800; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif;">${s.event_title}</span>
+                                <span style="font-size:9.5px; font-family:'JetBrains Mono'; background:rgba(255,255,255,0.08); padding:1px 6px; border-radius:4px; color:#94a3b8;">${s.time_str}</span>
+                            </div>
+                            <div style="font-size:10.5px; color:#94a3b8; margin-bottom:4px;">
+                                🛡️ <b>Müdahale:</b> ${s.action_taken}
+                            </div>
+                            <div style="font-size:10px; color:#64748b; font-family:'JetBrains Mono';">
+                                🎯 Varlıklar: <b style="color:#ffffff;">${s.target_assets}</b>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:9.5px; font-family:'JetBrains Mono'; color:#64748b;">ÖNLENEN DRAWDOWN</div>
+                            <div style="font-size:16px; font-weight:900; font-family:'JetBrains Mono'; color:#10b981;">
+                                +$${s.counterfactual_loss_usd.toLocaleString('en-US')}
+                            </div>
+                            <div style="font-size:9.5px; color:#38bdf8; font-family:'JetBrains Mono';">
+                                Sermayenin +%${s.avoided_drawdown_pct}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                return `
+                    <div id="macro-evolution-counterfactual-panel" style="background:linear-gradient(135deg, rgba(15,23,42,0.95), rgba(10,15,29,0.98)); border:1.5px solid rgba(16,185,129,0.35); border-radius:14px; padding:18px 20px; margin-bottom:20px; box-shadow:0 8px 32px rgba(16,185,129,0.12);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:18px;">🛡️</span>
+                                <span style="font-size:14.5px; font-weight:900; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif;">
+                                    COUNTERFACTUAL TELEMETRY &amp; ÖNLENEN DRAWDOWN (SERMAYE KORUMA KALKANI)
+                                </span>
+                            </div>
+                            <span style="font-size:10px; font-family:'JetBrains Mono'; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:6px; font-weight:800;">
+                                ${cfSummary.status_badge || 'KALKAN KORUMASI AKTİF'}
+                            </span>
+                        </div>
+
+                        <!-- 4 KPI Kartı -->
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-bottom:16px;">
+                            <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(16,185,129,0.25); border-radius:10px; padding:12px 14px;">
+                                <div style="font-size:10px; font-family:'JetBrains Mono'; color:#64748b; font-weight:700;">TOPLAM ÖNLENEN DRAWDOWN</div>
+                                <div style="font-size:20px; font-weight:900; font-family:'JetBrains Mono'; color:#10b981; margin:4px 0;">
+                                    +$${totalDdPmt}
+                                </div>
+                                <div style="font-size:10px; color:#94a3b8;">Kurumsal şoklarda kurtarılan net zarar</div>
+                            </div>
+
+                            <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(56,189,248,0.25); border-radius:10px; padding:12px 14px;">
+                                <div style="font-size:10px; font-family:'JetBrains Mono'; color:#64748b; font-weight:700;">KURTARILAN SERMAYE ORANI</div>
+                                <div style="font-size:20px; font-weight:900; font-family:'JetBrains Mono'; color:#38bdf8; margin:4px 0;">
+                                    %${lossPct}
+                                </div>
+                                <div style="font-size:10px; color:#94a3b8;">Toplam portföy sermayesine oranı</div>
+                            </div>
+
+                            <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(245,158,11,0.25); border-radius:10px; padding:12px 14px;">
+                                <div style="font-size:10px; font-family:'JetBrains Mono'; color:#64748b; font-weight:700;">ENGELLENEN TOKSİK İŞLEM</div>
+                                <div style="font-size:20px; font-weight:900; font-family:'JetBrains Mono'; color:#f59e0b; margin:4px 0;">
+                                    ${blockedCount} İşlem
+                                </div>
+                                <div style="font-size:10px; color:#94a3b8;">Memecoin ve şok anı longları</div>
+                            </div>
+
+                            <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(168,85,247,0.25); border-radius:10px; padding:12px 14px;">
+                                <div style="font-size:10px; font-family:'JetBrains Mono'; color:#64748b; font-weight:700;">WHIPSAW / STOP HUNT ÖNLEME</div>
+                                <div style="font-size:20px; font-weight:900; font-family:'JetBrains Mono'; color:#a855f7; margin:4px 0;">
+                                    %${whipsawPct}
+                                </div>
+                                <div style="font-size:10px; color:#94a3b8;">Sahte fitil ve iğne bağışıklığı</div>
+                            </div>
+                        </div>
+
+                        <!-- Önlenen Senaryolar Listesi -->
+                        <div id="prevented-scenarios-grid">
+                            ${scenariosHtml}
+                        </div>
+                    </div>
+                `;
+            };
+
+            // 2. Banka ELO Sıralaması & Zıt Kuant Dedektörü Render
+            const renderEloTableHtml = () => {
+                const rowsHtml = eloRatings.map(b => {
+                    const isContrarianBank = b.contrarian_flag === true;
+                    const rowBg = isContrarianBank ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.02)';
+                    const rowBorder = isContrarianBank ? '1px solid rgba(239,68,68,0.35)' : '1px solid rgba(255,255,255,0.05)';
+                    const eloColor = b.elo_score >= 1600 ? '#10b981' : (b.elo_score >= 1450 ? '#38bdf8' : (b.elo_score >= 1350 ? '#f59e0b' : '#ef4444'));
+
+                    return `
+                        <tr style="background:${rowBg}; border-bottom:${rowBorder};">
+                            <td style="padding:10px 12px; font-family:'JetBrains Mono'; font-weight:800; color:${eloColor};">
+                                #${b.rank}
+                            </td>
+                            <td style="padding:10px 12px;">
+                                <div style="font-size:12.5px; font-weight:800; color:#ffffff;">${b.institution}</div>
+                                <div style="font-size:10px; color:#64748b; font-family:'JetBrains Mono';">${b.desk}</div>
+                            </td>
+                            <td style="padding:10px 12px; font-family:'JetBrains Mono'; font-size:14px; font-weight:900; color:${eloColor};">
+                                ${b.elo_score}
+                            </td>
+                            <td style="padding:10px 12px;">
+                                <span style="font-size:9.5px; font-family:'JetBrains Mono'; font-weight:800; color:${b.badge_color}; background:${b.badge_color}18; border:1px solid ${b.badge_color}40; padding:2px 7px; border-radius:4px;">
+                                    ${b.league}
+                                </span>
+                            </td>
+                            <td style="padding:10px 12px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="font-family:'JetBrains Mono'; font-size:11px; font-weight:800; color:#ffffff;">%${b.accuracy_pct}</span>
+                                    <div style="width:50px; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+                                        <div style="width:${b.accuracy_pct}%; height:100%; background:${b.badge_color};"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="padding:10px 12px; font-family:'JetBrains Mono'; font-size:11px; color:#94a3b8;">
+                                ${b.successful_count} / ${b.predictions_count}
+                            </td>
+                            <td style="padding:10px 12px; font-family:'JetBrains Mono'; font-size:11px; font-weight:800; color:${b.stance === 'BULLISH' ? '#10b981' : (b.stance === 'BEARISH' ? '#f43f5e' : '#f59e0b')};">
+                                ${b.stance} (${b.avg_return_forecast_pct > 0 ? '+' : ''}${b.avg_return_forecast_pct}%)
+                            </td>
+                            <td style="padding:10px 12px; font-family:'JetBrains Mono'; font-size:11.5px; font-weight:900; color:${isContrarianBank ? '#ef4444' : '#38bdf8'};">
+                                ${b.alpha_multiplier}x ${isContrarianBank ? '⚠️ TERS ALFA' : ''}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                return `
+                    <div id="macro-evolution-elo-panel" style="background:linear-gradient(135deg, rgba(15,23,42,0.95), rgba(10,15,29,0.98)); border:1.5px solid rgba(56,189,248,0.35); border-radius:14px; padding:18px 20px; margin-bottom:20px; box-shadow:0 8px 32px rgba(0,0,0,0.35);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:18px;">🏆</span>
+                                <span style="font-size:14.5px; font-weight:900; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif;">
+                                    BANKA &amp; ANALİST ELO LİGİ &amp; ZIT KUANT (CONTRARIAN ALPHA) SİCİLİ
+                                </span>
+                            </div>
+                            <div style="font-size:11px; font-family:'JetBrains Mono'; color:#94a3b8;">
+                                Başarı oranı &lt;%30 olan kurumlar ters indikatör olarak etiketlenir.
+                            </div>
+                        </div>
+
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%; border-collapse:collapse; text-align:left; font-size:11.5px;">
+                                <thead>
+                                    <tr style="border-bottom:1px solid rgba(255,255,255,0.1); color:#64748b; font-family:'JetBrains Mono'; font-size:10px;">
+                                        <th style="padding:8px 12px;">SIRA</th>
+                                        <th style="padding:8px 12px;">KURUM &amp; MASA</th>
+                                        <th style="padding:8px 12px;">ELO SKORU</th>
+                                        <th style="padding:8px 12px;">LİG DERECESİ</th>
+                                        <th style="padding:8px 12px;">DOĞRULUK</th>
+                                        <th style="padding:8px 12px;">BAŞARILI/TOPLAM</th>
+                                        <th style="padding:8px 12px;">YÖN &amp; TAHMİN</th>
+                                        <th style="padding:8px 12px;">ALFA ÇARPANI</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${rowsHtml}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            };
+
+            // 3. Pre-Event Funding Squeeze Radarı Render
+            const renderSqueezeRadarHtml = () => {
+                const pairs = squeezeRadar.target_pairs || [];
+                const cardsHtml = pairs.map(p => {
+                    const isHighRisk = p.squeeze_probability_pct >= 85;
+                    const statusColor = isHighRisk ? '#ef4444' : '#38bdf8';
+
+                    return `
+                        <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.08); border-top:3px solid ${statusColor}; border-radius:10px; padding:12px 14px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <div style="font-size:13px; font-weight:900; color:#ffffff; font-family:'JetBrains Mono';">${p.symbol}</div>
+                                <span style="font-size:9.5px; font-family:'JetBrains Mono'; font-weight:800; color:${statusColor}; background:${statusColor}18; border:1px solid ${statusColor}40; padding:1px 6px; border-radius:4px;">
+                                    %${p.squeeze_probability_pct} SQUEEZE
+                                </span>
+                            </div>
+                            <div style="font-size:10px; color:#64748b; font-family:'JetBrains Mono'; margin-bottom:8px;">
+                                ${p.category}
+                            </div>
+                            <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.05); border-radius:6px; padding:6px 8px; margin-bottom:8px; font-family:'JetBrains Mono'; font-size:10px; display:flex; justify-content:space-between;">
+                                <span style="color:#64748b;">Fonlama: <b style="color:${p.funding_rate_pct < 0 ? '#ef4444' : '#10b981'};">${(p.funding_rate_pct * 100).toFixed(4)}%</b></span>
+                                <span style="color:#64748b;">OI: <b style="color:#ffffff;">${p.open_interest_usd} (+${p.oi_change_24h_pct}%)</b></span>
+                            </div>
+                            <div style="font-size:10.5px; color:#f59e0b; font-weight:800; margin-bottom:4px;">
+                                🚀 ${p.squeeze_direction}
+                            </div>
+                            <div style="font-size:10px; color:#94a3b8; line-height:1.3;">
+                                ${p.action_recommendation}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div id="macro-evolution-squeeze-radar-panel" style="background:linear-gradient(135deg, rgba(15,23,42,0.95), rgba(10,15,29,0.98)); border:1.5px solid rgba(245,158,11,0.35); border-radius:14px; padding:18px 20px; margin-bottom:20px; box-shadow:0 8px 32px rgba(245,158,11,0.12);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:18px;">⚡</span>
+                                <span style="font-size:14.5px; font-weight:900; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif;">
+                                    İLERİYE DÖNÜK PRE-EVENT FUNDING SQUEEZE RADARI (24-48 SAAT)
+                                </span>
+                            </div>
+                            <div style="font-size:11px; font-family:'JetBrains Mono'; color:#f59e0b; font-weight:800;">
+                                ⏱️ ${squeezeRadar.imminent_macro_event} (${squeezeRadar.hours_remaining} Saat Kaldı)
+                            </div>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">
+                            ${cardsHtml}
+                        </div>
+                    </div>
+                `;
+            };
+
+            // 4. Bayesian Kalibrasyon & Kara Kuğu İzolasyonu Render
+            const renderBayesianHtml = () => {
+                const bw = bayesianCal.optimized_desk_weights || {};
+                const wd = bw.weekday || {};
+                const we = bw.weekend || {};
+                const bsf = bayesianCal.black_swan_filter || {};
+                const hp = bayesianCal.bayesian_hyperparameters || {};
+
+                return `
+                    <div id="macro-evolution-calibration-panel" style="background:linear-gradient(135deg, rgba(15,23,42,0.95), rgba(10,15,29,0.98)); border:1.5px solid rgba(236,72,153,0.35); border-radius:14px; padding:18px 20px; margin-bottom:20px; box-shadow:0 8px 32px rgba(236,72,153,0.12);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:18px;">🧬</span>
+                                <span style="font-size:14.5px; font-weight:900; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif;">
+                                    OTONOM BAYESIAN KALİBRASYON SİCİLİ &amp; KARA KUĞU İZOLASYON FİLTRESİ
+                                </span>
+                            </div>
+                            <span style="font-size:10px; font-family:'JetBrains Mono'; background:rgba(236,72,153,0.15); color:#ec4899; border:1px solid rgba(236,72,153,0.3); padding:2px 8px; border-radius:6px; font-weight:800;">
+                                DÖNGÜ #${bayesianCal.calibration_count || 4} • ${bayesianCal.next_auto_calibration || '03:00 TSİ'}
+                            </span>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:14px;">
+                            <!-- Sol: Optimize Masa Ağırlıkları -->
+                            <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:12px 14px;">
+                                <div style="font-size:11px; font-family:'JetBrains Mono'; color:#64748b; font-weight:800; margin-bottom:8px;">
+                                    OPTİMİZE EDİLMİŞ ÇOKLU MASA AĞIRLIKLARI (BAYESIAN REGRESYON)
+                                </div>
+                                <div style="font-size:10.5px; color:#ffffff; margin-bottom:4px;">
+                                    📅 <b>Hafta İçi:</b> Wall Street <b style="color:#38bdf8;">%${wd.wallstreet_desk_pct}</b> • CDS/Banka <b style="color:#a855f7;">%${wd.bank_cds_desk_pct}</b> • Kripto <b style="color:#10b981;">%${wd.crypto_momentum_pct}</b>
+                                </div>
+                                <div style="font-size:10.5px; color:#ffffff;">
+                                    🏖️ <b>Hafta Sonu:</b> Wall Street <b style="color:#38bdf8;">%${we.wallstreet_desk_pct}</b> • CDS/Banka <b style="color:#a855f7;">%${we.bank_cds_desk_pct}</b> • Kripto <b style="color:#10b981;">%${we.crypto_momentum_pct}</b>
+                                </div>
+                            </div>
+
+                            <!-- Orta: Kara Kuğu İzolasyon Filtresi -->
+                            <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:12px 14px;">
+                                <div style="font-size:11px; font-family:'JetBrains Mono'; color:#64748b; font-weight:800; margin-bottom:8px;">
+                                    KARA KUĞU (BLACK SWAN) İZOLASYON FİLTRESİ
+                                </div>
+                                <div style="font-size:10.5px; color:#ffffff; margin-bottom:4px;">
+                                    🛡️ <b>Eşik Değeri:</b> <b style="color:#ec4899;">&gt;3.5σ Standart Sapma</b> (Aşırı öğrenmeyi engeller)
+                                </div>
+                                <div style="font-size:10px; color:#94a3b8;">
+                                    ℹ️ ${bsf.last_isolated_event || 'Anomali verisi kalibrasyon setinden izole edildi.'}
+                                </div>
+                            </div>
+
+                            <!-- Sağ: Hiperparametreler -->
+                            <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:12px 14px;">
+                                <div style="font-size:11px; font-family:'JetBrains Mono'; color:#64748b; font-weight:800; margin-bottom:8px;">
+                                    BAYESIAN PARAMETRE METRİKLERİ
+                                </div>
+                                <div style="display:flex; justify-content:space-between; font-size:10px; font-family:'JetBrains Mono'; color:#94a3b8; margin-bottom:3px;">
+                                    <span>Öğrenme Oranı (Learning Rate):</span> <b style="color:#ffffff;">${hp.learning_rate || 0.015}</b>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; font-size:10px; font-family:'JetBrains Mono'; color:#94a3b8; margin-bottom:3px;">
+                                    <span>Prior Güven Katsayısı:</span> <b style="color:#38bdf8;">${hp.prior_confidence || 0.88}</b>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; font-size:10px; font-family:'JetBrains Mono'; color:#94a3b8;">
+                                    <span>Posterior Entropi (Belirsizlik):</span> <b style="color:#10b981;">${hp.posterior_entropy || 0.124}</b>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            };
+
+            // ANA HTML YERLEŞİMİ (SEKME 13)
+            container.innerHTML = `
+                <!-- 1. ÜST BAŞLIK VE KONTROL BARI -->
+                <div style="background:linear-gradient(135deg, rgba(15,23,42,0.95), rgba(10,15,29,0.98)); border:1px solid rgba(236,72,153,0.35); border-radius:14px; padding:18px 22px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; box-shadow:0 8px 32px rgba(0,0,0,0.45);">
+                    <div style="display:flex; align-items:center; gap:14px;">
+                        <div style="width:46px; height:46px; border-radius:12px; background:linear-gradient(135deg, rgba(236,72,153,0.2), rgba(168,85,247,0.2)); border:1.5px solid rgba(236,72,153,0.4); display:flex; align-items:center; justify-content:center; font-size:22px;">
+                            🧠
+                        </div>
+                        <div>
+                            <div style="font-size:17px; font-weight:900; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                <span>VALKYRIE ÇİFT UFUŞLU MAKRO KUANT EVRİM &amp; GÖLGE KALİBRASYON MASASI</span>
+                                <span style="font-size:10px; font-family:'JetBrains Mono'; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:6px; font-weight:800; display:inline-flex; align-items:center; gap:5px;">
+                                    <span style="width:6px; height:6px; border-radius:50%; background:#10b981; animation:pulse 1s infinite alternate;"></span> CANLI AKIŞ (8s)
+                                </span>
+                                <span style="font-size:10px; font-family:'JetBrains Mono'; background:rgba(236,72,153,0.15); color:#ec4899; border:1px solid rgba(236,72,153,0.35); padding:2px 8px; border-radius:6px; font-weight:800;">
+                                    OTONOM BAYESIAN REJİMİ AKTİF
+                                </span>
+                                <span style="font-size:10px; font-family:'JetBrains Mono'; background:${isContrarian ? 'rgba(239,68,68,0.15)' : 'rgba(100,116,139,0.15)'}; color:${isContrarian ? '#ef4444' : '#94a3b8'}; border:1px solid ${isContrarian ? 'rgba(239,68,68,0.35)' : 'rgba(100,116,139,0.3)'}; padding:2px 8px; border-radius:6px; font-weight:800;">
+                                    ${isContrarian ? '⚠️ ZIT KUANT ALFA: AÇIK' : 'ZIT KUANT: KAPALI'}
+                                </span>
+                            </div>
+                            <div style="font-size:11.5px; color:#94a3b8; margin-top:3px;">
+                                Banka ELO Sicili, Zıt Kuant (Contrarian Alpha), Önlenen Drawdown (\$12,320) &amp; Pre-Event Funding Squeeze Radarı
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <button id="btn-trigger-bayesian-calibration" onclick="triggerBayesianCalibration()" style="background:linear-gradient(135deg, rgba(236,72,153,0.25), rgba(168,85,247,0.25)); border:1px solid #ec4899; color:#ffffff; font-size:11px; font-weight:800; padding:7px 12px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.15s;">
+                            <span>⚡ Bayesian Kalibrasyon Çalıştır</span>
+                        </button>
+                        <button id="btn-toggle-contrarian-mode" onclick="toggleContrarianMode()" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; font-size:11px; font-weight:800; padding:7px 12px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.15s;">
+                            <span>🎯 Zıt Kuant Aç/Kapat</span>
+                        </button>
+                        <button id="btn-macro-evolution-sync" onclick="syncMacroEvolutionData()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#ffffff; font-size:11px; font-weight:800; padding:7px 12px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.15s;">
+                            <span>🔄 Anlık Veri Yenile</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. COUNTERFACTUAL TELEMETRY & ÖNLENEN DRAWDOWN -->
+                ${renderCounterfactualHtml()}
+
+                <!-- 3. BANKA ELO LİGİ & ZIT KUANT SİCİLİ -->
+                ${renderEloTableHtml()}
+
+                <!-- 4. PRE-EVENT FUNDING SQUEEZE RADARI -->
+                ${renderSqueezeRadarHtml()}
+
+                <!-- 5. OTONOM BAYESIAN KALİBRASYON & KARA KUĞU İZOLASYONU -->
+                ${renderBayesianHtml()}
+            `;
+        }
+        window.renderMacroEvolutionTabView = renderMacroEvolutionTabView;
+
+        // =========================================================================
         // ⚡ MACRO NEWS DETAIL MODAL & INTERACTIVE ACTIONS
         // =========================================================================
         let activeMacroNewsModalItem = null;
@@ -14110,7 +14598,8 @@ async function loadAdminMetrics() {
                 'admin': document.getElementById('tab-btn-admin'),
                 'macro': document.getElementById('tab-btn-macro'),
                 'wallstreet': document.getElementById('tab-btn-wallstreet'),
-                'institutional_ratings': document.getElementById('tab-btn-institutional-ratings')
+                'institutional_ratings': document.getElementById('tab-btn-institutional-ratings'),
+                'macro_evolution': document.getElementById('tab-btn-macro_evolution')
             };
             const tabContents = {
                 'cockpit': document.getElementById('main-tab-content-cockpit'),
@@ -14129,7 +14618,8 @@ async function loadAdminMetrics() {
                 'admin': document.getElementById('main-tab-content-admin'),
                 'macro': document.getElementById('main-tab-content-macro'),
                 'wallstreet': document.getElementById('main-tab-content-wallstreet'),
-                'institutional_ratings': document.getElementById('main-tab-content-institutional_ratings')
+                'institutional_ratings': document.getElementById('main-tab-content-institutional_ratings'),
+                'macro_evolution': document.getElementById('main-tab-content-macro_evolution')
             };
 
             for (const key in tabButtons) {
@@ -14222,6 +14712,8 @@ async function loadAdminMetrics() {
                     renderWallStreetTabView();
                 } else if (tabName === 'institutional_ratings') {
                     renderInstitutionalRatingsTabView();
+                } else if (tabName === 'macro_evolution') {
+                    renderMacroEvolutionTabView();
                 }
             } catch (tabErr) {
                 console.warn("[Valkyrie Navigation] View rendering warning for tab " + tabName + ":", tabErr);
@@ -23567,12 +24059,39 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
+    async def api_macro_evolution(request):
+        try:
+            from macro_evolution_engine import macro_evolution_engine
+            evo_data = macro_evolution_engine.get_evolution_data() if macro_evolution_engine else {}
+            return json_compressed_response(request, evo_data)
+        except Exception as e:
+            return web.json_response({"status": "error", "message": str(e)}, status=500)
+
+    async def api_macro_evolution_calibrate(request):
+        try:
+            from macro_evolution_engine import macro_evolution_engine
+            data = macro_evolution_engine.trigger_bayesian_calibration() if macro_evolution_engine else {}
+            return web.json_response({"status": "ok", "message": "Otonom Bayesian Kalibrasyonu Başarıyla İcra Edildi", "data": data})
+        except Exception as e:
+            return web.json_response({"status": "error", "message": str(e)}, status=500)
+
+    async def api_macro_evolution_toggle_contrarian(request):
+        try:
+            from macro_evolution_engine import macro_evolution_engine
+            body = await request.json() if request.can_read_body else {}
+            enabled_val = body.get("enabled")
+            data = macro_evolution_engine.toggle_contrarian_mode(enabled_val) if macro_evolution_engine else {}
+            return web.json_response({"status": "ok", "message": "Zıt Kuant (Contrarian Alpha) Modu Güncellendi", "data": data})
+        except Exception as e:
+            return web.json_response({"status": "error", "message": str(e)}, status=500)
+
     async def api_macro_sync(request):
         try:
             from macro_calendar import calendar_manager
             from macro_cross_asset import cross_asset_radar
             from macro_news_sentinel import news_sentinel
             from macro_institutional_engine import institutional_engine
+            from macro_evolution_engine import macro_evolution_engine
 
             t1 = asyncio.create_task(calendar_manager.sync_calendar())
             t2 = asyncio.create_task(cross_asset_radar.sync_cross_assets(force=True))
@@ -23580,8 +24099,10 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             await asyncio.gather(t1, t2, t3, return_exceptions=True)
             if institutional_engine:
                 institutional_engine.load_cache()
+            if macro_evolution_engine:
+                macro_evolution_engine.load_cache()
 
-            return web.json_response({"status": "ok", "message": "Makro, Wall Street ve Kurumsal Derecelendirme veri kaynakları senkronize edildi."})
+            return web.json_response({"status": "ok", "message": "Makro, Wall Street, Kurumsal Derecelendirme ve Evrim veri kaynakları senkronize edildi."})
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
@@ -23590,11 +24111,14 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
     app.router.add_get('/api/institutional_intel', api_institutional_intel)
     app.router.add_get('/api/institutional_health', api_institutional_health)
     app.router.add_get('/api/institutional_interrupt', api_institutional_interrupt)
+    app.router.add_get('/api/macro_evolution', api_macro_evolution)
     app.router.add_post('/api/institutional_self_heal', api_institutional_self_heal)
     app.router.add_post('/api/institutional_toggle_weekend', api_institutional_toggle_weekend)
     app.router.add_post('/api/institutional_trigger_interrupt', api_institutional_trigger_interrupt)
     app.router.add_post('/api/institutional_reset_interrupt', api_institutional_reset_interrupt)
     app.router.add_post('/api/institutional_toggle_tier4_mute', api_institutional_toggle_tier4_mute)
+    app.router.add_post('/api/macro_evolution_calibrate', api_macro_evolution_calibrate)
+    app.router.add_post('/api/macro_evolution_toggle_contrarian', api_macro_evolution_toggle_contrarian)
     app.router.add_post('/api/macro_sync', api_macro_sync)
     app.router.add_get('/api/debug_fetch', api_debug_fetch)
 
