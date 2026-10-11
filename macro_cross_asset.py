@@ -21,6 +21,8 @@ MACRO_SYMBOLS = {
     "DXY": "DX-Y.NYB",    # Dolar Endeksi (US Dollar Index)
     "US10Y": "^TNX",      # ABD 10 Yıllık Hazine Tahvil Getirisi
     "GOLD": "GC=F",       # Ons Altın (XAU/USD Vadeli)
+    "OIL": "CL=F",        # WTI Ham Petrol Vadeli (Jeopolitik Risk & Enflasyon)
+    "BRENT": "BZ=F",      # Brent Petrol Vadeli (Küresel Enerji Göstergesi)
     "NASDAQ": "NQ=F",     # E-mini Nasdaq 100 Vadeli (Risk Varlıkları)
     "SP500": "ES=F",      # E-mini S&P 500 Vadeli (Geniş Piyasa Likiditesi)
     "VIX": "^VIX"         # CBOE Volatilite Korku Endeksi (Wall Street Fear Gauge)
@@ -48,6 +50,8 @@ class MacroCrossAssetRadar:
             "sp500": {"price": 7859.75, "chg_24h": 0.43, "status": "NEUTRAL"},
             "vix": {"price": 14.84, "chg_24h": -4.38, "status": "NEUTRAL"},
             "gold": {"price": 4216.3, "chg_24h": 1.43, "status": "NEUTRAL"},
+            "oil": {"price": 75.20, "chg_24h": 2.69, "status": "NEUTRAL"},
+            "brent": {"price": 78.40, "chg_24h": 4.12, "status": "NEUTRAL"},
             "btc_d": 59.08,
             "usdt_d": 6.52,
             "eth_btc": 0.03027,
@@ -141,13 +145,15 @@ class MacroCrossAssetRadar:
                     self._fetch_yahoo_symbol(session, "DXY", MACRO_SYMBOLS["DXY"]),
                     self._fetch_yahoo_symbol(session, "US10Y", MACRO_SYMBOLS["US10Y"]),
                     self._fetch_yahoo_symbol(session, "GOLD", MACRO_SYMBOLS["GOLD"]),
+                    self._fetch_yahoo_symbol(session, "OIL", MACRO_SYMBOLS["OIL"]),
+                    self._fetch_yahoo_symbol(session, "BRENT", MACRO_SYMBOLS["BRENT"]),
                     self._fetch_yahoo_symbol(session, "NASDAQ", MACRO_SYMBOLS["NASDAQ"]),
                     self._fetch_yahoo_symbol(session, "SP500", MACRO_SYMBOLS["SP500"]),
                     self._fetch_yahoo_symbol(session, "VIX", MACRO_SYMBOLS["VIX"]),
                     self._fetch_crypto_dominance(session),
                     self._fetch_eth_btc(session)
                 ]
-                dxy_r, us10y_r, gold_r, nasdaq_r, sp500_r, vix_r, dom_r, ethbtc_r = await asyncio.gather(*tasks, return_exceptions=True)
+                dxy_r, us10y_r, gold_r, oil_r, brent_r, nasdaq_r, sp500_r, vix_r, dom_r, ethbtc_r = await asyncio.gather(*tasks, return_exceptions=True)
 
                 if isinstance(dxy_r, dict) and dxy_r:
                     self.data["dxy"] = dxy_r
@@ -155,6 +161,10 @@ class MacroCrossAssetRadar:
                     self.data["us10y"] = us10y_r
                 if isinstance(gold_r, dict) and gold_r:
                     self.data["gold"] = gold_r
+                if isinstance(oil_r, dict) and oil_r:
+                    self.data["oil"] = oil_r
+                if isinstance(brent_r, dict) and brent_r:
+                    self.data["brent"] = brent_r
                 if isinstance(nasdaq_r, dict) and nasdaq_r:
                     self.data["nasdaq"] = nasdaq_r
                 if isinstance(sp500_r, dict) and sp500_r:
@@ -171,7 +181,7 @@ class MacroCrossAssetRadar:
                 self._calculate_macro_regime()
                 self.data["last_sync_ts"] = now
                 self.save_cache()
-                print(f">> [🌐 ÇAPRAZ MAKRO RADAR] Güncellendi: DXY={self.data['dxy']['price']} | US10Y={self.data['us10y']['price']}% | VIX={self.data.get('vix', {}).get('price', '-')} | USDT.D={self.data['usdt_d']}% | Rejim: {self.data['regime']} ({self.data['regime_score']:+0.1f})")
+                print(f">> [CAPRAZ MAKRO RADAR] Guncellendi: DXY={self.data['dxy']['price']} | US10Y={self.data['us10y']['price']}% | VIX={self.data.get('vix', {}).get('price', '-')} | Oil=${self.data.get('oil', {}).get('price', '-')} | Brent=${self.data.get('brent', {}).get('price', '-')} | USDT.D={self.data['usdt_d']}%")
                 return True
 
         except Exception as e:
@@ -233,6 +243,17 @@ class MacroCrossAssetRadar:
         gold_chg = float(self.data.get("gold", {}).get("chg_24h", 0.0))
         if gold_chg > 0.5 and dxy_chg <= 0.0:
             score += 10.0  # Dolar zayıflarken altın artışı, dijital altın BTC için rüzgar
+
+        # 5b. Petrol & Enerji Şoku (WTI CL=F & Brent BZ=F)
+        oil_chg = float(self.data.get("oil", {}).get("chg_24h", 0.0))
+        brent_chg = float(self.data.get("brent", {}).get("chg_24h", 0.0))
+        max_oil_chg = max(oil_chg, brent_chg)
+        if max_oil_chg >= 2.5:
+            score -= 20.0  # Akut petrol sıçraması: Jeopolitik savaş riski, enflasyon korkusu, Fed faiz indirimi ertelemesi
+        elif max_oil_chg >= 1.2:
+            score -= 10.0
+        elif max_oil_chg <= -2.0:
+            score += 10.0  # Petrol gevşemesi: Dezenflasyon ve rahatlama
 
         # 6. USDT Dominansı Katkısı
         usdt_d = float(self.data.get("usdt_d", 6.5))
@@ -312,10 +333,14 @@ class MacroCrossAssetRadar:
         regime = self.data.get("regime", "NEUTRAL")
         score = self.data.get("regime_score", 0.0)
 
+        brent_p = self.data.get("brent", {}).get("price", 0.0)
+        brent_chg = self.data.get("brent", {}).get("chg_24h", 0.0)
+        oil_str = f" | BRENT ${brent_p:.1f} ({brent_chg:+.1f}%)" if brent_p > 0 else ""
+
         dxy_color = "🟢" if dxy_chg <= 0 else "🔴"
         regime_icon = "🚀" if score >= 25 else ("🛡️" if score <= -25 else "⚖️")
 
-        hud_line = f"DXY {dxy_p:.2f} {dxy_color} | US10Y %{us10y_p:.2f} | VIX {vix_p:.1f} | USDT.D %{usdt_d:.1f} | BTC.D %{btc_d:.1f} | Rejim: {regime} {regime_icon}"
+        hud_line = f"DXY {dxy_p:.2f} {dxy_color} | US10Y %{us10y_p:.2f}{oil_str} | VIX {vix_p:.1f} | USDT.D %{usdt_d:.1f} | BTC.D %{btc_d:.1f} | Rejim: {regime} {regime_icon}"
 
         return {
             "dxy": self.data.get("dxy"),
@@ -324,6 +349,8 @@ class MacroCrossAssetRadar:
             "sp500": self.data.get("sp500"),
             "vix": self.data.get("vix"),
             "gold": self.data.get("gold"),
+            "oil": self.data.get("oil"),
+            "brent": self.data.get("brent"),
             "btc_d": btc_d,
             "usdt_d": usdt_d,
             "eth_btc": eth_btc,

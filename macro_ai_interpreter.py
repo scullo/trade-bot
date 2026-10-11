@@ -204,6 +204,18 @@ class MacroAIInterpreter:
                 score_explanation = f"Pozitif piyasa kelimeleri saptanmış ve {raw_score:+.1f} boğa yönlü etki puanı verilmiştir."
                 strategy_action = "Trend takip eden Breakout ve Pivot Flip kurulumları için yukarı yönlü teyit aranır."
 
+            elif category == "GEOPOLITICAL" or any(w in title_upper for w in ["MISSILE", "FÜZE", "STRIKE", "AIRPORT", "SAVAŞ", "WAR", "HOUTHI", "HUSİ", "DRONE", "ATTACK", "SALDIRI", "VURULDU", "ESCALATION"]):
+                impact_direction = "BEARISH"
+                market_impact = "🚨 JEOPOLİTİK SAVAŞ ŞOKU / PETROL & ENFLASYON RİSKİ"
+                ai_summary = f"Ortadoğu ve küresel enerji koridorunu vuran kritik jeopolitik saldırı: '{tr_headline}'."
+                ai_interpretation = (
+                    "Suudi Arabistan ve Körfez enerji hatlarına yapılan füze/İHA saldırıları petrol fiyatlarında sıçrama yaratır. "
+                    "Yüksek petrol fiyatları küresel enflasyon beklentilerini körükleyerek Fed'in faiz indirimlerini geciktirir. "
+                    "Kripto ve risk varlıklarında ilk tepki akut 'Risk-Off' likidasyonudur; sermaye dolara ve altına kaçar."
+                )
+                score_explanation = f"Jeopolitik çatışma ve savaş riski nedeniyle {raw_score:+.1f} negatif makro şok puanı verilmiştir."
+                strategy_action = "🚨 Risk-Off Savunması: Altcoinlerde agresif Long açılışları sınırlandırılır, kârdaki pozisyonlar Başa-Baş (BE) seviyesine çekilir."
+
             elif any(w in title_upper for w in ["HACK", "EXPLOIT", "STOLEN", "DRAIN", "SUED", "LAWSUIT", "BAN", "CRASH", "DUMP", "OUTFLOW"]):
                 impact_direction = "BEARISH"
                 market_impact = "RİSKLİ / AYI BASKISI"

@@ -1,7 +1,7 @@
 {
   "dxy": {
     "price": 102.231,
-    "chg_24h": 0.06
+    "chg_24h": 0.39
   },
   "us10y": {
     "price": 5.244,
@@ -9,11 +9,11 @@
   },
   "nasdaq": {
     "price": 31108.75,
-    "chg_24h": -0.67
+    "chg_24h": -1.19
   },
   "sp500": {
     "price": 7859.75,
-    "chg_24h": 0.43
+    "chg_24h": -0.18
   },
   "vix": {
     "price": 14.84,
@@ -21,12 +21,20 @@
   },
   "gold": {
     "price": 4216.3,
-    "chg_24h": 1.43
+    "chg_24h": 0.7
   },
-  "btc_d": 59.08,
-  "usdt_d": 6.52,
-  "eth_btc": 0.03029,
-  "regime": "RISK_ON (Küresel Boğa İştahı 🚀)",
-  "regime_score": 35.0,
-  "last_sync_ts": 1791661755.161889
+  "oil": {
+    "price": 91.85,
+    "chg_24h": 2.69
+  },
+  "brent": {
+    "price": 104.72,
+    "chg_24h": 4.12
+  },
+  "btc_d": 59.19,
+  "usdt_d": 6.53,
+  "eth_btc": 0.03016,
+  "regime": "RISK_OFF (Defans / Ayı Koruması 🛡️)",
+  "regime_score": -30.0,
+  "last_sync_ts": 1791699908.1979895
 }
