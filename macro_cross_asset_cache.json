@@ -79,12 +79,12 @@
     "chg_24h": 0.91,
     "status": "BULLISH"
   },
-  "btc_d": 59.17,
-  "usdt_d": 6.52,
-  "eth_btc": 0.03013,
+  "btc_d": 59.19,
+  "usdt_d": 6.53,
+  "eth_btc": 0.03011,
   "regime": "RISK_OFF (Defans / Ayı Koruması 🛡️)",
   "regime_score": -30.0,
-  "last_sync_ts": 1791702680.7772493,
+  "last_sync_ts": 1791703918.2275176,
   "terminal_assets": {
     "sp500": {
       "id": "sp500",
@@ -346,9 +346,9 @@
       "sub": "Körfez Enerji & Petrol Borsası",
       "flag": "🇸🇦",
       "category": "EMERGING",
-      "price": 10376.28,
-      "chg_24h": 0.0,
-      "status": "NEUTRAL"
+      "price": 10275.92,
+      "chg_24h": -0.97,
+      "status": "BEARISH"
     },
     "jse": {
       "id": "jse",

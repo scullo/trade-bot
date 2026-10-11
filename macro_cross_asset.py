@@ -31,45 +31,45 @@ MACRO_SYMBOLS = {
 # 🏛️ VALKYRIE WALL STREET & KÜRESEL TERMINAL DESK KONFİGÜRASYONU (4 KITA & EMTİA KORİDORU)
 GLOBAL_TERMINAL_CONFIG = {
     "america": [
-        {"id": "sp500", "symbol": "ES=F", "name": "S&P 500 Vadeli", "sub": "Geniş Piyasa Likiditesi", "flag": "🇺🇸", "category": "ENDEX"},
-        {"id": "nasdaq", "symbol": "NQ=F", "name": "Nasdaq 100 Vadeli", "sub": "Teknoloji & Risk Varlığı", "flag": "🇺🇸", "category": "ENDEX"},
-        {"id": "dow", "symbol": "YM=F", "name": "Dow Jones 30", "sub": "Sanayi & Değer Hisseleri", "flag": "🇺🇸", "category": "ENDEX"},
-        {"id": "russell", "symbol": "RTY=F", "name": "Russell 2000", "sub": "Küçük Sermayeli Şirketler (Risk-On)", "flag": "🇺🇸", "category": "ENDEX"},
-        {"id": "vix", "symbol": "^VIX", "name": "CBOE VIX Endeksi", "sub": "Wall Street Korku & Volatilite", "flag": "🇺🇸", "category": "VOLATILITY"},
-        {"id": "us10y", "symbol": "^TNX", "name": "ABD 10Y Hazine Faizi", "sub": "Küresel Borçlanma Maliyeti", "flag": "🇺🇸", "category": "RATES"}
+        {"id": "sp500", "symbol": "ES=F", "name": "S&P 500 Vadeli", "sub": "Geniş Piyasa Likiditesi", "flag": "🇺🇸", "code": "US", "category": "ENDEX"},
+        {"id": "nasdaq", "symbol": "NQ=F", "name": "Nasdaq 100 Vadeli", "sub": "Teknoloji & Risk Varlığı", "flag": "🇺🇸", "code": "US", "category": "ENDEX"},
+        {"id": "dow", "symbol": "YM=F", "name": "Dow Jones 30", "sub": "Sanayi & Değer Hisseleri", "flag": "🇺🇸", "code": "US", "category": "ENDEX"},
+        {"id": "russell", "symbol": "RTY=F", "name": "Russell 2000", "sub": "Küçük Sermayeli Şirketler (Risk-On)", "flag": "🇺🇸", "code": "US", "category": "ENDEX"},
+        {"id": "vix", "symbol": "^VIX", "name": "CBOE VIX Endeksi", "sub": "Wall Street Korku & Volatilite", "flag": "🇺🇸", "code": "US", "category": "VOLATILITY"},
+        {"id": "us10y", "symbol": "^TNX", "name": "ABD 10Y Hazine Faizi", "sub": "Küresel Borçlanma Maliyeti", "flag": "🇺🇸", "code": "US", "category": "RATES"}
     ],
     "europe": [
-        {"id": "dax", "symbol": "^GDAXI", "name": "Almanya DAX 40", "sub": "Frankfurt Sanayi Lokomotifi", "flag": "🇩🇪", "category": "ENDEX"},
-        {"id": "ftse", "symbol": "^FTSE", "name": "İngiltere FTSE 100", "sub": "Londra Finans & Emtia Masası", "flag": "🇬🇧", "category": "ENDEX"},
-        {"id": "cac40", "symbol": "^FCHI", "name": "Fransa CAC 40", "sub": "Paris Lüks & Enerji Endeksi", "flag": "🇫🇷", "category": "ENDEX"},
-        {"id": "stoxx50", "symbol": "^STOXX50E", "name": "Euro Stoxx 50", "sub": "Avrupa Birliği Mavi Çip", "flag": "🇪🇺", "category": "ENDEX"},
-        {"id": "eurusd", "symbol": "EURUSD=X", "name": "EUR / USD Paritesi", "sub": "Euro Bölgesi Döviz Gücü", "flag": "🇪🇺", "category": "FX"}
+        {"id": "dax", "symbol": "^GDAXI", "name": "Almanya DAX 40", "sub": "Frankfurt Sanayi Lokomotifi", "flag": "🇩🇪", "code": "DE", "category": "ENDEX"},
+        {"id": "ftse", "symbol": "^FTSE", "name": "İngiltere FTSE 100", "sub": "Londra Finans & Emtia Masası", "flag": "🇬🇧", "code": "GB", "category": "ENDEX"},
+        {"id": "cac40", "symbol": "^FCHI", "name": "Fransa CAC 40", "sub": "Paris Lüks & Enerji Endeksi", "flag": "🇫🇷", "code": "FR", "category": "ENDEX"},
+        {"id": "stoxx50", "symbol": "^STOXX50E", "name": "Euro Stoxx 50", "sub": "Avrupa Birliği Mavi Çip", "flag": "🇪🇺", "code": "EU", "category": "ENDEX"},
+        {"id": "eurusd", "symbol": "EURUSD=X", "name": "EUR / USD Paritesi", "sub": "Euro Bölgesi Döviz Gücü", "flag": "🇪🇺", "code": "EU", "category": "FX"}
     ],
     "asia": [
-        {"id": "nikkei", "symbol": "^N225", "name": "Japonya Nikkei 225", "sub": "Tokyo Teknoloji & İhracat", "flag": "🇯🇵", "category": "ENDEX"},
-        {"id": "hangseng", "symbol": "^HSI", "name": "Hong Kong Hang Seng", "sub": "Çin Teknoloji & Finans", "flag": "🇭🇰", "category": "ENDEX"},
-        {"id": "shanghai", "symbol": "000001.SS", "name": "Şanghay Bileşik", "sub": "Çin İmalat & Sanayi Devleri", "flag": "🇨🇳", "category": "ENDEX"},
-        {"id": "asx200", "symbol": "^AXJO", "name": "Avustralya ASX 200", "sub": "Madencilik & Pasifik Likiditesi", "flag": "🇦🇺", "category": "ENDEX"},
-        {"id": "usdjpy", "symbol": "USDJPY=X", "name": "USD / JPY Kuru", "sub": "Yen Carry Trade & Likidite", "flag": "🇯🇵", "category": "FX"}
+        {"id": "nikkei", "symbol": "^N225", "name": "Japonya Nikkei 225", "sub": "Tokyo Teknoloji & İhracat", "flag": "🇯🇵", "code": "JP", "category": "ENDEX"},
+        {"id": "hangseng", "symbol": "^HSI", "name": "Hong Kong Hang Seng", "sub": "Çin Teknoloji & Finans", "flag": "🇭🇰", "code": "HK", "category": "ENDEX"},
+        {"id": "shanghai", "symbol": "000001.SS", "name": "Şanghay Bileşik", "sub": "Çin İmalat & Sanayi Devleri", "flag": "🇨🇳", "code": "CN", "category": "ENDEX"},
+        {"id": "asx200", "symbol": "^AXJO", "name": "Avustralya ASX 200", "sub": "Madencilik & Pasifik Likiditesi", "flag": "🇦🇺", "code": "AU", "category": "ENDEX"},
+        {"id": "usdjpy", "symbol": "USDJPY=X", "name": "USD / JPY Kuru", "sub": "Yen Carry Trade & Likidite", "flag": "🇯🇵", "code": "JP", "category": "FX"}
     ],
     "turkey": [
-        {"id": "bist100", "symbol": "XU100.IS", "name": "BIST 100 Endeksi", "sub": "Borsa İstanbul Gösterge Endeksi", "flag": "🇹🇷", "category": "ENDEX"},
-        {"id": "bist30", "symbol": "XU030.IS", "name": "BIST 30 Endeksi", "sub": "Borsa İstanbul Lokomotif Devler", "flag": "🇹🇷", "category": "ENDEX"},
-        {"id": "xbank", "symbol": "XBANK.IS", "name": "BIST Bankacılık", "sub": "Türk Bankacılık Sektörü", "flag": "🇹🇷", "category": "SECTOR"},
-        {"id": "usdtry", "symbol": "USDTRY=X", "name": "USD / TRY Kuru", "sub": "Dolar / Türk Lirası Paritesi", "flag": "🇹🇷", "category": "FX"},
-        {"id": "eurtry", "symbol": "EURTRY=X", "name": "EUR / TRY Kuru", "sub": "Euro / Türk Lirası Paritesi", "flag": "🇹🇷", "category": "FX"},
-        {"id": "gram_altin", "symbol": "GAU-TRY", "name": "Gram Altın TL", "sub": "Kapalıçarşı & Serbest Piyasa", "flag": "🇹🇷", "category": "METALS"}
+        {"id": "bist100", "symbol": "XU100.IS", "name": "BIST 100 Endeksi", "sub": "Borsa İstanbul Gösterge Endeksi", "flag": "🇹🇷", "code": "TR", "category": "ENDEX"},
+        {"id": "bist30", "symbol": "XU030.IS", "name": "BIST 30 Endeksi", "sub": "Borsa İstanbul Lokomotif Devler", "flag": "🇹🇷", "code": "TR", "category": "ENDEX"},
+        {"id": "xbank", "symbol": "XBANK.IS", "name": "BIST Bankacılık", "sub": "Türk Bankacılık Sektörü", "flag": "🇹🇷", "code": "TR", "category": "SECTOR"},
+        {"id": "usdtry", "symbol": "USDTRY=X", "name": "USD / TRY Kuru", "sub": "Dolar / Türk Lirası Paritesi", "flag": "🇹🇷", "code": "TR", "category": "FX"},
+        {"id": "eurtry", "symbol": "EURTRY=X", "name": "EUR / TRY Kuru", "sub": "Euro / Türk Lirası Paritesi", "flag": "🇹🇷", "code": "TR", "category": "FX"},
+        {"id": "gram_altin", "symbol": "GAU-TRY", "name": "Gram Altın TL", "sub": "Kapalıçarşı & Serbest Piyasa", "flag": "🇹🇷", "code": "TR", "category": "METALS"}
     ],
     "commodities_me": [
-        {"id": "brent", "symbol": "BZ=F", "name": "Brent Ham Petrol", "sub": "Küresel Enerji & Jeopolitik Şok", "flag": "🛢️", "category": "ENERGY"},
-        {"id": "oil", "symbol": "CL=F", "name": "WTI Ham Petrol", "sub": "ABD Teksas Petrol Göstergesi", "flag": "🛢️", "category": "ENERGY"},
-        {"id": "natgas", "symbol": "NG=F", "name": "Henry Hub Doğalgaz", "sub": "Avrupa/ABD Isınma & Elektrik", "flag": "⚡", "category": "ENERGY"},
-        {"id": "gold", "symbol": "GC=F", "name": "Ons Altın (XAU/USD)", "sub": "Güvenli Liman & Devalüasyon", "flag": "🥇", "category": "METALS"},
-        {"id": "silver", "symbol": "SI=F", "name": "Ons Gümüş (XAG/USD)", "sub": "Endüstriyel & Değerli Metal", "flag": "🥈", "category": "METALS"},
-        {"id": "copper", "symbol": "HG=F", "name": "Yüksek Dereceli Bakır", "sub": "Dr. Bakır (Sanayi Barometresi)", "flag": "🥉", "category": "METALS"},
-        {"id": "dxy", "symbol": "DX-Y.NYB", "name": "Dolar Endeksi (DXY)", "sub": "Küresel Rezerv Para Gücü", "flag": "💵", "category": "CURRENCY"},
-        {"id": "tasi", "symbol": "^TASI.SR", "name": "Suudi Arabistan TASI", "sub": "Körfez Enerji & Petrol Borsası", "flag": "🇸🇦", "category": "EMERGING"},
-        {"id": "jse", "symbol": "^J200.JO", "name": "Güney Afrika JSE 40", "sub": "Afrika Kıtası Sanayi & Maden", "flag": "🇿🇦", "category": "EMERGING"}
+        {"id": "brent", "symbol": "BZ=F", "name": "Brent Ham Petrol", "sub": "Küresel Enerji & Jeopolitik Şok", "flag": "🛢️", "code": "ENERGY", "category": "ENERGY"},
+        {"id": "oil", "symbol": "CL=F", "name": "WTI Ham Petrol", "sub": "ABD Teksas Petrol Göstergesi", "flag": "🛢️", "code": "ENERGY", "category": "ENERGY"},
+        {"id": "natgas", "symbol": "NG=F", "name": "Henry Hub Doğalgaz", "sub": "Avrupa/ABD Isınma & Elektrik", "flag": "⚡", "code": "ENERGY", "category": "ENERGY"},
+        {"id": "gold", "symbol": "GC=F", "name": "Ons Altın (XAU/USD)", "sub": "Güvenli Liman & Devalüasyon", "flag": "🥇", "code": "GOLD", "category": "METALS"},
+        {"id": "silver", "symbol": "SI=F", "name": "Ons Gümüş (XAG/USD)", "sub": "Endüstriyel & Değerli Metal", "flag": "🥈", "code": "SILVER", "category": "METALS"},
+        {"id": "copper", "symbol": "HG=F", "name": "Yüksek Dereceli Bakır", "sub": "Dr. Bakır (Sanayi Barometresi)", "flag": "🥉", "code": "COPPER", "category": "METALS"},
+        {"id": "dxy", "symbol": "DX-Y.NYB", "name": "Dolar Endeksi (DXY)", "sub": "Küresel Rezerv Para Gücü", "flag": "💵", "code": "US", "category": "CURRENCY"},
+        {"id": "tasi", "symbol": "^TASI.SR", "name": "Suudi Arabistan TASI", "sub": "Körfez Enerji & Petrol Borsası", "flag": "🇸🇦", "code": "SA", "category": "EMERGING"},
+        {"id": "jse", "symbol": "^J200.JO", "name": "Güney Afrika JSE 40", "sub": "Afrika Kıtası Sanayi & Maden", "flag": "🇿🇦", "code": "ZA", "category": "EMERGING"}
     ]
 }
 
@@ -110,6 +110,7 @@ def get_world_market_sessions() -> List[Dict[str, Any]]:
         "id": "nyse",
         "name": "New York (NYSE / NASDAQ)",
         "flag": "🇺🇸",
+        "code": "US",
         "city": "Wall Street, New York",
         "hours_tsi": "16:30 - 23:00 TSİ",
         "is_open": ny_open,
@@ -131,6 +132,7 @@ def get_world_market_sessions() -> List[Dict[str, Any]]:
         "id": "lse",
         "name": "Londra (London Stock Exchange)",
         "flag": "🇬🇧",
+        "code": "GB",
         "city": "City of London",
         "hours_tsi": "10:00 - 18:30 TSİ",
         "is_open": lon_open,
@@ -152,6 +154,7 @@ def get_world_market_sessions() -> List[Dict[str, Any]]:
         "id": "tse",
         "name": "Tokyo (Tokyo Stock Exchange)",
         "flag": "🇯🇵",
+        "code": "JP",
         "city": "Tokyo, Nihonbashi",
         "hours_tsi": "03:00 - 09:00 TSİ",
         "is_open": tky_open,
@@ -173,6 +176,7 @@ def get_world_market_sessions() -> List[Dict[str, Any]]:
         "id": "bist",
         "name": "Borsa İstanbul (BIST 100)",
         "flag": "🇹🇷",
+        "code": "TR",
         "city": "Maslak, İstanbul",
         "hours_tsi": "10:00 - 18:00 TSİ",
         "is_open": ist_open,
@@ -610,6 +614,283 @@ class MacroCrossAssetRadar:
             }
         }
 
+    def calculate_session_domino_analysis(self) -> Dict[str, Any]:
+        """
+        Küresel Seans Domino Etkisi ve Canlı Makro Piyasa Okuyucu.
+        Asya Pasifik (03:00-09:00) ➔ BIST 100 & Türkiye (10:00-18:00) ➔ Avrupa (10:00-18:30) ➔
+        Wall Street (16:30-23:00) ➔ Kripto & Valkyrie Bot reaksiyon zincirini hesaplar.
+        Asya negatif ise BIST ve Wall Street açılışında Gap Down ihtimalini ve bulaşma (contagion) riskini tespit eder.
+        """
+        term_assets = self.data.get("terminal_assets", {})
+
+        def get_asset_chg(aid: str) -> float:
+            raw = term_assets.get(aid, {})
+            val = raw.get("chg_24h")
+            if val is None and isinstance(self.data.get(aid), dict):
+                val = self.data[aid].get("chg_24h")
+            try:
+                return float(val or 0.0)
+            except Exception:
+                return 0.0
+
+        def get_asset_price(aid: str) -> float:
+            raw = term_assets.get(aid, {})
+            val = raw.get("price")
+            if val is None and isinstance(self.data.get(aid), dict):
+                val = self.data[aid].get("price")
+            try:
+                return float(val or 0.0)
+            except Exception:
+                return 0.0
+
+        # 1. Asya Seansı Değişimleri
+        nikkei_chg = get_asset_chg("nikkei")
+        hangseng_chg = get_asset_chg("hangseng")
+        shanghai_chg = get_asset_chg("shanghai")
+        asx_chg = get_asset_chg("asx200")
+        usdjpy_chg = get_asset_chg("usdjpy")
+        asia_indices = [nikkei_chg, hangseng_chg, shanghai_chg, asx_chg]
+        asia_avg = sum(asia_indices) / len(asia_indices) if asia_indices else 0.0
+
+        # 2. Türkiye (BIST 100) Değişimleri
+        bist100_chg = get_asset_chg("bist100")
+        bist30_chg = get_asset_chg("bist30")
+        xbank_chg = get_asset_chg("xbank")
+        usdtry_chg = get_asset_chg("usdtry")
+        turkey_avg = bist100_chg if bist100_chg != 0.0 else (bist30_chg or 0.0)
+
+        # 3. Avrupa Seansı Değişimleri
+        dax_chg = get_asset_chg("dax")
+        ftse_chg = get_asset_chg("ftse")
+        cac_chg = get_asset_chg("cac40")
+        stoxx_chg = get_asset_chg("stoxx50")
+        eur_indices = [dax_chg, ftse_chg, cac_chg, stoxx_chg]
+        europe_avg = sum(eur_indices) / len(eur_indices) if eur_indices else 0.0
+
+        # 4. Wall Street Değişimleri & Makro Risk
+        sp500_chg = get_asset_chg("sp500")
+        nasdaq_chg = get_asset_chg("nasdaq")
+        dow_chg = get_asset_chg("dow")
+        vix_price = get_asset_price("vix")
+        dxy_chg = get_asset_chg("dxy")
+        us_indices = [sp500_chg, nasdaq_chg, dow_chg]
+        us_avg = sum(us_indices) / len(us_indices) if us_indices else 0.0
+
+        # 5. Kripto & USDT.D
+        btc_p = get_asset_price("btc")
+        btc_chg = get_asset_chg("btc")
+        usdt_d = float(self.data.get("usdt_d", 6.52) or 6.52)
+
+        # Kuant Domino Skoru Hesabı (-100 ile +100 arası)
+        score = (asia_avg * 25.0) + (turkey_avg * 20.0) + (europe_avg * 25.0) + (us_avg * 30.0)
+        if vix_price >= 20.0:
+            score -= 15.0
+        elif vix_price >= 25.0:
+            score -= 30.0
+        if dxy_chg >= 0.4:
+            score -= 10.0
+        score = max(-100.0, min(100.0, score))
+
+        # Zincir Adımları (Stepper Data)
+        chain_steps = []
+
+        # Adım 1: Asya
+        if asia_avg <= -0.5:
+            asia_status = "BEARISH"
+            asia_signal = "Kırmızı Başlangıç (Satıcılı)"
+            asia_desc = f"Nikkei (%{nikkei_chg:+.2f}) ve Hang Seng (%{hangseng_chg:+.2f}) ekside. Pasifik'te risk iştahı zayıf, satış baskısı batı seanslarına devrediyor."
+        elif asia_avg >= 0.5:
+            asia_status = "BULLISH"
+            asia_signal = "Yeşil Açılış (İştahlı)"
+            asia_desc = f"Asya endeksleri pozitif (Ort. %{asia_avg:+.2f}). Hong Kong ve Tokyo teknoloji hisselerine güçlü likidite girdi."
+        else:
+            asia_status = "NEUTRAL"
+            asia_signal = "Yatay / Nötr Seyir"
+            asia_desc = f"Asya Pasifik endeksleri sınırlı dalgalanma (%{asia_avg:+.2f}) ile kapandı. Piyasa yön arayışında."
+
+        chain_steps.append({
+            "order": 1,
+            "session": "ASYA PASİFİK",
+            "hours": "03:00 - 09:00 TSİ",
+            "flag": "🇯🇵",
+            "code": "JP",
+            "avg_chg": round(asia_avg, 2),
+            "status": asia_status,
+            "signal": asia_signal,
+            "desc": asia_desc
+        })
+
+        # Adım 2: Borsa İstanbul (BIST 100)
+        if turkey_avg <= -0.7:
+            tr_status = "BEARISH"
+            tr_signal = "Domino İletildi (Baskılı)"
+            tr_desc = f"BIST 100 (%{bist100_chg:+.2f}) Asya'daki satış baskısını devraldı. XBANK Bankacılık (%{xbank_chg:+.2f}) satıcılı."
+        elif turkey_avg >= 0.8:
+            tr_status = "BULLISH"
+            tr_signal = "Pozitif / Güçlü Ralli"
+            tr_desc = f"BIST 100 (%{bist100_chg:+.2f}) güçlü hacimle ralli yapıyor. Yerel enflasyon koruma talebi ve şirket bilançoları destekliyor."
+        else:
+            tr_status = "NEUTRAL"
+            tr_signal = "Dengeli / Beklemede"
+            tr_desc = f"BIST 100 (%{bist100_chg:+.2f}) kontrollü seyirde. Döviz kuru USD/TRY (%{usdtry_chg:+.2f}) dengeli."
+
+        chain_steps.append({
+            "order": 2,
+            "session": "BORSA İSTANBUL",
+            "hours": "10:00 - 18:00 TSİ",
+            "flag": "🇹🇷",
+            "code": "TR",
+            "avg_chg": round(turkey_avg, 2),
+            "status": tr_status,
+            "signal": tr_signal,
+            "desc": tr_desc
+        })
+
+        # Adım 3: Avrupa (DAX & FTSE)
+        if europe_avg <= -0.5:
+            eu_status = "BEARISH"
+            eu_signal = "Satış Bulaşması (Contagion)"
+            eu_desc = f"DAX (%{dax_chg:+.2f}) ve FTSE (%{ftse_chg:+.2f}) ortak eksiye geçti. Asya'dan devralınan satış Avrupa sanayi devlerini vurdu."
+        elif europe_avg >= 0.5:
+            eu_status = "BULLISH"
+            eu_signal = "Risk-On Genişleme"
+            eu_desc = f"Avrupa endeksleri yeşil bölgede (Ort. %{europe_avg:+.2f}). Euro Bölgesi likiditesi canlı."
+        else:
+            eu_status = "NEUTRAL"
+            eu_signal = "Dar Bant / Kararsız"
+            eu_desc = f"Avrupa borsaları dar bantta yatay (Ort. %{europe_avg:+.2f}). Wall Street açılışı bekleniyor."
+
+        chain_steps.append({
+            "order": 3,
+            "session": "LONDRA & FRANKFURT",
+            "hours": "10:00 - 18:30 TSİ",
+            "flag": "🇪🇺",
+            "code": "EU",
+            "avg_chg": round(europe_avg, 2),
+            "status": eu_status,
+            "signal": eu_signal,
+            "desc": eu_desc
+        })
+
+        # Adım 4: Wall Street (New York) & Gap İhtimali
+        # Finansal kural: Asya < -0.4% VE Avrupa < -0.4% ise New York açılışında %74 negatif gap riski
+        gap_down_prob = 74 if (asia_avg <= -0.4 and europe_avg <= -0.4) else (58 if (asia_avg <= -0.3 or europe_avg <= -0.3) else 22)
+        if us_avg <= -0.5 or (vix_price >= 20.0 and gap_down_prob >= 60):
+            us_status = "BEARISH"
+            us_signal = f"Gap-Down Riski (%{gap_down_prob})"
+            us_desc = f"S&P 500 vadeli (%{sp500_chg:+.2f}), VIX {vix_price:.1f}. Asya ve Avrupa ortak ekside olduğu için 16:30 zilinde ilk 30 dk kurumsal satış çığı riski yüksek."
+        elif us_avg >= 0.5:
+            us_status = "BULLISH"
+            us_signal = "Wall Street Boğası (Pozitif Gap)"
+            us_desc = f"S&P 500 vadeli (%{sp500_chg:+.2f}) ve Nasdaq (%{nasdaq_chg:+.2f}) güçlü. New York açılışı küresel risk iştahını coşturabilir."
+        else:
+            us_status = "NEUTRAL"
+            us_signal = "Temkinli Bekleyiş"
+            us_desc = f"Wall Street vadeli işlemleri sakin (%{us_avg:+.2f}). Açılış öncesi makro veri ve bilanço akışı izleniyor."
+
+        chain_steps.append({
+            "order": 4,
+            "session": "WALL STREET (ABD)",
+            "hours": "16:30 - 23:00 TSİ",
+            "flag": "🇺🇸",
+            "code": "US",
+            "avg_chg": round(us_avg, 2),
+            "status": us_status,
+            "signal": us_signal,
+            "desc": us_desc
+        })
+
+        # Adım 5: Kripto Likiditesi & Valkyrie Bot
+        if score <= -30:
+            cr_status = "DEFENSIVE"
+            cr_signal = "🛡️ Koruma Kalkanı Devrede"
+            cr_desc = f"Küresel satış zincirinde USDT.D nakite sığınma artıyor (%{usdt_d:.2f}). Bot 3x kaldıraç sınırı ve %50 marjin küçültme uygular; dip arama emirleri kilitlenir."
+        elif score >= 30:
+            cr_status = "BULLISH"
+            cr_signal = "🚀 Tam Risk-On Modu"
+            cr_desc = "Tüm küresel seanslar yeşil zincir oluşturdu. ETF kurumsal nakdi kriptoya akıyor; trend takip ve momentum kurguları serbestçe çalıştırılır."
+        else:
+            cr_status = "NEUTRAL"
+            cr_signal = "⚖️ Dinamik Kuant Modu"
+            cr_desc = "Piyasalar dengeli; bot standart %1-2 risk bütçesi ve sıkı ATR trailing-stop mekanizması ile seçici alım satım yapar."
+
+        chain_steps.append({
+            "order": 5,
+            "session": "KRİPTO & VALKYRIE BOT",
+            "hours": "7/24 Kesintisiz",
+            "flag": "🌐",
+            "code": "CRYPTO",
+            "avg_chg": round(btc_chg, 2),
+            "status": cr_status,
+            "signal": cr_signal,
+            "desc": cr_desc
+        })
+
+        # Domino Genel Durumu & Canlı Kuant Piyasa Raporu
+        if score <= -30:
+            domino_state = "BEARISH_CONTAGION"
+            domino_title = "🔴 KÜRESEL SATIŞ BULAŞMASI (BEARISH CONTAGION)"
+            domino_color = "#ef4444"
+            summary_narrative = (
+                f"Asya seansındaki zayıflık (Ort. %{asia_avg:+.2f}), Borsa İstanbul (BIST 100 %{bist100_chg:+.2f}) "
+                f"ve Avrupa (Ort. %{europe_avg:+.2f}) piyasalarını zincirleme aşağı çekti. "
+                f"Asya ve Avrupa'nın birlikte ekside kapandığı günlerde Wall Street New York açılışında %{gap_down_prob} "
+                f"olasılıkla negatif gap (aşağı yönlü açılış) ve ilk 30 dakikada (16:30 - 17:00 TSİ) sert kurumsal satış çığı gerçekleşir. "
+                f"Valkyrie Bot savunma kalkanına geçmiş; yeni LONG pozisyonlarda dip arayışı engellenmiş ve kaldıraç 3x ile sınırlandırılmıştır."
+            )
+            bot_posture = "DEFENSIVE_SHIELD"
+            posture_text = "🛡️ DEFANSİF KORUMA: Dip Arama Yasak, Kaldıraç 3x Tavan, Nakit Ağırlıklı"
+        elif score >= 30:
+            domino_state = "BULLISH_DOMINO"
+            domino_title = "🟢 KÜRESEL BOĞA DOMİNO ETKİSİ (GLOBAL RISK-ON)"
+            domino_color = "#10b981"
+            summary_narrative = (
+                f"Asya Pasifik'teki pozitif hava (Ort. %{asia_avg:+.2f}), BIST 100 (%{bist100_chg:+.2f}) "
+                f"ve Londra/Frankfurt borsalarına (Ort. %{europe_avg:+.2f}) güçlü sermaye girişi sağladı. "
+                f"Zincirleme risk iştahı Wall Street vadeli kontratlarını destekliyor. Küresel fiat sermayesi "
+                f"kripto ETF'lerine ve hisse senetlerine yöneliyor. Pozitif domino etkisiyle yukarı yönlü kırılımlar destekleniyor."
+            )
+            bot_posture = "AGGRESSIVE_LONG"
+            posture_text = "🚀 TAM RİSK-ON: Momentum Teyitli Alımlar Serbest, Trend Takip Aktif"
+        elif turkey_avg >= 1.0 and (asia_avg <= -0.3 or europe_avg <= -0.3):
+            domino_state = "BIST_DECOUPLING"
+            domino_title = "🇹🇷 BİST 100 POZİTİF AYRIŞMA (LOCAL HEDGE)"
+            domino_color = "#3b82f6"
+            summary_narrative = (
+                f"Küresel piyasalardaki negatif görünüme rağmen Borsa İstanbul (%{bist100_chg:+.2f}) yerel yatırımcı ilgisi ve "
+                f"enflasyon hedge talebiyle pozitif ayrışıyor. Ancak 16:30 Wall Street açılışında satış derinleşirse yerel piyasada "
+                f"da kâr realizasyonu tetiklenebileceğinden gün içi stop mesafeleri daraltılmalıdır."
+            )
+            bot_posture = "BALANCED_CAUTION"
+            posture_text = "⚡ YEREL POZİTİF / KÜRESEL TEMKİNLİ: Kâr Al Seviyelerini Sıkılaştır"
+        else:
+            domino_state = "MIXED_DECOUPLED"
+            domino_title = "🟡 KARIŞIK SEANS DENGESİ (SELECTIVE FLOW)"
+            domino_color = "#f59e0b"
+            summary_narrative = (
+                f"Bölgesel seanslar arasında senkronize bir çöküş veya ralli gözlenmiyor (Asya %{asia_avg:+.2f}, "
+                f"BIST %{turkey_avg:+.2f}, Avrupa %{europe_avg:+.2f}). Piyasa New York açılışı ve makro veriler öncesi "
+                f"dar bantta yön arıyor. Valkyrie Bot standart risk yönetimi ve seviye teyitli disiplinini koruyor."
+            )
+            bot_posture = "SELECTIVE"
+            posture_text = "⚖️ SEÇİCİ KUANT DENGESİ: Seviye Teyitsiz İşlem Yok, %1-2 Risk Bütçesi"
+
+        return {
+            "score": round(score, 1),
+            "state": domino_state,
+            "title": domino_title,
+            "color": domino_color,
+            "summary_narrative": summary_narrative,
+            "gap_down_prob": gap_down_prob,
+            "bot_posture": bot_posture,
+            "posture_text": posture_text,
+            "steps": chain_steps,
+            "asia_avg": round(asia_avg, 2),
+            "turkey_avg": round(turkey_avg, 2),
+            "europe_avg": round(europe_avg, 2),
+            "us_avg": round(us_avg, 2)
+        }
+
     def get_global_terminal_data(self) -> Dict[str, Any]:
         """
         Wall Street & Küresel Terminal Desk için hazır veri paketi döner:
@@ -617,6 +898,7 @@ class MacroCrossAssetRadar:
         - Dünya Borsa Seans Durumları (Açık/Kapalı + Geri Sayım)
         - Times Square Kayan Marquee Ticker Bandı
         - Makro Korelasyon & Beta Matrisi
+        - Küresel Seans Domino Analizi & Canlı Kuant Piyasa Yorumlayıcı
         """
         sessions = get_world_market_sessions()
 
@@ -668,6 +950,7 @@ class MacroCrossAssetRadar:
                     "name": item["name"],
                     "sub": item["sub"],
                     "flag": item["flag"],
+                    "code": item.get("code", ""),
                     "category": item["category"],
                     "price": round(float(price or 0.0), 3),
                     "chg_24h": round(float(chg or 0.0), 2),
@@ -681,6 +964,7 @@ class MacroCrossAssetRadar:
                     "symbol": item["symbol"].replace("=F", "").replace("^", "").replace(".SS", "").replace(".IS", "").replace("=X", ""),
                     "display_name": item["name"],
                     "flag": item["flag"],
+                    "code": item.get("code", ""),
                     "price": round(float(price or 0.0), 3),
                     "chg_24h": round(float(chg or 0.0), 2),
                     "is_positive": (chg or 0.0) >= 0,
@@ -726,6 +1010,9 @@ class MacroCrossAssetRadar:
             }
         }
 
+        # 3. Canlı Domino Etkisi & Seans Analizi
+        domino = self.calculate_session_domino_analysis()
+
         # TSİ formatlı zaman
         last_sync = self.data.get("last_sync_ts", 0.0)
         sync_str = datetime.fromtimestamp(last_sync, timezone(timedelta(hours=3))).strftime("%H:%M:%S TSİ") if last_sync > 0 else "Şimdi"
@@ -735,6 +1022,7 @@ class MacroCrossAssetRadar:
             "regions": regions,
             "marquee_tape": marquee_tape,
             "correlations": correlations,
+            "domino": domino,
             "regime": self.data.get("regime", "NEUTRAL"),
             "regime_score": self.data.get("regime_score", 0.0),
             "last_sync_ts": last_sync,

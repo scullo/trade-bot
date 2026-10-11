@@ -70,6 +70,16 @@ async def run_integration_tests():
     btc_bist = correlations["btc_bist"]
     print(f"  • 🧠 BTC / BIST 100 Beta      : ✅ Beta: {btc_bist['beta']} | {btc_bist['title']}")
 
+    # 4. Küresel Seans Domino Analizi & Canlı Piyasa Okuyucu
+    assert "domino" in terminal_data, "Terminal verisinde 'domino' alanı bulunmalı!"
+    domino = terminal_data["domino"]
+    assert "score" in domino, "Domino verisinde 'score' olmalı!"
+    assert "state" in domino, "Domino verisinde 'state' olmalı!"
+    assert "steps" in domino and len(domino["steps"]) == 5, f"Domino 5 seans adımı içermeli! Bulunan: {len(domino.get('steps', []))}"
+    assert "gap_down_prob" in domino, "Domino verisinde 'gap_down_prob' olmalı!"
+    assert "summary_narrative" in domino and len(domino["summary_narrative"]) > 20, "Canlı kuant yorum metni mevcut olmalı!"
+    print(f"  • 🌐 Domino Analizi & Yorum   : ✅ Durum: {domino['state']} | Skor: {domino['score']} | Wall Street Gap Riski: %{domino['gap_down_prob']}")
+
     # ──────────────────────────────────────────────────────────────────────────
     # ADIM 2: KÜRESEL DEVRE KESİCİ (GLOBAL CIRCUIT BREAKER)
     # ──────────────────────────────────────────────────────────────────────────
@@ -112,7 +122,12 @@ async def run_integration_tests():
     assert 'main-tab-content-wallstreet' in html_page, "HTML'de 11. Sekme konteyneri bulunmalı!"
     assert "setWallStreetFilter('turkey')" in html_page, "HTML'de Türkiye filtreleme butonu bulunmalı!"
     assert "TÜRKİYE MASASI" in html_page, "JS şablonunda 'TÜRKİYE MASASI' bölümü yer almalı!"
-    print("  • 🏛️ 11. Sekme & Türkiye Desk: ✅ DOM Butonu & Konteyneri Mevcut")
+    assert "FLAG_SVGS" in html_page, "HTML'de retina kalitesinde SVG bayrak kütüphanesi yer almalı!"
+    assert "getFlagHtml" in html_page, "HTML'de getFlagHtml fonksiyonu yer almalı!"
+    assert "renderDominoCardHtml" in html_page, "HTML'de renderDominoCardHtml fonksiyonu yer almalı!"
+    assert "KÜRESEL SEANS DOMİNO ETKİSİ" in html_page, "HTML'de Domino Etkisi başlığı yer almalı!"
+    assert "CANLI KUANT PİYASA OKUMA VE YORUM RAPORU" in html_page, "HTML'de Canlı Piyasa Okuma kutusu yer almalı!"
+    print("  • 🏛️ 11. Sekme & Domino Desk: ✅ DOM Butonu, SVG Bayraklar & 5 Adımlı Domino Stepper Mevcut")
 
     # 2. Kokpit Üst HUD Şeridi
     assert 'id="hud-macro-bist"' in html_page, "Kokpit HUD şeridinde BIST 100 göstergesi (id='hud-macro-bist') olmalı!"

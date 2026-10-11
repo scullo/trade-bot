@@ -3848,6 +3848,9 @@ HTML_PAGE = """
             border-color: rgba(0, 242, 254, 0.3);
             transform: translateY(-1px);
         }
+        @media (max-width: 900px) {
+            .domino-step-arrow { display: none !important; }
+        }
     </style>
 </head>
 <body>
@@ -9727,6 +9730,54 @@ async function loadAdminMetrics() {
         }
         window.setWallStreetFilter = setWallStreetFilter;
 
+        // 🚩 RETİNA KALİTESİNDE VEKTÖR SVG BAYRAK KÜTÜPHANESİ (Windows Emoji Ligatür Bypass)
+        const FLAG_SVGS = {
+            TR: '<svg style="width:20px; height:14px; border-radius:2.5px; vertical-align:middle; box-shadow:0 1px 3px rgba(0,0,0,0.4);" viewBox="0 0 1200 800"><rect width="1200" height="800" fill="#E30A17"/><circle cx="425" cy="400" r="200" fill="#ffffff"/><circle cx="475" cy="400" r="160" fill="#E30A17"/><polygon points="583.33,400 706.75,440.11 659.83,319.89 659.83,480.11 706.75,359.89" fill="#ffffff"/></svg>',
+            US: '<svg style="width:20px; height:14px; border-radius:2.5px; vertical-align:middle; box-shadow:0 1px 3px rgba(0,0,0,0.4);" viewBox="0 0 7410 3900"><rect width="7410" height="3900" fill="#b22234"/><path d="M0,450H7410M0,1050H7410M0,1650H7410M0,2250H7410M0,2850H7410M0,3450H7410" stroke="#fff" stroke-width="300"/><rect width="2964" height="2100" fill="#3c3b6e"/><circle cx="1482" cy="1050" r="600" fill="#fff" opacity="0.85"/></svg>',
+            GB: '<svg style="width:20px; height:14px; border-radius:2.5px; vertical-align:middle; box-shadow:0 1px 3px rgba(0,0,0,0.4);" viewBox="0 0 60 30"><clipPath id="c_gb"><path d="M0,0 v30 h60 v-30 z"/></clipPath><g clip-path="url(#c_gb)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="3"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg>',
+            JP: '<svg style="width:20px; height:14px; border-radius:2.5px; vertical-align:middle; box-shadow:0 1px 3px rgba(0,0,0,0.4);" viewBox="0 0 900 600"><rect width="900" height="600" fill="#ffffff"/><circle cx="450" cy="300" r="180" fill="#bc002d"/></svg>',
+            DE: '<svg style="width:20px; height:14px; border-radius:2.5px; vertical-align:middle; box-shadow:0 1px 3px rgba(0,0,0,0.4);" viewBox="0 0 5 3"><rect width="5" height="1" y="0" fill="#000"/><rect width="5" height="1" y="1" fill="#D00"/><rect width="5" height="1" y="2" fill="#FFCE00"/></svg>',
+            FR: '<svg style="width:20px; height:14px; border-radius:2.5px; vertical-align:middle; box-shadow:0 1px 3px rgba(0,0,0,0.4);" viewBox="0 0 900 600"><rect width="300" height="600" fill="#002654"/><rect width="300" height="600" x="300" fill="#ffffff"/><rect width="300" height="600" x="600" fill="#ce1126"/></svg>',
+            EU: '<svg style="width:20px; height:14px; border-radius:2.5px; vertical-align:middle; box-shadow:0 1px 3px rgba(0,0,0,0.4);" viewBox="0 0 810 540"><rect width="810" height="540" fill="#003399"/><circle cx="405" cy="270" r="140" fill="none" stroke="#ffcc00" stroke-width="20" stroke-dasharray="25 48"/></svg>',
+            AU: '<svg style="width:20px; height:14px; border-radius:2.5px; vertical-align:middle; box-shadow:0 1px 3px rgba(0,0,0,0.4);" viewBox="0 0 1200 600"><rect width="1200" height="600" fill="#00008b"/><path d="M0,0 h600 v300 h-600 z" fill="#012169"/><circle cx="900" cy="300" r="120" fill="#ffffff" opacity="0.8"/></svg>',
+            CN: '<svg style="width:20px; height:14px; border-radius:2.5px; vertical-align:middle; box-shadow:0 1px 3px rgba(0,0,0,0.4);" viewBox="0 0 900 600"><rect width="900" height="600" fill="#de2910"/><polygon points="150,75 165,120 210,120 174,148 188,192 150,165 112,192 126,148 90,120 135,120" fill="#ffde00"/></svg>',
+            HK: '<svg style="width:20px; height:14px; border-radius:2.5px; vertical-align:middle; box-shadow:0 1px 3px rgba(0,0,0,0.4);" viewBox="0 0 900 600"><rect width="900" height="600" fill="#c8102e"/><circle cx="450" cy="300" r="120" fill="#ffffff" opacity="0.85"/></svg>',
+            SA: '<svg style="width:20px; height:14px; border-radius:2.5px; vertical-align:middle; box-shadow:0 1px 3px rgba(0,0,0,0.4);" viewBox="0 0 900 600"><rect width="900" height="600" fill="#006c35"/><rect x="250" y="270" width="400" height="60" fill="#ffffff" rx="10"/></svg>',
+            ZA: '<svg style="width:20px; height:14px; border-radius:2.5px; vertical-align:middle; box-shadow:0 1px 3px rgba(0,0,0,0.4);" viewBox="0 0 900 600"><rect width="900" height="600" fill="#007749"/><rect width="900" height="200" fill="#e03c31"/><rect width="900" height="200" y="400" fill="#001489"/></svg>',
+            ENERGY: '<span style="display:inline-flex; align-items:center; justify-content:center; width:20px; height:14px; background:linear-gradient(135deg, #334155, #0f172a); border-radius:2.5px; color:#ffffff; font-size:9.5px; box-shadow:0 1px 3px rgba(0,0,0,0.4);">🛢️</span>',
+            GOLD: '<span style="display:inline-flex; align-items:center; justify-content:center; width:20px; height:14px; background:linear-gradient(135deg, #fbbf24, #d97706); border-radius:2.5px; color:#ffffff; font-size:9px; box-shadow:0 1px 3px rgba(0,0,0,0.4);">🥇</span>',
+            SILVER: '<span style="display:inline-flex; align-items:center; justify-content:center; width:20px; height:14px; background:linear-gradient(135deg, #94a3b8, #64748b); border-radius:2.5px; color:#ffffff; font-size:9px; box-shadow:0 1px 3px rgba(0,0,0,0.4);">🥈</span>',
+            COPPER: '<span style="display:inline-flex; align-items:center; justify-content:center; width:20px; height:14px; background:linear-gradient(135deg, #f97316, #c2410c); border-radius:2.5px; color:#ffffff; font-size:9px; box-shadow:0 1px 3px rgba(0,0,0,0.4);">🥉</span>',
+            CRYPTO: '<span style="display:inline-flex; align-items:center; justify-content:center; width:20px; height:14px; background:linear-gradient(135deg, #f59e0b, #d97706); border-radius:2.5px; color:#ffffff; font-size:9.5px; font-weight:900; box-shadow:0 1px 3px rgba(0,0,0,0.4);">₿</span>'
+        };
+
+        function getFlagHtml(flagEmoji, code) {
+            if (code && FLAG_SVGS[code]) {
+                return FLAG_SVGS[code];
+            }
+            if (flagEmoji) {
+                if (flagEmoji.includes('🇹🇷')) return FLAG_SVGS.TR;
+                if (flagEmoji.includes('🇺🇸')) return FLAG_SVGS.US;
+                if (flagEmoji.includes('🇬🇧')) return FLAG_SVGS.GB;
+                if (flagEmoji.includes('🇯🇵')) return FLAG_SVGS.JP;
+                if (flagEmoji.includes('🇩🇪')) return FLAG_SVGS.DE;
+                if (flagEmoji.includes('🇫🇷')) return FLAG_SVGS.FR;
+                if (flagEmoji.includes('🇪🇺')) return FLAG_SVGS.EU;
+                if (flagEmoji.includes('🇦🇺')) return FLAG_SVGS.AU;
+                if (flagEmoji.includes('🇨🇳')) return FLAG_SVGS.CN;
+                if (flagEmoji.includes('🇭🇰')) return FLAG_SVGS.HK;
+                if (flagEmoji.includes('🇸🇦')) return FLAG_SVGS.SA;
+                if (flagEmoji.includes('🇿🇦')) return FLAG_SVGS.ZA;
+                if (flagEmoji.includes('🛢️')) return FLAG_SVGS.ENERGY;
+                if (flagEmoji.includes('🥇')) return FLAG_SVGS.GOLD;
+                if (flagEmoji.includes('🥈')) return FLAG_SVGS.SILVER;
+                if (flagEmoji.includes('🥉')) return FLAG_SVGS.COPPER;
+            }
+            return flagEmoji || '🌐';
+        }
+        window.FLAG_SVGS = FLAG_SVGS;
+        window.getFlagHtml = getFlagHtml;
+
         window.currentMarqueeSpeed = window.currentMarqueeSpeed || 140;
         function setMarqueeSpeed(speedSec) {
             window.currentMarqueeSpeed = speedSec;
@@ -9826,7 +9877,7 @@ async function loadAdminMetrics() {
                 const badgeHtml = item.badge ? `<span style="background:rgba(244,63,94,0.18); color:#f43f5e; border:1px solid rgba(244,63,94,0.3); padding:1px 6px; border-radius:4px; font-size:9.5px; font-weight:800; margin-left:4px;">${item.badge}</span>` : '';
                 return `
                     <div class="wallstreet-ticker-pill" title="${item.display_name} (${item.symbol})">
-                        <span>${item.flag}</span>
+                        <span style="display:inline-flex; align-items:center;">${getFlagHtml(item.flag, item.code)}</span>
                         <strong style="color:#ffffff;">${item.symbol}</strong>
                         <span style="color:#94a3b8; font-size:10.5px;">${item.display_name}</span>
                         <span style="color:#ffffff; font-weight:700;">${formatVal(item.price, item.category, item.symbol)}</span>
@@ -9851,7 +9902,7 @@ async function loadAdminMetrics() {
                         <div class="wallstreet-clock-card">
                             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
                                 <div style="display:flex; align-items:center; gap:8px;">
-                                    <span style="font-size:20px;">${s.flag}</span>
+                                    <span style="display:inline-flex; align-items:center;">${getFlagHtml(s.flag, s.code)}</span>
                                     <div>
                                         <div style="font-size:13.5px; font-weight:800; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif;">${s.name}</div>
                                         <div style="font-size:10.5px; color:#64748b; font-family:'JetBrains Mono';">${s.city}</div>
@@ -9885,8 +9936,8 @@ async function loadAdminMetrics() {
                     return `
                         <div class="wallstreet-asset-card">
                             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
-                                <div style="display:flex; align-items:center; gap:6px;">
-                                    <span style="font-size:17px;">${it.flag}</span>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="display:inline-flex; align-items:center;">${getFlagHtml(it.flag, it.code)}</span>
                                     <div>
                                         <div style="font-size:13px; font-weight:800; color:#ffffff;">${it.name}</div>
                                         <div style="font-size:10px; color:#64748b; font-family:'JetBrains Mono';">${it.symbol} • ${it.sub}</div>
@@ -9917,7 +9968,7 @@ async function loadAdminMetrics() {
                 return `
                     <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:16px 18px; margin-bottom:20px;">
                         <div style="font-size:14px; font-weight:800; color:#ffffff; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
-                            <span>${icon}</span>
+                            <span style="display:inline-flex; align-items:center;">${getFlagHtml(icon, '')}</span>
                             <span>${title}</span>
                             <span style="font-size:11px; font-family:'JetBrains Mono'; color:#64748b; font-weight:700;">(${items.length} Gösterge)</span>
                         </div>
@@ -9946,6 +9997,131 @@ async function loadAdminMetrics() {
                     html += renderRegionSection('EMTİA, ENERJİ & ORTADOĞU/AFRİKA KORİDORU', '🌍', regions.commodities_me || []);
                 }
                 return html;
+            };
+
+            // DOMINO VE MAKRO PİYASA OKUYUCU KARTI
+            const domino = data.domino || {
+                score: 0,
+                state: "NEUTRAL",
+                title: "KÜRESEL SEANS DENGESİ",
+                color: "#38bdf8",
+                summary_narrative: "Piyasa verileri analiz ediliyor...",
+                gap_down_prob: 50,
+                bot_posture: "SELECTIVE",
+                posture_text: "Dengeli Mod",
+                steps: []
+            };
+
+            const renderDominoCardHtml = () => {
+                if (!domino) return '';
+                const scoreVal = Number(domino.score || 0);
+                const scoreSign = scoreVal > 0 ? '+' : '';
+                const scoreColor = scoreVal > 0 ? '#10b981' : (scoreVal < 0 ? '#ef4444' : '#f59e0b');
+                const gapProb = Number(domino.gap_down_prob || 50);
+                const gapColor = gapProb >= 70 ? '#ef4444' : (gapProb >= 50 ? '#f59e0b' : '#10b981');
+                const steps = domino.steps || [];
+
+                const stepsHtml = steps.map((st, idx) => {
+                    const isLast = idx === steps.length - 1;
+                    const isPos = st.avg_chg > 0;
+                    const isNeg = st.avg_chg < 0;
+                    const chgSign = isPos ? '+' : '';
+                    const chgColor = isPos ? '#10b981' : (isNeg ? '#ef4444' : '#cbd5e1');
+                    const stBg = st.status === 'BEARISH' ? 'rgba(239,68,68,0.1)' : (st.status === 'BULLISH' ? 'rgba(16,185,129,0.1)' : (st.status === 'DEFENSIVE' ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.03)'));
+                    const stBorder = st.status === 'BEARISH' ? 'rgba(239,68,68,0.3)' : (st.status === 'BULLISH' ? 'rgba(16,185,129,0.3)' : (st.status === 'DEFENSIVE' ? 'rgba(245,158,11,0.35)' : 'rgba(255,255,255,0.08)'));
+                    const badgeColor = st.status === 'BEARISH' ? '#ef4444' : (st.status === 'BULLISH' ? '#10b981' : '#f59e0b');
+
+                    return `
+                        <div style="flex:1; min-width:205px; background:${stBg}; border:1px solid ${stBorder}; border-radius:12px; padding:12px 14px; position:relative; box-shadow:0 4px 14px rgba(0,0,0,0.25);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <div style="display:flex; align-items:center; gap:6px;">
+                                    <span style="display:inline-flex; align-items:center;">${getFlagHtml(st.flag, st.code)}</span>
+                                    <span style="font-size:11.5px; font-weight:800; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif;">${st.session}</span>
+                                </div>
+                                <span style="font-size:10px; font-family:'JetBrains Mono'; font-weight:800; color:${chgColor}; background:rgba(0,0,0,0.35); border:1px solid ${chgColor}40; padding:1px 6px; border-radius:4px;">
+                                    ${chgSign}${st.avg_chg}%
+                                </span>
+                            </div>
+                            <div style="font-size:10px; color:#64748b; font-family:'JetBrains Mono'; margin-bottom:6px;">
+                                ⏱️ ${st.hours}
+                            </div>
+                            <div style="font-size:11px; font-weight:800; color:${badgeColor}; margin-bottom:6px; display:flex; align-items:center; gap:4px;">
+                                <span>⚡</span> <span>${st.signal}</span>
+                            </div>
+                            <div style="font-size:10.5px; color:#cbd5e1; line-height:1.45; font-family:'Plus Jakarta Sans',sans-serif;">
+                                ${st.desc}
+                            </div>
+                            ${!isLast ? `<div class="domino-step-arrow" style="position:absolute; right:-10px; top:50%; transform:translateY(-50%); font-size:14px; color:#64748b; z-index:2; text-shadow:0 0 4px #000;">➔</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div style="background:linear-gradient(135deg, rgba(15,23,42,0.95), rgba(10,15,29,0.98)); border:1.5px solid ${domino.color || 'var(--cyan)'}; border-radius:14px; padding:20px 22px; margin-bottom:22px; box-shadow:0 8px 32px rgba(0,0,0,0.45);">
+                        <!-- ÜST BİLGİ VE BAŞLIK BARI -->
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+                            <div>
+                                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                    <span style="font-size:18px;">🌐</span>
+                                    <span style="font-size:15px; font-weight:900; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif; letter-spacing:0.3px;">
+                                        KÜRESEL SEANS DOMİNO ETKİSİ &amp; CANLI PİYASA OKUYUCU
+                                    </span>
+                                    <span style="font-size:11px; font-weight:800; font-family:'JetBrains Mono'; background:${domino.color}20; color:${domino.color}; border:1px solid ${domino.color}50; padding:2px 10px; border-radius:6px;">
+                                        ${domino.title}
+                                    </span>
+                                </div>
+                                <div style="font-size:11.5px; color:#94a3b8; margin-top:4px;">
+                                    Asya Pasifik ➔ Borsa İstanbul ➔ Avrupa (Londra/DAX) ➔ Wall Street (New York) ➔ Kripto Zincirleme Bulaşma Algoritması
+                                </div>
+                            </div>
+
+                            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                                <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); padding:6px 12px; border-radius:8px; text-align:right;">
+                                    <div style="font-size:9.5px; color:#64748b; font-family:'JetBrains Mono'; font-weight:700;">DOMİNO KUANT SKORU</div>
+                                    <div style="font-size:14px; font-weight:900; font-family:'JetBrains Mono'; color:${scoreColor};">
+                                        ${scoreSign}${scoreVal} / 100
+                                    </div>
+                                </div>
+                                <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); padding:6px 12px; border-radius:8px; text-align:right;">
+                                    <div style="font-size:9.5px; color:#64748b; font-family:'JetBrains Mono'; font-weight:700;">WALL STREET GAP-DOWN RİSKİ</div>
+                                    <div style="font-size:14px; font-weight:900; font-family:'JetBrains Mono'; color:${gapColor};">
+                                        %${gapProb} İhtimal
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 5 ADIMLI DOMİNO ZİNCİR HATTI (STEPPER) -->
+                        <div style="margin-bottom:16px;">
+                            <div style="font-size:11px; font-weight:800; color:#64748b; font-family:'JetBrains Mono'; margin-bottom:8px; letter-spacing:0.5px;">
+                                🔗 24 SAATLİK SEANS BULAŞMA (CONTAGION) VE ETKİ HATTI:
+                            </div>
+                            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:stretch;">
+                                ${stepsHtml}
+                            </div>
+                        </div>
+
+                        <!-- CANLI PİYASA OKUYUCU & VALKYRIE KUANT YORUM KUTUSU -->
+                        <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.08); border-left:4px solid ${domino.color}; border-radius:10px; padding:14px 16px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+                                <div style="font-size:12.5px; font-weight:800; color:#ffffff; display:flex; align-items:center; gap:6px;">
+                                    <span>🗣️</span>
+                                    <span>CANLI KUANT PİYASA OKUMA VE YORUM RAPORU</span>
+                                </div>
+                                <span style="font-size:11px; font-weight:800; color:${domino.color}; background:${domino.color}15; border:1px solid ${domino.color}35; padding:2px 8px; border-radius:5px; font-family:'JetBrains Mono';">
+                                    ${domino.posture_text}
+                                </span>
+                            </div>
+                            <div style="font-size:12px; color:#e2e8f0; line-height:1.6; font-family:'Plus Jakarta Sans',sans-serif; margin-bottom:10px;">
+                                ${domino.summary_narrative}
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px; font-size:11px; color:#94a3b8; font-family:'JetBrains Mono'; background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.1); padding:8px 12px; border-radius:6px;">
+                                <span style="color:#f59e0b; font-size:14px;">💡</span>
+                                <span><b>Kuant Kuralı:</b> Asya ve Avrupa'nın ortak ekside kapandığı seanslarda, New York 16:30 zilinin ilk 30 dakikasında kurumsal vadeli satış çığı yaşanır. Kriptoda dip arayışı yapılmaz, USDT.D nakite kaçış izlenir.</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
             };
 
             const btcSp = correlations.btc_sp500 || {};
@@ -10019,13 +10195,16 @@ async function loadAdminMetrics() {
                     </div>
                 </div>
 
+                <!-- 🌐 KÜRESEL SEANS DOMİNO ETKİSİ & CANLI PİYASA OKUYUCU KARTI -->
+                ${renderDominoCardHtml()}
+
                 <!-- KITA & BÖLGE FİLTRE BUTONLARI -->
                 <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:18px;">
                     <button onclick="setWallStreetFilter('all')" class="news-filter-pill ${activeFilter === 'all' ? 'active' : ''}">🌐 Tümü (${marqueeTape.length})</button>
-                    <button onclick="setWallStreetFilter('america')" class="news-filter-pill ${activeFilter === 'america' ? 'active' : ''}">🇺🇸 Amerika (${(regions.america || []).length})</button>
-                    <button onclick="setWallStreetFilter('europe')" class="news-filter-pill ${activeFilter === 'europe' ? 'active' : ''}">🇪🇺 Avrupa (${(regions.europe || []).length})</button>
-                    <button onclick="setWallStreetFilter('asia')" class="news-filter-pill ${activeFilter === 'asia' ? 'active' : ''}">🇯🇵 Asya - Pasifik (${(regions.asia || []).length})</button>
-                    <button onclick="setWallStreetFilter('turkey')" class="news-filter-pill ${activeFilter === 'turkey' ? 'active' : ''}">🇹🇷 Türkiye BIST (${(regions.turkey || []).length})</button>
+                    <button onclick="setWallStreetFilter('america')" class="news-filter-pill ${activeFilter === 'america' ? 'active' : ''}">${getFlagHtml('🇺🇸', 'US')} Amerika (${(regions.america || []).length})</button>
+                    <button onclick="setWallStreetFilter('europe')" class="news-filter-pill ${activeFilter === 'europe' ? 'active' : ''}">${getFlagHtml('🇪🇺', 'EU')} Avrupa (${(regions.europe || []).length})</button>
+                    <button onclick="setWallStreetFilter('asia')" class="news-filter-pill ${activeFilter === 'asia' ? 'active' : ''}">${getFlagHtml('🇯🇵', 'JP')} Asya - Pasifik (${(regions.asia || []).length})</button>
+                    <button onclick="setWallStreetFilter('turkey')" class="news-filter-pill ${activeFilter === 'turkey' ? 'active' : ''}">${getFlagHtml('🇹🇷', 'TR')} Türkiye BIST (${(regions.turkey || []).length})</button>
                     <button onclick="setWallStreetFilter('commodities_me')" class="news-filter-pill ${activeFilter === 'commodities_me' ? 'active' : ''}">🌍 Emtia &amp; Körfez (${(regions.commodities_me || []).length})</button>
                 </div>
 
