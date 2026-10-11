@@ -4302,17 +4302,17 @@ HTML_PAGE = """
     <!-- =========================================================================
          VALKYRIE MACRO NEWS FORENSIC DETAIL & INTEL MODAL
          ========================================================================= -->
-    <div id="macro-news-detail-modal-overlay" class="modal-overlay" style="display:none; z-index:10080;" onclick="if(event.target===this) closeMacroNewsDetailModal()">
-        <div class="modal-card" style="max-width:680px; width:95%; text-align:left; border:1px solid rgba(0,242,254,0.35); box-shadow:0 25px 70px rgba(0,0,0,0.95), 0 0 35px rgba(0,242,254,0.15); padding:24px; border-radius:16px; background:linear-gradient(180deg, #0e1628 0%, #090e1c 100%);">
+    <div id="macro-news-detail-modal-overlay" class="modal-overlay" style="display:none; z-index:10080; padding:20px 10px; overflow-y:auto; align-items:flex-start;" onclick="if(event.target===this) closeMacroNewsDetailModal()">
+        <div class="modal-card" style="max-width:740px; width:95%; max-height:calc(100vh - 40px); margin:auto; display:flex; flex-direction:column; overflow:hidden; padding:0; text-align:left; border:1px solid rgba(0,242,254,0.35); box-shadow:0 25px 70px rgba(0,0,0,0.95), 0 0 35px rgba(0,242,254,0.15); border-radius:16px; background:linear-gradient(180deg, #0e1628 0%, #090e1c 100%);">
             
-            <!-- MODAL HEADER -->
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:14px; margin-bottom:18px;">
+            <!-- MODAL HEADER (Sticky Top) -->
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); padding:16px 22px; background:#0e1628; flex-shrink:0;">
                 <div style="display:flex; align-items:center; gap:12px;">
-                    <div style="width:40px; height:40px; border-radius:12px; background:rgba(0,242,254,0.15); border:1.5px solid var(--cyan); display:flex; align-items:center; justify-content:center; font-size:20px;">
+                    <div style="width:38px; height:38px; border-radius:10px; background:rgba(0,242,254,0.15); border:1.5px solid var(--cyan); display:flex; align-items:center; justify-content:center; font-size:18px;">
                         ⚡
                     </div>
                     <div>
-                        <div style="font-size:16px; font-weight:800; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif; display:flex; align-items:center; gap:8px;">
+                        <div style="font-size:15px; font-weight:800; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif; display:flex; align-items:center; gap:8px;">
                             <span>FLAŞ HABER İSTİHBARAT &amp; ADLİ TEYİT DETAYI</span>
                             <span id="mnews-modal-source-badge" style="font-size:10px; font-family:'JetBrains Mono'; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:6px; font-weight:800;">[KAYNAK]</span>
                         </div>
@@ -4321,116 +4321,117 @@ HTML_PAGE = """
                         </div>
                     </div>
                 </div>
-                <button onclick="closeMacroNewsDetailModal()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); color:#94a3b8; width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:800; display:flex; align-items:center; justify-content:center;">✕</button>
+                <button onclick="closeMacroNewsDetailModal()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); color:#94a3b8; width:32px; height:32px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:800; display:flex; align-items:center; justify-content:center; transition:all 0.2s;" onmouseover="this.style.color='#fff'; this.style.background='rgba(255,255,255,0.12)';" onmouseout="this.style.color='#94a3b8'; this.style.background='rgba(255,255,255,0.05)';">✕</button>
             </div>
 
-            <!-- HABER TAM BAŞLIĞI VE TÜRKÇE ÇEVİRİ METNİ -->
-            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-left:4px solid var(--cyan); border-radius:12px; padding:18px; margin-bottom:18px;">
-                <!-- 1. TÜRKÇE MANŞET VE TAM ÇEVİRİ METNİ -->
-                <div style="margin-bottom:12px;">
-                    <div style="font-size:11px; font-weight:800; color:#10b981; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
-                        <span>🇹🇷</span>
-                        <span>TÜRKÇE ÇEVİRİ METNİ</span>
+            <!-- MODAL BODY (Scrollable Area) -->
+            <div id="macro-news-detail-scroll-body" style="padding:20px 22px; overflow-y:auto; flex:1; -webkit-overflow-scrolling:touch;">
+                <!-- HABER TAM BAŞLIĞI VE TÜRKÇE ÇEVİRİ METNİ -->
+                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-left:4px solid var(--cyan); border-radius:12px; padding:16px; margin-bottom:16px;">
+                    <!-- 1. TÜRKÇE MANŞET VE TAM ÇEVİRİ METNİ -->
+                    <div style="margin-bottom:12px;">
+                        <div style="font-size:11px; font-weight:800; color:#10b981; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                            <span>🇹🇷</span>
+                            <span>TÜRKÇE ÇEVİRİ METNİ</span>
+                        </div>
+                        <div id="mnews-modal-title" style="font-size:14.5px; font-weight:700; color:#ffffff; line-height:1.55; font-family:'Plus Jakarta Sans',sans-serif;">
+                            Haber başlığı yükleniyor...
+                        </div>
                     </div>
-                    <div id="mnews-modal-title" style="font-size:14.5px; font-weight:700; color:#ffffff; line-height:1.55; font-family:'Plus Jakarta Sans',sans-serif;">
-                        Haber başlığı yükleniyor...
+
+                    <!-- 2. ORİJİNAL İNGİLİZCE METİN (KAYNAK) -->
+                    <div id="mnews-modal-orig-wrapper" style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:12px; margin-top:8px;">
+                        <div style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; display:flex; align-items:center; gap:5px;">
+                            <span>🌐</span>
+                            <span>ORİJİNAL METİN (İNGİLİZCE KAYNAK)</span>
+                        </div>
+                        <div id="mnews-modal-title-orig" style="font-size:12px; color:#cbd5e1; line-height:1.5; font-family:'JetBrains Mono',monospace;">
+                            --
+                        </div>
                     </div>
                 </div>
 
-                <!-- 2. ORİJİNAL İNGİLİZCE METİN (KAYNAK) -->
-                <div id="mnews-modal-orig-wrapper" style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:12px; margin-top:8px;">
-                    <div style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; display:flex; align-items:center; gap:5px;">
-                        <span>🌐</span>
-                        <span>ORİJİNAL METİN (İNGİLİZCE KAYNAK)</span>
+                <!-- ADLİ ANALİZ KARTLARI (3'LÜ GRID) -->
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:16px;">
+                    <!-- 1. SENTIMENT VE YÖN SKORU -->
+                    <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:12px;">
+                        <div style="font-size:10.5px; color:#64748b; font-family:'JetBrains Mono';">NLP SENTIMENT PUANI</div>
+                        <div id="mnews-modal-sentiment" style="font-size:17px; font-weight:800; margin-top:4px; font-family:'JetBrains Mono'; color:#10b981;">+0.0</div>
+                        <div id="mnews-modal-category" style="font-size:10px; color:#94a3b8; margin-top:2px;">Kategori: GENEL</div>
                     </div>
-                    <div id="mnews-modal-title-orig" style="font-size:12px; color:#cbd5e1; line-height:1.5; font-family:'JetBrains Mono',monospace;">
-                        --
+
+                    <!-- 2. MAKAM VE YETKİLİ ETKİSİ -->
+                    <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:12px;">
+                        <div style="font-size:10.5px; color:#64748b; font-family:'JetBrains Mono';">YETKİLİ &amp; MAKAM ETKİSİ</div>
+                        <div id="mnews-modal-speaker" style="font-size:13px; font-weight:800; margin-top:4px; color:#ffffff;">Genel Piyasa</div>
+                        <div id="mnews-modal-speaker-weight" style="font-size:10px; color:var(--cyan); margin-top:2px;">0.1x Ağırlık</div>
+                    </div>
+
+                    <!-- 3. BYZANTINE MUTABAKAT & ONAY -->
+                    <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:12px;">
+                        <div style="font-size:10.5px; color:#64748b; font-family:'JetBrains Mono';">BYZANTINE QUORUM DURUMU</div>
+                        <div id="mnews-modal-quorum-verdict" style="font-size:12px; font-weight:800; margin-top:4px; color:#38bdf8;">Çift Teyit Bekleniyor</div>
+                        <div id="mnews-modal-entry-perm" style="font-size:10px; color:#94a3b8; margin-top:2px;">Yeni İşlem: Korumalı</div>
+                    </div>
+                </div>
+
+                <!-- 🧠 VALKYRIE AI ADLİ İSTİHBARAT & DETAYLI PİYASA YORUMU -->
+                <div style="background:linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9)); border:1px solid rgba(0, 242, 254, 0.3); border-radius:12px; padding:16px; margin-bottom:16px; box-shadow:0 4px 20px rgba(0, 242, 254, 0.08);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <div style="font-size:12px; font-weight:800; color:var(--cyan); display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:16px;">🧠</span>
+                            <span>YAPAY ZEKA (AI) ADLİ İSTİHBARAT &amp; PİYASA YORUMU</span>
+                        </div>
+                        <span id="mnews-modal-impact-badge" style="font-size:10px; font-weight:800; padding:2px 8px; border-radius:6px; background:rgba(0,242,254,0.15); color:var(--cyan); border:1px solid rgba(0,242,254,0.3);">
+                            NÖTR / RUTİN AKIŞ
+                        </span>
+                    </div>
+
+                    <!-- 1. HABERİN NE OLDUĞU (ÖZET & ANLAM) -->
+                    <div style="margin-bottom:10px;">
+                        <div style="font-size:10.5px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px;">📰 Bu Haber Nedir &amp; Ne Anlama Geliyor?</div>
+                        <div id="mnews-modal-ai-summary" style="font-size:12.5px; color:#ffffff; line-height:1.5; margin-top:3px; font-weight:600;">
+                            Haber metni taranıyor...
+                        </div>
+                    </div>
+
+                    <!-- 2. YAPAY ZEKA KUANT YORUMU & ETKİ ANALİZİ -->
+                    <div style="margin-bottom:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:10px;">
+                        <div style="font-size:10.5px; font-weight:800; color:#c084fc; text-transform:uppercase; letter-spacing:0.5px;">🤖 Kuant Masası &amp; Piyasa Etkisi</div>
+                        <div id="mnews-modal-ai-interpretation" style="font-size:12px; color:#cbd5e1; line-height:1.5; margin-top:3px;">
+                            Piyasa etkisi ve likidite akışı hesaplanıyor...
+                        </div>
+                    </div>
+
+                    <!-- 3. PUANLAMA MANTIĞI & BOT AKSİYONU (2'Lİ GRID) -->
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:11px;">
+                        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:8px 10px; border-radius:7px;">
+                            <div style="color:#64748b; font-size:9.5px; font-weight:800; font-family:'JetBrains Mono';">PUANLAMA GEREKÇESİ (NEDEN BU PUAN?)</div>
+                            <div id="mnews-modal-score-explanation" style="color:#ffffff; font-weight:600; margin-top:3px; font-size:11.5px; line-height:1.4;">Metin anahtar kelimeleri incelendi.</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:8px 10px; border-radius:7px;">
+                            <div style="color:#64748b; font-size:9.5px; font-weight:800; font-family:'JetBrains Mono';">BOT STRATEJİ AKSİYONU</div>
+                            <div id="mnews-modal-strategy-action" style="color:#10b981; font-weight:700; margin-top:3px; font-size:11.5px; line-height:1.4;">Standart rejimde işlem serbest.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KAYNAK VE ELO REPUTATION BİLGİSİ -->
+                <div style="background:rgba(168,85,247,0.05); border:1px solid rgba(168,85,247,0.2); border-radius:12px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <div style="font-size:11px; font-weight:800; color:#c084fc;">🧬 Kaynak Güvenilirliği (Darwinian ELO Engine)</div>
+                        <div style="font-size:11.5px; color:#cbd5e1; margin-top:2px;" id="mnews-modal-elo-info">
+                            Kaynak: <strong style="color:#ffffff;">TreeNews</strong> • ELO: <strong style="color:#10b981;">98.5</strong> • Quorum Oy Ağırlığı: <strong style="color:var(--cyan);">1.5x</strong>
+                        </div>
+                    </div>
+                    <div id="mnews-modal-status-badge" style="font-size:10px; font-weight:800; padding:3px 8px; border-radius:6px; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3);">
+                        YÜKSEK GÜVEN ✅
                     </div>
                 </div>
             </div>
 
-            <!-- ADLİ ANALİZ KARTLARI (3'LÜ GRID) -->
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:18px;">
-                
-                <!-- 1. SENTIMENT VE YÖN SKORU -->
-                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:12px;">
-                    <div style="font-size:10.5px; color:#64748b; font-family:'JetBrains Mono';">NLP SENTIMENT PUANI</div>
-                    <div id="mnews-modal-sentiment" style="font-size:17px; font-weight:800; margin-top:4px; font-family:'JetBrains Mono'; color:#10b981;">+0.0</div>
-                    <div id="mnews-modal-category" style="font-size:10px; color:#94a3b8; margin-top:2px;">Kategori: GENEL</div>
-                </div>
-
-                <!-- 2. MAKAM VE YETKİLİ ETKİSİ -->
-                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:12px;">
-                    <div style="font-size:10.5px; color:#64748b; font-family:'JetBrains Mono';">YETKİLİ &amp; MAKAM ETKİSİ</div>
-                    <div id="mnews-modal-speaker" style="font-size:13px; font-weight:800; margin-top:4px; color:#ffffff;">Genel Piyasa</div>
-                    <div id="mnews-modal-speaker-weight" style="font-size:10px; color:var(--cyan); margin-top:2px;">0.1x Ağırlık</div>
-                </div>
-
-                <!-- 3. BYZANTINE MUTABAKAT & ONAY -->
-                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:12px;">
-                    <div style="font-size:10.5px; color:#64748b; font-family:'JetBrains Mono';">BYZANTINE QUORUM DURUMU</div>
-                    <div id="mnews-modal-quorum-verdict" style="font-size:12px; font-weight:800; margin-top:4px; color:#38bdf8;">Çift Teyit Bekleniyor</div>
-                    <div id="mnews-modal-entry-perm" style="font-size:10px; color:#94a3b8; margin-top:2px;">Yeni İşlem: Korumalı</div>
-                </div>
-
-            </div>
-
-            <!-- 🧠 VALKYRIE AI ADLİ İSTİHBARAT & DETAYLI PİYASA YORUMU -->
-            <div style="background:linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9)); border:1px solid rgba(0, 242, 254, 0.3); border-radius:12px; padding:16px; margin-bottom:18px; box-shadow:0 4px 20px rgba(0, 242, 254, 0.08);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                    <div style="font-size:12px; font-weight:800; color:var(--cyan); display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:16px;">🧠</span>
-                        <span>YAPAY ZEKA (AI) ADLİ İSTİHBARAT &amp; PİYASA YORUMU</span>
-                    </div>
-                    <span id="mnews-modal-impact-badge" style="font-size:10px; font-weight:800; padding:2px 8px; border-radius:6px; background:rgba(0,242,254,0.15); color:var(--cyan); border:1px solid rgba(0,242,254,0.3);">
-                        NÖTR / RUTİN AKIŞ
-                    </span>
-                </div>
-
-                <!-- 1. HABERİN NE OLDUĞU (ÖZET & ANLAM) -->
-                <div style="margin-bottom:10px;">
-                    <div style="font-size:10.5px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px;">📰 Bu Haber Nedir &amp; Ne Anlama Geliyor?</div>
-                    <div id="mnews-modal-ai-summary" style="font-size:12.5px; color:#ffffff; line-height:1.5; margin-top:3px; font-weight:600;">
-                        Haber metni taranıyor...
-                    </div>
-                </div>
-
-                <!-- 2. YAPAY ZEKA KUANT YORUMU & ETKİ ANALİZİ -->
-                <div style="margin-bottom:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:10px;">
-                    <div style="font-size:10.5px; font-weight:800; color:#c084fc; text-transform:uppercase; letter-spacing:0.5px;">🤖 Kuant Masası &amp; Piyasa Etkisi</div>
-                    <div id="mnews-modal-ai-interpretation" style="font-size:12px; color:#cbd5e1; line-height:1.5; margin-top:3px;">
-                        Piyasa etkisi ve likidite akışı hesaplanıyor...
-                    </div>
-                </div>
-
-                <!-- 3. PUANLAMA MANTIĞI & BOT AKSİYONU (2'Lİ GRID) -->
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:11px;">
-                    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:8px 10px; border-radius:7px;">
-                        <div style="color:#64748b; font-size:9.5px; font-weight:800; font-family:'JetBrains Mono';">PUANLAMA GEREKÇESİ (NEDEN BU PUAN?)</div>
-                        <div id="mnews-modal-score-explanation" style="color:#ffffff; font-weight:600; margin-top:3px; font-size:11.5px; line-height:1.4;">Metin anahtar kelimeleri incelendi.</div>
-                    </div>
-                    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:8px 10px; border-radius:7px;">
-                        <div style="color:#64748b; font-size:9.5px; font-weight:800; font-family:'JetBrains Mono';">BOT STRATEJİ AKSİYONU</div>
-                        <div id="mnews-modal-strategy-action" style="color:#10b981; font-weight:700; margin-top:3px; font-size:11.5px; line-height:1.4;">Standart rejimde işlem serbest.</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- KAYNAK VE ELO REPUTATION BİLGİSİ -->
-            <div style="background:rgba(168,85,247,0.05); border:1px solid rgba(168,85,247,0.2); border-radius:12px; padding:12px 16px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                <div>
-                    <div style="font-size:11px; font-weight:800; color:#c084fc;">🧬 Kaynak Güvenilirliği (Darwinian ELO Engine)</div>
-                    <div style="font-size:11.5px; color:#cbd5e1; margin-top:2px;" id="mnews-modal-elo-info">
-                        Kaynak: <strong style="color:#ffffff;">TreeNews</strong> • ELO: <strong style="color:#10b981;">98.5</strong> • Quorum Oy Ağırlığı: <strong style="color:var(--cyan);">1.5x</strong>
-                    </div>
-                </div>
-                <div id="mnews-modal-status-badge" style="font-size:10px; font-weight:800; padding:3px 8px; border-radius:6px; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3);">
-                    YÜKSEK GÜVEN ✅
-                </div>
-            </div>
-
-            <!-- BUTONLAR VE AKSİYONLAR -->
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-top:1px solid rgba(255,255,255,0.08); padding-top:16px;">
+            <!-- MODAL FOOTER (Sticky Bottom) -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-top:1px solid rgba(255,255,255,0.08); padding:14px 22px; background:#090e1c; flex-shrink:0;">
                 <div style="display:flex; gap:8px;">
                     <button id="mnews-btn-copy" onclick="copyMacroNewsHeadline()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); color:#cbd5e1; padding:9px 14px; border-radius:8px; font-size:11.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px;">
                         <span>📋 Başlığı Kopyala</span>
@@ -9741,6 +9742,9 @@ async function loadAdminMetrics() {
             }
 
             overlay.style.display = 'flex';
+            const scrollBody = document.getElementById('macro-news-detail-scroll-body');
+            if (scrollBody) scrollBody.scrollTop = 0;
+            overlay.scrollTop = 0;
         }
         window.openMacroNewsDetailModal = openMacroNewsDetailModal;
 
