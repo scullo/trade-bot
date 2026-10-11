@@ -24248,6 +24248,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
         await asyncio.sleep(15)
         while True:
             try:
+                import aiohttp
                 from forensic_blackbox_manager import forensic_blackbox_manager as fbm
                 hist = list(getattr(trader_manager, 'history', []) or [])[-60:]
                 fbm.backfill_status = {"ts": time.time(), "hist": len(hist), "catalog": len(fbm.catalog)}
