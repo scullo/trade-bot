@@ -23787,6 +23787,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             page = int(request.query.get("page", 1))
             page_size = int(request.query.get("page_size", 24))
             data = forensic_blackbox_manager.get_snapshots(filter_category=category, search=search, page=page, page_size=page_size)
+            data["backfill_status"] = getattr(forensic_blackbox_manager, "backfill_status", None)
             return web.json_response(data)
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=500)
@@ -24249,6 +24250,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             try:
                 from forensic_blackbox_manager import forensic_blackbox_manager as fbm
                 hist = list(getattr(trader_manager, 'history', []) or [])[-60:]
+                fbm.backfill_status = {"ts": time.time(), "hist": len(hist), "catalog": len(fbm.catalog)}
                 known = set()
                 for e in fbm.catalog:
                     if e.get("source_trade_id"):
@@ -24306,6 +24308,11 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                     print(f">> [ADLI KARA KUTU BACKFILL] {done} kapanmış işlem için görsel yeniden üretildi.")
             except Exception as e:
                 print(f"[FORENSIC BACKFILL] hata: {e}")
+                try:
+                    from forensic_blackbox_manager import forensic_blackbox_manager as fbm2
+                    fbm2.backfill_status = {"ts": time.time(), "error": repr(e)}
+                except Exception:
+                    pass
             await asyncio.sleep(60)
 
     asyncio.create_task(forensic_backfill_daemon())
