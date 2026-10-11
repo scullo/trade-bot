@@ -9818,9 +9818,25 @@ async function loadAdminMetrics() {
         }
         window.syncWallStreetData = syncWallStreetData;
 
+        let wallStreetAutoPollingInterval = null;
+        function initWallStreetAutoPolling() {
+            if (window.wallStreetAutoPollingInterval) return;
+            window.wallStreetAutoPollingInterval = setInterval(() => {
+                const tab = document.getElementById('main-tab-content-wallstreet');
+                if (tab && !tab.classList.contains('hidden') && tab.style.display !== 'none') {
+                    if (typeof renderWallStreetTabView === 'function') {
+                        renderWallStreetTabView(false);
+                    }
+                }
+            }, 8000);
+        }
+        window.initWallStreetAutoPolling = initWallStreetAutoPolling;
+
         async function renderWallStreetTabView(forceRefresh = false) {
             const container = document.getElementById('wallstreet-tab-view-container');
             if (!container) return;
+
+            initWallStreetAutoPolling();
 
             if (window.wallStreetDataCache && !wallStreetDataCache) {
                 wallStreetDataCache = window.wallStreetDataCache;
@@ -9830,7 +9846,7 @@ async function loadAdminMetrics() {
             }
 
             const now = Date.now();
-            if (forceRefresh || !wallStreetDataCache || (now - lastWallStreetFetchTs > 10000)) {
+            if (forceRefresh || !wallStreetDataCache || (now - lastWallStreetFetchTs > 7000)) {
                 try {
                     const res = await fetch('/api/wallstreet_terminal');
                     const json = await res.json();
@@ -9848,8 +9864,13 @@ async function loadAdminMetrics() {
             const data = wallStreetDataCache || window.wallStreetDataCache || {};
             const sessions = data.sessions || [];
             const regions = data.regions || {};
+            const groupedRegions = data.grouped_regions || {};
             const marqueeTape = data.marquee_tape || [];
             const correlations = data.correlations || {};
+            const domino = data.domino || {};
+            const anomalies = data.anomalies || {};
+            const openForecasts = data.open_forecasts || [];
+            const aiInsights = data.ai_insights || {};
             const syncTime = data.last_sync_tsi || "Şimdi";
             const activeFilter = window.currentWallStreetFilter || 'all';
             const currentMarqueeSpeed = window.currentMarqueeSpeed || 140;
@@ -9889,6 +9910,52 @@ async function loadAdminMetrics() {
 
             const marqueeTrackHtml = marqueeTape.map(renderPillItem).join('');
 
+            // 1. GÜNÜN DİKKAT ÇEKENİ & PİYASA ANOMALİ RADARI
+            const renderAnomalyAlertHtml = () => {
+                if (!anomalies || !anomalies.title) return '';
+                const isCritical = anomalies.severity === 'CRITICAL';
+                const isHigh = anomalies.severity === 'HIGH';
+                const borderColor = isCritical ? '#ef4444' : (isHigh ? '#f59e0b' : 'var(--cyan)');
+                const bgGradient = isCritical 
+                    ? 'linear-gradient(135deg, rgba(239,68,68,0.16), rgba(15,23,42,0.95))' 
+                    : 'linear-gradient(135deg, rgba(245,158,11,0.14), rgba(15,23,42,0.95))';
+                const iconAnim = isCritical ? 'animation:pulse 1s infinite alternate;' : '';
+
+                return `
+                    <div style="background:${bgGradient}; border:1.5px solid ${borderColor}; border-radius:12px; padding:14px 18px; margin-bottom:18px; box-shadow:0 6px 24px rgba(0,0,0,0.4); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                        <div style="display:flex; align-items:flex-start; gap:12px; max-width:850px;">
+                            <div style="width:38px; height:38px; border-radius:10px; background:${borderColor}20; border:1px solid ${borderColor}; display:flex; align-items:center; justify-content:center; font-size:18px; ${iconAnim}">
+                                ${isCritical ? '🚨' : '⚡'}
+                            </div>
+                            <div>
+                                <div style="font-size:10px; font-weight:800; font-family:'JetBrains Mono'; color:${borderColor}; letter-spacing:0.8px; margin-bottom:2px; text-transform:uppercase;">
+                                    🚨 GÜNÜN DİKKAT ÇEKENİ &amp; PİYASA ANOMALİ RADARI
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                    <span style="font-size:13.5px; font-weight:900; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif;">
+                                        ${anomalies.title}
+                                    </span>
+                                    <span style="font-size:10px; font-weight:800; font-family:'JetBrains Mono'; background:${borderColor}25; color:${borderColor}; border:1px solid ${borderColor}60; padding:1px 8px; border-radius:5px;">
+                                        ${anomalies.badge || 'ANOMALİ'}
+                                    </span>
+                                </div>
+                                <div style="font-size:11.5px; color:#cbd5e1; margin-top:4px; line-height:1.5; font-family:'Plus Jakarta Sans',sans-serif;">
+                                    ${anomalies.narrative}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="background:rgba(0,0,0,0.45); border:1px dashed ${borderColor}60; padding:8px 14px; border-radius:8px; min-width:260px; text-align:right;">
+                            <div style="font-size:9.5px; color:#64748b; font-family:'JetBrains Mono'; font-weight:700;">BOT KUANT AKSİYONU</div>
+                            <div style="font-size:11px; font-weight:800; color:${borderColor}; margin-top:2px; font-family:'JetBrains Mono';">
+                                ${anomalies.bot_action}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            };
+
+            // 2. SEANS SAATLERİ (4 MERKEZ)
             const renderClocksHtml = () => {
                 if (!sessions || sessions.length === 0) return '<div style="color:#94a3b8; font-size:12px;">Seans saatleri yükleniyor...</div>';
                 return sessions.map(s => {
@@ -9922,98 +9989,92 @@ async function loadAdminMetrics() {
                 }).join('');
             };
 
-            const renderRegionSection = (title, icon, items) => {
-                if (!items || items.length === 0) return '';
-                const cardsHtml = items.map(it => {
-                    const isPos = it.is_positive;
-                    const chgSign = it.chg_24h > 0 ? '+' : '';
-                    const chgColor = it.chg_24h > 0 ? '#10b981' : (it.chg_24h < 0 ? '#f43f5e' : '#cbd5e1');
-                    const chgBg = it.chg_24h > 0 ? 'rgba(16,185,129,0.12)' : (it.chg_24h < 0 ? 'rgba(244,63,94,0.12)' : 'rgba(255,255,255,0.05)');
-                    const chgBorder = it.chg_24h > 0 ? 'rgba(16,185,129,0.3)' : (it.chg_24h < 0 ? 'rgba(244,63,94,0.3)' : 'rgba(255,255,255,0.1)');
-                    const chgArrow = it.chg_24h > 0 ? '▲' : (it.chg_24h < 0 ? '▼' : '●');
-                    const badgeHtml = it.badge ? `<div style="margin-top:6px; font-size:10px; font-weight:800; background:rgba(244,63,94,0.15); color:#f43f5e; border:1px solid rgba(244,63,94,0.3); padding:2px 8px; border-radius:5px; display:inline-block;">${it.badge}</div>` : '';
+            // 3. AÇILACAK BORSALARI TAHMİN EDEN SENTETİK GAP MOTORU
+            const renderOpenForecastsHtml = () => {
+                if (!openForecasts || openForecasts.length === 0) return '';
+
+                const cards = openForecasts.map(f => {
+                    const isDown = f.predicted_gap < 0;
+                    const isUp = f.predicted_gap > 0;
+                    const gapColor = isDown ? '#ef4444' : (isUp ? '#10b981' : '#cbd5e1');
+                    const gapSign = isUp ? '+' : '';
+                    const arrow = isDown ? '▼' : (isUp ? '▲' : '●');
+                    const cardBg = isDown ? 'rgba(239,68,68,0.06)' : (isUp ? 'rgba(16,185,129,0.06)' : 'rgba(255,255,255,0.02)');
+                    const cardBorder = isDown ? 'rgba(239,68,68,0.25)' : (isUp ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.08)');
 
                     return `
-                        <div class="wallstreet-asset-card">
-                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
-                                <div style="display:flex; align-items:center; gap:8px;">
-                                    <span style="display:inline-flex; align-items:center;">${getFlagHtml(it.flag, it.code)}</span>
-                                    <div>
-                                        <div style="font-size:13px; font-weight:800; color:#ffffff;">${it.name}</div>
-                                        <div style="font-size:10px; color:#64748b; font-family:'JetBrains Mono';">${it.symbol} • ${it.sub}</div>
+                        <div style="background:${cardBg}; border:1px solid ${cardBorder}; border-radius:12px; padding:14px 16px; position:relative; box-shadow:0 4px 16px rgba(0,0,0,0.25); display:flex; flex-direction:column; justify-content:space-between;">
+                            <div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        ${getFlagHtml(f.flag, f.code)}
+                                        <div>
+                                            <div style="font-size:13px; font-weight:800; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif;">${f.target}</div>
+                                            <div style="font-size:10px; color:#64748b; font-family:'JetBrains Mono';">⏱️ ${f.hours}</div>
+                                        </div>
                                     </div>
-                                </div>
-                                <span style="font-size:9.5px; font-family:'JetBrains Mono'; font-weight:800; color:#38bdf8; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:1px 6px; border-radius:5px;">
-                                    ${it.category}
-                                </span>
-                            </div>
-
-                            <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:10px;">
-                                <div>
-                                    <div style="font-size:18px; font-weight:900; color:#ffffff; font-family:'JetBrains Mono';">
-                                        ${formatVal(it.price, it.category, it.symbol)}
-                                    </div>
-                                </div>
-                                <div style="text-align:right;">
-                                    <span style="display:inline-block; font-size:12px; font-weight:800; font-family:'JetBrains Mono'; color:${chgColor}; background:${chgBg}; border:1px solid ${chgBorder}; padding:2px 8px; border-radius:6px;">
-                                        ${chgArrow} ${chgSign}${it.chg_24h}%
+                                    <span style="font-size:9.5px; font-family:'JetBrains Mono'; font-weight:800; color:${f.is_open ? '#10b981' : '#38bdf8'}; background:${f.is_open ? 'rgba(16,185,129,0.12)' : 'rgba(56,189,248,0.12)'}; border:1px solid ${f.is_open ? 'rgba(16,185,129,0.3)' : 'rgba(56,189,248,0.3)'}; padding:2px 8px; border-radius:5px;">
+                                        ${f.status_label}
                                     </span>
                                 </div>
+
+                                <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:10px 12px; margin:10px 0; display:flex; justify-content:space-between; align-items:center;">
+                                    <div>
+                                        <div style="font-size:9.5px; color:#94a3b8; font-family:'JetBrains Mono';">TAHMİNİ AÇILIŞ DEĞERİ</div>
+                                        <div style="font-size:16px; font-weight:900; color:#ffffff; font-family:'JetBrains Mono';">
+                                            ${formatVal(f.predicted_open, 'ENDEX', '')}
+                                        </div>
+                                    </div>
+                                    <div style="text-align:right;">
+                                        <div style="font-size:9.5px; color:#94a3b8; font-family:'JetBrains Mono';">BEKLENEN GAP (BOŞLUK)</div>
+                                        <div style="font-size:14px; font-weight:900; color:${gapColor}; font-family:'JetBrains Mono';">
+                                            ${arrow} ${gapSign}${f.predicted_gap}%
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="font-size:10.5px; font-weight:800; color:${gapColor}; margin-bottom:6px;">
+                                    ${f.gap_label}
+                                </div>
+                                <div style="font-size:11px; color:#cbd5e1; line-height:1.45; font-family:'Plus Jakarta Sans',sans-serif; margin-bottom:10px;">
+                                    ${f.commentary}
+                                </div>
                             </div>
-                            ${badgeHtml}
+
+                            <div style="display:flex; justify-content:space-between; align-items:center; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06); font-family:'JetBrains Mono'; font-size:10px;">
+                                <span style="color:#64748b;">🎯 Tetikleyici: <b style="color:#94a3b8;">${f.primary_driver}</b></span>
+                                <span style="color:#38bdf8; font-weight:800;">Güven: %${f.confidence}</span>
+                            </div>
                         </div>
                     `;
                 }).join('');
 
                 return `
-                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:16px 18px; margin-bottom:20px;">
-                        <div style="font-size:14px; font-weight:800; color:#ffffff; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
-                            <span style="display:inline-flex; align-items:center;">${getFlagHtml(icon, '')}</span>
-                            <span>${title}</span>
-                            <span style="font-size:11px; font-family:'JetBrains Mono'; color:#64748b; font-weight:700;">(${items.length} Gösterge)</span>
+                    <div style="background:linear-gradient(135deg, rgba(15,23,42,0.92), rgba(10,15,29,0.96)); border:1px solid rgba(56,189,248,0.3); border-radius:14px; padding:18px 20px; margin-bottom:22px; box-shadow:0 6px 24px rgba(0,0,0,0.35);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:18px;">🔮</span>
+                                <span style="font-size:14px; font-weight:900; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif;">
+                                    KÜRESEL BORSA AÇILIŞ TAHMİN MASASI (AI SYNTHETIC GAP PREDICTOR)
+                                </span>
+                                <span style="font-size:10px; font-family:'JetBrains Mono'; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:2px 8px; border-radius:5px; font-weight:800;">
+                                    CANLI MODELLEME
+                                </span>
+                            </div>
+                            <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">
+                                Küresel Korelasyon Matrisi (Asya ➔ BIST ➔ Avrupa ➔ Wall Street) Ağırlıklı Tahmin
+                            </div>
                         </div>
-                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">
-                            ${cardsHtml}
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px;">
+                            ${cards}
                         </div>
                     </div>
                 `;
             };
 
-            const renderAllRegions = () => {
-                let html = '';
-                if (activeFilter === 'all' || activeFilter === 'america') {
-                    html += renderRegionSection('AMERİKA MASASI (Wall Street & New York Desk)', '🇺🇸', regions.america || []);
-                }
-                if (activeFilter === 'all' || activeFilter === 'europe') {
-                    html += renderRegionSection('AVRUPA MASASI (Frankfurt, Londra & Paris)', '🇪🇺', regions.europe || []);
-                }
-                if (activeFilter === 'all' || activeFilter === 'asia') {
-                    html += renderRegionSection('ASYA - PASİFİK MASASI (Tokyo, Hong Kong & Şanghay)', '🇯🇵', regions.asia || []);
-                }
-                if (activeFilter === 'all' || activeFilter === 'turkey') {
-                    html += renderRegionSection('TÜRKİYE MASASI (Borsa İstanbul & Türk Lirası Varlıkları)', '🇹🇷', regions.turkey || []);
-                }
-                if (activeFilter === 'all' || activeFilter === 'commodities_me') {
-                    html += renderRegionSection('EMTİA, ENERJİ & ORTADOĞU/AFRİKA KORİDORU', '🌍', regions.commodities_me || []);
-                }
-                return html;
-            };
-
-            // DOMINO VE MAKRO PİYASA OKUYUCU KARTI
-            const domino = data.domino || {
-                score: 0,
-                state: "NEUTRAL",
-                title: "KÜRESEL SEANS DENGESİ",
-                color: "#38bdf8",
-                summary_narrative: "Piyasa verileri analiz ediliyor...",
-                gap_down_prob: 50,
-                bot_posture: "SELECTIVE",
-                posture_text: "Dengeli Mod",
-                steps: []
-            };
-
+            // 4. KÜRESEL SEANS DOMİNO ETKİSİ KARTI
             const renderDominoCardHtml = () => {
-                if (!domino) return '';
+                if (!domino || !domino.title) return '';
                 const scoreVal = Number(domino.score || 0);
                 const scoreSign = scoreVal > 0 ? '+' : '';
                 const scoreColor = scoreVal > 0 ? '#10b981' : (scoreVal < 0 ? '#ef4444' : '#f59e0b');
@@ -10058,7 +10119,6 @@ async function loadAdminMetrics() {
 
                 return `
                     <div style="background:linear-gradient(135deg, rgba(15,23,42,0.95), rgba(10,15,29,0.98)); border:1.5px solid ${domino.color || 'var(--cyan)'}; border-radius:14px; padding:20px 22px; margin-bottom:22px; box-shadow:0 8px 32px rgba(0,0,0,0.45);">
-                        <!-- ÜST BİLGİ VE BAŞLIK BARI -->
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
                             <div>
                                 <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
@@ -10091,7 +10151,6 @@ async function loadAdminMetrics() {
                             </div>
                         </div>
 
-                        <!-- 5 ADIMLI DOMİNO ZİNCİR HATTI (STEPPER) -->
                         <div style="margin-bottom:16px;">
                             <div style="font-size:11px; font-weight:800; color:#64748b; font-family:'JetBrains Mono'; margin-bottom:8px; letter-spacing:0.5px;">
                                 🔗 24 SAATLİK SEANS BULAŞMA (CONTAGION) VE ETKİ HATTI:
@@ -10101,7 +10160,6 @@ async function loadAdminMetrics() {
                             </div>
                         </div>
 
-                        <!-- CANLI PİYASA OKUYUCU & VALKYRIE KUANT YORUM KUTUSU -->
                         <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.08); border-left:4px solid ${domino.color}; border-radius:10px; padding:14px 16px;">
                             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
                                 <div style="font-size:12.5px; font-weight:800; color:#ffffff; display:flex; align-items:center; gap:6px;">
@@ -10124,6 +10182,179 @@ async function loadAdminMetrics() {
                 `;
             };
 
+            // 5. BORSA TASARIMI: TEKİL VARLIK KARTI
+            const renderAssetCard = (it) => {
+                const isPos = it.is_positive;
+                const chgSign = it.chg_24h > 0 ? '+' : '';
+                const chgColor = it.chg_24h > 0 ? '#10b981' : (it.chg_24h < 0 ? '#f43f5e' : '#cbd5e1');
+                const chgBg = it.chg_24h > 0 ? 'rgba(16,185,129,0.12)' : (it.chg_24h < 0 ? 'rgba(244,63,94,0.12)' : 'rgba(255,255,255,0.05)');
+                const chgBorder = it.chg_24h > 0 ? 'rgba(16,185,129,0.3)' : (it.chg_24h < 0 ? 'rgba(244,63,94,0.3)' : 'rgba(255,255,255,0.1)');
+                const chgArrow = it.chg_24h > 0 ? '▲' : (it.chg_24h < 0 ? '▼' : '●');
+                const badgeHtml = it.badge ? `<div style="margin-top:6px; font-size:9.5px; font-weight:800; background:rgba(244,63,94,0.15); color:#f43f5e; border:1px solid rgba(244,63,94,0.3); padding:2px 7px; border-radius:4px; display:inline-block;">${it.badge}</div>` : '';
+
+                return `
+                    <div class="wallstreet-asset-card">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="display:inline-flex; align-items:center;">${getFlagHtml(it.flag, it.code)}</span>
+                                <div>
+                                    <div style="font-size:13px; font-weight:800; color:#ffffff;">${it.name}</div>
+                                    <div style="font-size:10px; color:#64748b; font-family:'JetBrains Mono';">${it.symbol} • ${it.sub}</div>
+                                </div>
+                            </div>
+                            <span style="font-size:9px; font-family:'JetBrains Mono'; font-weight:800; color:#38bdf8; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:1px 6px; border-radius:4px;">
+                                ${it.category}
+                            </span>
+                        </div>
+
+                        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:8px;">
+                            <div>
+                                <div style="font-size:17px; font-weight:900; color:#ffffff; font-family:'JetBrains Mono';">
+                                    ${formatVal(it.price, it.category, it.symbol)}
+                                </div>
+                            </div>
+                            <div style="text-align:right;">
+                                <span style="display:inline-block; font-size:12px; font-weight:800; font-family:'JetBrains Mono'; color:${chgColor}; background:${chgBg}; border:1px solid ${chgBorder}; padding:2px 8px; border-radius:6px;">
+                                    ${chgArrow} ${chgSign}${it.chg_24h}%
+                                </span>
+                            </div>
+                        </div>
+                        ${badgeHtml}
+                    </div>
+                `;
+            };
+
+            // 6. BORSA TASARIMI: GRUPLANMIŞ BÖLGE MASALARI (TÜRKİYE, ABD, AVRUPA VB.)
+            const renderRegionSection = (title, icon, regKey) => {
+                const groupObj = (groupedRegions && groupedRegions[regKey]) ? groupedRegions[regKey] : null;
+                const items = regions[regKey] || [];
+                if (!items || items.length === 0) return '';
+
+                let innerHtml = '';
+                if (groupObj && Object.keys(groupObj).length > 0) {
+                    for (const [subTitle, subItems] of Object.entries(groupObj)) {
+                        if (!subItems || subItems.length === 0) continue;
+                        const subCards = subItems.map(renderAssetCard).join('');
+                        innerHtml += `
+                            <div style="margin-bottom:14px;">
+                                <div style="font-size:11.5px; font-weight:800; color:#94a3b8; font-family:'JetBrains Mono'; margin-bottom:8px; display:flex; align-items:center; gap:6px; padding-bottom:4px; border-bottom:1px dashed rgba(255,255,255,0.08);">
+                                    <span style="color:var(--cyan); font-size:10px;">■</span>
+                                    <span>${subTitle}</span>
+                                    <span style="color:#64748b; font-size:10px;">(${subItems.length} Enstrüman)</span>
+                                </div>
+                                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:10px;">
+                                    ${subCards}
+                                </div>
+                            </div>
+                        `;
+                    }
+                } else {
+                    innerHtml = `
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:10px;">
+                            ${items.map(renderAssetCard).join('')}
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:16px 18px; margin-bottom:20px; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+                        <div style="font-size:14px; font-weight:800; color:#ffffff; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="display:inline-flex; align-items:center;">${getFlagHtml(icon, '')}</span>
+                                <span>${title}</span>
+                                <span style="font-size:11px; font-family:'JetBrains Mono'; color:#64748b; font-weight:700;">(${items.length} Gösterge)</span>
+                            </div>
+                            <span style="font-size:9.5px; font-family:'JetBrains Mono'; color:#38bdf8; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:2px 8px; border-radius:5px;">
+                                CANLI BORSA MASASI
+                            </span>
+                        </div>
+                        ${innerHtml}
+                    </div>
+                `;
+            };
+
+            const renderAllRegions = () => {
+                let html = '';
+                if (activeFilter === 'all' || activeFilter === 'america') {
+                    html += renderRegionSection('AMERİKA MASASI (Wall Street & New York Desk)', '🇺🇸', 'america');
+                }
+                if (activeFilter === 'all' || activeFilter === 'europe') {
+                    html += renderRegionSection('AVRUPA MASASI (Frankfurt, Londra & Paris)', '🇪🇺', 'europe');
+                }
+                if (activeFilter === 'all' || activeFilter === 'asia') {
+                    html += renderRegionSection('ASYA - PASİFİK MASASI (Tokyo, Hong Kong & Şanghay)', '🇯🇵', 'asia');
+                }
+                if (activeFilter === 'all' || activeFilter === 'turkey') {
+                    html += renderRegionSection('TÜRKİYE MASASI (Borsa İstanbul & Türk Lirası Varlıkları)', '🇹🇷', 'turkey');
+                }
+                if (activeFilter === 'all' || activeFilter === 'commodities_me') {
+                    html += renderRegionSection('EMTİA, ENERJİ & ORTADOĞU/AFRİKA KORİDORU', '🌍', 'commodities_me');
+                }
+                return html;
+            };
+
+            // 7. ÇOKLU YAPAY ZEKA KUANT MASASI & PERSONA KEŞİF MOTORU
+            const renderMultiPersonaAiHtml = () => {
+                const ai = aiInsights || {};
+                const macroP = ai.macro_strategist || {};
+                const emP = ai.em_specialist || {};
+                const energyP = ai.energy_geopolitics || {};
+                const cryptoP = ai.crypto_quant || {};
+                const consensus = ai.consensus || {};
+
+                const renderPersonaCard = (p, color) => {
+                    if (!p || !p.persona) return '';
+                    return `
+                        <div style="background:rgba(15,23,42,0.7); border:1px solid ${color}35; border-radius:10px; padding:12px 14px; box-shadow:0 3px 12px rgba(0,0,0,0.2);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <span style="font-size:12px; font-weight:800; color:#ffffff;">${p.persona}</span>
+                                <span style="font-size:9.5px; font-family:'JetBrains Mono'; font-weight:800; color:${color}; background:${color}15; border:1px solid ${color}40; padding:1px 6px; border-radius:4px;">
+                                    ${p.badge}
+                                </span>
+                            </div>
+                            <div style="font-size:11.5px; color:#cbd5e1; line-height:1.55; font-family:'Plus Jakarta Sans',sans-serif;">
+                                ${p.text}
+                            </div>
+                        </div>
+                    `;
+                };
+
+                return `
+                    <div style="background:linear-gradient(135deg, rgba(20,30,50,0.85), rgba(10,15,29,0.98)); border:1px solid rgba(168,85,247,0.35); border-radius:14px; padding:18px 20px; margin-top:20px; box-shadow:0 6px 24px rgba(168,85,247,0.1);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:18px;">🤖</span>
+                                <span style="font-size:14px; font-weight:900; color:#ffffff;">
+                                    ÇOKLU YAPAY ZEKA PİYASA KEŞİF &amp; UZMAN YORUM MASASI
+                                </span>
+                                <span style="font-size:10px; font-family:'JetBrains Mono'; background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.3); padding:2px 8px; border-radius:5px; font-weight:800;">
+                                    4 UZMAN AJAN + VALKYRIE SENTEZLEYİCİ
+                                </span>
+                            </div>
+                            <div style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono';">
+                                Bağımsız Kuant Modelleri Ortak Konsensüs Çözümlemesi
+                            </div>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:10px; margin-bottom:14px;">
+                            ${renderPersonaCard(macroP, '#38bdf8')}
+                            ${renderPersonaCard(emP, '#f59e0b')}
+                            ${renderPersonaCard(energyP, '#f43f5e')}
+                            ${renderPersonaCard(cryptoP, '#10b981')}
+                        </div>
+
+                        <div style="background:rgba(0,0,0,0.45); border:1px solid rgba(168,85,247,0.4); border-left:4px solid #a855f7; border-radius:10px; padding:12px 16px;">
+                            <div style="font-size:12px; font-weight:900; color:#c084fc; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                                <span>🎯</span> <span>${consensus.title || 'VALKYRIE MAKRO KONSENSÜS RAPORU'}</span>
+                            </div>
+                            <div style="font-size:11.5px; color:#e2e8f0; line-height:1.55; font-family:'Plus Jakarta Sans',sans-serif;">
+                                ${consensus.summary || ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            };
+
             const btcSp = correlations.btc_sp500 || {};
             const btcDxy = correlations.btc_dxy || {};
             const btcGold = correlations.btc_gold || {};
@@ -10132,7 +10363,7 @@ async function loadAdminMetrics() {
 
             container.innerHTML = `
                 <!-- ÜST BAŞLIK VE KONTROL KARTI -->
-                <div style="background:linear-gradient(135deg, rgba(15,23,42,0.95), rgba(10,15,29,0.98)); border:1px solid rgba(0,242,254,0.25); border-radius:14px; padding:18px 22px; margin-bottom:20px; box-shadow:0 8px 32px rgba(0,0,0,0.4); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
+                <div style="background:linear-gradient(135deg, rgba(15,23,42,0.95), rgba(10,15,29,0.98)); border:1px solid rgba(0,242,254,0.25); border-radius:14px; padding:18px 22px; margin-bottom:18px; box-shadow:0 8px 32px rgba(0,0,0,0.4); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
                     <div style="display:flex; align-items:center; gap:14px;">
                         <div style="width:46px; height:46px; border-radius:12px; background:rgba(0,242,254,0.12); border:1.5px solid var(--cyan); display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 0 16px rgba(0,242,254,0.25);">
                             🏛️
@@ -10140,7 +10371,9 @@ async function loadAdminMetrics() {
                         <div>
                             <div style="font-size:18px; font-weight:900; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif; display:flex; align-items:center; gap:10px;">
                                 <span>VALKYRIE WALL STREET &amp; KÜRESEL TERMINAL DESK</span>
-                                <span style="font-size:10px; font-family:'JetBrains Mono'; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:6px; font-weight:800;">NYSE / GLOBAL CANLI</span>
+                                <span style="font-size:10px; font-family:'JetBrains Mono'; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:6px; font-weight:800; display:inline-flex; align-items:center; gap:5px;">
+                                    <span style="width:6px; height:6px; border-radius:50%; background:#10b981; animation:pulse 1s infinite alternate;"></span> CANLI AKIŞ (8s)
+                                </span>
                             </div>
                             <div style="font-size:12px; color:#94a3b8; margin-top:3px;">
                                 New York, Londra, Tokyo, Borsa İstanbul, Frankfurt ve Emtia Piyasaları Canlı Takip &amp; Kripto Risk İştahı Masası
@@ -10157,6 +10390,9 @@ async function loadAdminMetrics() {
                         </button>
                     </div>
                 </div>
+
+                <!-- 🚨 GÜNÜN DİKKAT ÇEKENİ & PİYASA ANOMALİ RADARI -->
+                ${renderAnomalyAlertHtml()}
 
                 <!-- 🔴 CANLI TIMES SQUARE KAYAN YAZI BANDI -->
                 <div class="wallstreet-marquee-wrap">
@@ -10195,6 +10431,9 @@ async function loadAdminMetrics() {
                     </div>
                 </div>
 
+                <!-- 🔮 KÜRESEL BORSA AÇILIŞ TAHMİN MASASI (AI SYNTHETIC GAP PREDICTOR) -->
+                ${renderOpenForecastsHtml()}
+
                 <!-- 🌐 KÜRESEL SEANS DOMİNO ETKİSİ & CANLI PİYASA OKUYUCU KARTI -->
                 ${renderDominoCardHtml()}
 
@@ -10208,7 +10447,7 @@ async function loadAdminMetrics() {
                     <button onclick="setWallStreetFilter('commodities_me')" class="news-filter-pill ${activeFilter === 'commodities_me' ? 'active' : ''}">🌍 Emtia &amp; Körfez (${(regions.commodities_me || []).length})</button>
                 </div>
 
-                <!-- BÖLGESEL ENDEKS KARTLARI -->
+                <!-- BÖLGESEL ENDEKS KARTLARI (GRUPLANMIŞ BORSA TASARIMI) -->
                 ${renderAllRegions()}
 
                 <!-- 🧠 MAKRO KORELASYON & KRİPTO KUANT BETA MASASI -->
@@ -10270,6 +10509,9 @@ async function loadAdminMetrics() {
                         </div>
                     </div>
                 </div>
+
+                <!-- 🤖 ÇOKLU YAPAY ZEKA PİYASA KEŞİF & UZMAN YORUM MASASI -->
+                ${renderMultiPersonaAiHtml()}
             `;
         }
         window.renderWallStreetTabView = renderWallStreetTabView;
