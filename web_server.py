@@ -5242,6 +5242,12 @@ HTML_PAGE = """
                     <span class="tab-btn-text">11. Wall Street Desk</span>
                     <span class="tab-badge-sub" id="nav-wallstreet-badge" style="background:rgba(0,242,254,0.15); color:var(--cyan); border:1px solid rgba(0,242,254,0.3);">NYSE Canlı</span>
                 </button>
+
+                <button class="nav-tab-btn" id="tab-btn-institutional-ratings" onclick="switchMainTab('institutional_ratings')" title="12. Kurumsal Derecelendirme, Banka Raporları & Sovereign CDS Masası (Goldman Sachs, BofA, Moody's, 5Y CDS)">
+                    <span class="tab-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path><line x1="9" y1="7" x2="15" y2="7"></line><line x1="9" y1="11" x2="15" y2="11"></line><line x1="9" y1="15" x2="13" y2="15"></line></svg></span>
+                    <span class="tab-btn-text">12. Kurumsal &amp; CDS</span>
+                    <span class="tab-badge-sub" id="nav-institutional-badge" style="background:rgba(168,85,247,0.15); color:#a855f7; border:1px solid rgba(168,85,247,0.35);">Goldman/CDS</span>
+                </button>
             </div>
 
             <!-- SIDEBAR TELEMETRİ KARTI -->
@@ -7724,6 +7730,15 @@ HTML_PAGE = """
         </div>
     </div>
 
+    <!-- =========================================================================
+         12. SEKME: VALKYRIE INSTITUTIONAL RATINGS & SOVEREIGN CDS DESK
+         ========================================================================= -->
+    <div id="main-tab-content-institutional_ratings" class="main-tab-content" style="display:none; padding: 6px 0 30px 0;">
+        <div id="institutional_ratings-tab-view-container">
+            <!-- Dynamically populated by renderInstitutionalRatingsTabView() -->
+        </div>
+    </div>
+
         </main>
     </div><!-- END DASHBOARD-MAIN-LAYOUT -->
 
@@ -9072,11 +9087,25 @@ async function loadAdminMetrics() {
                 }
             }
         }
-        window.triggerMacroSync = triggerMacroSync;
+        let macroOracleAutoPollingInterval = null;
+        function initMacroOracleAutoPolling() {
+            if (window.macroOracleAutoPollingInterval) return;
+            window.macroOracleAutoPollingInterval = setInterval(() => {
+                const tab = document.getElementById('main-tab-content-macro');
+                if (tab && !tab.classList.contains('hidden') && tab.style.display !== 'none') {
+                    if (typeof renderMacroTabView === 'function') {
+                        renderMacroTabView(false);
+                    }
+                }
+            }, 8000);
+        }
+        window.initMacroOracleAutoPolling = initMacroOracleAutoPolling;
 
         async function renderMacroTabView(forceRefresh = false) {
             const container = document.getElementById('macro-tab-view-container');
             if (!container) return;
+
+            initMacroOracleAutoPolling();
 
             const now = Date.now();
             if (forceRefresh || !macroOracleDataCache || (now - lastMacroOracleFetchTs > 8000)) {
@@ -10515,6 +10544,506 @@ async function loadAdminMetrics() {
             `;
         }
         window.renderWallStreetTabView = renderWallStreetTabView;
+
+        // =========================================================================
+        // 🏛️ 12. SEKME: KÜRESEL KURUMSAL DERECELENDİRME & SOVEREIGN CDS MOTORU
+        // =========================================================================
+        let institutionalDataCache = null;
+        let lastInstitutionalFetchTs = 0;
+        window.institutionalDataCache = institutionalDataCache;
+        window.lastInstitutionalFetchTs = lastInstitutionalFetchTs;
+        window.currentInstitutionalFilter = 'all';
+
+        function setInstitutionalFilter(filterKey) {
+            window.currentInstitutionalFilter = filterKey;
+            renderInstitutionalRatingsTabView(false);
+        }
+        window.setInstitutionalFilter = setInstitutionalFilter;
+
+        let institutionalAutoPollingInterval = null;
+        function initInstitutionalAutoStream() {
+            if (window.institutionalAutoPollingInterval) return;
+            window.institutionalAutoPollingInterval = setInterval(() => {
+                const tab = document.getElementById('main-tab-content-institutional_ratings');
+                if (tab && !tab.classList.contains('hidden') && tab.style.display !== 'none') {
+                    if (typeof renderInstitutionalRatingsTabView === 'function') {
+                        renderInstitutionalRatingsTabView(false);
+                    }
+                }
+            }, 8000);
+        }
+        window.initInstitutionalAutoStream = initInstitutionalAutoStream;
+
+        async function syncInstitutionalData() {
+            const btn = document.getElementById('btn-institutional-sync');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span>⏳ Senkronize Ediliyor...</span>';
+            }
+            try {
+                const res = await fetch('/api/macro_sync', { method: 'POST' });
+                await res.json();
+                await renderInstitutionalRatingsTabView(true);
+            } catch(e) {
+                console.error("Institutional sync error:", e);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>🔄 Anlık Veri Yenile</span>';
+                }
+            }
+        }
+        window.syncInstitutionalData = syncInstitutionalData;
+
+        async function renderInstitutionalRatingsTabView(forceRefresh = false) {
+            const container = document.getElementById('institutional_ratings-tab-view-container');
+            if (!container) return;
+
+            initInstitutionalAutoStream();
+
+            if (window.institutionalDataCache && !institutionalDataCache) {
+                institutionalDataCache = window.institutionalDataCache;
+            }
+            if (window.lastInstitutionalFetchTs && !lastInstitutionalFetchTs) {
+                lastInstitutionalFetchTs = window.lastInstitutionalFetchTs;
+            }
+
+            const now = Date.now();
+            if (forceRefresh || !institutionalDataCache || (now - lastInstitutionalFetchTs > 7000)) {
+                try {
+                    const res = await fetch('/api/institutional_intel');
+                    const json = await res.json();
+                    if (json && json.status === 'ok' && json.data) {
+                        institutionalDataCache = json.data;
+                        window.institutionalDataCache = json.data;
+                        lastInstitutionalFetchTs = now;
+                        window.lastInstitutionalFetchTs = now;
+                    }
+                } catch(e) {
+                    console.error("Institutional intel fetch error:", e);
+                }
+            }
+
+            const data = institutionalDataCache || window.institutionalDataCache || {};
+            const cdsMetrics = data.cds_metrics || {};
+            const reports = data.reports || [];
+            const calendar = data.calendar || [];
+            const thermometer = data.thermometer || {};
+            const isWeekend = data.is_weekend_mode === true;
+            const weekendDesc = data.weekend_status_text || "Hafta İçi Canlı Seans";
+            const syncTime = data.last_sync_tsi || "Şimdi";
+            const activeFilter = window.currentInstitutionalFilter || 'all';
+
+            // Filtreleme
+            const filteredReports = reports.filter(r => {
+                if (activeFilter === 'all') return true;
+                if (activeFilter === 'TURKEY_BIST') return r.category === 'TURKEY_BIST';
+                if (activeFilter === 'US_WALLSTREET') return r.category === 'US_WALLSTREET';
+                if (activeFilter === 'CRYPTO') return r.category === 'CRYPTO';
+                if (activeFilter === 'GLOBAL_MACRO') return r.category === 'GLOBAL_MACRO';
+                if (activeFilter === 'SOVEREIGN') return r.type && r.type.includes('SOVEREIGN');
+                return true;
+            });
+
+            // 1. CDS & TAHVİL RADARI RENDER
+            const renderCdsCardsHtml = () => {
+                const tr = cdsMetrics.turkey_5y_cds || {};
+                const us = cdsMetrics.us_yield_spread_10y_2y || {};
+                const de = cdsMetrics.germany_10y_bund || {};
+                const em = cdsMetrics.em_cds_basket || {};
+
+                return `
+                    <div id="cds-stress-radar-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px; margin-bottom:20px;">
+                        <!-- TR 5Y CDS -->
+                        <div class="cds-metric-card" style="background:rgba(15,23,42,0.7); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:14px 16px; box-shadow:0 4px 16px rgba(0,0,0,0.3);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="font-size:16px;">🇹🇷</span>
+                                    <div>
+                                        <div style="font-size:12.5px; font-weight:800; color:#ffffff;">${tr.name || 'Türkiye 5Y CDS'}</div>
+                                        <div style="font-size:10px; color:#64748b; font-family:'JetBrains Mono';">${tr.symbol || 'TR5YCDS'} • İflas Risk Primi</div>
+                                    </div>
+                                </div>
+                                <span style="font-size:9.5px; font-family:'JetBrains Mono'; font-weight:800; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 7px; border-radius:4px;">
+                                    Z: ${tr.z_score || '-1.15'}σ
+                                </span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:8px;">
+                                <div style="font-size:20px; font-weight:900; color:#ffffff; font-family:'JetBrains Mono';">
+                                    ${tr.value_bps || 254.2} <span style="font-size:12px; color:#94a3b8; font-weight:600;">bps</span>
+                                </div>
+                                <div style="font-size:11.5px; font-weight:800; font-family:'JetBrains Mono'; color:#10b981; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.25); padding:2px 8px; border-radius:5px;">
+                                    ▼ ${tr.change_bps_24h || -8.4} bps (${tr.change_pct || -3.2}%)
+                                </div>
+                            </div>
+                            <div style="font-size:10.5px; color:#94a3b8; margin-top:8px; line-height:1.45;">
+                                ${tr.status_label || '🟢 GÜÇLÜ NORMALLEŞME'} • 30G Ort: ${tr.mean_30d || 268.5} bps
+                            </div>
+                        </div>
+
+                        <!-- ABD 10Y-2Y YIELD SPREAD -->
+                        <div class="cds-metric-card" style="background:rgba(15,23,42,0.7); border:1px solid rgba(245,158,11,0.3); border-radius:12px; padding:14px 16px; box-shadow:0 4px 16px rgba(0,0,0,0.3);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="font-size:16px;">🇺🇸</span>
+                                    <div>
+                                        <div style="font-size:12.5px; font-weight:800; color:#ffffff;">${us.name || 'ABD 10Y-2Y Spread'}</div>
+                                        <div style="font-size:10px; color:#64748b; font-family:'JetBrains Mono';">${us.symbol || 'T10Y2Y'} • Getiri Eğrisi</div>
+                                    </div>
+                                </div>
+                                <span style="font-size:9.5px; font-family:'JetBrains Mono'; font-weight:800; background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3); padding:2px 7px; border-radius:4px;">
+                                    DİKLEŞME
+                                </span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:8px;">
+                                <div style="font-size:20px; font-weight:900; color:#ffffff; font-family:'JetBrains Mono';">
+                                    +${us.value_pct || 0.18}% <span style="font-size:12px; color:#94a3b8; font-weight:600;">(+18 bps)</span>
+                                </div>
+                                <div style="font-size:11.5px; font-weight:800; font-family:'JetBrains Mono'; color:#f59e0b; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.25); padding:2px 8px; border-radius:5px;">
+                                    ▲ ${us.change_bps_24h || '+2.5'} bps
+                                </div>
+                            </div>
+                            <div style="font-size:10.5px; color:#94a3b8; margin-top:8px; line-height:1.45;">
+                                ${us.status_label || '⚠️ UN-INVERSION İZLEMEDE'} • Resesyon Fiyatlaması
+                            </div>
+                        </div>
+
+                        <!-- ALMANYA 10Y BUND -->
+                        <div class="cds-metric-card" style="background:rgba(15,23,42,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:14px 16px; box-shadow:0 4px 16px rgba(0,0,0,0.3);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="font-size:16px;">🇩🇪</span>
+                                    <div>
+                                        <div style="font-size:12.5px; font-weight:800; color:#ffffff;">${de.name || 'Almanya 10Y Bund'}</div>
+                                        <div style="font-size:10px; color:#64748b; font-family:'JetBrains Mono';">${de.symbol || 'DE10Y'} • Euro Göstergesi</div>
+                                    </div>
+                                </div>
+                                <span style="font-size:9.5px; font-family:'JetBrains Mono'; font-weight:800; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:2px 7px; border-radius:4px;">
+                                    ECB İNDİRİM
+                                </span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:8px;">
+                                <div style="font-size:20px; font-weight:900; color:#ffffff; font-family:'JetBrains Mono';">
+                                    ${de.value_pct || 2.38}%
+                                </div>
+                                <div style="font-size:11.5px; font-weight:800; font-family:'JetBrains Mono'; color:#10b981; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.25); padding:2px 8px; border-radius:5px;">
+                                    ▼ ${de.change_bps_24h || -4.1} bps
+                                </div>
+                            </div>
+                            <div style="font-size:10.5px; color:#94a3b8; margin-top:8px; line-height:1.45;">
+                                ${de.status_label || '🟢 İSTİKRARLI'} • Borçlanma Baskısı Azalıyor
+                            </div>
+                        </div>
+
+                        <!-- GELİŞEN PİYASALAR EM CDS -->
+                        <div class="cds-metric-card" style="background:rgba(15,23,42,0.7); border:1px solid rgba(168,85,247,0.3); border-radius:12px; padding:14px 16px; box-shadow:0 4px 16px rgba(0,0,0,0.3);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="font-size:16px;">🌐</span>
+                                    <div>
+                                        <div style="font-size:12.5px; font-weight:800; color:#ffffff;">${em.name || 'Gelişen Piyasalar CDS'}</div>
+                                        <div style="font-size:10px; color:#64748b; font-family:'JetBrains Mono';">${em.symbol || 'EM_CDS'} • Bileşik EM Sepeti</div>
+                                    </div>
+                                </div>
+                                <span style="font-size:9.5px; font-family:'JetBrains Mono'; font-weight:800; background:rgba(168,85,247,0.15); color:#a855f7; border:1px solid rgba(168,85,247,0.3); padding:2px 7px; border-radius:4px;">
+                                    KÜRESEL FON
+                                </span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:8px;">
+                                <div style="font-size:20px; font-weight:900; color:#ffffff; font-family:'JetBrains Mono';">
+                                    ${em.value_bps || 184.0} <span style="font-size:12px; color:#94a3b8; font-weight:600;">bps</span>
+                                </div>
+                                <div style="font-size:11.5px; font-weight:800; font-family:'JetBrains Mono'; color:#10b981; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.25); padding:2px 8px; border-radius:5px;">
+                                    ▼ ${em.change_bps_24h || -1.8} bps
+                                </div>
+                            </div>
+                            <div style="font-size:10.5px; color:#94a3b8; margin-top:8px; line-height:1.45;">
+                                ${em.status_label || '🟢 LİKİDİTE YÜKSEK'} • Küresel Risk İştahı Açık
+                            </div>
+                        </div>
+                    </div>
+                `;
+            };
+
+            // 2. KREDİ DERECELENDİRME TAKVİMİ RENDER
+            const renderCalendarHtml = () => {
+                if (!calendar || calendar.length === 0) return '';
+                const cards = calendar.map(c => `
+                    <div class="sovereign-calendar-card" style="background:rgba(15,23,42,0.8); border:1px solid ${c.is_imminent ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.08)'}; border-radius:10px; padding:12px 14px; position:relative; box-shadow:0 3px 12px rgba(0,0,0,0.25);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <span>${c.flag}</span>
+                                <span style="font-size:12px; font-weight:800; color:#ffffff;">${c.agency}</span>
+                                <span style="font-size:10px; color:#94a3b8;">(${c.country})</span>
+                            </div>
+                            <span style="font-size:9.5px; font-family:'JetBrains Mono'; font-weight:800; color:${c.is_imminent ? '#ef4444' : '#38bdf8'}; background:${c.is_imminent ? 'rgba(239,68,68,0.15)' : 'rgba(56,189,248,0.15)'}; border:1px solid ${c.is_imminent ? 'rgba(239,68,68,0.3)' : 'rgba(56,189,248,0.3)'}; padding:1px 6px; border-radius:4px;">
+                                ${c.badge}
+                            </span>
+                        </div>
+                        <div style="font-size:11px; font-weight:700; color:#e2e8f0; margin-bottom:6px;">
+                            ${c.event_title}
+                        </div>
+                        <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:6px; padding:6px 10px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; font-family:'JetBrains Mono'; font-size:10.5px;">
+                            <span style="color:#64748b;">Mevcut: <b style="color:#ffffff;">${c.current_rating} (${c.outlook})</b></span>
+                            <span style="color:#f59e0b; font-weight:800;">⏱️ ${c.countdown}</span>
+                        </div>
+                        <div style="font-size:10px; color:#94a3b8;">
+                            🎯 Beklenti: <b style="color:#38bdf8;">${c.expected_action}</b>
+                        </div>
+                    </div>
+                `).join('');
+
+                return `
+                    <div style="background:linear-gradient(135deg, rgba(20,30,50,0.85), rgba(10,15,29,0.98)); border:1px solid rgba(56,189,248,0.3); border-radius:14px; padding:16px 18px; margin-bottom:20px; box-shadow:0 6px 24px rgba(0,0,0,0.35);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:16px;">📅</span>
+                                <span style="font-size:14px; font-weight:900; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif;">
+                                    RESMİ KREDİ DERECELENDİRME TAKVİMİ &amp; CANLI GERİ SAYIM (SOVEREIGN CALENDAR)
+                                </span>
+                            </div>
+                            <span style="font-size:10.5px; font-family:'JetBrains Mono'; color:#64748b;">
+                                S&amp;P Global, Moody's &amp; Fitch Ratings Yıllık Takvimi
+                            </span>
+                        </div>
+                        <div id="sovereign-calendar-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:10px;">
+                            ${cards}
+                        </div>
+                    </div>
+                `;
+            };
+
+            // 3. TIER-1 BANKALAR KONSENSÜS TERMOMETRESİ & AYRIŞMA RENDER
+            const renderThermometerHtml = () => {
+                const score = thermometer.score || 0;
+                const scoreColor = score >= 30 ? '#10b981' : (score <= -20 ? '#ef4444' : '#f59e0b');
+                const scoreSign = score > 0 ? '+' : '';
+                const pctNormalized = Math.max(0, Math.min(100, (score + 100) / 2));
+                const disp = thermometer.dispersion_pct || 25;
+
+                return `
+                    <div style="background:linear-gradient(135deg, rgba(15,23,42,0.95), rgba(10,15,29,0.98)); border:1.5px solid rgba(168,85,247,0.35); border-radius:14px; padding:18px 20px; margin-bottom:20px; box-shadow:0 6px 24px rgba(168,85,247,0.12);">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+                            <div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="font-size:18px;">🌡️</span>
+                                    <span style="font-size:14.5px; font-weight:900; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif;">
+                                        TIER-1 BANKALAR KUANT KONSENSÜS TERMOMETRESİ &amp; AYRIŞMA BAROMETRESİ
+                                    </span>
+                                </div>
+                                <div style="font-size:11.5px; color:#94a3b8; margin-top:3px;">
+                                    Goldman Sachs, BofA, Morgan Stanley, JPMorgan, Citi &amp; Derecelendirme Devleri Bileşik Rejimi
+                                </div>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                                <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); padding:6px 14px; border-radius:8px; text-align:right;">
+                                    <div style="font-size:9.5px; color:#64748b; font-family:'JetBrains Mono'; font-weight:700;">KURUMSAL KONSENSÜS</div>
+                                    <div style="font-size:16px; font-weight:900; font-family:'JetBrains Mono'; color:${scoreColor};">
+                                        ${scoreSign}${score} / 100
+                                    </div>
+                                </div>
+                                <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); padding:6px 14px; border-radius:8px; text-align:right;">
+                                    <div style="font-size:9.5px; color:#64748b; font-family:'JetBrains Mono'; font-weight:700;">ANALİST AYRIŞMASI (DISPERSION)</div>
+                                    <div style="font-size:16px; font-weight:900; font-family:'JetBrains Mono'; color:${disp > 50 ? '#ef4444' : '#38bdf8'};">
+                                        %${disp}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- İlerleme Çubuğu -->
+                        <div style="margin-bottom:12px;">
+                            <div style="display:flex; justify-content:space-between; font-size:10px; font-family:'JetBrains Mono'; color:#64748b; margin-bottom:4px;">
+                                <span>-100 (AŞIRI DEFANSİF)</span>
+                                <span style="color:${scoreColor}; font-weight:800;">${thermometer.label || 'NÖTR / DENGELİ'}</span>
+                                <span>+100 (AGRESİF RİSK-ON)</span>
+                            </div>
+                            <div style="width:100%; height:10px; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1); border-radius:6px; position:relative; overflow:hidden;">
+                                <div style="width:${pctNormalized}%; height:100%; background:linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #10b981 100%); transition:width 0.4s ease;"></div>
+                            </div>
+                        </div>
+
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-size:11px; font-family:'JetBrains Mono'; background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.08); padding:8px 12px; border-radius:8px;">
+                            <span style="color:#94a3b8;">📊 Analist Dağılımı: <b style="color:#10b981;">${thermometer.bullish_count || 4} Alım/Hedef Artışı</b> vs <b style="color:#f43f5e;">${thermometer.bearish_count || 2} Savunma/İndirim</b></span>
+                            <span style="color:#a855f7; font-weight:700;">${thermometer.dispersion_label || 'DÜŞÜK AYRIŞMA'}</span>
+                        </div>
+                    </div>
+                `;
+            };
+
+            // 4. FİLTRE BUTONLARI RENDER
+            const renderFilterButtonsHtml = () => {
+                const filters = [
+                    { key: 'all', label: 'TÜMÜ', count: reports.length },
+                    { key: 'TURKEY_BIST', label: '🇹🇷 BIST 100 & TÜRKİYE', count: reports.filter(r => r.category === 'TURKEY_BIST').length },
+                    { key: 'US_WALLSTREET', label: '🇺🇸 WALL STREET', count: reports.filter(r => r.category === 'US_WALLSTREET').length },
+                    { key: 'CRYPTO', label: '🪙 KRİPTO LİKİDİTE', count: reports.filter(r => r.category === 'CRYPTO').length },
+                    { key: 'SOVEREIGN', label: '🚨 NOT & CDS KARARLARI', count: reports.filter(r => r.type && r.type.includes('SOVEREIGN')).length },
+                    { key: 'GLOBAL_MACRO', label: '🌐 KÜRESEL LİKİDİTE', count: reports.filter(r => r.category === 'GLOBAL_MACRO').length }
+                ];
+
+                return `
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
+                        ${filters.map(f => {
+                            const isActive = activeFilter === f.key;
+                            const bg = isActive ? 'linear-gradient(135deg, rgba(168,85,247,0.3), rgba(56,189,248,0.25))' : 'rgba(15,23,42,0.6)';
+                            const border = isActive ? '1px solid #a855f7' : '1px solid rgba(255,255,255,0.08)';
+                            const color = isActive ? '#ffffff' : '#94a3b8';
+                            return `
+                                <button class="inst-filter-btn" data-filter="${f.key}" onclick="setInstitutionalFilter('${f.key}')" style="background:${bg}; border:${border}; color:${color}; padding:6px 14px; border-radius:8px; font-size:11.5px; font-weight:800; font-family:'Plus Jakarta Sans',sans-serif; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.15s;">
+                                    <span>${f.label}</span>
+                                    <span style="font-size:10px; font-family:'JetBrains Mono'; background:rgba(255,255,255,0.08); padding:1px 6px; border-radius:4px;">${f.count}</span>
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            };
+
+            // 5. CANLI KURUMSAL RAPOR KARTLARI RENDER
+            const renderReportCardsHtml = () => {
+                if (!filteredReports || filteredReports.length === 0) {
+                    return '<div id="institutional-reports-grid"><div style="color:#94a3b8; font-size:12px; padding:20px; text-align:center;">Seçili filtreye uygun kurumsal rapor bulunamadı.</div></div>';
+                }
+
+                const reportItems = filteredReports.map(r => {
+                    const isBull = r.stance === 'BULLISH';
+                    const isBear = r.stance === 'BEARISH';
+                    const stanceColor = isBull ? '#10b981' : (isBear ? '#f43f5e' : '#f59e0b');
+                    const stanceSign = r.revision_pct > 0 ? '+' : '';
+
+                    return `
+                        <div class="institutional-report-card" data-category="${r.category || ''}" style="background:rgba(15,23,42,0.85); border:1px solid rgba(255,255,255,0.08); border-left:4px solid ${stanceColor}; border-radius:12px; padding:16px 18px; margin-bottom:14px; box-shadow:0 4px 20px rgba(0,0,0,0.35);">
+                            <!-- Üst Bar -->
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <span style="font-size:13px; font-weight:900; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif;">
+                                        ${r.institution}
+                                    </span>
+                                    <span style="font-size:10px; color:#64748b; font-family:'JetBrains Mono';">
+                                        • ${r.desk}
+                                    </span>
+                                    <span style="font-size:9.5px; font-family:'JetBrains Mono'; font-weight:800; color:${r.badge_color || '#38bdf8'}; background:${r.badge_color || '#38bdf8'}15; border:1px solid ${r.badge_color || '#38bdf8'}40; padding:1px 7px; border-radius:4px;">
+                                        ${r.badge}
+                                    </span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="font-size:10px; color:#64748b; font-family:'JetBrains Mono';">⏱️ ${r.time_ago_str}</span>
+                                    <span style="font-size:9.5px; font-family:'JetBrains Mono'; font-weight:800; color:#ffffff; background:${stanceColor}25; border:1px solid ${stanceColor}50; padding:2px 8px; border-radius:5px;">
+                                        ${r.impact_level || 'HIGH'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Başlık -->
+                            <div style="font-size:14px; font-weight:800; color:#ffffff; margin-bottom:10px; font-family:'Plus Jakarta Sans',sans-serif; line-height:1.45;">
+                                ${r.title}
+                            </div>
+
+                            <!-- Revizyon & Hedef Kutusu -->
+                            <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:10px 14px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                                <div>
+                                    <div style="font-size:9.5px; color:#64748b; font-family:'JetBrains Mono';">HEDEF VARLIK &amp; KATEGORİ</div>
+                                    <div style="font-size:12px; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono';">
+                                        🎯 ${r.target_asset}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div style="font-size:9.5px; color:#64748b; font-family:'JetBrains Mono';">REVİZYON (ESKİ ➔ YENİ)</div>
+                                    <div style="font-size:12px; font-weight:800; color:#e2e8f0; font-family:'JetBrains Mono';">
+                                        <span style="color:#94a3b8; text-decoration:line-through;">${r.old_val}</span> ➔ <b style="color:#ffffff;">${r.new_val}</b>
+                                    </div>
+                                </div>
+                                <div style="text-align:right;">
+                                    <div style="font-size:9.5px; color:#64748b; font-family:'JetBrains Mono';">REVİZYON ŞİDDETİ</div>
+                                    <div style="font-size:13px; font-weight:900; font-family:'JetBrains Mono'; color:${stanceColor};">
+                                        ${stanceSign}${r.revision_pct}% (${r.stance})
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- AI Kuant Yorumu -->
+                            <div style="font-size:11.5px; color:#cbd5e1; line-height:1.55; margin-bottom:12px; font-family:'Plus Jakarta Sans',sans-serif;">
+                                ${r.ai_commentary}
+                            </div>
+
+                            <!-- Alt Rozetler & Bot Aksiyonu -->
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06);">
+                                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                    <span style="font-size:10px; font-family:'JetBrains Mono'; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:2px 8px; border-radius:5px;">
+                                        ⚡ ${r.market_impact}
+                                    </span>
+                                    <span style="font-size:10px; font-family:'JetBrains Mono'; font-weight:700; color:#a855f7; background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.25); padding:2px 8px; border-radius:5px;">
+                                        🪙 Kripto Geçirgenliği: %${Math.round(r.crypto_spillover_beta * 100)}
+                                    </span>
+                                    <span style="font-size:10px; font-family:'JetBrains Mono'; font-weight:700; color:#f59e0b; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.25); padding:2px 8px; border-radius:5px;">
+                                        ${r.priced_in_label || '🔥 TAZE'}
+                                    </span>
+                                </div>
+                                <div style="font-size:10.5px; color:#94a3b8; font-family:'JetBrains Mono'; background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.1); padding:4px 10px; border-radius:5px;">
+                                    <b style="color:${stanceColor};">${r.bot_action}</b>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `<div id="institutional-reports-grid">${reportItems}</div>`;
+            };
+
+            // ANA HTML YERLEŞİMİ
+            container.innerHTML = `
+                <!-- 1. ÜST BAŞLIK VE KONTROL BARI -->
+                <div style="background:linear-gradient(135deg, rgba(15,23,42,0.95), rgba(10,15,29,0.98)); border:1px solid rgba(168,85,247,0.35); border-radius:14px; padding:18px 22px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; box-shadow:0 8px 32px rgba(0,0,0,0.45);">
+                    <div style="display:flex; align-items:center; gap:14px;">
+                        <div style="width:46px; height:46px; border-radius:12px; background:linear-gradient(135deg, rgba(168,85,247,0.2), rgba(56,189,248,0.2)); border:1.5px solid rgba(168,85,247,0.4); display:flex; align-items:center; justify-content:center; font-size:22px;">
+                            🏛️
+                        </div>
+                        <div>
+                            <div style="font-size:17px; font-weight:900; color:#ffffff; font-family:'Plus Jakarta Sans',sans-serif; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                <span>VALKYRIE KURUMSAL DERECELENDİRME &amp; SOVEREIGN CDS MASASI</span>
+                                <span style="font-size:10px; font-family:'JetBrains Mono'; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:6px; font-weight:800; display:inline-flex; align-items:center; gap:5px;">
+                                    <span style="width:6px; height:6px; border-radius:50%; background:#10b981; animation:pulse 1s infinite alternate;"></span> CANLI AKIŞ (8s)
+                                </span>
+                                <span style="font-size:10px; font-family:'JetBrains Mono'; background:${isWeekend ? 'rgba(245,158,11,0.15)' : 'rgba(56,189,248,0.15)'}; color:${isWeekend ? '#f59e0b' : '#38bdf8'}; border:1px solid ${isWeekend ? 'rgba(245,158,11,0.35)' : 'rgba(56,189,248,0.3)'}; padding:2px 8px; border-radius:6px; font-weight:800;">
+                                    ${isWeekend ? '🏖️ HAFTA SONU NÖBETÇİ REJİMİ' : '🟢 CANLI SEANS HAFTA İÇİ'}
+                                </span>
+                            </div>
+                            <div style="font-size:11.5px; color:#94a3b8; margin-top:3px;">
+                                Goldman Sachs, BofA, Morgan Stanley Raporları, Kredi Notları (S&amp;P, Moody's, Fitch) &amp; 5Y CDS Risk Primi Radarı
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <div style="font-size:11px; font-family:'JetBrains Mono'; color:#94a3b8; background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.08); padding:6px 12px; border-radius:8px;">
+                            ⏱️ Son Senkron: <b style="color:#ffffff;">${syncTime}</b>
+                        </div>
+                        <button id="btn-institutional-sync" onclick="syncInstitutionalData()" style="background:linear-gradient(135deg, rgba(168,85,247,0.25), rgba(56,189,248,0.25)); border:1px solid #a855f7; color:#ffffff; font-size:11.5px; font-weight:800; padding:7px 14px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.15s;">
+                            <span>🔄 Anlık Veri Yenile</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. SOVEREIGN CDS & TAHVİL RİSK PRİMİ RADARI -->
+                ${renderCdsCardsHtml()}
+
+                <!-- 3. KREDİ DERECELENDİRME TAKVİMİ -->
+                ${renderCalendarHtml()}
+
+                <!-- 4. TIER-1 BANKALAR KONSENSÜS TERMOMETRESİ -->
+                ${renderThermometerHtml()}
+
+                <!-- 5. AKILLI ENDEKS FİLTRE BUTONLARI -->
+                ${renderFilterButtonsHtml()}
+
+                <!-- 6. CANLI RAPOR VE DERECELENDİRME KARTLARI AKIŞI -->
+                <div style="margin-top:10px;">
+                    ${renderReportCardsHtml()}
+                </div>
+            `;
+        }
+        window.renderInstitutionalRatingsTabView = renderInstitutionalRatingsTabView;
 
         // =========================================================================
         // ⚡ MACRO NEWS DETAIL MODAL & INTERACTIVE ACTIONS
@@ -13160,7 +13689,8 @@ async function loadAdminMetrics() {
                 'health': document.getElementById('tab-btn-health'),
                 'admin': document.getElementById('tab-btn-admin'),
                 'macro': document.getElementById('tab-btn-macro'),
-                'wallstreet': document.getElementById('tab-btn-wallstreet')
+                'wallstreet': document.getElementById('tab-btn-wallstreet'),
+                'institutional_ratings': document.getElementById('tab-btn-institutional-ratings')
             };
             const tabContents = {
                 'cockpit': document.getElementById('main-tab-content-cockpit'),
@@ -13178,7 +13708,8 @@ async function loadAdminMetrics() {
                 'health': document.getElementById('main-tab-content-health'),
                 'admin': document.getElementById('main-tab-content-admin'),
                 'macro': document.getElementById('main-tab-content-macro'),
-                'wallstreet': document.getElementById('main-tab-content-wallstreet')
+                'wallstreet': document.getElementById('main-tab-content-wallstreet'),
+                'institutional_ratings': document.getElementById('main-tab-content-institutional_ratings')
             };
 
             for (const key in tabButtons) {
@@ -13269,6 +13800,8 @@ async function loadAdminMetrics() {
                     renderMacroTabView();
                 } else if (tabName === 'wallstreet') {
                     renderWallStreetTabView();
+                } else if (tabName === 'institutional_ratings') {
+                    renderInstitutionalRatingsTabView();
                 }
             } catch (tabErr) {
                 console.warn("[Valkyrie Navigation] View rendering warning for tab " + tabName + ":", tabErr);
@@ -22537,23 +23070,35 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
+    async def api_institutional_intel(request):
+        try:
+            from macro_institutional_engine import institutional_engine
+            data = institutional_engine.get_institutional_desk_data() if institutional_engine else {}
+            return json_compressed_response(request, {"status": "ok", "data": data})
+        except Exception as e:
+            return web.json_response({"status": "error", "message": str(e)}, status=500)
+
     async def api_macro_sync(request):
         try:
             from macro_calendar import calendar_manager
             from macro_cross_asset import cross_asset_radar
             from macro_news_sentinel import news_sentinel
+            from macro_institutional_engine import institutional_engine
 
             t1 = asyncio.create_task(calendar_manager.sync_calendar())
             t2 = asyncio.create_task(cross_asset_radar.sync_cross_assets(force=True))
             t3 = asyncio.create_task(news_sentinel.sync_all_sources())
             await asyncio.gather(t1, t2, t3, return_exceptions=True)
+            if institutional_engine:
+                institutional_engine.load_cache()
 
-            return web.json_response({"status": "ok", "message": "Makro ve Wall Street veri kaynakları senkronize edildi."})
+            return web.json_response({"status": "ok", "message": "Makro, Wall Street ve Kurumsal Derecelendirme veri kaynakları senkronize edildi."})
         except Exception as e:
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
     app.router.add_get('/api/macro_oracle', api_macro_oracle)
     app.router.add_get('/api/wallstreet_terminal', api_wallstreet_terminal)
+    app.router.add_get('/api/institutional_intel', api_institutional_intel)
     app.router.add_post('/api/macro_sync', api_macro_sync)
     app.router.add_get('/api/debug_fetch', api_debug_fetch)
 
