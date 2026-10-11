@@ -31,12 +31,60 @@
     "price": 104.72,
     "chg_24h": 4.12
   },
-  "btc_d": 59.18,
+  "bist100": {
+    "id": "bist100",
+    "symbol": "XU100.IS",
+    "name": "BIST 100 Endeksi",
+    "sub": "Borsa İstanbul Gösterge Endeksi",
+    "flag": "🇹🇷",
+    "category": "ENDEX",
+    "price": 12265.98,
+    "chg_24h": -1.43,
+    "status": "BEARISH"
+  },
+  "bist30": {
+    "price": 15145.27,
+    "chg_24h": -2.02,
+    "status": "NEUTRAL"
+  },
+  "xbank": {
+    "price": 15870.84,
+    "chg_24h": -1.31,
+    "status": "NEUTRAL"
+  },
+  "usdtry": {
+    "id": "usdtry",
+    "symbol": "USDTRY=X",
+    "name": "USD / TRY Kuru",
+    "sub": "Dolar / Türk Lirası Paritesi",
+    "flag": "🇹🇷",
+    "category": "FX",
+    "price": 49.26,
+    "chg_24h": 0.21,
+    "status": "BULLISH"
+  },
+  "eurtry": {
+    "price": 55.22,
+    "chg_24h": -0.21,
+    "status": "NEUTRAL"
+  },
+  "gram_altin": {
+    "id": "gram_altin",
+    "symbol": "GAU-TRY",
+    "name": "Gram Altın TL",
+    "sub": "Kapalıçarşı & Serbest Piyasa",
+    "flag": "🇹🇷",
+    "category": "METALS",
+    "price": 6677.55,
+    "chg_24h": 0.91,
+    "status": "BULLISH"
+  },
+  "btc_d": 59.17,
   "usdt_d": 6.52,
-  "eth_btc": 0.03014,
+  "eth_btc": 0.03013,
   "regime": "RISK_OFF (Defans / Ayı Koruması 🛡️)",
   "regime_score": -30.0,
-  "last_sync_ts": 1791702271.8670957,
+  "last_sync_ts": 1791702680.7772493,
   "terminal_assets": {
     "sp500": {
       "id": "sp500",
@@ -299,8 +347,8 @@
       "flag": "🇸🇦",
       "category": "EMERGING",
       "price": 10376.28,
-      "chg_24h": -1.57,
-      "status": "BEARISH"
+      "chg_24h": 0.0,
+      "status": "NEUTRAL"
     },
     "jse": {
       "id": "jse",
@@ -311,6 +359,72 @@
       "category": "EMERGING",
       "price": 100764.33,
       "chg_24h": 0.08,
+      "status": "BULLISH"
+    },
+    "bist100": {
+      "id": "bist100",
+      "symbol": "XU100.IS",
+      "name": "BIST 100 Endeksi",
+      "sub": "Borsa İstanbul Gösterge Endeksi",
+      "flag": "🇹🇷",
+      "category": "ENDEX",
+      "price": 12265.98,
+      "chg_24h": -1.43,
+      "status": "BEARISH"
+    },
+    "bist30": {
+      "id": "bist30",
+      "symbol": "XU030.IS",
+      "name": "BIST 30 Endeksi",
+      "sub": "Borsa İstanbul Lokomotif Devler",
+      "flag": "🇹🇷",
+      "category": "ENDEX",
+      "price": 15145.27,
+      "chg_24h": -2.02,
+      "status": "BEARISH"
+    },
+    "xbank": {
+      "id": "xbank",
+      "symbol": "XBANK.IS",
+      "name": "BIST Bankacılık",
+      "sub": "Türk Bankacılık Sektörü",
+      "flag": "🇹🇷",
+      "category": "SECTOR",
+      "price": 15870.84,
+      "chg_24h": -1.31,
+      "status": "BEARISH"
+    },
+    "usdtry": {
+      "id": "usdtry",
+      "symbol": "USDTRY=X",
+      "name": "USD / TRY Kuru",
+      "sub": "Dolar / Türk Lirası Paritesi",
+      "flag": "🇹🇷",
+      "category": "FX",
+      "price": 49.26,
+      "chg_24h": 0.21,
+      "status": "BULLISH"
+    },
+    "eurtry": {
+      "id": "eurtry",
+      "symbol": "EURTRY=X",
+      "name": "EUR / TRY Kuru",
+      "sub": "Euro / Türk Lirası Paritesi",
+      "flag": "🇹🇷",
+      "category": "FX",
+      "price": 55.22,
+      "chg_24h": -0.21,
+      "status": "BEARISH"
+    },
+    "gram_altin": {
+      "id": "gram_altin",
+      "symbol": "GAU-TRY",
+      "name": "Gram Altın TL",
+      "sub": "Kapalıçarşı & Serbest Piyasa",
+      "flag": "🇹🇷",
+      "category": "METALS",
+      "price": 6677.55,
+      "chg_24h": 0.91,
       "status": "BULLISH"
     }
   }

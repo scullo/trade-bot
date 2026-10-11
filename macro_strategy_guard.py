@@ -108,6 +108,81 @@ class MacroStrategyGuard:
                 "is_shock": False
             }
 
+    def check_global_equity_circuit_breaker(self) -> Dict[str, Any]:
+        """
+        KÜRESEL DEVRE KESİCİ & SERMAYE ŞOKU KALKANI (GLOBAL CIRCUIT BREAKER)
+        Aşağıdaki akut küresel makro şok durumlarında otomatik devreye girer:
+        1. Wall Street Çöküşü: S&P 500 <= -2.0% veya Nasdaq <= -2.5%
+        2. BIST 100 Çöküşü: BIST 100 <= -3.0% (Gelişmekte olan piyasa sermaye tahliyesi)
+        3. Volatilite Patlaması: VIX >= 22.0 veya VIX gün içi sıçraması >= +15.0%
+        4. Akut Petrol Şoku: Brent >= $100.0 veya gün içi sıçraması >= +5.0% (Jeopolitik/Havalimanı saldırıları)
+
+        Devre Kesici Aksiyonu:
+        - Maksimum Kaldıraç: 3x ile sınırlandırılır.
+        - Pozisyon Bütçesi: %50 düşürülür (margin_multiplier = 0.5).
+        - Ters Yönlü Bıçak Yakalama (Counter-trend scalps) ve Sahte Kırılımlar (Fakeout Breakouts) engellenir.
+        """
+        triggers: List[str] = []
+        is_triggered = False
+
+        term_assets = getattr(self.cross_asset, "data", {}).get("terminal_assets", {})
+        macro_data = getattr(self.cross_asset, "data", {})
+
+        # 1. Wall Street (S&P 500 & Nasdaq)
+        sp_chg = float(macro_data.get("sp500", {}).get("chg_24h", 0.0) or 0.0)
+        nq_chg = float(macro_data.get("nasdaq", {}).get("chg_24h", 0.0) or 0.0)
+        if sp_chg <= -2.0:
+            is_triggered = True
+            triggers.append(f"S&P 500 sert düşüşte ({sp_chg:+.2f}%)")
+        if nq_chg <= -2.5:
+            is_triggered = True
+            triggers.append(f"Nasdaq teknoloji satışı derinleşti ({nq_chg:+.2f}%)")
+
+        # 2. Borsa İstanbul (BIST 100)
+        bist_chg = float((term_assets.get("bist100", {}) or macro_data.get("bist100", {})).get("chg_24h", 0.0) or 0.0)
+        if bist_chg <= -3.0:
+            is_triggered = True
+            triggers.append(f"BIST 100 yerel sermaye şoku ({bist_chg:+.2f}%)")
+
+        # 3. VIX Korku & Volatilite Endeksi
+        vix_p = float(macro_data.get("vix", {}).get("price", 0.0) or 0.0)
+        vix_chg = float(macro_data.get("vix", {}).get("chg_24h", 0.0) or 0.0)
+        if vix_p >= 22.0:
+            is_triggered = True
+            triggers.append(f"VIX Panik Eşiğinde ({vix_p:.1f} >= 22.0)")
+        elif vix_chg >= 15.0:
+            is_triggered = True
+            triggers.append(f"VIX Gün İçi Patlaması ({vix_chg:+.1f}%)")
+
+        # 4. Brent Ham Petrol (Jeopolitik & Körfez Şoku)
+        brent_p = float(macro_data.get("brent", {}).get("price", 0.0) or 0.0)
+        brent_chg = float(macro_data.get("brent", {}).get("chg_24h", 0.0) or 0.0)
+        if brent_p >= 100.0:
+            is_triggered = True
+            triggers.append(f"Brent Petrol $100 Kritik Eşiğini Aştı (${brent_p:.1f})")
+        elif brent_chg >= 5.0:
+            is_triggered = True
+            triggers.append(f"Akut Petrol/Jeopolitik Sıçraması ({brent_chg:+.1f}%)")
+
+        if is_triggered:
+            return {
+                "active": True,
+                "severity": "CRITICAL_DEFENSE",
+                "leverage_cap": 3,
+                "margin_multiplier": 0.5,
+                "triggers": triggers,
+                "message": f"🚨 KÜRESEL DEVRE KESİCİ AKTİF: {', '.join(triggers)}. Kaldıraç max 3x, pozisyon büyüklüğü %50 düşürüldü."
+            }
+
+        return {
+            "active": False,
+            "severity": "NORMAL",
+            "leverage_cap": 10,
+            "margin_multiplier": 1.0,
+            "triggers": [],
+            "message": "Küresel piyasalar olağan parametreler dahilinde."
+        }
+
     def enforce_pre_event_defenses(self, open_positions: Dict[str, Any], paper_trader: Any = None) -> List[Dict[str, Any]]:
         """
         1. FAZ: PRE-EVENT (< 15 DAKİKA KALA) SAVUNMA KİLİDİ
@@ -282,11 +357,25 @@ class MacroStrategyGuard:
                     "reason": f"🔇 Setup Susturuldu (Muted): Boğa makro şokunda ({macro_reg.get('title')}) Camarilla R3/R4 Reversal Short kurulumları kurumsal alıcı dalgası altında ezilme riskine karşı kesinlikle susturuldu."
                 }
 
+        # ── 7. KÜRESEL DEVRE KESİCİ (GLOBAL CIRCUIT BREAKER) KONTROLÜ ──
+        breaker = self.check_global_equity_circuit_breaker()
+        if breaker.get("active"):
+            # Küresel hisse veya enerji şokunda bıçak tutan ters yönlü Long veya sahte kırılım engellenir
+            if side == "LONG" and any(k in setup_str for k in ["S3_BOUNCE", "S4", "DİP", "REVERSAL", "DESTEK", "REVERSAL_LONG"]):
+                return {
+                    "allowed": False,
+                    "error": "CIRCUIT_BREAKER_KNIFE_CATCH_BLOCKED",
+                    "reason": f"🛑 Küresel Devre Kesici: {breaker.get('message')} Akut küresel kriz anında Long dip arama kurulumları mutlak engellendi."
+                }
+
         return {
             "allowed": True,
             "error": None,
             "reason": "Tüm makro risk, takvim ve Bizans mutabakat kontrolleri onaylandı."
         }
+
+    # Geriye dönük uyumluluk takma adı (alias)
+    check_macro_guard_for_entry = evaluate_macro_entry_permission
 
     def apply_macro_setup_boost(
         self,
@@ -304,7 +393,23 @@ class MacroStrategyGuard:
         Makro rüzgar arkadayken:
         - Boğa şokunda R4 Breakout Long: 1.25x marjin bütçesi ve +%20 TP2 hedef genişletmesi.
         - Ayı şokunda S4 Breakdown Short: 1.25x marjin bütçesi ve +%20 TP2 hedef genişletmesi.
+        - Küresel Devre Kesici Aktifken: Marjin %50 düşürülür, kaldıraç max 3x sınırlandırılır.
         """
+        breaker = self.check_global_equity_circuit_breaker()
+        if breaker.get("active"):
+            reduced_margin = round(base_margin * breaker.get("margin_multiplier", 0.5), 2)
+            return {
+                "boosted": False,
+                "margin": reduced_margin,
+                "tp1": base_tp1,
+                "tp2": base_tp2,
+                "runner_mode": False,
+                "score_bonus": -15,
+                "breaker_active": True,
+                "leverage_cap": breaker.get("leverage_cap", 3),
+                "reason": f"🛡️ Küresel Devre Kesici Koruması: {breaker.get('message')}"
+            }
+
         macro_reg = self.get_active_macro_shock_regime()
         regime_code = macro_reg.get("regime", "NEUTRAL_BALANCED")
         setup_str = (str(setup_id) + " " + reason).upper()
@@ -355,6 +460,8 @@ class MacroStrategyGuard:
         news_bias = self.news_sentinel.get_news_bias()
         latest_news = self.news_sentinel.get_latest_news(limit=5)
         shock_reg = self.get_active_macro_shock_regime()
+        breaker = self.check_global_equity_circuit_breaker()
+        breaker_prefix = f"🚨 DEVRE KESİCİ: {breaker.get('message')} | " if breaker.get("active") else ""
 
         return {
             "next_event": next_ev,
@@ -362,7 +469,8 @@ class MacroStrategyGuard:
             "news_bias": news_bias,
             "latest_news": latest_news,
             "shock_regime": shock_reg,
-            "hud_ticker_text": f"🔴 DEV OLAY: {next_ev.get('title', 'Yok')} ({next_ev.get('countdown_str', '--:--:--')}) | MAKRO NABIZ: DXY {cross_reg.get('assets', {}).get('DXY', {}).get('value', '102.2')} | USDT.D %{cross_reg.get('assets', {}).get('USDT.D', {}).get('value', '6.5')} | DURUM: {shock_reg.get('title', 'NÖTR')}"
+            "global_breaker": breaker,
+            "hud_ticker_text": f"{breaker_prefix}🔴 DEV OLAY: {next_ev.get('title', 'Yok')} ({next_ev.get('countdown_str', '--:--:--')}) | MAKRO NABIZ: DXY {cross_reg.get('assets', {}).get('DXY', {}).get('value', '102.2')} | USDT.D %{cross_reg.get('assets', {}).get('USDT.D', {}).get('value', '6.5')} | DURUM: {shock_reg.get('title', 'NÖTR')}"
         }
 
 # Global Singleton Örneği

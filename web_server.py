@@ -5266,16 +5266,24 @@ HTML_PAGE = """
             </div>
             <!-- Makro Nabız & Yönlendirme -->
             <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                <div style="font-size:11px; font-family:'JetBrains Mono'; color:#94a3b8; display:flex; align-items:center; gap:10px;">
+                <div style="font-size:11px; font-family:'JetBrains Mono'; color:#94a3b8; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                     <span>DXY: <b id="hud-macro-dxy" style="color:#ffffff;">—</b></span>
                     <span>US10Y: <b id="hud-macro-us10y" style="color:#38bdf8;">—</b></span>
                     <span>USDT.D: <b id="hud-macro-usdtd" style="color:#10b981;">—</b></span>
+                    <span>BIST 100: <b id="hud-macro-bist" style="color:#f59e0b;">—</b></span>
+                    <span>BRENT: <b id="hud-macro-brent" style="color:#ef4444;">—</b></span>
                     <span style="background:rgba(0,242,254,0.1); color:var(--cyan); border:1px solid rgba(0,242,254,0.25); padding:2px 7px; border-radius:6px; font-weight:700;" id="hud-macro-regime">⚪ DENGELİ</span>
                 </div>
-                <button onclick="switchMainTab('macro')" style="background:rgba(0,242,254,0.12); color:#00f2fe; border:1px solid rgba(0,242,254,0.35); padding:5px 12px; border-radius:7px; font-size:11px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.15s;" title="Detaylı Makro & İstihbarat Masasını Aç">
-                    <span>Makro Masası</span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </button>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <button onclick="switchMainTab('wallstreet')" style="background:rgba(245,158,11,0.14); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:5px 11px; border-radius:7px; font-size:11px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.15s;" title="Wall Street & Borsa İstanbul Masasını Aç">
+                        <span>🏛️ Wall Street &amp; BIST</span>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </button>
+                    <button onclick="switchMainTab('macro')" style="background:rgba(0,242,254,0.12); color:#00f2fe; border:1px solid rgba(0,242,254,0.35); padding:5px 11px; border-radius:7px; font-size:11px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.15s;" title="Detaylı Makro & İstihbarat Masasını Aç">
+                        <span>Makro Masası</span>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -8973,11 +8981,37 @@ async function loadAdminMetrics() {
             if (us10yEl && assets.US10Y) us10yEl.innerText = `%${Number(assets.US10Y.value || 0).toFixed(2)}`;
 
             const usdtdEl = document.getElementById('hud-macro-usdtd');
-            if (usdtdEl && assets.USDT_D) usdtdEl.innerText = `%${Number(assets.USDT_D.value || 0).toFixed(2)}`;
+            if (usdtdEl && (assets.USDT_D || assets['USDT.D'])) {
+                const uVal = assets.USDT_D ? assets.USDT_D.value : assets['USDT.D'].value;
+                usdtdEl.innerText = `%${Number(uVal || 0).toFixed(2)}`;
+            }
 
+            const bistEl = document.getElementById('hud-macro-bist');
+            if (bistEl && assets.BIST100) {
+                const bVal = Number(assets.BIST100.value || 0);
+                const bChg = assets.BIST100.chg_24h !== undefined ? Number(assets.BIST100.chg_24h) : 0;
+                bistEl.innerText = bVal > 0 ? `${bVal.toLocaleString('tr-TR', {maximumFractionDigits:0})} (${bChg > 0 ? '+' : ''}${bChg.toFixed(1)}%)` : '—';
+                bistEl.style.color = bChg >= 0 ? '#10b981' : '#f43f5e';
+            }
+
+            const brentEl = document.getElementById('hud-macro-brent');
+            if (brentEl && assets.BRENT) {
+                const brVal = Number(assets.BRENT.value || 0);
+                const brChg = assets.BRENT.chg_24h !== undefined ? Number(assets.BRENT.chg_24h) : 0;
+                brentEl.innerText = brVal > 0 ? `$${brVal.toFixed(1)} (${brChg > 0 ? '+' : ''}${brChg.toFixed(1)}%)` : '—';
+                brentEl.style.color = brVal >= 100.0 ? '#ef4444' : '#ffffff';
+            }
+
+            const breaker = hud.global_breaker || {};
             const regEl = document.getElementById('hud-macro-regime');
             if (regEl) {
-                if (shock.is_shock) {
+                if (breaker.active) {
+                    regEl.innerText = '🚨 DEVRE KESİCİ (%50 RİSK)';
+                    regEl.title = breaker.message || 'Küresel Devre Kesici Aktif';
+                    regEl.style.color = '#ef4444';
+                    regEl.style.borderColor = 'rgba(239,68,68,0.5)';
+                    regEl.style.background = 'rgba(239,68,68,0.2)';
+                } else if (shock.is_shock) {
                     regEl.innerText = shock.title || '🚨 MAKRO ŞOK';
                     regEl.style.color = '#f43f5e';
                     regEl.style.borderColor = 'rgba(244,63,94,0.4)';
@@ -9727,11 +9761,17 @@ async function loadAdminMetrics() {
             const syncTime = data.last_sync_tsi || "Şimdi";
             const activeFilter = window.currentWallStreetFilter || 'all';
 
-            const formatVal = (num, category) => {
+            const formatVal = (num, category, symbol) => {
                 const n = Number(num || 0);
                 if (category === 'RATES') return `%${n.toFixed(3)}`;
-                if (category === 'FX') return n.toFixed(4);
+                if (category === 'FX') {
+                    if (symbol && symbol.includes('TRY')) return `₺${n.toFixed(4)}`;
+                    return n.toFixed(4);
+                }
                 if (category === 'CURRENCY') return n.toFixed(3);
+                if (symbol && (symbol.includes('GAU') || symbol.includes('TRY'))) {
+                    return `₺${n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                }
                 if (n >= 1000) return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 return n.toFixed(2);
             };
@@ -9747,7 +9787,7 @@ async function loadAdminMetrics() {
                         <span>${item.flag}</span>
                         <strong style="color:#ffffff;">${item.symbol}</strong>
                         <span style="color:#94a3b8; font-size:10.5px;">${item.display_name}</span>
-                        <span style="color:#ffffff; font-weight:700;">${formatVal(item.price, '')}</span>
+                        <span style="color:#ffffff; font-weight:700;">${formatVal(item.price, item.category, item.symbol)}</span>
                         <span style="color:${chgColor}; font-weight:800;">${chgArrow} ${chgSign}${item.chg_24h}%</span>
                         ${badgeHtml}
                     </div>
@@ -9818,7 +9858,7 @@ async function loadAdminMetrics() {
                             <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:10px;">
                                 <div>
                                     <div style="font-size:18px; font-weight:900; color:#ffffff; font-family:'JetBrains Mono';">
-                                        ${formatVal(it.price, it.category)}
+                                        ${formatVal(it.price, it.category, it.symbol)}
                                     </div>
                                 </div>
                                 <div style="text-align:right;">
@@ -9857,6 +9897,9 @@ async function loadAdminMetrics() {
                 if (activeFilter === 'all' || activeFilter === 'asia') {
                     html += renderRegionSection('ASYA - PASİFİK MASASI (Tokyo, Hong Kong & Şanghay)', '🇯🇵', regions.asia || []);
                 }
+                if (activeFilter === 'all' || activeFilter === 'turkey') {
+                    html += renderRegionSection('TÜRKİYE MASASI (Borsa İstanbul & Türk Lirası Varlıkları)', '🇹🇷', regions.turkey || []);
+                }
                 if (activeFilter === 'all' || activeFilter === 'commodities_me') {
                     html += renderRegionSection('EMTİA, ENERJİ & ORTADOĞU/AFRİKA KORİDORU', '🌍', regions.commodities_me || []);
                 }
@@ -9866,6 +9909,7 @@ async function loadAdminMetrics() {
             const btcSp = correlations.btc_sp500 || {};
             const btcDxy = correlations.btc_dxy || {};
             const btcGold = correlations.btc_gold || {};
+            const btcBist = correlations.btc_bist || {};
             const oilShock = correlations.oil_shock || {};
 
             container.innerHTML = `
@@ -9881,7 +9925,7 @@ async function loadAdminMetrics() {
                                 <span style="font-size:10px; font-family:'JetBrains Mono'; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:6px; font-weight:800;">NYSE / GLOBAL CANLI</span>
                             </div>
                             <div style="font-size:12px; color:#94a3b8; margin-top:3px;">
-                                New York, Londra, Tokyo, Frankfurt ve Emtia Piyasaları Canlı Takip &amp; Kripto Risk İştahı Masası
+                                New York, Londra, Tokyo, Borsa İstanbul, Frankfurt ve Emtia Piyasaları Canlı Takip &amp; Kripto Risk İştahı Masası
                             </div>
                         </div>
                     </div>
@@ -9902,7 +9946,7 @@ async function loadAdminMetrics() {
                         <div style="display:flex; align-items:center; gap:8px;">
                             <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444; box-shadow:0 0 10px #ef4444; animation:pulse 1s infinite;"></span>
                             <span style="color:#ffffff; font-weight:900; letter-spacing:0.5px;">🔴 CANLI WALL STREET &amp; KÜRESEL TICKER BANDI</span>
-                            <span style="color:var(--cyan); font-weight:700;">(25 KÜRESEL VARLIK &amp; EMTİA)</span>
+                            <span style="color:var(--cyan); font-weight:700;">(${marqueeTape.length || 31} KÜRESEL &amp; TÜRKİYE VARLIĞI)</span>
                         </div>
                         <div style="font-size:10px; color:#64748b;">
                             ⏸️ DURAKLATMAK İÇİN ÜZERİNE GELİN
@@ -9934,6 +9978,7 @@ async function loadAdminMetrics() {
                     <button onclick="setWallStreetFilter('america')" class="news-filter-pill ${activeFilter === 'america' ? 'active' : ''}">🇺🇸 Amerika (${(regions.america || []).length})</button>
                     <button onclick="setWallStreetFilter('europe')" class="news-filter-pill ${activeFilter === 'europe' ? 'active' : ''}">🇪🇺 Avrupa (${(regions.europe || []).length})</button>
                     <button onclick="setWallStreetFilter('asia')" class="news-filter-pill ${activeFilter === 'asia' ? 'active' : ''}">🇯🇵 Asya - Pasifik (${(regions.asia || []).length})</button>
+                    <button onclick="setWallStreetFilter('turkey')" class="news-filter-pill ${activeFilter === 'turkey' ? 'active' : ''}">🇹🇷 Türkiye BIST (${(regions.turkey || []).length})</button>
                     <button onclick="setWallStreetFilter('commodities_me')" class="news-filter-pill ${activeFilter === 'commodities_me' ? 'active' : ''}">🌍 Emtia &amp; Körfez (${(regions.commodities_me || []).length})</button>
                 </div>
 
@@ -9980,7 +10025,16 @@ async function loadAdminMetrics() {
                             <div style="font-size:11px; color:#cbd5e1; margin-top:6px; line-height:1.4;">${btcGold.desc || 'Dijital Değer Saklama Sığınağı'}</div>
                         </div>
 
-                        <!-- 4. PETROL ŞOKU & ENFLASYON -->
+                        <!-- 4. BTC / BIST 100 -->
+                        <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:12px 14px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-size:11px; font-weight:800; color:#f59e0b;">🇹🇷 ${btcBist.title || 'BTC / BIST 100'}</span>
+                                <span style="font-size:13px; font-weight:900; font-family:'JetBrains Mono'; color:#f59e0b;">${btcBist.beta || '+0.45'}</span>
+                            </div>
+                            <div style="font-size:11px; color:#cbd5e1; margin-top:6px; line-height:1.4;">${btcBist.desc || 'Yerel Borsa ve Enflasyon Hedge Korelasyonu'}</div>
+                        </div>
+
+                        <!-- 5. PETROL ŞOKU & ENFLASYON -->
                         <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:12px 14px;">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <span style="font-size:11px; font-weight:800; color:#c084fc;">🛢️ Petrol Şoku &amp; Enflasyon</span>

@@ -52,6 +52,14 @@ GLOBAL_TERMINAL_CONFIG = {
         {"id": "asx200", "symbol": "^AXJO", "name": "Avustralya ASX 200", "sub": "Madencilik & Pasifik Likiditesi", "flag": "🇦🇺", "category": "ENDEX"},
         {"id": "usdjpy", "symbol": "USDJPY=X", "name": "USD / JPY Kuru", "sub": "Yen Carry Trade & Likidite", "flag": "🇯🇵", "category": "FX"}
     ],
+    "turkey": [
+        {"id": "bist100", "symbol": "XU100.IS", "name": "BIST 100 Endeksi", "sub": "Borsa İstanbul Gösterge Endeksi", "flag": "🇹🇷", "category": "ENDEX"},
+        {"id": "bist30", "symbol": "XU030.IS", "name": "BIST 30 Endeksi", "sub": "Borsa İstanbul Lokomotif Devler", "flag": "🇹🇷", "category": "ENDEX"},
+        {"id": "xbank", "symbol": "XBANK.IS", "name": "BIST Bankacılık", "sub": "Türk Bankacılık Sektörü", "flag": "🇹🇷", "category": "SECTOR"},
+        {"id": "usdtry", "symbol": "USDTRY=X", "name": "USD / TRY Kuru", "sub": "Dolar / Türk Lirası Paritesi", "flag": "🇹🇷", "category": "FX"},
+        {"id": "eurtry", "symbol": "EURTRY=X", "name": "EUR / TRY Kuru", "sub": "Euro / Türk Lirası Paritesi", "flag": "🇹🇷", "category": "FX"},
+        {"id": "gram_altin", "symbol": "GAU-TRY", "name": "Gram Altın TL", "sub": "Kapalıçarşı & Serbest Piyasa", "flag": "🇹🇷", "category": "METALS"}
+    ],
     "commodities_me": [
         {"id": "brent", "symbol": "BZ=F", "name": "Brent Ham Petrol", "sub": "Küresel Enerji & Jeopolitik Şok", "flag": "🛢️", "category": "ENERGY"},
         {"id": "oil", "symbol": "CL=F", "name": "WTI Ham Petrol", "sub": "ABD Teksas Petrol Göstergesi", "flag": "🛢️", "category": "ENERGY"},
@@ -188,6 +196,12 @@ class MacroCrossAssetRadar:
             "gold": {"price": 4216.3, "chg_24h": 1.43, "status": "NEUTRAL"},
             "oil": {"price": 75.20, "chg_24h": 2.69, "status": "NEUTRAL"},
             "brent": {"price": 78.40, "chg_24h": 4.12, "status": "NEUTRAL"},
+            "bist100": {"price": 12265.98, "chg_24h": 1.25, "status": "NEUTRAL"},
+            "bist30": {"price": 15145.27, "chg_24h": 1.10, "status": "NEUTRAL"},
+            "xbank": {"price": 15870.84, "chg_24h": 1.80, "status": "NEUTRAL"},
+            "usdtry": {"price": 49.26, "chg_24h": 0.05, "status": "NEUTRAL"},
+            "eurtry": {"price": 55.22, "chg_24h": 0.08, "status": "NEUTRAL"},
+            "gram_altin": {"price": 6677.55, "chg_24h": 1.48, "status": "NEUTRAL"},
             "btc_d": 59.08,
             "usdt_d": 6.52,
             "eth_btc": 0.03027,
@@ -323,8 +337,38 @@ class MacroCrossAssetRadar:
                         # Geriye dönük uyumluluk: Çekirdek makro alanları da güncelle
                         if asset_id in self.data and isinstance(self.data[asset_id], dict):
                             self.data[asset_id].update({"price": p, "chg_24h": chg})
-                        elif asset_id in ["dxy", "us10y", "nasdaq", "sp500", "vix", "gold", "oil", "brent"]:
+                        elif asset_id in ["dxy", "us10y", "nasdaq", "sp500", "vix", "gold", "oil", "brent", "bist100", "bist30", "xbank", "usdtry", "eurtry", "gram_altin"]:
                             self.data[asset_id] = {"price": p, "chg_24h": chg}
+
+                # Gram Altın TL Sentetik Kuant Hesaplaması (Ons Altın / 31.1034768 * USD/TRY)
+                gold_info = self.data.get("terminal_assets", {}).get("gold") or self.data.get("gold", {})
+                usdtry_info = self.data.get("terminal_assets", {}).get("usdtry") or self.data.get("usdtry", {})
+                g_p = float(gold_info.get("price", 0.0) if isinstance(gold_info, dict) else 0.0)
+                u_p = float(usdtry_info.get("price", 0.0) if isinstance(usdtry_info, dict) else 0.0)
+                if g_p > 0 and u_p > 0:
+                    gram_p = round((g_p / 31.1034768) * u_p, 2)
+                    g_chg = float(gold_info.get("chg_24h", 0.0) if isinstance(gold_info, dict) else 0.0)
+                    u_chg = float(usdtry_info.get("chg_24h", 0.0) if isinstance(usdtry_info, dict) else 0.0)
+                    gram_chg = round(g_chg + u_chg, 2)
+                    gram_data = {
+                        "id": "gram_altin",
+                        "symbol": "GAU-TRY",
+                        "name": "Gram Altın TL",
+                        "sub": "Kapalıçarşı & Serbest Piyasa",
+                        "flag": "🇹🇷",
+                        "category": "METALS",
+                        "price": gram_p,
+                        "chg_24h": gram_chg,
+                        "status": "BULLISH" if gram_chg > 0 else ("BEARISH" if gram_chg < 0 else "NEUTRAL")
+                    }
+                    self.data["terminal_assets"]["gram_altin"] = gram_data
+                    self.data["gram_altin"] = gram_data
+
+                # BIST 100 ve USD/TRY çekirdek alana da doğrudan yansıt
+                if "bist100" in self.data["terminal_assets"]:
+                    self.data["bist100"] = self.data["terminal_assets"]["bist100"]
+                if "usdtry" in self.data["terminal_assets"]:
+                    self.data["usdtry"] = self.data["terminal_assets"]["usdtry"]
 
                 if isinstance(dom_r, dict) and dom_r:
                     self.data["btc_d"] = dom_r.get("btc_d", self.data.get("btc_d", 59.08))
@@ -336,7 +380,7 @@ class MacroCrossAssetRadar:
                 self._calculate_macro_regime()
                 self.data["last_sync_ts"] = now
                 self.save_cache()
-                print(f">> [WALL STREET & GLOBAL DESK] {len(all_config_items)} varlık senkronize edildi: DXY={self.data.get('dxy',{}).get('price')} | Brent=${self.data.get('brent',{}).get('price')} | S&P500={self.data.get('sp500',{}).get('price')}")
+                print(f">> [WALL STREET & GLOBAL DESK] {len(all_config_items)} varlık senkronize edildi: DXY={self.data.get('dxy',{}).get('price')} | BIST100={self.data.get('bist100',{}).get('price')} | Brent=${self.data.get('brent',{}).get('price')} | S&P500={self.data.get('sp500',{}).get('price')}")
                 return True
 
         except Exception as e:
@@ -409,6 +453,14 @@ class MacroCrossAssetRadar:
             score -= 10.0
         elif max_oil_chg <= -2.0:
             score += 10.0  # Petrol gevşemesi: Dezenflasyon ve rahatlama
+
+        # 5c. Borsa İstanbul & Gelişmekte Olan Piyasalar (BIST 100 XU100.IS)
+        bist_info = self.data.get("terminal_assets", {}).get("bist100") or self.data.get("bist100", {})
+        bist_chg = float(bist_info.get("chg_24h", 0.0) if isinstance(bist_info, dict) else 0.0)
+        if bist_chg >= 2.0:
+            score += 8.0  # Güçlü yerel risk iştahı ve gelişmekte olan piyasa sermaye girişi
+        elif bist_chg <= -3.0:
+            score -= 12.0 # Gelişmekte olan piyasa sermaye çıkışı ve yerel stres
 
         # 6. USDT Dominansı Katkısı
         usdt_d = float(self.data.get("usdt_d", 6.5))
@@ -492,10 +544,14 @@ class MacroCrossAssetRadar:
         brent_chg = self.data.get("brent", {}).get("chg_24h", 0.0)
         oil_str = f" | BRENT ${brent_p:.1f} ({brent_chg:+.1f}%)" if brent_p > 0 else ""
 
+        bist_p = float((self.data.get("bist100") or self.data.get("terminal_assets", {}).get("bist100", {})).get("price", 0.0) or 0.0)
+        bist_chg = float((self.data.get("bist100") or self.data.get("terminal_assets", {}).get("bist100", {})).get("chg_24h", 0.0) or 0.0)
+        bist_str = f" | BIST100 {bist_p:.0f} ({bist_chg:+.1f}%)" if bist_p > 0 else ""
+
         dxy_color = "🟢" if dxy_chg <= 0 else "🔴"
         regime_icon = "🚀" if score >= 25 else ("🛡️" if score <= -25 else "⚖️")
 
-        hud_line = f"DXY {dxy_p:.2f} {dxy_color} | US10Y %{us10y_p:.2f}{oil_str} | VIX {vix_p:.1f} | USDT.D %{usdt_d:.1f} | BTC.D %{btc_d:.1f} | Rejim: {regime} {regime_icon}"
+        hud_line = f"DXY {dxy_p:.2f} {dxy_color} | US10Y %{us10y_p:.2f}{bist_str}{oil_str} | VIX {vix_p:.1f} | USDT.D %{usdt_d:.1f} | BTC.D %{btc_d:.1f} | Rejim: {regime} {regime_icon}"
 
         return {
             "dxy": self.data.get("dxy"),
@@ -506,6 +562,11 @@ class MacroCrossAssetRadar:
             "gold": self.data.get("gold"),
             "oil": self.data.get("oil"),
             "brent": self.data.get("brent"),
+            "bist100": self.data.get("bist100") or self.data.get("terminal_assets", {}).get("bist100"),
+            "bist30": self.data.get("bist30") or self.data.get("terminal_assets", {}).get("bist30"),
+            "xbank": self.data.get("xbank") or self.data.get("terminal_assets", {}).get("xbank"),
+            "usdtry": self.data.get("usdtry") or self.data.get("terminal_assets", {}).get("usdtry"),
+            "gram_altin": self.data.get("gram_altin") or self.data.get("terminal_assets", {}).get("gram_altin"),
             "btc_d": btc_d,
             "usdt_d": usdt_d,
             "eth_btc": eth_btc,
@@ -521,17 +582,38 @@ class MacroCrossAssetRadar:
             "regime": self.data.get("regime", "NEUTRAL (Dengeli / Karışık ⚖️)"),
             "composite_score": float(self.data.get("regime_score", 0.0)),
             "assets": {
-                "DXY": {"value": self.data.get("dxy", {}).get("price", 102.2)},
-                "US10Y": {"value": self.data.get("us10y", {}).get("price", 5.24)},
+                "DXY": {"value": self.data.get("dxy", {}).get("price", 102.2), "chg": self.data.get("dxy", {}).get("chg_24h", 0.0)},
+                "US10Y": {"value": self.data.get("us10y", {}).get("price", 5.24), "chg": self.data.get("us10y", {}).get("chg_24h", 0.0)},
                 "USDT.D": {"value": self.data.get("usdt_d", 6.54)},
-                "BTC.D": {"value": self.data.get("btc_d", 59.09)}
+                "USDT_D": {"value": self.data.get("usdt_d", 6.54)},
+                "BTC.D": {"value": self.data.get("btc_d", 59.09)},
+                "BIST100": {
+                    "value": float((self.data.get("bist100") or self.data.get("terminal_assets", {}).get("bist100", {})).get("price", 0.0)),
+                    "chg_24h": float((self.data.get("bist100") or self.data.get("terminal_assets", {}).get("bist100", {})).get("chg_24h", 0.0))
+                },
+                "BRENT": {
+                    "value": float(self.data.get("brent", {}).get("price", 0.0)),
+                    "chg_24h": float(self.data.get("brent", {}).get("chg_24h", 0.0))
+                },
+                "SP500": {
+                    "value": float(self.data.get("sp500", {}).get("price", 0.0)),
+                    "chg_24h": float(self.data.get("sp500", {}).get("chg_24h", 0.0))
+                },
+                "VIX": {
+                    "value": float(self.data.get("vix", {}).get("price", 0.0)),
+                    "chg_24h": float(self.data.get("vix", {}).get("chg_24h", 0.0))
+                },
+                "USDTRY": {
+                    "value": float((self.data.get("usdtry") or self.data.get("terminal_assets", {}).get("usdtry", {})).get("price", 0.0)),
+                    "chg_24h": float((self.data.get("usdtry") or self.data.get("terminal_assets", {}).get("usdtry", {})).get("chg_24h", 0.0))
+                }
             }
         }
 
     def get_global_terminal_data(self) -> Dict[str, Any]:
         """
         Wall Street & Küresel Terminal Desk için hazır veri paketi döner:
-        - 4 Kıta & Bölgesel Masalar (Amerika, Avrupa, Asya, Emtia/ME)
+        - 5 Kıta & Bölgesel Masalar (Amerika, Avrupa, Asya, Türkiye, Emtia/ME)
         - Dünya Borsa Seans Durumları (Açık/Kapalı + Geri Sayım)
         - Times Square Kayan Marquee Ticker Bandı
         - Makro Korelasyon & Beta Matrisi
@@ -543,6 +625,7 @@ class MacroCrossAssetRadar:
             "america": [],
             "europe": [],
             "asia": [],
+            "turkey": [],
             "commodities_me": []
         }
 
@@ -568,6 +651,14 @@ class MacroCrossAssetRadar:
                     badge = "🟢 DOLAR GEVŞEMESİ (RİSK-ON)"
                 elif aid == "sp500" and chg >= 0.8:
                     badge = "🚀 WALL STREET BOĞASI"
+                elif aid == "bist100" and chg >= 2.0:
+                    badge = "🚀 BİST RALLİSİ"
+                elif aid == "bist100" and chg <= -2.5:
+                    badge = "⚠️ BİST SERT SATIŞ"
+                elif aid == "usdtry" and chg >= 0.8:
+                    badge = "⚡ DÖVİZ HAREKETİ"
+                elif aid == "gram_altin" and chg >= 1.5:
+                    badge = "🥇 GRAM TL REKORU"
                 elif abs(chg) >= 2.0:
                     badge = "⚡ YÜKSEK VOLATİLİTE"
 
@@ -587,7 +678,7 @@ class MacroCrossAssetRadar:
 
                 # Marquee şeridi için kompakt kart
                 marquee_tape.append({
-                    "symbol": item["symbol"].replace("=F", "").replace("^", "").replace(".SS", ""),
+                    "symbol": item["symbol"].replace("=F", "").replace("^", "").replace(".SS", "").replace(".IS", "").replace("=X", ""),
                     "display_name": item["name"],
                     "flag": item["flag"],
                     "price": round(float(price or 0.0), 3),
@@ -600,6 +691,7 @@ class MacroCrossAssetRadar:
         brent_p = float(self.data.get("brent", {}).get("price", 0.0) or 0.0)
         dxy_chg = float(self.data.get("dxy", {}).get("chg_24h", 0.0) or 0.0)
         sp_chg = float(self.data.get("sp500", {}).get("chg_24h", 0.0) or 0.0)
+        bist_chg = float((self.data.get("bist100") or self.data.get("terminal_assets", {}).get("bist100", {})).get("chg_24h", 0.0) or 0.0)
 
         correlations = {
             "btc_sp500": {
@@ -619,6 +711,12 @@ class MacroCrossAssetRadar:
                 "bias": "NEUTRAL",
                 "title": "BTC / Altın (Dijital Sığınak)",
                 "desc": "Jeopolitik gerilimlerde fiziksel altın ilk tepkiyi verirken, 7/24 transfer edilen BTC dijital liman rolü oynar."
+            },
+            "btc_bist": {
+                "beta": "+0.45",
+                "bias": "BULLISH" if bist_chg > 0 else "NEUTRAL",
+                "title": "BTC / BIST 100 Yerel Likidite",
+                "desc": "Borsa İstanbul ve TL piyasalarındaki yerel yatırımcı ilgisi ve enflasyon hedge talebi Türk kripto hacimlerine pozitif yansır."
             },
             "oil_shock": {
                 "brent_price": brent_p,
