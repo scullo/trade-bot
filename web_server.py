@@ -3777,10 +3777,32 @@ HTML_PAGE = """
         .wallstreet-marquee-track {
             display: inline-flex;
             width: max-content;
-            animation: wallstreetMarqueeScroll 45s linear infinite;
+            animation: wallstreetMarqueeScroll 140s linear infinite;
         }
         .wallstreet-marquee-track:hover {
             animation-play-state: paused;
+        }
+        .marquee-speed-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #94a3b8;
+            padding: 2px 8px;
+            border-radius: 5px;
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .marquee-speed-btn:hover {
+            background: rgba(0, 242, 254, 0.15);
+            border-color: var(--cyan);
+            color: #ffffff;
+        }
+        .marquee-speed-btn.active {
+            background: rgba(0, 242, 254, 0.2);
+            border-color: var(--cyan);
+            color: var(--cyan);
         }
         .wallstreet-ticker-pill {
             display: inline-flex;
@@ -9705,6 +9727,25 @@ async function loadAdminMetrics() {
         }
         window.setWallStreetFilter = setWallStreetFilter;
 
+        window.currentMarqueeSpeed = window.currentMarqueeSpeed || 140;
+        function setMarqueeSpeed(speedSec) {
+            window.currentMarqueeSpeed = speedSec;
+            const tracks = document.querySelectorAll('.wallstreet-marquee-track');
+            tracks.forEach(t => {
+                t.style.animationDuration = speedSec + 's';
+            });
+            const btns = document.querySelectorAll('.marquee-speed-btn');
+            btns.forEach(b => {
+                const s = Number(b.getAttribute('data-speed'));
+                if (s === speedSec) {
+                    b.classList.add('active');
+                } else {
+                    b.classList.remove('active');
+                }
+            });
+        }
+        window.setMarqueeSpeed = setMarqueeSpeed;
+
         async function syncWallStreetData() {
             const btn = document.getElementById('btn-wallstreet-sync');
             if (btn) {
@@ -9760,6 +9801,7 @@ async function loadAdminMetrics() {
             const correlations = data.correlations || {};
             const syncTime = data.last_sync_tsi || "Şimdi";
             const activeFilter = window.currentWallStreetFilter || 'all';
+            const currentMarqueeSpeed = window.currentMarqueeSpeed || 140;
 
             const formatVal = (num, category, symbol) => {
                 const n = Number(num || 0);
@@ -9948,13 +9990,18 @@ async function loadAdminMetrics() {
                             <span style="color:#ffffff; font-weight:900; letter-spacing:0.5px;">🔴 CANLI WALL STREET &amp; KÜRESEL TICKER BANDI</span>
                             <span style="color:var(--cyan); font-weight:700;">(${marqueeTape.length || 31} KÜRESEL &amp; TÜRKİYE VARLIĞI)</span>
                         </div>
-                        <div style="font-size:10px; color:#64748b;">
-                            ⏸️ DURAKLATMAK İÇİN ÜZERİNE GELİN
+                        <div style="display:flex; align-items:center; gap:10px; font-size:10.5px; flex-wrap:wrap;">
+                            <span style="color:#64748b;">⏸️ DURAKLATMAK İÇİN ÜZERİNE GELİN</span>
+                            <span style="color:rgba(255,255,255,0.15);">|</span>
+                            <span style="color:#94a3b8; font-weight:700;">Akış Hızı:</span>
+                            <button onclick="setMarqueeSpeed(190)" data-speed="190" class="marquee-speed-btn ${currentMarqueeSpeed === 190 ? 'active' : ''}" title="Çok Yavaş / Sakin Okuma Modu">🐢 Sakin (190s)</button>
+                            <button onclick="setMarqueeSpeed(140)" data-speed="140" class="marquee-speed-btn ${(currentMarqueeSpeed === 140 || currentMarqueeSpeed === 130) ? 'active' : ''}" title="İdeal Kurumsal Borsa Hızı">🚶 Normal (140s)</button>
+                            <button onclick="setMarqueeSpeed(80)" data-speed="80" class="marquee-speed-btn ${currentMarqueeSpeed === 80 ? 'active' : ''}" title="Dinamik Akış Modu">⚡ Hızlı (80s)</button>
                         </div>
                     </div>
 
                     <div class="wallstreet-marquee-track-container">
-                        <div class="wallstreet-marquee-track">
+                        <div class="wallstreet-marquee-track" style="animation-duration:${currentMarqueeSpeed}s;">
                             ${marqueeTrackHtml}
                             ${marqueeTrackHtml}
                         </div>
