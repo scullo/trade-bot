@@ -12,6 +12,9 @@ Valkyrie Quant Brain - Rolling 48-Hour Continuous Evolution Architecture
   GitHub state dalına kilitler ve VIP Telegram özetini iletir.
 """
 
+
+from valkyrie_logger import get_logger
+logger = get_logger("autonomous_dna_calibrator")
 import os
 import json
 import time
@@ -101,8 +104,8 @@ class AutonomousDNACalibrator:
                         self.last_calibration_ts = float(data.get("last_calibration_ts", 0.0))
                         self.last_structural_ts = float(data.get("last_structural_ts", self.last_calibration_ts))
                         self.last_fast_risk_ts = float(data.get("last_fast_risk_ts", 0.0))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[autonomous_dna_calibrator] Exception caught: {e}")
 
     def save_audit_history(self):
         """Denetim defterini diske ve GitHub state dalına atomik olarak yazar."""
@@ -142,8 +145,8 @@ class AutonomousDNACalibrator:
                 })
                 with urllib.request.urlopen(get_req, timeout=10) as get_res:
                     sha = json.loads(get_res.read().decode("utf-8")).get("sha")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[autonomous_dna_calibrator] Exception caught: {e}")
 
             payload = {
                 "message": f"[CALIBRATION] Auto-calibration state sync ({remote_file_path})",
@@ -236,8 +239,8 @@ class AutonomousDNACalibrator:
                 try:
                     with open(history_file, "r", encoding="utf-8") as f:
                         completed_shadow = json.load(f).get("completed", [])
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[autonomous_dna_calibrator] Exception caught: {e}")
 
         def _extract_timestamp(t):
             for k in ("exit_timestamp", "timestamp_ts", "exit_time", "timestamp"):
@@ -252,8 +255,8 @@ class AutonomousDNACalibrator:
                             try:
                                 dt = datetime.strptime(val.split('.')[0], "%Y-%m-%d %H:%M:%S")
                                 return dt.timestamp()
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                logger.debug(f"[autonomous_dna_calibrator] Exception caught: {e}")
             return 0.0
 
         # Taranacak sembol havuzu
@@ -438,8 +441,8 @@ class AutonomousDNACalibrator:
                 try:
                     with open(history_file, "r", encoding="utf-8") as f:
                         completed_trades = json.load(f).get("completed", [])
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[autonomous_dna_calibrator] Exception caught: {e}")
 
         min_req = 3 if self.is_test else 20
         if len(completed_trades) < min_req:
@@ -964,8 +967,8 @@ class AutonomousDNACalibrator:
             try:
                 with open(self.calibrated_dna_file, "r", encoding="utf-8") as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[autonomous_dna_calibrator] Exception caught: {e}")
         return {}
 
     def _save_calibrated_dna(self, dna_data: Dict[str, dict]):
@@ -1013,15 +1016,15 @@ class AutonomousDNACalibrator:
                 try:
                     from config import TELEGRAM_BOT_TOKEN
                     token = TELEGRAM_BOT_TOKEN
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[autonomous_dna_calibrator] Exception caught: {e}")
             chat_id = getattr(self.notifier, "chat_id", None) or os.environ.get("TELEGRAM_CHAT_ID", "")
             if not chat_id:
                 try:
                     from config import TELEGRAM_CHAT_ID
                     chat_id = TELEGRAM_CHAT_ID
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[autonomous_dna_calibrator] Exception caught: {e}")
 
             if token and chat_id:
                 url = f"https://api.telegram.org/bot{token}/sendMessage"

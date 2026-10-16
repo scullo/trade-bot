@@ -21,6 +21,9 @@ Arka Planda Gölge İşlem Takip Motoru ve Otonom Kuant Kalibrasyon Masası
    - Render 512MB RAM sınırına kesinlikle uyumlu (<2MB bellek ayak izi).
 """
 
+
+from valkyrie_logger import get_logger
+logger = get_logger("shadow_engine")
 import os
 import json
 import time
@@ -92,8 +95,8 @@ class ShadowExecutionEngine:
             if os.path.exists(b_path):
                 with open(b_path, 'r', encoding='utf-8') as f_b:
                     self.dna_baseline = json.load(f_b)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[shadow_engine] Exception caught: {e}")
 
         # Hafızadaki geçmişi yükle
         self.load_history()
@@ -460,8 +463,8 @@ class ShadowExecutionEngine:
                     if pid_res.get('is_engaged') and pid_res.get('proposed_stop', 0) > 0:
                         pos["pid_engaged"] = True
                         pos["pid_stop"] = pid_res['proposed_stop']
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[shadow_engine] Exception caught: {e}")
 
             # PID Kâr Kilidi veya Breakeven Stop Kontrolü
             if pos.get("pid_engaged") and pos.get("pid_stop"):
@@ -921,8 +924,8 @@ class ShadowExecutionEngine:
             with open(tmp, "w", encoding="utf-8") as f:
                 json.dump(self.cumulative_stats, f, ensure_ascii=False, indent=2)
             os.replace(tmp, self.cumulative_stats_file)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[shadow_engine] Exception caught: {e}")
 
     # ──────────────────────────────────────────────────────────────────────────
     # PERFORMANS ÖZETİ VE METRİKLER (KPIs)
@@ -1825,8 +1828,8 @@ class ShadowExecutionEngine:
                 try:
                     with open(af_path, "r", encoding="utf-8") as f:
                         existing = json.load(f).get("completed", [])
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[shadow_engine] Exception caught: {e}")
 
             merged_map = {x.get("id"): x for x in (existing + tr_list) if x.get("id")}
             archive_data = {
@@ -1954,8 +1957,8 @@ class ShadowExecutionEngine:
                 with open(tmp_file, "w", encoding="utf-8") as f:
                     json.dump(data, f, ensure_ascii=False, indent=2)
                 os.replace(tmp_file, self.history_file)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[shadow_engine] Exception caught: {e}")
 
         # 2. GitHub Uzak Kalıcılık (İzole state dalı - Render restart döngüsünü tetiklemez)
         if GITHUB_TOKEN and not self.is_test:
@@ -1996,8 +1999,8 @@ class ShadowExecutionEngine:
                         with urllib.request.urlopen(req, timeout=15) as res:
                             gh = json.loads(res.read().decode("utf-8"))
                             self._github_sha = gh.get("sha")
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug(f"[shadow_engine] Exception caught: {e}")
 
                     payload = {
                         "message": f"[SHADOW] State auto-sync ({current_count} completed, {len(data.get('actives', []))} active)",

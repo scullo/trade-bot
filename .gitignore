@@ -30,6 +30,8 @@ macro_quorum_audit.json
 ANALİZ/
 *.xlsx
 *.csv
+*.docx
+backtest_results.json
 Yeni Metin Belgesi*.txt
 
 # Python & Environment

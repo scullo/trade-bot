@@ -6,6 +6,9 @@ from datetime import datetime, timezone, timedelta
 import ccxt.async_support as ccxt_async
 from security_vault import SecurityVault
 import state_store
+from valkyrie_logger import get_logger
+
+logger = get_logger("live_trader")
 
 LIVE_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "live_config.json")
 LIVE_HISTORY_PATH = os.path.join(os.path.dirname(__file__), "live_trade_history.json")
@@ -54,8 +57,8 @@ def load_live_config() -> dict:
         try:
             with open(LIVE_CONFIG_PATH, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"live_config.json okunamadı ({e}), varsayılan DEMO modu yüklendi.")
     return {
         "mode": "DEMO",
         "api_key": "",
@@ -73,8 +76,8 @@ def save_live_config(cfg: dict):
         json.dump(cfg, f, indent=2, ensure_ascii=False)
     try:
         state_store.backup_file(LIVE_CONFIG_PATH)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"live_config.json yedeklenirken: {e}")
 
 
 def load_positions_state() -> dict:
@@ -84,8 +87,8 @@ def load_positions_state() -> dict:
                 data = json.load(f)
                 if isinstance(data, dict):
                     return {normalize_symbol(k): v for k, v in data.items()}
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"live_positions_state.json okunamadı: {e}")
     return {}
 
 
@@ -140,8 +143,8 @@ class LiveTrader:
             try:
                 with open(LIVE_HISTORY_PATH, "r", encoding="utf-8") as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"live_trade_history.json yüklenirken hata: {e}")
         return []
 
     def _save_history(self):
@@ -494,8 +497,8 @@ class LiveTrader:
                 if old_sl:
                     try:
                         await self.exchange.cancel_order(old_sl, ex_sym)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug(f"Eski stop emri iptal edilirken (tetiklenmiş veya kapatılmış olabilir): {e}")
                 formatted_stop = float(self.exchange.price_to_precision(ex_sym, new_stop))
                 amount = float(self.exchange.amount_to_precision(ex_sym, pos["amount"]))
                 new_sl = await self.exchange.create_order(
@@ -650,8 +653,8 @@ class LiveTrader:
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
                     asyncio.create_task(self.update_position_stop(norm_sym, new_stop_price))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Stop güncelleme asenkron görevi başlatılamadı: {e}")
 
     def update_position_levels(self, symbol: str, **kwargs):
         norm_sym = normalize_symbol(symbol)

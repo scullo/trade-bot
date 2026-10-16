@@ -56,6 +56,9 @@ def verify_all():
     print("\n[2] Sidebar Dikey Kaydırma (Vertical Scroll) CSS Denetimi:")
     with open("web_server.py", "r", encoding="utf-8") as f:
         web_code = f.read()
+    if os.path.exists("templates/index.html"):
+        with open("templates/index.html", "r", encoding="utf-8") as tf:
+            web_code += "\n" + tf.read()
 
     assert "overflow-y: auto" in web_code, "Sidebar için overflow-y: auto kuralı bulunamadı!"
     assert ".dashboard-sidebar .nav-tab-strip" in web_code, "nav-tab-strip CSS kuralı bulunamadı!"

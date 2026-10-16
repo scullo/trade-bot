@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "last_updated": 1791645819,
+  "last_updated": 1792136634,
   "roles": {
     "FED_CHAIR": {
       "title": "Federal Reserve Başkanı",
@@ -28,10 +28,10 @@
       "title": "SEC (Menkul Kıymetler Komisyonu) Başkanı",
       "current_holder": "Paul Atkins",
       "alias_list": [
-        "Chairman Atkins",
-        "Chair Atkins",
         "Paul Atkins",
-        "Atkins"
+        "Atkins",
+        "Chair Atkins",
+        "Chairman Atkins"
       ],
       "market_weight": 1.0,
       "domain": "REGULATION",

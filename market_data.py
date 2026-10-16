@@ -1,3 +1,6 @@
+
+from valkyrie_logger import get_logger
+logger = get_logger("market_data")
 import asyncio
 import json
 import time
@@ -48,8 +51,8 @@ def downcast_candle_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         for c in float32_cols:
             if c in df.columns:
                 df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0.0).astype(np.float32)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[market_data] Exception caught: {e}")
     return df
 
 def update_rolling_candle_buffer(df: pd.DataFrame, candle_dict: dict, maxlen: int = 300) -> pd.DataFrame:
@@ -615,8 +618,8 @@ class MarketDataManager:
                 cal_ev_cnt = len(calendar_manager.events)
                 cal_next_info = calendar_manager.get_next_major_event() or {}
                 macro_calendar_ok = (cal_ev_cnt > 0)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[market_data] Exception caught: {e}")
 
             try:
                 from macro_cross_asset import cross_asset_radar
@@ -624,28 +627,28 @@ class MarketDataManager:
                 cross_us10y_val = float(cross_asset_radar.data.get("us10y", {}).get("price", 5.24) or 5.24)
                 cross_reg_text = str(cross_asset_radar.data.get("regime", "NEUTRAL"))
                 macro_cross_asset_ok = (cross_dxy_val > 50.0 and cross_us10y_val > 0.0)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[market_data] Exception caught: {e}")
 
             try:
                 from macro_news_sentinel import news_sentinel
                 news_tot_cnt = len(news_sentinel.news_items)
                 news_top_item = news_sentinel.get_flash_breaking_alert() or {}
                 macro_news_sentinel_ok = (news_tot_cnt > 0)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[market_data] Exception caught: {e}")
 
             try:
                 from macro_quorum import news_quorum
                 macro_quorum_ok = isinstance(news_quorum.audit_history, list)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[market_data] Exception caught: {e}")
 
             try:
                 from macro_strategy_guard import macro_guard
                 macro_guard_ok = (macro_guard is not None)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[market_data] Exception caught: {e}")
 
             macro_checks = [
                 macro_calendar_ok, macro_cross_asset_ok, macro_news_sentinel_ok,
@@ -921,8 +924,8 @@ class MarketDataManager:
                                     except (ValueError, TypeError):
                                         pass
                                 source_name = "Binance Futures (Direct)"
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[market_data] Exception caught: {e}")
 
                 # 2. Gate.io Futures Tickers (Render / US Cloud Safe - 980+ Kontrat)
                 if not fmap:
@@ -947,8 +950,8 @@ class MarketDataManager:
                                         except (ValueError, TypeError):
                                             pass
                                     source_name = "Gate.io Futures (US Cloud Safe)"
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug(f"[market_data] Exception caught: {e}")
 
                 # 3. Bitget USDT-Futures Tickers (Tamamlayici / Hibrit Kaynak)
                 if not fmap or source_name != "Binance Futures (Direct)":
@@ -972,8 +975,8 @@ class MarketDataManager:
                                                 pass
                                     if not source_name or source_name == "None":
                                         source_name = "Bitget Futures (US Cloud Safe)"
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug(f"[market_data] Exception caught: {e}")
 
             if not fmap:
                 print(">> [FONLAMA UYARI]: Hicbir vadeli kaynaktan veri alinamadi.")
@@ -1423,8 +1426,8 @@ class MarketDataManager:
                         self.symbol_cvd = {}
                     self.symbol_cvd[symbol] = res
                     return res
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[market_data] Exception caught: {e}")
 
         if data:
             return data
@@ -1764,8 +1767,8 @@ class MarketDataManager:
                         if t_5m is not None and not t_5m.empty:
                             df_1d, df_5m = t_1d, t_5m
                             break
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug(f"[market_data] Exception caught: {e}")
 
             if df_1d is not None and not df_1d.empty and (df_5m is None or df_5m.empty):
                 df_5m = df_1d.copy()
@@ -2565,8 +2568,8 @@ class MarketDataManager:
                                     gex_res['last_update'] = time.time()
                                     self.deribit_gex_data[ccy] = gex_res
                                     success_count += 1
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug(f"[market_data] Exception caught: {e}")
                 if success_count > 0:
                     self.deribit_gex_data['last_sync_ts'] = time.time()
                     self.deribit_gex_data['is_live'] = True
@@ -2793,8 +2796,8 @@ class MarketDataManager:
             )
             try:
                 print(f">> [TETHER TREASURY MINT] {self.tether_mint_status['boost_reason']}")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[market_data] Exception caught: {e}")
         return self.get_tether_mint_status()
 
     def get_tether_mint_status(self) -> dict:
@@ -3042,8 +3045,8 @@ class MarketDataManager:
                 res_met['iceberg_side'] = str(ice_live.get('iceberg_side', 'NONE'))
                 res_met['has_iceberg'] = bool(ice_live.get('has_seller_iceberg') or ice_live.get('has_buyer_iceberg') or max_r >= 3.0)
                 return res_met
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[market_data] Exception caught: {e}")
 
         return base_met
 
@@ -3063,8 +3066,8 @@ class MarketDataManager:
         if c_price <= 0 and symbol in self.candles_5m and not self.candles_5m[symbol].empty:
             try:
                 c_price = float(self.candles_5m[symbol]['close'].iloc[-1])
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[market_data] Exception caught: {e}")
 
         try:
             async with aiohttp.ClientSession(headers=headers) as session:
@@ -3077,8 +3080,8 @@ class MarketDataManager:
                             if raw_oi > 0:
                                 p = c_price if c_price > 0 else 1.0
                                 oi_val_usd = raw_oi * p
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[market_data] Exception caught: {e}")
 
                 if oi_val_usd == 0.0:
                     raw_gate = self.get_gate_contract_name(symbol)
@@ -3093,10 +3096,10 @@ class MarketDataManager:
                                     last_p = float(d[0].get('last', 0.0) or c_price or 1.0)
                                     gate_mult = self.get_gate_contract_multiplier(raw_gate)
                                     oi_val_usd = raw_size * gate_mult * last_p
-                    except Exception:
-                        pass
-        except Exception:
-            pass
+                    except Exception as e:
+                        logger.debug(f"[market_data] Exception caught: {e}")
+        except Exception as e:
+            logger.debug(f"[market_data] Exception caught: {e}")
 
         prev_info = self.symbol_oi.get(symbol, {})
         cur_hist = list(prev_info.get('oi_history', []))
@@ -3119,8 +3122,8 @@ class MarketDataManager:
                 c_prev = float(df['close'].iloc[-2])
                 if c_prev > 0:
                     price_chg_5m = round(((c_last - c_prev) / c_prev) * 100.0, 2)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[market_data] Exception caught: {e}")
 
         status = "BALANCED"
         if price_chg_5m <= -0.10 and delta_pct >= OI_EXPANSION_THRESHOLD_PCT:
@@ -3191,8 +3194,8 @@ class MarketDataManager:
                             asks = [(float(p), float(q)) for p, q in d.get('asks', [])]
                             if bids and asks:
                                 l2_provider = "binance"
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[market_data] Exception caught: {e}")
 
                 if not bids:
                     raw_gate = self.get_gate_contract_name(symbol)
@@ -3206,10 +3209,10 @@ class MarketDataManager:
                                 asks = [(float(item['p']), float(item['s']) * gate_mult) for item in d_gate.get('asks', [])]
                                 if bids and asks:
                                     l2_provider = "gate"
-                    except Exception:
-                        pass
-        except Exception:
-            pass
+                    except Exception as e:
+                        logger.debug(f"[market_data] Exception caught: {e}")
+        except Exception as e:
+            logger.debug(f"[market_data] Exception caught: {e}")
 
         mid_price = (bids[0][0] + asks[0][0]) / 2.0 if bids and asks else 0.0
         bid_usd_05 = 0.0
@@ -3622,8 +3625,8 @@ class MarketDataManager:
                                                 'taker_quote': float(prev_k[10]) if len(prev_k) > 10 else 0.0
                                             }
                                             break
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                logger.debug(f"[market_data] Exception caught: {e}")
 
                         if cur_candle is not None and prev_candle is not None:
                             # 🛡️ OTOMATİK BORSA SENKRONİZASYON VE ANLIK ONARIM (AUTO-HEAL GUARD)
@@ -3901,8 +3904,8 @@ class MarketDataManager:
                                                     'last_price': float(kline.get('c', 0.0)),
                                                     'last_update': now_ts
                                                 }
-                                        except Exception:
-                                            pass
+                                        except Exception as e:
+                                            logger.debug(f"[market_data] Exception caught: {e}")
 
                                         if kline.get('x', False):
                                             new_candle = {
@@ -4080,8 +4083,8 @@ class MarketDataManager:
                                                 top_sym = sym_k
                                         self.global_liquidation_stats['top_symbol'] = top_sym
                                         self.global_liquidation_stats['top_symbol_usd'] = round(top_val, 2)
-                                    except Exception:
-                                        pass
+                                    except Exception as e:
+                                        logger.debug(f"[market_data] Exception caught: {e}")
                                 elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
                                     break
                 except Exception as e:
@@ -4118,8 +4121,8 @@ class MarketDataManager:
                                                 self.perp_hist_3m[s] = deque(maxlen=60)
                                             self.perp_hist_3m[s].append((now_ts, cur_perp))
                                 self.last_spot_update_ts = now_ts
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[market_data] Exception caught: {e}")
                 await asyncio.sleep(15)  # 15 saniyede bir spot baz fiyatlarını tazele
 
         # Worker 7: Kurumsal Deribit GEX (Gamma Exposure) Radarı (WebSocket + REST Fallback)
@@ -4174,8 +4177,8 @@ class MarketDataManager:
                                         gex_res['source'] = 'WEBSOCKET'
                                         self.deribit_gex_data[ccy] = gex_res
                                         ws_success = True
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug(f"[market_data] Exception caught: {e}")
 
                     # 2. WebSocket kurulamadıysa REST API Fallback
                     if not ws_success:
@@ -4306,8 +4309,8 @@ class MarketDataManager:
                                         val = float(item.get('openInterestValue', 0.0))
                                         if val > 0:
                                             oi_batch[sym_raw] = val
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.debug(f"[market_data] Exception caught: {e}")
 
                         # 2. Öncelik: Gate.io Vadeli Tickers (Yedek borsa - VDA-04: Kontrat lotları USD değerine normalize edilir)
                         if not oi_batch:
@@ -4326,8 +4329,8 @@ class MarketDataManager:
                                                     gate_mult = self.get_gate_contract_multiplier(c_name)
                                                     val_usd = raw_size * gate_mult * last_p
                                                     oi_batch[c_name] = val_usd
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                logger.debug(f"[market_data] Exception caught: {e}")
 
                     if oi_batch:
                         for s in list(self.all_symbols):
@@ -4372,8 +4375,8 @@ class MarketDataManager:
                                         c_prev = float(df['close'].iloc[-2])
                                         if c_prev > 0:
                                             price_chg_5m = round(((c_last - c_prev) / c_prev) * 100.0, 2)
-                                    except Exception:
-                                        pass
+                                    except Exception as e:
+                                        logger.debug(f"[market_data] Exception caught: {e}")
 
                                 status = "BALANCED"
                                 if price_chg_5m <= -0.10 and delta_pct >= OI_EXPANSION_THRESHOLD_PCT:
@@ -4491,8 +4494,8 @@ class MarketDataManager:
 
                                         # 3.2 SSR Osilatörünü Güncelle
                                         self.get_ssr_status()
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.debug(f"[market_data] Exception caught: {e}")
 
                         # 3. Parite Bazlı Borsa Net Akışı (Symbol Netflow & Taker Delta Proxy)
                         now_ts = time.time()
@@ -4699,8 +4702,8 @@ class MarketDataManager:
                                                 blockchain="BTC"
                                             )
                                             print(f">> [🔗 ON-CHAIN BTC MEMPOOL] {from_label} ➔ {to_label} | ${tot_usd/1e6:.2f}M ({tot_btc:.2f} BTC) | TX: {h[:12]}...")
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.debug(f"[market_data] Exception caught: {e}")
 
                         # 2. Ethereum / ERC20 Büyük Transfer Taraması (Blockscout API)
                         try:
@@ -4762,18 +4765,18 @@ class MarketDataManager:
                                                 blockchain="ETH"
                                             )
                                             print(f">> [🔗 ON-CHAIN ERC20 {sym}] {f_label} ➔ {t_label} | ${usd_val/1e6:.2f}M | TX: {tx_h[:12]}...")
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.debug(f"[market_data] Exception caught: {e}")
 
                 except Exception as e:
                     print(f">> [ONCHAIN WORKER UYARI]: {e}")
 
                 await asyncio.sleep(25)  # Her 25 saniyede bir mempool ve transfer kontrolü
 
-        # Worker 12: 15 Dakikalık Periyodik Bellek Koruma ve GC Süpürmesi (Render Free Tier 512MB RAM Kalkanı)
+        # Worker 12: 2 Dakikalık Periyodik Bellek Koruma ve GC Süpürmesi (Render Free Tier 512MB RAM Kalkanı)
         async def memory_guard_worker():
             while True:
-                await asyncio.sleep(900)  # Her 15 dakikada bir
+                await asyncio.sleep(120)  # Her 2 dakikada bir kontrol
                 try:
                     import gc
                     # 1. Ölü ve inaktif deque anahtarlarını süpür
@@ -4784,6 +4787,7 @@ class MarketDataManager:
                             for k in list(dq_map.keys()):
                                 if k not in active_and_all:
                                     dq_map.pop(k, None)
+
                     # 2. 60 saniyeden eski JIT indikatör önbelleklerini serbest bırak
                     now_cur = time.time()
                     for c_name in ['_vp_cache', '_naked_cache', '_session_cache']:
@@ -4792,11 +4796,26 @@ class MarketDataManager:
                             for k in list(c_map.keys()):
                                 if now_cur - c_map[k].get('ts', 0) > 60.0:
                                     c_map.pop(k, None)
-                    # 3. Açık GC süpürmesi
+
+                    # 3. Mum hafıza optimizasyonu (DataFrame Budama - 512MB RAM zırhı)
+                    # 100 parite için candles_5m ve diğer zaman dilimlerini sınırla
+                    if hasattr(self, 'candles_5m') and isinstance(self.candles_5m, dict):
+                        for s, df_cand in list(self.candles_5m.items()):
+                            if df_cand is not None and hasattr(df_cand, '__len__') and len(df_cand) > 250:
+                                max_keep = 250 if s in self.active_symbols else 120
+                                if len(df_cand) > max_keep:
+                                    self.candles_5m[s] = df_cand.iloc[-max_keep:].copy()
+
+                    if hasattr(self, 'candles_1h') and isinstance(self.candles_1h, dict):
+                        for s, df_cand in list(self.candles_1h.items()):
+                            if df_cand is not None and hasattr(df_cand, '__len__') and len(df_cand) > 100:
+                                self.candles_1h[s] = df_cand.iloc[-100:].copy()
+
+                    # 4. Açık GC süpürmesi
                     collected = gc.collect()
-                    print(f">> [BELLEK KORUMA ZIRHI] 15dk periyodik GC süpürmesi tamamlandı. {collected} sahipsiz nesne serbest bırakıldı.")
-                except Exception:
-                    pass
+                    logger.debug(f"[RAM_GUARD] 2dk bellek süpürmesi tamamlandı. {collected} sahipsiz nesne serbest bırakıldı.")
+                except Exception as e:
+                    logger.debug(f"[market_data] Memory guard exception: {e}")
 
         # Her worker'ı crash-proof saran koruyucu (bir worker çökerse diğerlerini öldürmez, otomatik yeniden başlatır)
         async def resilient_worker(name, coro_fn, *args):

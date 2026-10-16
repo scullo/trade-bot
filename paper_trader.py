@@ -14,6 +14,9 @@ from config import (
     FIXED_DOLLAR_RISK, RISK_EQUITY_PCT, MIN_POSITION_MARGIN, MAX_POSITION_MARGIN,
     ENABLE_CHANDELIER_BREATHING
 )
+from valkyrie_logger import get_logger
+
+logger = get_logger("paper_trader")
 
 def _sanitize_floats(obj):
     """Recursively replaces NaN, Infinity, -Infinity with 0.0 or safe defaults."""
@@ -58,8 +61,8 @@ def _get_gh_token():
                 m = re.search(r'https://[^:]+:([^@]+)@github\.com', txt)
                 if m:
                     tok = m.group(1)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Git config token okunamadı: {e}")
     if not tok:
         try:
             # Segmented assembly to ensure cloud persistence without triggering push scanners
@@ -67,8 +70,8 @@ def _get_gh_token():
             k2 = "xJ0B5cecgBtbFOTW"
             k3 = "jXja3gGD2KZCcO2YQvBF"
             tok = k1 + k2 + k3
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"GitHub token assembly atlandı: {e}")
     return tok
 
 GITHUB_TOKEN = _get_gh_token()
@@ -157,8 +160,8 @@ class PaperTrader:
                                 self.open_positions = _sanitize_floats(local_data.get("open_positions", {}))
                                 self.history = _sanitize_floats(loc_hist)
                                 print(f">> [PERSISTENCE GUARD] Güvenli yerel veri korundu (Yerel: {len(self.history)} işlem / ${self.balance:.2f} vs GitHub: {len(gh_history)} işlem / ${gh_balance:.2f})!")
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning(f"Lokal trade_history.json okunamadı: {e}")
 
                 if not local_has_more:
                     self.balance = gh_balance
@@ -166,8 +169,8 @@ class PaperTrader:
                     self.history = gh_history
                     try:
                         self.save_local_history()
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning(f"save_local_history hatası: {e}")
                 loaded = True
                 print(f">> [GITHUB PERSISTENCE] trade_history.json GitHub'dan yuklendi ({len(self.history)} islem, SHA: {self._github_sha[:8] if self._github_sha else 'None'}) Bakiye: {self.balance}")
             except Exception as e:
@@ -257,8 +260,8 @@ class PaperTrader:
                         res = urllib.request.urlopen(req, timeout=10)
                         gh = json.loads(res.read().decode("utf-8"))
                         self._github_sha = gh.get("sha")
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug(f"GitHub SHA alma atlandı veya başarısız: {e}")
 
                     payload = {
                         "message": f"[BOT] Trade state auto-save ({datetime.now(timezone(timedelta(hours=3))).strftime('%H:%M:%S')})",
@@ -638,8 +641,8 @@ class PaperTrader:
                     "stop_dist_pct": round(stop_dist_pct * 100.0, 2),
                     "max_allowed": MAX_ENTRY_STOP_DIST_PCT
                 }
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Stop mesafesi güvenlik kalkanı kontrolünde hata: {e}")
 
         # Kurumsal Risk Paritesi: Kasanın %0.80'i net dolar riski olarak hedeflenir
         if custom_margin is not None:

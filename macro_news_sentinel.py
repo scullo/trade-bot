@@ -5,6 +5,9 @@ anlık beslenen, makam sahibini (Fed Başkanı, SEC Başkanı, POTUS) sınıflan
 yalan haber manipülasyonunu engelleyen ve dashboard'a canlı flaş haber sağlayan motor.
 """
 
+
+from valkyrie_logger import get_logger
+logger = get_logger("macro_news_sentinel")
 import os
 import sys
 import json
@@ -111,8 +114,8 @@ def translate_to_turkish(text: str) -> str:
                 res_tr = (prefix + translated.strip()).strip()
                 TRANSLATION_CACHE[str(text).strip()] = res_tr
                 return res_tr
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[macro_news_sentinel] Exception caught: {e}")
 
     TRANSLATION_CACHE[str(text).strip()] = str(text).strip()
     return str(text).strip()
@@ -191,8 +194,8 @@ class MacroNewsSentinel:
         # 2. Dinamik Makam ve Konuşmacı Sınıflandırması & Otomatik Liderlik Değişimi (Faz 6C)
         try:
             role_registry.detect_leadership_changes(title)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[macro_news_sentinel] Exception caught: {e}")
         speaker_info = role_registry.classify_text_speaker(title)
 
         # 3. Kripto Etki Puanı (Hızlı Kuant Skorlama)
@@ -222,8 +225,8 @@ class MacroNewsSentinel:
         try:
             from macro_source_evolution import source_evolution_engine
             source_evolution_engine.crawl_and_extract_citations(title, source)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[macro_news_sentinel] Exception caught: {e}")
 
         # Orijinal Haber URL'si (Doğrudan link yoksa akıllı X/Web arama linki)
         if not url:
@@ -318,16 +321,16 @@ class MacroNewsSentinel:
                             if pub_elem is not None and pub_elem.text:
                                 try:
                                     raw_ts = email.utils.parsedate_to_datetime(pub_elem.text.strip()).timestamp()
-                                except Exception:
-                                    pass
+                                except Exception as e:
+                                    logger.debug(f"[macro_news_sentinel] Exception caught: {e}")
 
                             sig = self._create_signature(title, site_name)
                             if sig not in self.seen_signatures:
                                 self.seen_signatures.add(sig)
                                 parsed = self._analyze_headline(title, site_name, raw_ts, url=link)
                                 results.append(parsed)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[macro_news_sentinel] Exception caught: {e}")
             return results
 
         try:
@@ -337,8 +340,8 @@ class MacroNewsSentinel:
                 for res in gathered:
                     if isinstance(res, list) and res:
                         new_items.extend(res)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[macro_news_sentinel] Exception caught: {e}")
         return new_items
 
     async def fetch_sec_edgar(self) -> List[Dict[str, Any]]:
@@ -373,16 +376,16 @@ class MacroNewsSentinel:
                             if updated_elem is not None and updated_elem.text:
                                 try:
                                     raw_ts = datetime.fromisoformat(updated_elem.text.replace("Z", "+00:00")).timestamp()
-                                except Exception:
-                                    pass
+                                except Exception as e:
+                                    logger.debug(f"[macro_news_sentinel] Exception caught: {e}")
 
                             sig = self._create_signature(title, "SEC_EDGAR")
                             if sig not in self.seen_signatures:
                                 self.seen_signatures.add(sig)
                                 parsed = self._analyze_headline(f"[SEC 8-K RESMİ BİLDİRİM] {title}", "SEC_EDGAR", raw_ts, url=link)
                                 new_items.append(parsed)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[macro_news_sentinel] Exception caught: {e}")
         return new_items
 
     async def fetch_fed_press(self) -> List[Dict[str, Any]]:
@@ -409,16 +412,16 @@ class MacroNewsSentinel:
                             if pub_elem is not None and pub_elem.text:
                                 try:
                                     raw_ts = email.utils.parsedate_to_datetime(pub_elem.text.strip()).timestamp()
-                                except Exception:
-                                    pass
+                                except Exception as e:
+                                    logger.debug(f"[macro_news_sentinel] Exception caught: {e}")
 
                             sig = self._create_signature(title, "FED_OFFICIAL")
                             if sig not in self.seen_signatures:
                                 self.seen_signatures.add(sig)
                                 parsed = self._analyze_headline(f"[FED RESMİ AÇIKLAMA] {title}", "FED_OFFICIAL", raw_ts, url=link)
                                 new_items.append(parsed)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[macro_news_sentinel] Exception caught: {e}")
         return new_items
 
     async def sync_all_sources(self) -> int:
@@ -450,8 +453,8 @@ class MacroNewsSentinel:
                 self.save_history()
                 try:
                     print(f">> [FLAS ISTIHBARAT] {added_count} taze haber/bildirim hafizaya islendi.")
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[macro_news_sentinel] Exception caught: {e}")
 
             return added_count
         finally:

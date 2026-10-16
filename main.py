@@ -1,3 +1,6 @@
+
+from valkyrie_logger import get_logger
+logger = get_logger("main")
 import asyncio
 import os
 import sys
@@ -75,8 +78,8 @@ async def main():
                 # 2. Linux glibc malloc_trim ile boşaltılan belleği doğrudan işletim sistemine iade et
                 try:
                     ctypes.CDLL('libc.so.6').malloc_trim(0)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[main] Exception caught: {e}")
 
                 # 3. 5M mum verilerini 240 satıra (20 saat) sınırla (OOM kesin önlenir, AVWAP tam korunur)
                 for sym in list(market_data.candles_5m.keys()):
@@ -95,21 +98,21 @@ async def main():
                         gc.collect()
                         try:
                             ctypes.CDLL('libc.so.6').malloc_trim(0)
-                        except Exception:
-                            pass
-                except Exception:
-                    pass
+                        except Exception as e:
+                            logger.debug(f"[main] Exception caught: {e}")
+                except Exception as e:
+                    logger.debug(f"[main] Exception caught: {e}")
 
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[main] Exception caught: {e}")
 
             # Her 60 saniyede bir LIVE modunda Binance bakiye ve pozisyon senkronizasyonu
             if sync_counter % 2 == 0 and trader_manager.mode == "LIVE":
                 try:
                     await live_trader.sync_open_positions()
                     await live_trader.sync_balance()
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[main] Exception caught: {e}")
 
             # Her 15 dakikada bir (30 * 30s = 900s = 15dk) bekleyen GitHub state sync kontrolü
             sync_counter += 1
@@ -154,8 +157,8 @@ async def main():
                 from macro_news_sentinel import news_sentinel
                 if news_sentinel and not getattr(news_sentinel, 'is_syncing', False):
                     await news_sentinel.sync_all_sources()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[main] Exception caught: {e}")
             await asyncio.sleep(20)
 
     asyncio.create_task(macro_news_stream_watchdog())

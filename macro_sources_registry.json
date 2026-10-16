@@ -1,6 +1,6 @@
 {
   "version": "6.0.0",
-  "last_update": 1791713180.3133268,
+  "last_update": 1792136632.6383555,
   "sources": {
     "TREENEWS": {
       "title": "TreeNews Fast Wire WebSocket",
@@ -9,11 +9,11 @@
       "domain": "CRYPTO_MACRO",
       "status": "HIGH_TRUST",
       "quorum_weight": 1.5,
-      "total_news_count": 3,
-      "accurate_count": 3,
+      "total_news_count": 6,
+      "accurate_count": 6,
       "fakeout_count": 0,
       "avg_latency_ms": 120.0,
-      "pnl_impact_usd": 360.0
+      "pnl_impact_usd": 720.0
     },
     "SEC_EDGAR": {
       "title": "SEC EDGAR Form 8-K / S-1 Resmi RSS",
@@ -203,12 +203,12 @@
       "entity_key": "REUTERS.COM",
       "display_name": "reuters.com",
       "entity_type": "DOMAIN_OUTLET",
-      "citation_count": 3,
+      "citation_count": 6,
       "citing_wires": [
         "TREENEWS"
       ],
       "first_seen": 1791644559.9477124,
-      "last_seen": 1791645047.228349,
+      "last_seen": 1792136632.6128013,
       "sample_headlines": [
         "BREAKING: SEC Commissioner Hester Peirce hints at S-1 progress, per @EleanorTerr",
         "BREAKING: SEC Commissioner Hester Peirce hints at S-1 progress, per @EleanorTerr",
@@ -219,12 +219,12 @@
       "entity_key": "REF_REUTERS",
       "display_name": "reuters",
       "entity_type": "NAMED_SOURCE",
-      "citation_count": 3,
+      "citation_count": 6,
       "citing_wires": [
         "TREENEWS"
       ],
       "first_seen": 1791644559.9477124,
-      "last_seen": 1791645047.228349,
+      "last_seen": 1792136632.6128013,
       "sample_headlines": [
         "BREAKING: SEC Commissioner Hester Peirce hints at S-1 progress, per @EleanorTerr",
         "BREAKING: SEC Commissioner Hester Peirce hints at S-1 progress, per @EleanorTerr",
@@ -251,12 +251,12 @@
       "entity_key": "@COINDESK",
       "display_name": "@CoinDesk",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 8,
+      "citation_count": 10,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791644973.5929885,
-      "last_seen": 1791645840.6482673,
+      "last_seen": 1792136618.8943274,
       "sample_headlines": [
         "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we",
         "CoinDesk (@CoinDesk): “These fundamental rules are absent in the US”\n\nOn this we",
@@ -395,12 +395,12 @@
       "entity_key": "@REALDONALDTRUMP",
       "display_name": "@realDonaldTrump",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 28,
+      "citation_count": 32,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791644973.640304,
-      "last_seen": 1791713179.2566013,
+      "last_seen": 1792136631.7214541,
       "sample_headlines": [
         "Donald J. Trump (@realDonaldTrump): Robert Jeffress, senior pastor of First Bapt",
         "Donald J. Trump (@realDonaldTrump): The American people are 'under attack' by US",
@@ -571,12 +571,12 @@
       "entity_key": "@WUBLOCKCHAIN",
       "display_name": "@WuBlockchain",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 15,
+      "citation_count": 19,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791644973.7236764,
-      "last_seen": 1791713178.779705,
+      "last_seen": 1792136630.4436493,
       "sample_headlines": [
         "Wu Blockchain (@WuBlockchain): Weekly Project Updates: Polymarket Overhauls Unde",
         "Wu Blockchain (@WuBlockchain): Vitalik Buterin: Without AI, Ethereum's Lean Road",
@@ -900,46 +900,16 @@
         "Donald J. Trump (@realDonaldTrump): https://strangely-ruling-deer.edgecompute.ap"
       ]
     },
-    "@ELEANORTERRETT": {
-      "entity_key": "@ELEANORTERRETT",
-      "display_name": "@EleanorTerrett",
-      "entity_type": "TWITTER_HANDLE",
-      "citation_count": 2,
-      "citing_wires": [
-        "TREENEWS",
-        "WALTER_BLOOMBERG"
-      ],
-      "first_seen": 1791645047.228349,
-      "last_seen": 1791645047.2315214,
-      "sample_headlines": [
-        "BREAKING: SEC Commissioner Hester Peirce hints at S-1 progress, per @EleanorTerr",
-        "ETF analyst confirms new filing details citing @EleanorTerrett on Fox Business"
-      ]
-    },
-    "@ERICBALCHUNAS": {
-      "entity_key": "@ERICBALCHUNAS",
-      "display_name": "@EricBalchunas",
-      "entity_type": "TWITTER_HANDLE",
-      "citation_count": 1,
-      "citing_wires": [
-        "TREENEWS:WIRE"
-      ],
-      "first_seen": 1791645047.2857053,
-      "last_seen": 1791645047.2857053,
-      "sample_headlines": [
-        "SEC filing confirms new advisor @EricBalchunas reports"
-      ]
-    },
     "@THEBLOCKCO": {
       "entity_key": "@THEBLOCKCO",
       "display_name": "@TheBlockCo",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 5,
+      "citation_count": 17,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791645840.6188958,
-      "last_seen": 1791661786.6677454,
+      "last_seen": 1792136631.014414,
       "sample_headlines": [
         "The Block (@TheBlockCo): THE BLOCK: US spot ether ETFs posted $542.1 million in ",
         "The Block (@TheBlockCo): THE BLOCK: Kalshi is investigating three bets placed be",
@@ -1413,14 +1383,16 @@
       "entity_key": "@BINANCE",
       "display_name": "@binance",
       "entity_type": "TWITTER_HANDLE",
-      "citation_count": 1,
+      "citation_count": 3,
       "citing_wires": [
         "TREENEWS:TWITTER"
       ],
       "first_seen": 1791713174.7406547,
-      "last_seen": 1791713174.7406547,
+      "last_seen": 1792136618.8943274,
       "sample_headlines": [
-        "Wu Blockchain (@WuBlockchain): Michael Saylor :AI will amplify the scarcity of p"
+        "Wu Blockchain (@WuBlockchain): Michael Saylor :AI will amplify the scarcity of p",
+        "AVA Foundation (@AVAFoundation): AVA WEEKLY UPDATE\n\nWelcome to the weekly $AVA u",
+        "AVA Foundation (@AVAFoundation): AVA WEEKLY UPDATE\n\nWelcome to the weekly $AVA u"
       ]
     },
     "@SAYLOR": {
@@ -1813,6 +1785,351 @@
       "last_seen": 1791713180.308081,
       "sample_headlines": [
         "Aptos Labs (@AptosLabs): Lead with the product. Let the chain stay in the backgr"
+      ]
+    },
+    "REF_SANTIMENT": {
+      "entity_key": "REF_SANTIMENT",
+      "display_name": "Santiment",
+      "entity_type": "NAMED_SOURCE",
+      "citation_count": 4,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1792135419.3273344,
+      "last_seen": 1792136621.1562097,
+      "sample_headlines": [
+        "The Block (@TheBlockCo): NEW: The number of bitcoin wallets holding 10 to 10,000",
+        "The Block (@TheBlockCo): NEW: The number of bitcoin wallets holding 10 to 10,000",
+        "The Block (@TheBlockCo): NEW: The number of bitcoin wallets holding 10 to 10,000"
+      ]
+    },
+    "@_RICHARDTENG": {
+      "entity_key": "@_RICHARDTENG",
+      "display_name": "@_RichardTeng",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 4,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1792135419.9539695,
+      "last_seen": 1792136621.6217773,
+      "sample_headlines": [
+        "Richard Teng (@_RichardTeng): Markets react to headlines. Smart investors read t",
+        "Richard Teng (@_RichardTeng): Markets react to headlines. Smart investors read t",
+        "Richard Teng (@_RichardTeng): Markets react to headlines. Smart investors read t"
+      ]
+    },
+    "@BINANCERESEARCH": {
+      "entity_key": "@BINANCERESEARCH",
+      "display_name": "@BinanceResearch",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 4,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1792135419.9539695,
+      "last_seen": 1792136621.6217773,
+      "sample_headlines": [
+        "Richard Teng (@_RichardTeng): Markets react to headlines. Smart investors read t",
+        "Richard Teng (@_RichardTeng): Markets react to headlines. Smart investors read t",
+        "Richard Teng (@_RichardTeng): Markets react to headlines. Smart investors read t"
+      ]
+    },
+    "@TRAVALACOM": {
+      "entity_key": "@TRAVALACOM",
+      "display_name": "@travalacom",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 8,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1792135421.1211264,
+      "last_seen": 1792136622.754699,
+      "sample_headlines": [
+        "Travala (@travalacom): Travala Q3 2026 Business Update\n\nQ3 was one of the bigges",
+        "Travala (@travalacom): Travala Q3 2026 Business Update\n\nQ3 was one of the bigges",
+        "Travala (@travalacom): Read this week's $AVA news round-up 👇"
+      ]
+    },
+    "@BNBCHAIN": {
+      "entity_key": "@BNBCHAIN",
+      "display_name": "@BNBCHAIN",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 6,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1792135421.1211264,
+      "last_seen": 1792136622.754699,
+      "sample_headlines": [
+        "Travala (@travalacom): Travala Q3 2026 Business Update\n\nQ3 was one of the bigges",
+        "Travala (@travalacom): Travala Q3 2026 Business Update\n\nQ3 was one of the bigges",
+        "AVA Foundation (@AVAFoundation): AVA WEEKLY UPDATE\n\nWelcome to the weekly $AVA u"
+      ]
+    },
+    "@AVAFOUNDATION": {
+      "entity_key": "@AVAFOUNDATION",
+      "display_name": "@AVAFoundation",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 6,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1792135421.1211264,
+      "last_seen": 1792136622.754699,
+      "sample_headlines": [
+        "Travala (@travalacom): Travala Q3 2026 Business Update\n\nQ3 was one of the bigges",
+        "Travala (@travalacom): Travala Q3 2026 Business Update\n\nQ3 was one of the bigges",
+        "AVA Foundation (@AVAFoundation): AVA WEEKLY UPDATE\n\nWelcome to the weekly $AVA u"
+      ]
+    },
+    "@DROMOSLABS": {
+      "entity_key": "@DROMOSLABS",
+      "display_name": "@DromosLabs",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 4,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1792135422.224935,
+      "last_seen": 1792136624.020622,
+      "sample_headlines": [
+        "Dromos (@DromosLabs): \"Aerodrome and Velodrome are going to be coming together w",
+        "Dromos (@DromosLabs): \"Aerodrome and Velodrome are going to be coming together w",
+        "Dromos (@DromosLabs): \"Aerodrome and Velodrome are going to be coming together w"
+      ]
+    },
+    "@WAGMIALEXANDER": {
+      "entity_key": "@WAGMIALEXANDER",
+      "display_name": "@wagmiAlexander",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 4,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1792135422.224935,
+      "last_seen": 1792136624.020622,
+      "sample_headlines": [
+        "Dromos (@DromosLabs): \"Aerodrome and Velodrome are going to be coming together w",
+        "Dromos (@DromosLabs): \"Aerodrome and Velodrome are going to be coming together w",
+        "Dromos (@DromosLabs): \"Aerodrome and Velodrome are going to be coming together w"
+      ]
+    },
+    "@OPENGRADIENT": {
+      "entity_key": "@OPENGRADIENT",
+      "display_name": "@OpenGradient",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 4,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1792135422.8877616,
+      "last_seen": 1792136624.5267453,
+      "sample_headlines": [
+        "OpenGradient (∇, ∇) (@OpenGradient): We’re excited to partner with @verio_networ",
+        "OpenGradient (∇, ∇) (@OpenGradient): We’re excited to partner with @verio_networ",
+        "OpenGradient (∇, ∇) (@OpenGradient): We’re excited to partner with @verio_networ"
+      ]
+    },
+    "@VERIO_NETWORK": {
+      "entity_key": "@VERIO_NETWORK",
+      "display_name": "@verio_network",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 4,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1792135422.8877616,
+      "last_seen": 1792136624.5267453,
+      "sample_headlines": [
+        "OpenGradient (∇, ∇) (@OpenGradient): We’re excited to partner with @verio_networ",
+        "OpenGradient (∇, ∇) (@OpenGradient): We’re excited to partner with @verio_networ",
+        "OpenGradient (∇, ∇) (@OpenGradient): We’re excited to partner with @verio_networ"
+      ]
+    },
+    "@DWFLABS": {
+      "entity_key": "@DWFLABS",
+      "display_name": "@DWFLabs",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 4,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1792135424.956234,
+      "last_seen": 1792136626.5080378,
+      "sample_headlines": [
+        "DWF Labs (@DWFLabs): The market hasn’t priced in the convergence of AI + crypto ",
+        "DWF Labs (@DWFLabs): The market hasn’t priced in the convergence of AI + crypto ",
+        "DWF Labs (@DWFLabs): The market hasn’t priced in the convergence of AI + crypto "
+      ]
+    },
+    "@TOKEN2049": {
+      "entity_key": "@TOKEN2049",
+      "display_name": "@token2049",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 4,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1792135424.956234,
+      "last_seen": 1792136626.5080378,
+      "sample_headlines": [
+        "DWF Labs (@DWFLabs): The market hasn’t priced in the convergence of AI + crypto ",
+        "DWF Labs (@DWFLabs): The market hasn’t priced in the convergence of AI + crypto ",
+        "DWF Labs (@DWFLabs): The market hasn’t priced in the convergence of AI + crypto "
+      ]
+    },
+    "@RIVERDOTINC": {
+      "entity_key": "@RIVERDOTINC",
+      "display_name": "@RiverdotInc",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 4,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1792135430.2807896,
+      "last_seen": 1792135731.9872723,
+      "sample_headlines": [
+        "River (@RiverdotInc): S6 Conclusion\n\nSeason 6 wrapped on Sep 30, the first full ",
+        "River (@RiverdotInc): S6 Conclusion\n\nSeason 6 wrapped on Sep 30, the first full ",
+        "River (@RiverdotInc): S6 Conclusion\n\nSeason 6 wrapped on Sep 30, the first full "
+      ]
+    },
+    "@COSMOS": {
+      "entity_key": "@COSMOS",
+      "display_name": "@cosmos",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1792135720.5211785,
+      "last_seen": 1792136619.9996862,
+      "sample_headlines": [
+        "Cosmos - The Interchain ⚛️ (@cosmos): @Peersyst reduces the complexity of sourci",
+        "Cosmos - The Interchain ⚛️ (@cosmos): @Peersyst reduces the complexity of sourci",
+        "Cosmos - The Interchain ⚛️ (@cosmos): @Peersyst reduces the complexity of sourci"
+      ]
+    },
+    "@PEERSYST": {
+      "entity_key": "@PEERSYST",
+      "display_name": "@Peersyst",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 3,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1792135720.5211785,
+      "last_seen": 1792136619.9996862,
+      "sample_headlines": [
+        "Cosmos - The Interchain ⚛️ (@cosmos): @Peersyst reduces the complexity of sourci",
+        "Cosmos - The Interchain ⚛️ (@cosmos): @Peersyst reduces the complexity of sourci",
+        "Cosmos - The Interchain ⚛️ (@cosmos): @Peersyst reduces the complexity of sourci"
+      ]
+    },
+    "REF_TRAVALA": {
+      "entity_key": "REF_TRAVALA",
+      "display_name": "Travala",
+      "entity_type": "NAMED_SOURCE",
+      "citation_count": 2,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1792136506.2655895,
+      "last_seen": 1792136618.8943274,
+      "sample_headlines": [
+        "AVA Foundation (@AVAFoundation): AVA WEEKLY UPDATE\n\nWelcome to the weekly $AVA u",
+        "AVA Foundation (@AVAFoundation): AVA WEEKLY UPDATE\n\nWelcome to the weekly $AVA u"
+      ]
+    },
+    "REF_CEDE": {
+      "entity_key": "REF_CEDE",
+      "display_name": "Cede",
+      "entity_type": "NAMED_SOURCE",
+      "citation_count": 2,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1792136506.2655895,
+      "last_seen": 1792136618.8943274,
+      "sample_headlines": [
+        "AVA Foundation (@AVAFoundation): AVA WEEKLY UPDATE\n\nWelcome to the weekly $AVA u",
+        "AVA Foundation (@AVAFoundation): AVA WEEKLY UPDATE\n\nWelcome to the weekly $AVA u"
+      ]
+    },
+    "REF_SMART": {
+      "entity_key": "REF_SMART",
+      "display_name": "Smart",
+      "entity_type": "NAMED_SOURCE",
+      "citation_count": 2,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1792136506.2655895,
+      "last_seen": 1792136618.8943274,
+      "sample_headlines": [
+        "AVA Foundation (@AVAFoundation): AVA WEEKLY UPDATE\n\nWelcome to the weekly $AVA u",
+        "AVA Foundation (@AVAFoundation): AVA WEEKLY UPDATE\n\nWelcome to the weekly $AVA u"
+      ]
+    },
+    "@ZEROBASEZK": {
+      "entity_key": "@ZEROBASEZK",
+      "display_name": "@zerobasezk",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 2,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1792136506.822849,
+      "last_seen": 1792136619.4009233,
+      "sample_headlines": [
+        "ZEROBASE (@zerobasezk): MSCI’s decision to adopt new eligibility rules has injec",
+        "ZEROBASE (@zerobasezk): MSCI’s decision to adopt new eligibility rules has injec"
+      ]
+    },
+    "REF_PROFIT": {
+      "entity_key": "REF_PROFIT",
+      "display_name": "profit",
+      "entity_type": "NAMED_SOURCE",
+      "citation_count": 2,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "first_seen": 1792136506.822849,
+      "last_seen": 1792136619.4009233,
+      "sample_headlines": [
+        "ZEROBASE (@zerobasezk): MSCI’s decision to adopt new eligibility rules has injec",
+        "ZEROBASE (@zerobasezk): MSCI’s decision to adopt new eligibility rules has injec"
+      ]
+    },
+    "@ELEANORTERRETT": {
+      "entity_key": "@ELEANORTERRETT",
+      "display_name": "@EleanorTerrett",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 2,
+      "citing_wires": [
+        "TREENEWS",
+        "WALTER_BLOOMBERG"
+      ],
+      "first_seen": 1792136632.6128013,
+      "last_seen": 1792136632.6195266,
+      "sample_headlines": [
+        "BREAKING: SEC Commissioner Hester Peirce hints at S-1 progress, per @EleanorTerr",
+        "ETF analyst confirms new filing details citing @EleanorTerrett on Fox Business"
+      ]
+    },
+    "@ERICBALCHUNAS": {
+      "entity_key": "@ERICBALCHUNAS",
+      "display_name": "@EricBalchunas",
+      "entity_type": "TWITTER_HANDLE",
+      "citation_count": 1,
+      "citing_wires": [
+        "TREENEWS:WIRE"
+      ],
+      "first_seen": 1792136632.6373556,
+      "last_seen": 1792136632.6373556,
+      "sample_headlines": [
+        "SEC filing confirms new advisor @EricBalchunas reports"
       ]
     }
   },
@@ -2447,23 +2764,6 @@
       "shadow_accuracy_pct": 0.0,
       "is_promoted": false
     },
-    "@ELEANORTERRETT": {
-      "entity_key": "@ELEANORTERRETT",
-      "display_name": "@EleanorTerrett",
-      "entity_type": "TWITTER_HANDLE",
-      "enrolled_ts": 1791645047.2315214,
-      "citing_wires": [
-        "TREENEWS",
-        "WALTER_BLOOMBERG"
-      ],
-      "status": "PROMOTED_TO_ACTIVE",
-      "shadow_events_count": 3,
-      "shadow_accurate_count": 3,
-      "shadow_fakeout_count": 0,
-      "shadow_accuracy_pct": 100.0,
-      "is_promoted": true,
-      "promoted_ts": 1791645047.2719004
-    },
     "@THEBLOCKCO": {
       "entity_key": "@THEBLOCKCO",
       "display_name": "@TheBlockCo",
@@ -2779,6 +3079,263 @@
       "shadow_fakeout_count": 0,
       "shadow_accuracy_pct": 0.0,
       "is_promoted": false
+    },
+    "@RIVERDOTINC": {
+      "entity_key": "@RIVERDOTINC",
+      "display_name": "@RiverdotInc",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1792135731.9872723,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@TRAVALACOM": {
+      "entity_key": "@TRAVALACOM",
+      "display_name": "@travalacom",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1792136505.6864905,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@AVAFOUNDATION": {
+      "entity_key": "@AVAFOUNDATION",
+      "display_name": "@AVAFoundation",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1792136506.2655895,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@BNBCHAIN": {
+      "entity_key": "@BNBCHAIN",
+      "display_name": "@BNBCHAIN",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1792136506.2655895,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "REF_SANTIMENT": {
+      "entity_key": "REF_SANTIMENT",
+      "display_name": "Santiment",
+      "entity_type": "NAMED_SOURCE",
+      "enrolled_ts": 1792136508.3737621,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@_RICHARDTENG": {
+      "entity_key": "@_RICHARDTENG",
+      "display_name": "@_RichardTeng",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1792136509.0153906,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@BINANCERESEARCH": {
+      "entity_key": "@BINANCERESEARCH",
+      "display_name": "@BinanceResearch",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1792136509.0153906,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@DROMOSLABS": {
+      "entity_key": "@DROMOSLABS",
+      "display_name": "@DromosLabs",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1792136511.3442533,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@WAGMIALEXANDER": {
+      "entity_key": "@WAGMIALEXANDER",
+      "display_name": "@wagmiAlexander",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1792136511.3442533,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@OPENGRADIENT": {
+      "entity_key": "@OPENGRADIENT",
+      "display_name": "@OpenGradient",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1792136511.9748828,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@VERIO_NETWORK": {
+      "entity_key": "@VERIO_NETWORK",
+      "display_name": "@verio_network",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1792136511.9748828,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@DWFLABS": {
+      "entity_key": "@DWFLABS",
+      "display_name": "@DWFLabs",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1792136513.8331444,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@TOKEN2049": {
+      "entity_key": "@TOKEN2049",
+      "display_name": "@token2049",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1792136513.8331444,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@BINANCE": {
+      "entity_key": "@BINANCE",
+      "display_name": "@binance",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1792136618.8943274,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@COSMOS": {
+      "entity_key": "@COSMOS",
+      "display_name": "@cosmos",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1792136619.9996862,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@PEERSYST": {
+      "entity_key": "@PEERSYST",
+      "display_name": "@Peersyst",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1792136619.9996862,
+      "citing_wires": [
+        "TREENEWS:TWITTER"
+      ],
+      "status": "SHADOW_SANDBOX",
+      "shadow_events_count": 0,
+      "shadow_accurate_count": 0,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 0.0,
+      "is_promoted": false
+    },
+    "@ELEANORTERRETT": {
+      "entity_key": "@ELEANORTERRETT",
+      "display_name": "@EleanorTerrett",
+      "entity_type": "TWITTER_HANDLE",
+      "enrolled_ts": 1792136632.6195266,
+      "citing_wires": [
+        "TREENEWS",
+        "WALTER_BLOOMBERG"
+      ],
+      "status": "PROMOTED_TO_ACTIVE",
+      "shadow_events_count": 3,
+      "shadow_accurate_count": 3,
+      "shadow_fakeout_count": 0,
+      "shadow_accuracy_pct": 100.0,
+      "is_promoted": true,
+      "promoted_ts": 1792136632.633085
     }
   },
   "attribution_history": [
@@ -2875,6 +3432,141 @@
     {
       "timestamp": 1791645046.016409,
       "event_id": "EVT_1791645046016_ANON_L",
+      "source": "ANON_LEAK_PUMP",
+      "title": "RUMOR: Gensler resigns immediately after secret meeting",
+      "price_pct_30s": 0.108,
+      "price_pct_300s": -0.462,
+      "is_accurate": false,
+      "is_fakeout": true,
+      "delta_elo": -11.5,
+      "old_elo": 48.5,
+      "new_elo": 37.0,
+      "status": "QUARANTINED",
+      "status_changed": true
+    },
+    {
+      "timestamp": 1792135437.826081,
+      "event_id": "EVT_1792135437826_TREENE",
+      "source": "TREENEWS",
+      "title": "BlackRock files updated S-1 for Solana Trust",
+      "price_pct_30s": 0.15,
+      "price_pct_300s": 0.25,
+      "is_accurate": true,
+      "is_fakeout": false,
+      "delta_elo": 6.5,
+      "old_elo": 100.0,
+      "new_elo": 100.0,
+      "status": "HIGH_TRUST",
+      "status_changed": false
+    },
+    {
+      "timestamp": 1792135437.8377213,
+      "event_id": "EVT_1792135437837_ANON_L",
+      "source": "ANON_LEAK_PUMP",
+      "title": "RUMOR: Apple secretly buying 50,000 BTC",
+      "price_pct_30s": 0.1,
+      "price_pct_300s": -0.35,
+      "is_accurate": false,
+      "is_fakeout": true,
+      "delta_elo": -11.5,
+      "old_elo": 60.0,
+      "new_elo": 48.5,
+      "status": "ACTIVE",
+      "status_changed": false
+    },
+    {
+      "timestamp": 1792135437.8377213,
+      "event_id": "EVT_1792135437837_ANON_L",
+      "source": "ANON_LEAK_PUMP",
+      "title": "RUMOR: Gensler resigns immediately after secret meeting",
+      "price_pct_30s": 0.108,
+      "price_pct_300s": -0.462,
+      "is_accurate": false,
+      "is_fakeout": true,
+      "delta_elo": -11.5,
+      "old_elo": 48.5,
+      "new_elo": 37.0,
+      "status": "QUARANTINED",
+      "status_changed": true
+    },
+    {
+      "timestamp": 1792136537.5617,
+      "event_id": "EVT_1792136537561_TREENE",
+      "source": "TREENEWS",
+      "title": "BlackRock files updated S-1 for Solana Trust",
+      "price_pct_30s": 0.15,
+      "price_pct_300s": 0.25,
+      "is_accurate": true,
+      "is_fakeout": false,
+      "delta_elo": 6.5,
+      "old_elo": 100.0,
+      "new_elo": 100.0,
+      "status": "HIGH_TRUST",
+      "status_changed": false
+    },
+    {
+      "timestamp": 1792136537.5716233,
+      "event_id": "EVT_1792136537571_ANON_L",
+      "source": "ANON_LEAK_PUMP",
+      "title": "RUMOR: Apple secretly buying 50,000 BTC",
+      "price_pct_30s": 0.1,
+      "price_pct_300s": -0.35,
+      "is_accurate": false,
+      "is_fakeout": true,
+      "delta_elo": -11.5,
+      "old_elo": 60.0,
+      "new_elo": 48.5,
+      "status": "ACTIVE",
+      "status_changed": false
+    },
+    {
+      "timestamp": 1792136537.5724025,
+      "event_id": "EVT_1792136537572_ANON_L",
+      "source": "ANON_LEAK_PUMP",
+      "title": "RUMOR: Gensler resigns immediately after secret meeting",
+      "price_pct_30s": 0.108,
+      "price_pct_300s": -0.462,
+      "is_accurate": false,
+      "is_fakeout": true,
+      "delta_elo": -11.5,
+      "old_elo": 48.5,
+      "new_elo": 37.0,
+      "status": "QUARANTINED",
+      "status_changed": true
+    },
+    {
+      "timestamp": 1792136632.5890007,
+      "event_id": "EVT_1792136632589_TREENE",
+      "source": "TREENEWS",
+      "title": "BlackRock files updated S-1 for Solana Trust",
+      "price_pct_30s": 0.15,
+      "price_pct_300s": 0.25,
+      "is_accurate": true,
+      "is_fakeout": false,
+      "delta_elo": 6.5,
+      "old_elo": 100.0,
+      "new_elo": 100.0,
+      "status": "HIGH_TRUST",
+      "status_changed": false
+    },
+    {
+      "timestamp": 1792136632.597314,
+      "event_id": "EVT_1792136632597_ANON_L",
+      "source": "ANON_LEAK_PUMP",
+      "title": "RUMOR: Apple secretly buying 50,000 BTC",
+      "price_pct_30s": 0.1,
+      "price_pct_300s": -0.35,
+      "is_accurate": false,
+      "is_fakeout": true,
+      "delta_elo": -11.5,
+      "old_elo": 60.0,
+      "new_elo": 48.5,
+      "status": "ACTIVE",
+      "status_changed": false
+    },
+    {
+      "timestamp": 1792136632.6013722,
+      "event_id": "EVT_1792136632601_ANON_L",
       "source": "ANON_LEAK_PUMP",
       "title": "RUMOR: Gensler resigns immediately after secret meeting",
       "price_pct_30s": 0.108,

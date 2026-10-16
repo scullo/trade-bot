@@ -4,6 +4,9 @@ import os
 import hashlib
 from datetime import datetime, timezone, timedelta
 from security_vault import SecurityVault
+from valkyrie_logger import get_logger
+
+logger = get_logger("db_manager")
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'valkyrie_platform.db')
 
@@ -27,8 +30,8 @@ class DatabaseManager:
         try:
             import state_store
             state_store.backup_file(self.db_path, critical=critical)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Veritabanı yedeklenirken: {e}")
 
     def init_db(self):
         """Veritabani tablolarini ve indekslerini olusturur."""

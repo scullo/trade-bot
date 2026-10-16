@@ -1,3 +1,6 @@
+
+from valkyrie_logger import get_logger
+logger = get_logger("aegis_sentinel")
 import asyncio
 import time
 import json
@@ -398,8 +401,8 @@ class ValkyrieAegisSentinel:
                     try:
                         await market_data.fetch_single_symbol(sym)
                         actions_taken.append(f"⚡ {sym} veri akışı tazelendi.")
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug(f"[aegis_sentinel] Exception caught: {e}")
 
         # 4. Blueprint Alpha Oto-Onarım: Deribit GEX bayat ise arka planda anında yenile
         bp_audit = audit_findings.get("blueprint", {})
@@ -530,8 +533,8 @@ class ValkyrieAegisSentinel:
                 from macro_cross_asset import cross_asset_radar
                 asyncio.create_task(cross_asset_radar.sync_cross_assets())
                 actions_taken.append("🌐 Çapraz Piyasa Radarı veri anomalisi giderildi: Otonom REST senkronizasyonu başlatıldı.")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[aegis_sentinel] Exception caught: {e}")
 
         # 17. Macro Oracle: Flaş Haber İstihbaratı Canlandırma
         news_audit = macro_audit.get("news_sentinel", {})
@@ -540,8 +543,8 @@ class ValkyrieAegisSentinel:
                 from macro_news_sentinel import news_sentinel
                 asyncio.create_task(news_sentinel.sync_all_sources())
                 actions_taken.append("⚡ Flaş Haber İstihbarat soketleri boş/gecikmeli: Çoklu kaynak otonom tazeleme tetiklendi.")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[aegis_sentinel] Exception caught: {e}")
 
         # 18. Macro Oracle: Byzantine Quorum Bellek Temizliği (>180s eski kümeler)
         try:
@@ -552,8 +555,8 @@ class ValkyrieAegisSentinel:
                 del news_quorum.topic_clusters[k]
             if stale_keys:
                 actions_taken.append(f"🛡️ Byzantine Quorum masasında {len(stale_keys)} bayat konu kümesi temizlendi (RAM koruması).")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[aegis_sentinel] Exception caught: {e}")
 
         # 19. Macro Oracle: Source Evolution Sicil Kurtarma (Hafıza / Kütük Sağlığı)
         try:
@@ -561,8 +564,8 @@ class ValkyrieAegisSentinel:
             if len(source_evolution_engine.sources) == 0:
                 source_evolution_engine.load_registry()
                 actions_taken.append("🧬 Kaynak Evrimi motoru boş hafıza tespit edildi: Tohum sicili otonom onarıldı.")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[aegis_sentinel] Exception caught: {e}")
 
         if actions_taken:
             self.healing_history.append({

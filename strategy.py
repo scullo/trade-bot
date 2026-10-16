@@ -1,9 +1,12 @@
+
+from valkyrie_logger import get_logger
+logger = get_logger("strategy")
 import sys
 if hasattr(sys.stdout, 'reconfigure'):
     try:
         sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
 from security_vault import SecurityVault
 from shadow_engine import ShadowExecutionEngine
@@ -225,15 +228,15 @@ class StrategyEngine:
                                 telemetry.setdefault("exchange_netflow_usd", float(fl.get("netflow_24h_usd", 0.0)))
                                 telemetry.setdefault("netflow_zscore", float(fl.get("z_score", 0.0)))
                                 telemetry.setdefault("netflow_regime", str(fl.get("regime", "BALANCED_FLOW")))
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.debug(f"[strategy] İstisna yakalandı: {e}")
                     if self.market_data and hasattr(self.market_data, 'get_ammunition_status'):
                         try:
                             am = self.market_data.get_ammunition_status()
                             if am:
                                 telemetry.setdefault("ammunition_bias", str(am.get("bias", "NEUTRAL")))
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
                     if df_c is not None and not df_c.empty:
                         c_last = df_c.iloc[-1]
@@ -260,8 +263,8 @@ class StrategyEngine:
                                 if ou_p and ou_p.get('is_valid'):
                                     telemetry.setdefault("ou_half_life_min", float(ou_p.get("half_life_min", 30.0)))
                                     telemetry.setdefault("ou_regime", str(ou_p.get("regime", "MODERATE_MEAN_REVERTING")))
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
                     self.shadow_engine.spawn_shadow_trade(
                         symbol=clean_s,
@@ -274,8 +277,8 @@ class StrategyEngine:
                         tp2_price=kwargs.get("tp2"),
                         telemetry=telemetry
                     )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
     def _record_structural_stop(self, record: dict):
         """Stop olan veya zararla kapanan işlemin seviyesini kaydeder."""
@@ -401,8 +404,8 @@ class StrategyEngine:
                     cur_p = df['close'].iloc[-1]
                     if cur_p > 0 and not np.isnan(atr_val):
                         return float(atr_val / cur_p)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[strategy] İstisna yakalandı: {e}")
         return 0.012  # Varsayilan %1.2
 
     def get_macro_climate(self) -> dict:
@@ -474,8 +477,8 @@ class StrategyEngine:
                     eth_chg_4h = round(((eth_close - df_eth['close'].iloc[-48]) / df_eth['close'].iloc[-48]) * 100.0, 2)
                 else:
                     eth_chg_4h = eth_chg_1h
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
         eth_lead_pct = round(eth_chg_1h - btc_chg_1h, 2)
         eth_leading = eth_lead_pct >= 0.70 and eth_chg_1h > 0
@@ -540,8 +543,8 @@ class StrategyEngine:
         if macro_guard is not None:
             try:
                 macro_hud = macro_guard.get_macro_hud_telemetry()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
         return {
             "regime": str(regime),
@@ -654,8 +657,8 @@ class StrategyEngine:
                 sm = self.shadow_engine.get_coin_setup_matrix(raw_sym)
                 res["muted_setups"] = [sid for sid, m in sm.items() if m.get("status") == "UYUTULDU"]
                 res["priority_setups"] = [sid for sid, m in sm.items() if m.get("status") == "A+ ONAYLI"]
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
         res.setdefault("is_trading_allowed", True)
         return res
@@ -897,8 +900,8 @@ class StrategyEngine:
                             exit_status=str(res.get("close_reason") or "CLOSED"),
                             close_reason=str(res.get("close_reason") or "CLOSED")
                         )
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
             # 🖼️ VALKYRIE GÖRSEL ADLİ KARA KUTU & MİKROSKOBİK MUM OTOPSİSİ
             # (Model 1: Birleşik Yaşam Döngüsü - Yalnızca nihai kapanışta tüm bacakları içeren tek kompozit görsel üretilir)
@@ -919,8 +922,8 @@ class StrategyEngine:
                         levels=levels_snap,
                         is_shadow=False
                     )
-                except Exception as fb_err:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[strategy] Exception caught: {e}")
         return res
 
     async def _safe_open_position(self, *args, **kwargs):
@@ -1021,10 +1024,10 @@ class StrategyEngine:
                             from forensic_blackbox_manager import forensic_blackbox_manager
                             df_s = self.market_data.candles_5m.get(symbol) if hasattr(self, "market_data") and self.market_data else None
                             forensic_blackbox_manager.enqueue_closed_trade(s_pos, df_s, levels=levels, is_shadow=True)
-                        except Exception:
-                            pass
-            except Exception:
-                pass
+                        except Exception as e:
+                            logger.debug(f"[strategy] İstisna yakalandı: {e}")
+            except Exception as e:
+                logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
         if symbol not in self.paper_trader.open_positions:
             return
@@ -1033,15 +1036,15 @@ class StrategyEngine:
         if macro_guard is not None:
             try:
                 macro_guard.enforce_pre_event_defenses(self.paper_trader.open_positions, self.paper_trader)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
         # 🎯 TELEMETRİ: Anlık milisaniyelik MFE (Zirve Kâr) ve MAE (Dip Zarar) takibini güncelle
         if hasattr(self.paper_trader, "update_tick_telemetry"):
             try:
                 self.paper_trader.update_tick_telemetry(symbol, current_price)
             except Exception as e:
-                pass
+                logger.debug(f"[strategy] Exception caught: {e}")
 
         pos = self.paper_trader.open_positions[symbol]
         side = pos["side"]
@@ -1096,8 +1099,8 @@ class StrategyEngine:
                                 cur_profit_pct=cur_price_pct * 100.0,
                                 leverage=int(pos.get('leverage', 5))
                             ))
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
         # 🚀 ASTROQUANT REFORMU: SPACEX FALCON 9 PID DİNAMİK KÂR VE STOP KONTROLÖRÜ
         if ENABLE_PID_PROFIT_CONTROLLER and cur_price_pct >= 0.0030:
@@ -1717,8 +1720,8 @@ class StrategyEngine:
                 )
                 try:
                     print(f">> [RED - COIN DNA SETUP UYUTULDU] {symbol}: {rej_msg}")
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[strategy] İstisna yakalandı: {e}")
                 self.log_rejection(symbol, reason, rej_msg, setup_archetype="SETUP_MUTED_BY_ALPHA")
                 return {"error": "SETUP_MUTED_BY_ALPHA"}
 
@@ -1893,8 +1896,8 @@ class StrategyEngine:
                         res_f = await self.market_data.fetch_symbol_open_interest(symbol)
                         if isinstance(res_f, dict):
                             oi_data = res_f
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
         oi_status = oi_data.get('status', 'BALANCED')
         delta_oi_pct = float(oi_data.get('delta_oi_pct', 0.0))
@@ -2212,8 +2215,8 @@ class StrategyEngine:
                 coin_detail = self.shadow_engine.get_coin_forensic_detail(symbol)
                 if coin_detail.get('primary_scenario') == 'SPOILER_OVER_RESTRICTIVE':
                     is_spoiler_coin = True
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
         cvd_short_limit = 58.0 if is_spoiler_coin else (55.0 if is_reversal_setup else 52.0)
         cvd_long_limit = 42.0 if is_spoiler_coin else (45.0 if is_reversal_setup else 48.0)
@@ -2252,8 +2255,8 @@ class StrategyEngine:
         if not is_obi_fresh:
             try:
                 print(f">> [RED - ISINMA KALKANI] {symbol}: {rej_msg}")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[strategy] İstisna yakalandı: {e}")
             self.log_rejection(symbol, reason, rej_msg)
             return {"error": "OBI_WARMUP_GATE_BLOCKED"}
 
@@ -2365,8 +2368,8 @@ class StrategyEngine:
                 sm_div_mult = self.market_data.get_smart_money_divergence(symbol)
                 if side == "LONG" and sm_div_mult.get('is_institutional_accum'):
                     local_margin_mult *= float(sm_div_mult.get('margin_multiplier', 1.25))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[strategy] İstisna yakalandı: {e}")
         
         # Madde 5 Kuralı (2. Temas)
         is_mean_rev = (trade_type == "SCALP" or any(k in reason for k in ["nPOC", "Destek", "Retest", "Reclaim", "Sekmesi", "S3", "R3", "Flip"]))
@@ -2706,8 +2709,8 @@ class StrategyEngine:
                             print(f">> [RED - BTC VWAP ÇAPASI] {symbol}: {rej_msg}")
                             self.log_rejection(symbol, reason, rej_msg)
                             return {"error": "BTC_VWAP_ANCHOR_BLOCKED"}
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
         # ── ESNEK PORTFÖY KAPASİTESİ (ELASTIC SLOTS 5-8 ARASI MARJİN BÜTÇELİ GEÇİŞ) ──
         # 5 slot dolduktan sonra 6., 7. ve 8. pozisyonlar engellenmez; bütçe ve temel confluence (>=2/4) ile girer!
@@ -2845,8 +2848,8 @@ class StrategyEngine:
                         if "Tether_Treasury_$1B_Mint_Surge" not in confluence_list:
                             confluence_list.append("Tether_Treasury_$1B_Mint_Surge")
                     reason += f" [🏛️ Tether $1B+ Mint Boğa İvmesi ({tether_st.get('blockchain', 'TRON')})]"
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
         is_macro_bear = (regime_clim in ["BEAR_DUMP", "BEAR_TREND"]) or (btc_chg_4h <= -1.2) or (btc_chg_4h <= -0.80 and btc_chg_1h <= -0.20)
         is_macro_bull = (regime_clim in ["BULL_TREND", "BULL_PUMP", "EXTREME_BULL"]) or (btc_chg_4h >= 1.2) or (btc_chg_4h >= 0.80 and btc_chg_1h >= 0.20)
@@ -3074,8 +3077,8 @@ class StrategyEngine:
                 )
                 try:
                     print(f">> [RED - GEX PATLAMA MEAN REVERSION VETO] {symbol}: {rej_msg}")
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[strategy] İstisna yakalandı: {e}")
                 self.log_rejection(symbol, reason, rej_msg, setup_archetype="GEX_EXPLOSION_MEAN_REVERSION_MUTED")
                 return {"error": "GEX_EXPLOSION_MEAN_REVERSION_MUTED", "reason": rej_msg}
             elif is_breakout_act:
@@ -3740,8 +3743,8 @@ class StrategyEngine:
             cvd_div_tag, _ = calculate_cvd_divergence(df_5m_sig, lookback=15)
             rvol_ratio_v, rvol_z_v, rvol_tag_v = calculate_rvol_zscore(df_5m_sig)
             macro_dom_tag, _ = calculate_macro_dominance_bias(df_btc_sig, df_5m_sig)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
         # VDA-32: VAMPİR BTC VE AYI CVD UYUMSUZLUĞU VETO KALKANI
         is_btc = symbol in ["BTC/USDT", "BTCUSDT", "BTC/USDT:USDT"]
@@ -3750,8 +3753,8 @@ class StrategyEngine:
             rej_msg = f"🧛 Vampir BTC Kalkanı: BTC likiditeyi emerken altcoin LONG işlemi veto edildi ({macro_dom_tag})"
             try:
                 print(f">> [RED - VAMPIR BTC VETO] {symbol}: {rej_msg}")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[strategy] İstisna yakalandı: {e}")
             self.log_rejection(symbol, setup_id or reason, rej_msg)
             return {"error": "VAMPIRE_BTC_ALT_LONG_VETO", "reason": rej_msg}
 
@@ -3760,8 +3763,8 @@ class StrategyEngine:
             rej_msg = f"🚨 CVD Ayı Uyumsuzluğu Kalkanı: Zirvede alıcı tükenişi (Bull Trap riski) sebebiyle Breakout LONG veto edildi ({cvd_div_tag})"
             try:
                 print(f">> [RED - CVD AYI UYUMSUZLUGU VETO] {symbol}: {rej_msg}")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[strategy] İstisna yakalandı: {e}")
             self.log_rejection(symbol, setup_id or reason, rej_msg)
             return {"error": "BEARISH_CVD_DIVERGENCE_BREAKOUT_VETO", "reason": rej_msg}
 
@@ -3804,8 +3807,8 @@ class StrategyEngine:
                         ou_eq_mu = float(ou_res.get('equilibrium_mu', entry_price))
                         ou_r2 = float(ou_res.get('r_squared', 0.50))
                         ou_sigma = float(ou_res.get('sigma', 0.005))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
         # ── 16. BORSA NET AKIŞI (EXCHANGE NETFLOWS) VE ON-CHAIN BALİNA RADARI ──
         exchange_netflow_usd = 0.0
@@ -3857,8 +3860,8 @@ class StrategyEngine:
                         )
                         try:
                             print(f">> [RED - BALİNA BORSA GİRİŞ KALKANI] {symbol}: {rej_msg}")
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.debug(f"[strategy] İstisna yakalandı: {e}")
                         self.log_rejection(symbol, setup_id or reason, rej_msg, exchange_netflow_usd=exchange_netflow_usd, netflow_zscore=netflow_zscore, netflow_regime=netflow_regime, ammunition_bias=ammunition_bias)
                         return {"error": "WHALE_EXCHANGE_INFLOW_DUMP_VETO", "reason": rej_msg}
 
@@ -3871,8 +3874,8 @@ class StrategyEngine:
                         )
                         try:
                             print(f">> [RED - SOĞUK CÜZDAN ÇIKIŞ KALKANI] {symbol}: {rej_msg}")
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.debug(f"[strategy] İstisna yakalandı: {e}")
                         self.log_rejection(symbol, setup_id or reason, rej_msg, exchange_netflow_usd=exchange_netflow_usd, netflow_zscore=netflow_zscore, netflow_regime=netflow_regime, ammunition_bias=ammunition_bias)
                         return {"error": "WHALE_EXCHANGE_OUTFLOW_SQUEEZE_VETO", "reason": rej_msg}
 
@@ -3886,8 +3889,8 @@ class StrategyEngine:
                         )
                         try:
                             print(f">> [RED - KURUMSAL BLOK SATIŞ KALKANI] {symbol}: {rej_msg}")
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.debug(f"[strategy] İstisna yakalandı: {e}")
                         self.log_rejection(symbol, setup_id or reason, rej_msg, exchange_netflow_usd=exchange_netflow_usd, netflow_zscore=netflow_zscore, netflow_regime=netflow_regime, ammunition_bias=ammunition_bias)
                         return {"error": "INSTITUTIONAL_BLOCK_SELL_DUMP_VETO", "reason": rej_msg}
 
@@ -3901,8 +3904,8 @@ class StrategyEngine:
                         )
                         try:
                             print(f">> [RED - KURUMSAL BLOK ALIŞ KALKANI] {symbol}: {rej_msg}")
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.debug(f"[strategy] İstisna yakalandı: {e}")
                         self.log_rejection(symbol, setup_id or reason, rej_msg, exchange_netflow_usd=exchange_netflow_usd, netflow_zscore=netflow_zscore, netflow_regime=netflow_regime, ammunition_bias=ammunition_bias)
                         return {"error": "INSTITUTIONAL_BLOCK_BUY_SQUEEZE_VETO", "reason": rej_msg}
 
@@ -3922,8 +3925,8 @@ class StrategyEngine:
                             )
                             try:
                                 print(f">> [RED - MEMPOOL BALİNA GİRİŞ KALKANI] {symbol}: {rej_msg}")
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                logger.debug(f"[strategy] İstisna yakalandı: {e}")
                             self.log_rejection(symbol, setup_id or reason, rej_msg, planned_r=0.0)
                             return {"error": "MEMPOOL_WHALE_INFLOW_DUMP_VETO", "reason": rej_msg}
 
@@ -3939,8 +3942,8 @@ class StrategyEngine:
                             )
                             try:
                                 print(f">> [RED - MEMPOOL SOĞUK CÜZDAN KALKANI] {symbol}: {rej_msg}")
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                logger.debug(f"[strategy] İstisna yakalandı: {e}")
                             self.log_rejection(symbol, setup_id or reason, rej_msg, planned_r=0.0)
                             return {"error": "MEMPOOL_WHALE_OUTFLOW_SQUEEZE_VETO", "reason": rej_msg}
 
@@ -3962,8 +3965,8 @@ class StrategyEngine:
                                     )
                                     try:
                                         print(f">> [RED - PERAKENDE LONG TUZAĞI KALKANI] {symbol}: {rej_msg}")
-                                    except Exception:
-                                        pass
+                                    except Exception as e:
+                                        logger.debug(f"[strategy] İstisna yakalandı: {e}")
                                     self.log_rejection(symbol, setup_id or reason, rej_msg, planned_r=0.0)
                                     return {"error": "INSTITUTIONAL_DIVERGENCE_RETAIL_TRAP_VETO", "reason": rej_msg}
 
@@ -3975,8 +3978,8 @@ class StrategyEngine:
                                     )
                                     try:
                                         print(f">> [RED - PERAKENDE PANİK SHORT KALKANI] {symbol}: {rej_msg}")
-                                    except Exception:
-                                        pass
+                                    except Exception as e:
+                                        logger.debug(f"[strategy] İstisna yakalandı: {e}")
                                     self.log_rejection(symbol, setup_id or reason, rej_msg, planned_r=0.0)
                                     return {"error": "INSTITUTIONAL_DIVERGENCE_PANIC_SHORT_VETO", "reason": rej_msg}
 
@@ -3984,8 +3987,8 @@ class StrategyEngine:
                                     if confluence_list is not None and isinstance(confluence_list, list):
                                         if "Smart_Money_Kurumsal_Spot_Teyidi" not in confluence_list:
                                             confluence_list.append("Smart_Money_Kurumsal_Spot_Teyidi")
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
                     # Kural 3: Stabil Kripto Cephane Confluence Ödülü
                     if ENABLE_AMMUNITION_CONFLUENCE and side == "LONG" and ammunition_bias == "BULLISH_FUEL":
@@ -3994,8 +3997,8 @@ class StrategyEngine:
             except Exception as e:
                 try:
                     print(f">> [UYARI - BALİNA NETFLOW RADARI İSTİSNA] {symbol}: {e}")
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
         # ── 3c. MAKRO SETUP TEŞVİK VE RUNNER GENİŞLETMESİ (SETUP 2: RANGE BREAKOUT) ──
         if macro_guard is not None:
@@ -4016,8 +4019,8 @@ class StrategyEngine:
                     if confluence_list is not None and isinstance(confluence_list, list):
                         confluence_list.append("Macro_Shock_Breakout_Runner_Boost")
                     print(f">> [🚀 MAKRO SETUP BOOST] {symbol} ({side}): {m_boost.get('reason')}")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
         macro_clim = self.get_macro_climate()
         res = await self._safe_open_position(
@@ -4231,10 +4234,10 @@ class StrategyEngine:
                             from forensic_blackbox_manager import forensic_blackbox_manager
                             df_s = self.market_data.candles_5m.get(symbol) if hasattr(self, "market_data") and self.market_data else None
                             forensic_blackbox_manager.enqueue_closed_trade(s_pos, df_s, levels=levels, is_shadow=True)
-                        except Exception:
-                            pass
-            except Exception:
-                pass
+                        except Exception as e:
+                            logger.debug(f"[strategy] İstisna yakalandı: {e}")
+            except Exception as e:
+                logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
         # 🪤 Fakeout Reclaim mum ömrü takibi
         if hasattr(self, 'recently_stopped_levels') and symbol in self.recently_stopped_levels:
@@ -4313,8 +4316,8 @@ class StrategyEngine:
                     self.paper_trader.update_tick_telemetry(symbol, current_candle.get('high', close_price))
                     self.paper_trader.update_tick_telemetry(symbol, current_candle.get('low', close_price))
                     self.paper_trader.update_tick_telemetry(symbol, close_price)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
             pos = self.paper_trader.open_positions[symbol]
             soft_stop = pos.get("soft_stop", 0.0)
@@ -4466,8 +4469,8 @@ class StrategyEngine:
                                         cur_profit_pct=price_pct * 100.0,
                                         leverage=int(pos.get('leverage', 5))
                                     ))
-                                except Exception:
-                                    pass
+                                except Exception as e:
+                                    logger.debug(f"[strategy] İstisna yakalandı: {e}")
 
                 if is_half:
                     # 🎯 MİKROYAPI REFORMU: ANTİ-KMNO DİNAMİK RUNNER KÂR KİLİDİ (5M Kontrolü)
