@@ -1,0 +1,10 @@
+{
+  "mode": "DEMO",
+  "api_key": "YOUR_BINANCE_API_KEY",
+  "api_secret": "YOUR_BINANCE_API_SECRET",
+  "leverage": 5,
+  "margin_type": "ISOLATED",
+  "position_size_usdt": 10.0,
+  "max_open_positions": 3,
+  "auto_sl_tp": true
+}

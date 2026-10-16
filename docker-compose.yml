@@ -11,4 +11,19 @@ services:
       - PYTHONUNBUFFERED=1
       - PORT=5000
     volumes:
+      # 1. Paper Trading & Kasa Durumu
       - ./trade_history.json:/app/trade_history.json
+      # 2. Canlı İşlem (LIVE) Durum, Emir Defteri ve Konfigürasyon
+      - ./live_config.json:/app/live_config.json
+      - ./live_trade_history.json:/app/live_trade_history.json
+      - ./live_positions_state.json:/app/live_positions_state.json
+      # 3. Kullanıcı, Ödeme ve Lisans Veritabanı (SQLite)
+      - ./valkyrie_platform.db:/app/valkyrie_platform.db
+      # 4. Gölge İşlem (Shadow Engine) ve İstatistik Defteri
+      - ./shadow_trades_history.json:/app/shadow_trades_history.json
+      - ./shadow_cumulative_stats.json:/app/shadow_cumulative_stats.json
+      # 5. Makro Oracle İstihbarat & Liderlik Sicil Kütükleri
+      - ./macro_roles_registry.json:/app/macro_roles_registry.json
+      - ./macro_sources_registry.json:/app/macro_sources_registry.json
+      # 6. Adli Kara Kutu (Görsel Grafik ve Otopsi Kartları)
+      - ./forensic_blackbox:/app/forensic_blackbox

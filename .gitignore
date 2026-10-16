@@ -1,3 +1,38 @@
+# Databases & Local State
+*.db
+*.sqlite
+*.sqlite3
+valkyrie_platform.db
+
+# Live Trading State & Sensitive Configuration
+live_config.json
+live_trade_history.json
+live_positions_state.json
+.env
+.env.*
+!.env.example
+!live_config.example.json
+
+# Scratch Directory & Temporary Artifacts
+scratch/
+_ARCHIVE_SCRATCH/
+*.tmp
+*.temp
+
+# Large Archive Files (> 20 MB) & Backup Snapshots
+shadow_archive_*.json
+shadow_archive_2026*.json
+trade_history_backup_*.json
+calibration_audit_history.json
+macro_quorum_audit.json
+
+# Excel and Export Reports
+ANALİZ/
+*.xlsx
+*.csv
+Yeni Metin Belgesi*.txt
+
+# Python & Environment
 __pycache__/
 *.pyc
 *.pyo
@@ -6,12 +41,12 @@ __pycache__/
 env/
 venv/
 ENV/
+.pytest_cache/
 .system_generated/
 *.log
 .DS_Store
-_ARCHIVE_SCRATCH/
-Yeni Metin Belgesi*.txt
+
+# Forensic Blackbox heavy media
 forensic_blackbox/snapshots/
 forensic_blackbox/reports/
 forensic_blackbox/hall_of_fame/
-
