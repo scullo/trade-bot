@@ -23,6 +23,13 @@ class DatabaseManager:
         conn.row_factory = sqlite3.Row
         return conn
 
+    def _backup(self, critical: bool = False):
+        try:
+            import state_store
+            state_store.backup_file(self.db_path, critical=critical)
+        except Exception:
+            pass
+
     def init_db(self):
         """Veritabani tablolarini ve indekslerini olusturur."""
         with self.get_connection() as conn:
@@ -176,6 +183,7 @@ class DatabaseManager:
                 """, (user_id, now_tsi.strftime('%Y-%m-%d %H:%M:%S'), expires_tsi.strftime('%Y-%m-%d %H:%M:%S')))
 
                 conn.commit()
+                self._backup()
                 return True, "Kullanıcı başarıyla kaydedildi ve 48 Saatlik Ücretsiz Demo (Paper Trading) tanımlandı!", user_id
         except sqlite3.IntegrityError:
             return False, "Bu e-posta adresi veya Binance hesabı sistemde zaten kayıtlı!", None
@@ -201,6 +209,7 @@ class DatabaseManager:
                     verified_at=excluded.verified_at
             """, (user_id, enc_key, enc_secret, balance, now_str))
             conn.commit()
+            self._backup()
             return True
 
     def get_decrypted_credentials(self, user_id: int) -> dict:
@@ -402,6 +411,7 @@ class DatabaseManager:
                     ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at
                 """, (k, v, now_str))
             conn.commit()
+            self._backup()
             return True
 
     def create_pending_crypto_order(self, user_id: int, network: str = "TRC20") -> dict:
@@ -564,4 +574,5 @@ class DatabaseManager:
             """, (tx_hash, order_id))
 
             conn.commit()
+            self._backup()
             return True

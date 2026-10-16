@@ -245,14 +245,14 @@ ENABLE_DYNAMIC_COIN_AUDIT = True          # Her coinde anlık kuant ve veri süz
 ENABLE_CHANDELIER_EARLY_BE_LOCK = True    # +%0.80 MFE (+%4.0 ROE) kâr gören pozisyona erken Breakeven kilidi
 CHANDELIER_EARLY_BE_THRESHOLD_PCT = 0.80  # Erken BE için gereken asgari fiyat lehte hareket eşiği (%0.80)
 ENABLE_ASIA_SELECTIVE_SHIELD = True       # Asya seansında (TSİ 02:00-09:00) düşük likidite tuzak filtresi
-ENABLE_COOLDOWN_THROTTLE = False          # Fırsat kaçırmamak için genel soğuma KAPALI (Zararlarda zaten 45dk stop kalkanı ve 2 stop sınırı devrededir)
-SYMBOL_MIN_COOLDOWN_MINUTES = 0           # Kârlı trendlerde ve A+ Elit sinyallerde anında yeniden işlem açılabilir (0 dk)
+ENABLE_COOLDOWN_THROTTLE = True           # Gerçek para koruması: İşlemler arası soğuma ve komisyon freni AKTİF
+SYMBOL_MIN_COOLDOWN_MINUTES = 3            # Aynı paritede peş peşe işlem açılmasını önleyen soğuma süresi (3 dk)
 
 # 12. Sistem Mimarisi & Güvenlik Yapılandırması (15 Reform Paketi)
 ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "valkyrie-quant-2025-secure")
 ENABLE_CHANDELIER_BE_NOTIFY = True        # Breakeven kilitlendiğinde Telegram anlık bildirim kalkanı
-ENABLE_DAILY_CIRCUIT_BREAKER = False      # Fırsat kaçırmamak için günlük devre kesici engellemesi KAPALI (Yalnızca telemetri)
-MAX_DAILY_LOSS_PCT = 0.05                 # Azami günlük referans takip eşiği (%5.0)
+ENABLE_DAILY_CIRCUIT_BREAKER = True       # Gerçek para koruması: Günlük maksimum kayıp devre kesicisi AKTİF
+MAX_DAILY_LOSS_PCT = 0.05                 # Azami günlük kayıp eşiği (%5.0 - aşıldığında yeni pozisyon durdurulur)
 
 SECTOR_CLUSTERS = {
     "MEME": {"DOGE/USDT", "PEPE/USDT", "SHIB/USDT", "WIF/USDT", "BONK/USDT", "FLOKI/USDT", "TURBO/USDT", "BOME/USDT", "PUMP/USDT", "1000PEPE/USDT", "1000SHIB/USDT", "1000BONK/USDT", "1000FLOKI/USDT", "NEIRO/USDT"},

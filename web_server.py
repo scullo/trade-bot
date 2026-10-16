@@ -23709,6 +23709,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 "margin_type": cfg.get("margin_type", "ISOLATED"),
                 "position_size_usdt": cfg.get("position_size_usdt", 10.0),
                 "max_open_positions": cfg.get("max_open_positions", 3),
+                "auto_sl_tp": cfg.get("auto_sl_tp", True),
                 "live_balance": live_bal,
                 "live_free_balance": live_free
             })
@@ -23744,6 +23745,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             leverage = int(body.get("leverage", 5))
             margin_type = body.get("margin_type", "ISOLATED")
             position_size = float(body.get("position_size_usdt", 10.0))
+            auto_sl_tp = body.get("auto_sl_tp")
 
             if live_trader:
                 if not api_key and live_trader.config.get("api_key"):
@@ -23751,7 +23753,7 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                 if not api_secret and live_trader.config.get("api_secret"):
                     api_secret = live_trader.config.get("api_secret")
 
-                await live_trader.update_credentials(api_key, api_secret, leverage, margin_type, position_size)
+                await live_trader.update_credentials(api_key, api_secret, leverage, margin_type, position_size, auto_sl_tp=auto_sl_tp)
 
             if trader_manager:
                 trader_manager.set_mode(mode)

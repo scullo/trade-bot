@@ -4,8 +4,9 @@ from live_trader import LiveTrader, load_live_config, save_live_config
 
 class TraderManager:
     """
-    Demo (Paper Trading) ve Gercek (Binance Live) ticaret motorlari arasinda
-    kusursuz, anlik gecis saglayan birlestirilmis yonetici.
+    Demo (Paper Trading) ve Gerçek (Binance Live) ticaret motorları arasında
+    kusursuz, anlık geçiş sağlayan birleştirilmiş yönetici.
+    Aktif motorda tanımlı tüm özellik ve metotları saydam olarak iletir (__getattr__).
     """
     def __init__(self, paper_trader: PaperTrader, live_trader: LiveTrader):
         self.paper_trader = paper_trader
@@ -32,11 +33,23 @@ class TraderManager:
     def history(self) -> list:
         return self.active_trader.history
 
+    async def initialize(self):
+        """Uygulama açılışında veya mod değişiminde canlı tüccarı hazırlar."""
+        if hasattr(self.live_trader, 'initialize'):
+            await self.live_trader.initialize()
+
     def set_mode(self, new_mode: str):
         self.mode = new_mode.upper()
         self.config["mode"] = self.mode
         save_live_config(self.config)
-        print(f">> [TICARET MODU DEGISTIRILDI]: {self.mode}")
+        print(f">> [TİCARET MODU DEĞİŞTİRİLDİ]: {self.mode}")
+        if self.mode == "LIVE":
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    asyncio.create_task(self.live_trader.initialize())
+            except Exception as e:
+                print(f">> [TRADER MANAGER] Canlı başlatma görevi oluşturulamadı: {e}")
 
     async def open_position(self, *args, **kwargs):
         if self.mode == "LIVE":
@@ -54,6 +67,21 @@ class TraderManager:
         if hasattr(self.active_trader, 'save_history'):
             return self.active_trader.save_history()
 
+    def save_local_history(self):
+        if hasattr(self.active_trader, 'save_local_history'):
+            return self.active_trader.save_local_history()
+
     def update_tick_telemetry(self, *args, **kwargs):
         if hasattr(self.active_trader, 'update_tick_telemetry'):
             return self.active_trader.update_tick_telemetry(*args, **kwargs)
+
+    def update_position_levels(self, *args, **kwargs):
+        if hasattr(self.active_trader, 'update_position_levels'):
+            return self.active_trader.update_position_levels(*args, **kwargs)
+
+    def __getattr__(self, name):
+        """
+        TraderManager üzerinde doğrudan tanımlanmamış tüm metot ve özellikleri
+        aktif tüccara (PaperTrader ya da LiveTrader) yönlendirir.
+        """
+        return getattr(self.active_trader, name)

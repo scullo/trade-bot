@@ -4791,16 +4791,18 @@ class StrategyEngine:
         if tot_open_margin >= max_margin_budget:
             return
 
-        # 🛡️ GÜVENLİK ZIRHI 1: GÜNLÜK DEVRE KESİCİ TELEMETRİSİ (Fırsat Kaçırmamak İçin İşlemi Asla Durdurmaz)
-        user_daily_loss_pct = getattr(self.paper_trader, 'max_daily_drawdown_pct', 0.05)
-        cb_ok, cb_msg = self.vault.check_daily_circuit_breaker(
-            getattr(self.paper_trader, 'history', []),
-            getattr(self.paper_trader, 'balance', 10000.0),
-            max_loss_pct=user_daily_loss_pct
-        )
-        if not cb_ok:
-            # Fırsat kaçırmamak ve veri toplamayı kesintisiz sürdürmek için işlemi engellemez, yalnızca telemetri kaydeder
-            print(f">> [DEVRE KESİCİ TELEMETRİ BİLDİRİMİ] {cb_msg}")
+        # 🛡️ GÜVENLİK ZIRHI 1: GÜNLÜK DEVRE KESİCİ
+        if ENABLE_DAILY_CIRCUIT_BREAKER:
+            user_daily_loss_pct = getattr(self.paper_trader, 'max_daily_drawdown_pct', MAX_DAILY_LOSS_PCT)
+            cb_ok, cb_msg = self.vault.check_daily_circuit_breaker(
+                getattr(self.paper_trader, 'history', []),
+                getattr(self.paper_trader, 'balance', 10000.0),
+                max_loss_pct=user_daily_loss_pct
+            )
+            if not cb_ok:
+                print(f">> [DEVRE KESİCİ AKTİF - İŞLEM ENGELLENDİ] {cb_msg}")
+                self.log_rejection(symbol, "ALL", f"Günlük Devre Kesici devrede: {cb_msg}")
+                return
 
         # 🛡️ GÜVENLİK ZIRHI 2: PORTFÖY MARJİN TAVAN KONTROLÜ
         user_margin_cap_pct = getattr(self.paper_trader, 'max_portfolio_margin_pct', 0.80)

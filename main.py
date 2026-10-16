@@ -24,10 +24,18 @@ async def main():
     print(f"• Zaman Dilimi         : {TIMEFRAME}")
     print("=" * 65)
 
+    import state_store
+    state_store.restore_all()
+    state_store.start_periodic_backup(300.0)
+
     market_data = MarketDataManager(all_symbols=ALL_AVAILABLE_SYMBOLS, active_symbols=DEFAULT_ACTIVE_SYMBOLS, timeframe=TIMEFRAME)
     paper_trader = PaperTrader(initial_balance=INITIAL_BALANCE, leverage=LEVERAGE, margin_per_trade=POSITION_SIZE_USDT)
     live_trader = LiveTrader()
     trader_manager = TraderManager(paper_trader, live_trader)
+    try:
+        await live_trader.initialize()
+    except Exception as e:
+        print(f">> [CANLI BAŞLATMA UYARISI] {e}")
     notifier = TelegramNotifier()
     strategy = StrategyEngine(trader_manager, notifier, market_data=market_data)
     trader_manager.strategy = strategy
@@ -94,6 +102,14 @@ async def main():
 
             except Exception:
                 pass
+
+            # Her 60 saniyede bir LIVE modunda Binance bakiye ve pozisyon senkronizasyonu
+            if sync_counter % 2 == 0 and trader_manager.mode == "LIVE":
+                try:
+                    await live_trader.sync_open_positions()
+                    await live_trader.sync_balance()
+                except Exception:
+                    pass
 
             # Her 15 dakikada bir (30 * 30s = 900s = 15dk) bekleyen GitHub state sync kontrolü
             sync_counter += 1

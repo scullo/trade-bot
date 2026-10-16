@@ -1,1 +1,42 @@
-[]
+[
+  {
+    "id": "snap_ONT_20261011_134655_20",
+    "symbol": "ONT/USDT",
+    "side": "LONG",
+    "trade_category": "REAL",
+    "outcome": "LOSS",
+    "entry_price": 0.06168466,
+    "exit_price": 0.06131546,
+    "net_pnl": -10.4734,
+    "roe_pct": -2.09,
+    "setup_id": "SETUP_9_BELOW_NPOC_BOUNCE",
+    "close_reason": "🛑 Dinamik ATR Stopu Tetiklendi ($0.0614)",
+    "duration": "11dk",
+    "candle_count": 2,
+    "source_trade_id": "TRD-0044",
+    "exit_time": "2026-10-11 11:56:44",
+    "date": "2026-10-11",
+    "created_at": "2026-10-11 13:46:55",
+    "png_path": "forensic_blackbox\\snapshots\\2026-10-11\\REAL_LOSS_ONT_20261011_134655_MINUS2.1PCT_BALANCEDNORM.png",
+    "json_path": "forensic_blackbox\\snapshots\\2026-10-11\\REAL_LOSS_ONT_20261011_134655_MINUS2.1PCT_BALANCEDNORM.json",
+    "has_image": true,
+    "is_starred": false,
+    "is_reviewed": false,
+    "autopsy": {
+      "diagnosis_code": "BALANCED_NORMAL_CLOSE",
+      "diagnosis_title": "Standart Kuant Yürütmesi",
+      "diagnosis_badge": "⚖️ STANDART İCRAAT",
+      "diagnosis_color": "#94a3b8",
+      "diagnosis_icon": "📋",
+      "confidence_score": 0.78,
+      "findings": [
+        "İşlem normal risk yönetimi sınırları dahilinde stop oldu (ROE: %-2.09).",
+        "Giriş gerekçesi teknik olarak uygundu ancak piyasa devamlılığı sağlamadı.",
+        "Kayıp, hesaplanan azami risk toleransı sınırları içinde tutuldu."
+      ],
+      "actionable_advice": "Her kurulum kârlı olamaz; disiplinli risk yönetimi kasayı uzun vadede korur.",
+      "vision_prompt": "Valkyrie Forensic AI Otopsi İncelemesi: #ONT/USDT (LONG 3x).\nGiriş Fiyatı: $0.0617, Çıkış Fiyatı: $0.0613, Net PnL: $-10.47 (-2.09% ROE).\nSetup: SETUP_9_BELOW_NPOC_BOUNCE, Çıkış Nedeni: 🛑 Dinamik ATR Stopu Tetiklendi ($0.0614), Süre: 11dk (2 Mum).\nÖn Teşhis: Standart Kuant Yürütmesi (⚖️ STANDART İCRAAT).\nAdli Bulgular:\n- İşlem normal risk yönetimi sınırları dahilinde stop oldu (ROE: %-2.09).\n- Giriş gerekçesi teknik olarak uygundu ancak piyasa devamlılığı sağlamadı.\n- Kayıp, hesaplanan azami risk toleransı sınırları içinde tutuldu.\nÖneri: Her kurulum kârlı olamaz; disiplinli risk yönetimi kasayı uzun vadede korur.\nGrafikte işaretlenen Giriş Mumu ve Çıkış Mumundaki kurumsal fiyat hareketini (Price Action, CVD, Likidite fitilleri) ve yapılması gereken düzeltmeyi 3 vurucu maddede değerlendir.",
+      "analyzed_at": "2026-10-11 13:46:55"
+    }
+  }
+]
