@@ -198,9 +198,12 @@ def restore_file(local_path: str, remote_name: str = None, merge_json: bool = Fa
             remote.update({k: v for k, v in local.items() if k in SENSITIVE_KEYS and v})
             raw = json.dumps(remote, ensure_ascii=False, indent=2).encode("utf-8")
         elif os.path.exists(local_path) and os.path.getsize(local_path) > 0 and not local_path.endswith(".db"):
-            # Yerel veri zaten varsa (örn. aynı süreç içinde), daha büyük olanı koru
-            if os.path.getsize(local_path) >= len(raw):
-                return False
+            # Yerel veri zaten varsa, gecerli JSON kontrolu yap; kucuk/temiz reset dosyalarini engelleme
+            try:
+                json.loads(raw.decode("utf-8"))
+            except Exception:
+                if os.path.getsize(local_path) >= len(raw):
+                    return False
         elif local_path.endswith(".db") and os.path.exists(local_path):
             # Yeni boş oluşturulmuş DB'yi yedekle değiştir (sadece Render cold-start'ında anlamlı)
             if os.path.getsize(local_path) >= len(raw):
@@ -217,6 +220,7 @@ def restore_file(local_path: str, remote_name: str = None, merge_json: bool = Fa
 
 
 PERSISTED_FILES = [
+    ("trade_history.json", False),
     ("live_config.json", True),
     ("live_trade_history.json", False),
     ("live_positions_state.json", False),

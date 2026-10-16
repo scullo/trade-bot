@@ -5279,6 +5279,9 @@
                         <span>Makro Masası</span>
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                     </button>
+                    <button onclick="triggerResetTradingState()" style="background:rgba(239,68,68,0.18); color:#fca5a5; border:1px solid rgba(239,68,68,0.45); padding:5px 11px; border-radius:7px; font-size:11px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.15s;" title="Kasayı $10,000 USDT'ye çek, açık ve kapalı pozisyonları sıfırla">
+                        <span>🔄 Kasayı Sıfırla</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -14594,6 +14597,38 @@ async function loadAdminMetrics() {
         }
         window.renderInstitutionalView = renderInstitutionalView;
 
+        async function triggerResetTradingState() {
+            if (!confirm("⚠️ DİKKAT: Kasa bakiyesi $10,000.00 USDT seviyesine çekilecek, tüm açık pozisyonlar ve geçmiş işlem defteri tamamen sıfırlanacaktır.\n\nOnaylıyor musunuz?")) {
+                return;
+            }
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                try {
+                    const saved = localStorage.getItem('valkyrie_auth_user');
+                    if (saved) {
+                        const u = JSON.parse(saved);
+                        if (u && u.session_token) headers['Authorization'] = 'Bearer ' + u.session_token;
+                    }
+                } catch (e) {}
+
+                const res = await fetch('/api/admin/reset_trading_state', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ confirm_reset: true })
+                });
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    alert("✅ Başarılı: " + data.message);
+                    window.location.reload();
+                } else {
+                    alert("❌ Sıfırlama Hatası: " + (data.message || JSON.stringify(data)));
+                }
+            } catch (err) {
+                alert("❌ Bağlantı Hatası: " + err.message);
+            }
+        }
+        window.triggerResetTradingState = triggerResetTradingState;
+
         function switchMainTab(tabName) {
             if (tabName === 'history') tabName = 'ledger';
             currentActiveMainTab = tabName;
@@ -19136,12 +19171,35 @@ async function loadAdminMetrics() {
                 priceDiffPct = 0.0;
             }
 
-            const roePct = priceDiffPct * (pos.leverage || 5);
-            const posVal = Number(pos.position_value) || (Number(pos.margin || 100) * Number(pos.leverage || 5));
-            const pnlUsdt = posVal * (priceDiffPct / 100);
-            const isWin = pnlUsdt > 0.0001;
-            const isLoss = pnlUsdt < -0.0001;
-            return { curP, isLong, priceDiffPct, roePct, pnlUsdt, isWin, isLoss };
+            const leverage = Number(pos.leverage || 5);
+            const margin = Number(pos.margin || 100);
+            const posVal = Number(pos.position_value) || (margin * leverage);
+            
+            // Brüt PnL ve Brüt ROE
+            const grossPnlUsdt = posVal * (priceDiffPct / 100);
+            const grossRoePct = priceDiffPct * leverage;
+
+            // 🛡️ NET PNL & ROE SENKRONİZASYONU (TASK-4.2 / UI-003):
+            // Giriş ve tahmini çıkış komisyonu (%0.05 + %0.05 = %0.10) + Birikmiş fonlama kesintisi
+            const commFee = posVal * 0.0010;
+            const fundFee = Number(pos.accumulated_funding_fee || 0);
+            const netPnlUsdt = grossPnlUsdt - commFee - fundFee;
+            const netRoePct = (margin > 0) ? (netPnlUsdt / margin) * 100 : grossRoePct;
+
+            // Backend parity için varsayılan pnlUsdt ve roePct net değerleri yansıtır
+            const pnlUsdt = netPnlUsdt;
+            const roePct = netRoePct;
+            const isWin = netPnlUsdt > 0.0001;
+            const isLoss = netPnlUsdt < -0.0001;
+
+            return { 
+                curP, isLong, priceDiffPct, 
+                roePct, pnlUsdt, 
+                grossPnlUsdt, grossRoePct, 
+                netPnlUsdt, netRoePct, 
+                commFee, fundFee, 
+                isWin, isLoss 
+            };
         }
 
         function formatSmartPrice(val) {

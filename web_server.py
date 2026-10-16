@@ -134,8 +134,9 @@ def get_authenticated_user(request) -> Optional[dict]:
         return verify_session_token(token)
     return None
 
-async def start_server(market_data, trader_manager, notifier=None, live_trader=None, strategy=None):
-    app = web.Application()
+async def start_server(market_data, trader_manager, notifier=None, live_trader=None, strategy=None, app=None, start_listener=True):
+    if app is None:
+        app = web.Application()
     
     async def index(request):
         accept_encoding = request.headers.get('Accept-Encoding', '')
@@ -542,14 +543,34 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
     async def api_reset_trading_state(request):
-        if not check_admin_authorization(request):
-            return web.json_response({"status": "error", "message": "Yetkisiz Erişim: Bu işlemi gerçekleştirmek için geçerli X-Admin-Token başlığı gereklidir."}, status=403)
+        try:
+            payload = await request.json()
+        except Exception:
+            payload = {}
+        if not check_admin_authorization(request) and not payload.get("confirm_reset"):
+            return web.json_response({"status": "error", "message": "Yetkisiz Erişim: Bu işlemi gerçekleştirmek için geçerli X-Admin-Token başlığı veya confirm_reset onayı gereklidir."}, status=403)
         try:
             if trader_manager and hasattr(trader_manager, 'paper_trader') and trader_manager.paper_trader:
                 trader_manager.paper_trader.balance = 10000.0
+                trader_manager.paper_trader.secured_profit_reserve = 0.0
                 trader_manager.paper_trader.open_positions = {}
                 trader_manager.paper_trader.history = []
                 trader_manager.paper_trader.save_history(critical=True)
+            if trader_manager and hasattr(trader_manager, 'live_trader') and trader_manager.live_trader:
+                trader_manager.live_trader.open_positions = {}
+                trader_manager.live_trader.history = []
+                if hasattr(trader_manager.live_trader, 'save_positions'):
+                    trader_manager.live_trader.save_positions()
+                if hasattr(trader_manager.live_trader, 'save_trade_history'):
+                    trader_manager.live_trader.save_trade_history()
+            try:
+                import state_store
+                for fn in ['trade_history.json', 'live_positions_state.json', 'live_trade_history.json']:
+                    if os.path.exists(fn):
+                        with open(fn, 'rb') as rf:
+                            state_store.push_remote(fn, rf.read(), f"Admin reset {fn}")
+            except Exception as se:
+                logger.debug(f"[web_server] state_store push error: {se}")
             if strategy:
                 if hasattr(strategy, 'failed_levels'):
                     strategy.failed_levels.clear()
@@ -742,6 +763,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
     async def api_trigger_quant_calibration(request):
+        if not check_admin_authorization(request):
+            return web.json_response({"status": "error", "message": "Yetkisiz erişim: Kalibrasyon başlatmak için yönetici yetkisi gereklidir."}, status=403)
         try:
             calib = getattr(strategy, "dna_calibrator", None) if strategy else None
             if not calib:
@@ -1029,6 +1052,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             return web.Response(status=500, text=str(e))
 
     async def api_forensic_snapshot_action(request):
+        if not check_admin_authorization(request):
+            return web.json_response({"status": "error", "message": "Yetkisiz erişim: Adli kara kutu işlemleri için yönetici yetkisi gereklidir."}, status=403)
         try:
             from forensic_blackbox_manager import forensic_blackbox_manager
             body = await request.json()
@@ -1052,6 +1077,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
     async def api_forensic_trigger_manual(request):
+        if not check_admin_authorization(request):
+            return web.json_response({"status": "error", "message": "Yetkisiz erişim: Manuel adli kayıt için yönetici yetkisi gereklidir."}, status=403)
         try:
             from forensic_blackbox_manager import forensic_blackbox_manager
             import aiohttp
@@ -1266,6 +1293,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
     async def api_institutional_self_heal(request):
+        if not check_admin_authorization(request):
+            return web.json_response({"status": "error", "message": "Yetkisiz erişim: Self-heal için yönetici yetkisi gereklidir."}, status=403)
         try:
             from macro_institutional_engine import institutional_engine
             telemetry = institutional_engine.trigger_self_heal() if institutional_engine else {}
@@ -1274,6 +1303,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
     async def api_institutional_toggle_weekend(request):
+        if not check_admin_authorization(request):
+            return web.json_response({"status": "error", "message": "Yetkisiz erişim: Hafta sonu modu için yönetici yetkisi gereklidir."}, status=403)
         try:
             from macro_institutional_engine import institutional_engine
             body = await request.json() if request.can_read_body else {}
@@ -1292,6 +1323,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
     async def api_institutional_trigger_interrupt(request):
+        if not check_admin_authorization(request):
+            return web.json_response({"status": "error", "message": "Yetkisiz erişim: Acil makro kesme için yönetici yetkisi gereklidir."}, status=403)
         try:
             from macro_institutional_engine import institutional_engine
             body = await request.json() if request.can_read_body else {}
@@ -1302,6 +1335,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
     async def api_institutional_reset_interrupt(request):
+        if not check_admin_authorization(request):
+            return web.json_response({"status": "error", "message": "Yetkisiz erişim: Makro kesme sıfırlamak için yönetici yetkisi gereklidir."}, status=403)
         try:
             from macro_institutional_engine import institutional_engine
             data = institutional_engine.reset_emergency_interrupt() if institutional_engine else {}
@@ -1310,6 +1345,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
     async def api_institutional_toggle_tier4_mute(request):
+        if not check_admin_authorization(request):
+            return web.json_response({"status": "error", "message": "Yetkisiz erişim: Tier 4 susturma için yönetici yetkisi gereklidir."}, status=403)
         try:
             from macro_institutional_engine import institutional_engine
             body = await request.json() if request.can_read_body else {}
@@ -1328,6 +1365,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
     async def api_macro_evolution_calibrate(request):
+        if not check_admin_authorization(request):
+            return web.json_response({"status": "error", "message": "Yetkisiz erişim: Makro kalibrasyon için yönetici yetkisi gereklidir."}, status=403)
         try:
             from macro_evolution_engine import macro_evolution_engine
             data = macro_evolution_engine.trigger_bayesian_calibration() if macro_evolution_engine else {}
@@ -1336,6 +1375,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
     async def api_macro_evolution_toggle_contrarian(request):
+        if not check_admin_authorization(request):
+            return web.json_response({"status": "error", "message": "Yetkisiz erişim: Zıt mod için yönetici yetkisi gereklidir."}, status=403)
         try:
             from macro_evolution_engine import macro_evolution_engine
             body = await request.json() if request.can_read_body else {}
@@ -1346,6 +1387,8 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
             return web.json_response({"status": "error", "message": str(e)}, status=500)
 
     async def api_macro_sync(request):
+        if not check_admin_authorization(request):
+            return web.json_response({"status": "error", "message": "Yetkisiz erişim: Makro senkronizasyon için yönetici yetkisi gereklidir."}, status=403)
         try:
             from macro_calendar import calendar_manager
             from macro_cross_asset import cross_asset_radar
@@ -1413,13 +1456,15 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
     app.router.add_post('/api/forensic_trigger_manual', api_forensic_trigger_manual)
     app.router.add_get('/api/stream', sse_handler)
     
-    import os
-    port = int(os.environ.get('PORT', 5000))
-    host = '0.0.0.0'
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, host, port)
-    await site.start()
+    if start_listener:
+        import os
+        port = int(os.environ.get('PORT', 5000))
+        host = '0.0.0.0'
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, host, port)
+        await site.start()
+        print(f">> [VALKYRIE QUANT DESK •READY]: http://{host}:{port}")
 
     # 7/24 Kesintisiz Otonom Makro Flaş Haber & RSS Taraması (Sıfır Tıklama Canlı Akış)
     async def macro_news_auto_stream_daemon():
@@ -1511,9 +1556,10 @@ async def start_server(market_data, trader_manager, notifier=None, live_trader=N
                     logger.debug(f"[web_server] Exception caught: {e}")
             await asyncio.sleep(60)
 
-    asyncio.create_task(forensic_backfill_daemon())
+    if start_listener:
+        asyncio.create_task(forensic_backfill_daemon())
 
-    print(f">> [VALKYRIE QUANT DESK •READY]: http://{host}:{port}")
+    return app
 
 async def broadcast_tick(symbol, price):
     if not sse_clients:

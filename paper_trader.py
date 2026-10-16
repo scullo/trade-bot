@@ -85,6 +85,7 @@ class PaperTrader:
         self._pending_state = None  # Başarısız push'ları yeniden denemek için
         self._push_lock = threading.Lock()
         self._open_lock = threading.Lock()  # Eşzamanlı pozisyon açılışlarında mükerrer girişi önleyen atomik kilit
+        self.secured_profit_reserve = 0.0
         self.emergency_alert = None  # Bakiye ve sistem anomalisi kritik uyarı bayrağı
         self.is_safety_stopped = False  # VDA-13: Kasa < $1,000 olduğunda otomatik güvenli durdurma modu
         self.trading_halted = False
@@ -98,6 +99,7 @@ class PaperTrader:
     def reset_state(self):
         """Kasa, açık ve kapalı pozisyonları sıfırlar ve hem yerel hem GitHub state'e kaydeder."""
         self.balance = float(self.initial_balance)
+        self.secured_profit_reserve = 0.0
         self.open_positions = {}
         self.history = []
         self._pending_state = None
@@ -145,7 +147,8 @@ class PaperTrader:
                             loc_bal = float(local_data.get("balance", self.initial_balance))
                             loc_hist = local_data.get("history", [])
                             # Anomali Koruması: Yerel işlem sayısı daha çoksa veya GitHub test bakiyesiyle (<5000) ezilmişse yereli koru
-                            if len(loc_hist) > len(gh_history) or (gh_balance < 5000.0 and loc_bal >= 5000.0):
+                            is_gh_clean_reset = (len(gh_history) == 0 and abs(gh_balance - self.initial_balance) < 1.0)
+                            if not is_gh_clean_reset and (len(loc_hist) > len(gh_history) or (gh_balance < 5000.0 and loc_bal >= 5000.0)):
                                 local_has_more = True
                                 self.balance = float(self.initial_balance) if (math.isnan(loc_bal) or math.isinf(loc_bal)) else loc_bal
                                 self.open_positions = _sanitize_floats(local_data.get("open_positions", {}))
@@ -156,12 +159,15 @@ class PaperTrader:
 
                 if not local_has_more:
                     self.balance = gh_balance
+                    self.secured_profit_reserve = float(data.get("secured_profit_reserve", 0.0))
                     self.open_positions = gh_positions
                     self.history = gh_history
                     try:
                         self.save_local_history()
                     except Exception as e:
                         logger.warning(f"save_local_history hatası: {e}")
+                else:
+                    self.secured_profit_reserve = float(local_data.get("secured_profit_reserve", 0.0))
                 loaded = True
                 print(f">> [GITHUB PERSISTENCE] trade_history.json GitHub'dan yuklendi ({len(self.history)} islem, SHA: {self._github_sha[:8] if self._github_sha else 'None'}) Bakiye: {self.balance}")
             except Exception as e:
@@ -177,6 +183,7 @@ class PaperTrader:
                         self.balance = float(self.initial_balance) if (math.isnan(lb) or math.isinf(lb)) else lb
                     except Exception:
                         self.balance = float(self.initial_balance)
+                    self.secured_profit_reserve = float(data.get("secured_profit_reserve", 0.0))
                     self.open_positions = _sanitize_floats(data.get("open_positions", {}))
                     self.history = _sanitize_floats(data.get("history", []))
                     loaded = True
@@ -208,6 +215,7 @@ class PaperTrader:
         clean_bal = float(self.initial_balance) if (math.isnan(self.balance) or math.isinf(self.balance)) else round(self.balance, 4)
         state = {
             "balance": clean_bal,
+            "secured_profit_reserve": round(getattr(self, "secured_profit_reserve", 0.0), 2),
             "open_positions": _sanitize_floats(self.open_positions),
             "history": _sanitize_floats(self.history)
         }
@@ -323,13 +331,32 @@ class PaperTrader:
             last_epoch = int(pos.get("last_funding_epoch") if pos.get("last_funding_epoch") is not None else (int(pos.get("entry_timestamp", now_ts)) // 28800))
             if current_epoch > last_epoch:
                 missed_epochs = current_epoch - last_epoch
-                rate = 0.0001
-                if market_data and hasattr(market_data, 'symbol_funding'):
+                raw_rate = None
+                if market_data:
                     clean_s = market_data._clean_symbol(s_sym) if hasattr(market_data, '_clean_symbol') else s_sym
-                    fund_info = market_data.symbol_funding.get(s_sym) or market_data.symbol_funding.get(clean_s, {})
-                    rate = float(fund_info.get('funding_rate', pos.get('entry_funding_rate', 0.0001)))
-                else:
-                    rate = float(pos.get('entry_funding_rate', 0.0001))
+                    if hasattr(market_data, 'get_funding_info'):
+                        fund_info = market_data.get_funding_info(s_sym) or market_data.get_funding_info(clean_s)
+                        if fund_info and isinstance(fund_info, dict):
+                            raw_rate = fund_info.get('rate')
+                    elif hasattr(market_data, 'funding_rates') and isinstance(market_data.funding_rates, dict):
+                        fund_info = market_data.funding_rates.get(s_sym) or market_data.funding_rates.get(clean_s, {})
+                        if fund_info and isinstance(fund_info, dict):
+                            raw_rate = fund_info.get('rate')
+
+                if raw_rate is None:
+                    raw_rate = pos.get('entry_funding_rate', 0.0001)
+
+                try:
+                    rate = float(raw_rate)
+                except (ValueError, TypeError):
+                    rate = 0.0001
+
+                # Normalizasyon: Eger yuzde cinsinden geldiyse (ornegin 0.0100 = %0.01) ondaliga cevir (DATA-001 100x bug fix)
+                if abs(rate) > 0.005:
+                    rate = rate / 100.0
+
+                # Binance limitleri cercevesinde [-0.0075, +0.0075] (-%0.75 ile +%0.75) sinirla
+                rate = max(-0.0075, min(0.0075, rate))
 
                 pos_val = float(pos.get("position_value", pos.get("margin", 50.0) * pos.get("leverage", 5)))
                 side = pos.get("side", "LONG").upper()
@@ -598,7 +625,7 @@ class PaperTrader:
         with self._open_lock:
             return self._open_position_unlocked(*args, **kwargs)
 
-    def _open_position_unlocked(self, symbol: str, side: str, entry_price: float, reason: str, soft_stop: float, hard_stop: float, tp1: float, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None, atr_pct: float = 1.0, trend_regime: str = "YATAY", session: str = "LONDRA", volume_surge: float = 1.0, confluence_score: str = "2/4", htf_alignment: str = "TREND YÖNÜNDE", custom_margin: float = None, rs_vs_btc: float = 0.0, decoupling_status: str = "⚪ NÖTR_TAKİPÇİ", cvd_pct: float = 50.0, candle_velocity: float = 1.0, custom_leverage: int = None, **kwargs):
+    def _open_position_unlocked(self, symbol: str, side: str, entry_price: float, reason: str = "", soft_stop: float = None, hard_stop: float = None, tp1: float = None, tp2: float = None, trade_type: str = "BREAKOUT", snapshot_levels: dict = None, setup_id: str = "", confluence_list: list = None, atr_pct: float = 1.0, trend_regime: str = "YATAY", session: str = "LONDRA", volume_surge: float = 1.0, confluence_score: str = "2/4", htf_alignment: str = "TREND YÖNÜNDE", custom_margin: float = None, rs_vs_btc: float = 0.0, decoupling_status: str = "⚪ NÖTR_TAKİPÇİ", cvd_pct: float = 50.0, candle_velocity: float = 1.0, custom_leverage: int = None, **kwargs):
         # VDA-13: Kasa < $1,000 olduğunda otomatik güvenli durdurma modu
         if getattr(self, 'is_safety_stopped', False) or getattr(self, 'trading_halted', False) or self.balance < 1000.0:
             self.is_safety_stopped = True
@@ -615,7 +642,14 @@ class PaperTrader:
             return None
 
         # Dinamik veya Temel Kaldıraç Belirleme
+        if custom_leverage is None and 'active_leverage' in kwargs:
+            custom_leverage = kwargs.get('active_leverage')
+        if custom_leverage is None and 'leverage' in kwargs:
+            custom_leverage = kwargs.get('leverage')
         active_leverage = int(custom_leverage) if custom_leverage is not None and int(custom_leverage) > 0 else int(self.leverage)
+
+        if custom_margin is None and 'margin' in kwargs:
+            custom_margin = kwargs.get('margin')
 
         # Risk hesabı (1R değeri) ve Kurumsal Risk Paritesi (Volatility Targeting / Normalized Dollar Risk)
         stop_level = hard_stop if (hard_stop and hard_stop > 0) else (soft_stop if (soft_stop and soft_stop > 0) else 0)
@@ -713,9 +747,9 @@ class PaperTrader:
             "legs": [],
             "entry_time": entry_time_str,
             "entry_timestamp": entry_timestamp,
-            "soft_stop": float(soft_stop),
-            "hard_stop": float(hard_stop),
-            "tp1": float(tp1) if tp1 else 0.0,
+            "soft_stop": float(soft_stop) if soft_stop is not None else round(entry_price * (0.985 if side.upper() == "LONG" else 1.015), 8),
+            "hard_stop": float(hard_stop) if hard_stop is not None else round(entry_price * (0.985 if side.upper() == "LONG" else 1.015), 8),
+            "tp1": float(tp1) if tp1 else round(entry_price * (1.02 if side.upper() == "LONG" else 0.98), 8),
             "tp2": float(tp2) if tp2 else 0.0,
             "trade_type": trade_type,
             "setup_id": setup_id or ("SETUP_" + trade_type),
@@ -756,7 +790,16 @@ class PaperTrader:
         print(f">> [POZISYON ACILDI] {symbol} {side} @ {entry_price} | Marjin: {margin}$ ({active_leverage}x) | Setup: {clean_pos['setup_id']}")
         return clean_pos
 
-    def close_position(self, symbol: str, exit_price: float, close_reason: str, is_partial: bool = False, slippage_pct: float = 0.0):
+    def close_position(self, symbol: str, exit_price: float = None, close_reason: str = None, is_partial: bool = False, slippage_pct: float = 0.0, **kwargs):
+        if exit_price is None:
+            exit_price = float(kwargs.get("current_price", 0.0))
+        if close_reason is None:
+            close_reason = str(kwargs.get("reason", "MANUAL_CLOSE"))
+        if not is_partial and "is_partial" in kwargs:
+            is_partial = bool(kwargs["is_partial"])
+        if slippage_pct == 0.0 and "slippage_pct" in kwargs:
+            slippage_pct = float(kwargs["slippage_pct"])
+
         if symbol not in self.open_positions:
             return None
 
@@ -881,7 +924,8 @@ class PaperTrader:
             pos_val = pos.get("position_value", margin * pos.get("leverage", 5))
             exit_fee = (qty * exit_price) * self.commission_rate
             accumulated_funding = float(pos.get("accumulated_funding_fee", 0.0))
-            total_fees_leg = entry_fee + exit_fee + max(0.0, accumulated_funding)
+            trading_fees_leg = entry_fee + exit_fee
+            total_fees_leg = trading_fees_leg + accumulated_funding
 
             if side == "LONG":
                 gross_pnl_leg = (exit_price - entry_p) * qty
@@ -896,14 +940,24 @@ class PaperTrader:
             if is_liquidated:
                 close_reason = close_reason + " [🚨 İZOLE MARJİN TASFİYESİ]"
 
-            self.balance += net_pnl_leg
+            # 🛡️ ÇİFTE FONLAMA KESİNTİSİ ENGELİ (TASK-4.1 / CODE-006):
+            # Fonlama ücreti (accumulated_funding_fee), pozisyon açık kaldığı süre boyunca
+            # check_and_settle_funding_fees() tarafından her 8 saatlik epoch'ta self.balance'tan
+            # zaten peşin kesilmiştir. Kapanış anında kasaya eklenecek nakit akışı:
+            # gross_pnl_leg - trading_fees_leg'dir (fonlama bir daha düşülmez).
+            cash_pnl_leg = max(-margin, gross_pnl_leg - trading_fees_leg)
+            self.balance += cash_pnl_leg
             
-            # VDA-13: Otomatik sıfırlama yerine güvenli durdurma moduna geçiş
+            # 🛡️ KÂR KİLİTLEME ZIRHI (TASK-4.1 / $150k Sıfırlama Hatasının Giderilmesi):
+            # Kasa $150,000'ı aştığında kârı başlangıç bakiyesine silmek yerine,
+            # $100,000 üzerindeki kâr güvenli kâr rezervine aktarılır, sermaye korunur.
             if self.balance > 150000.0:
-                clean_alert = f"[KRİTİK KASA ALARMI] Bakiye tavanı aşıldı! (${self.balance:,.2f}) -> Başlangıç kasasına (${self.initial_balance:,.2f}) emniyet sıfırlaması yapıldı."
+                excess_profit = self.balance - 100000.0
+                self.secured_profit_reserve = getattr(self, 'secured_profit_reserve', 0.0) + excess_profit
+                self.balance = 100000.0
+                clean_alert = f"[KÂR KİLİTLEME ZIRHI] Kasa tavanı aşıldı! (${self.balance + excess_profit:,.2f}) -> ${excess_profit:,.2f} kâr güvenli kâr rezervine kilitlendi (Toplam Rezerv: ${self.secured_profit_reserve:,.2f}). Kasa $100,000 aktif sermaye ile çalışmaya devam ediyor."
                 print(f">> {clean_alert}")
-                self.emergency_alert = f"🚨 {clean_alert}"
-                self.balance = float(self.initial_balance)
+                self.emergency_alert = f"🏆 {clean_alert}"
             elif self.balance < 1000.0:
                 self.is_safety_stopped = True
                 self.trading_halted = True
