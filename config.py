@@ -214,9 +214,9 @@ MAX_ENTRY_SLIPPAGE_PCT = 0.10    # Hedef lot büyüklüğünde azami kabul edile
 MIN_L2_DEPTH_USD_03 = 12000.0    # Fiyatın %0.3 derinliğinde bulunması gereken asgari tahta likiditesi ($12,000)
 
 # 8. Telegram Bildirim Ayarlari
-TELEGRAM_ENABLED = True
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8893395987:AAGo285LhPhMKEfBpg3pyZAdO13sHC2y18U")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "829687700")
+TELEGRAM_ENABLED = bool(os.getenv("TELEGRAM_BOT_TOKEN") and os.getenv("TELEGRAM_CHAT_ID"))
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
 # 9. Geometrik Kuant & Asimetrik 2R Motoru (Valkyrie Grand Quant Engine)
 ENABLE_GEOMETRIC_R_GATE = True        # R >= 1.80x Geometrik Ön-Onay Kapısı (Dün -$457 yazan 25 sıkışık işlemi eler)
@@ -249,7 +249,34 @@ ENABLE_COOLDOWN_THROTTLE = True           # Gerçek para koruması: İşlemler a
 SYMBOL_MIN_COOLDOWN_MINUTES = 3            # Aynı paritede peş peşe işlem açılmasını önleyen soğuma süresi (3 dk)
 
 # 12. Sistem Mimarisi & Güvenlik Yapılandırması (15 Reform Paketi)
-ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "valkyrie-quant-2025-secure")
+def _get_admin_secret() -> str:
+    secret = os.environ.get("ADMIN_SECRET", "")
+    if secret:
+        return secret
+    secret_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".admin_secret")
+    if os.path.exists(secret_file):
+        try:
+            with open(secret_file, "r", encoding="utf-8") as f:
+                s = f.read().strip()
+                if s:
+                    return s
+        except Exception:
+            pass
+    import secrets
+    new_secret = secrets.token_urlsafe(32)
+    try:
+        with open(secret_file, "w", encoding="utf-8") as f:
+            f.write(new_secret)
+        if hasattr(os, "chmod"):
+            try:
+                os.chmod(secret_file, 0o600)
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return new_secret
+
+ADMIN_SECRET = _get_admin_secret()
 ENABLE_CHANDELIER_BE_NOTIFY = True        # Breakeven kilitlendiğinde Telegram anlık bildirim kalkanı
 ENABLE_DAILY_CIRCUIT_BREAKER = True       # Gerçek para koruması: Günlük maksimum kayıp devre kesicisi AKTİF
 MAX_DAILY_LOSS_PCT = 0.05                 # Azami günlük kayıp eşiği (%5.0 - aşıldığında yeni pozisyon durdurulur)

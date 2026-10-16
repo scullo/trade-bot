@@ -63,15 +63,6 @@ def _get_gh_token():
                     tok = m.group(1)
         except Exception as e:
             logger.debug(f"Git config token okunamadı: {e}")
-    if not tok:
-        try:
-            # Segmented assembly to ensure cloud persistence without triggering push scanners
-            k1 = "".join(["g", "h", "p", "_"])
-            k2 = "xJ0B5cecgBtbFOTW"
-            k3 = "jXja3gGD2KZCcO2YQvBF"
-            tok = k1 + k2 + k3
-        except Exception as e:
-            logger.debug(f"GitHub token assembly atlandı: {e}")
     return tok
 
 GITHUB_TOKEN = _get_gh_token()

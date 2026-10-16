@@ -7901,6 +7901,20 @@
             }
         }
 
+        function getAuthHeaders(extra = {}) {
+            const headers = { 'Content-Type': 'application/json', ...extra };
+            try {
+                const saved = localStorage.getItem('valkyrie_auth_user');
+                if (saved) {
+                    const u = JSON.parse(saved);
+                    if (u && u.session_token) {
+                        headers['Authorization'] = 'Bearer ' + u.session_token;
+                    }
+                }
+            } catch (e) {}
+            return headers;
+        }
+
         async function saveAdminPaymentConfig() {
             const trc20_wallet = document.getElementById('admin-input-trc20').value;
             const bep20_wallet = document.getElementById('admin-input-bep20').value;
@@ -7910,7 +7924,7 @@
             try {
                 const res = await fetch('/api/admin/save_payment_config', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({ trc20_wallet, bep20_wallet, price_monthly })
                 });
                 const data = await res.json();
@@ -7952,7 +7966,7 @@
             try {
                 const res = await fetch('/api/payment/verify', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({
                         user_id: userId,
                         tx_hash: tx_hash,
@@ -8260,7 +8274,9 @@
         }
 async function loadAdminMetrics() {
             try {
-                const res = await fetch('/api/admin/overview');
+                const res = await fetch('/api/admin/overview', {
+                    headers: getAuthHeaders()
+                });
                 const data = await res.json();
                 
                 const aumEl = document.getElementById('admin-total-aum');
@@ -19243,7 +19259,7 @@ async function loadAdminMetrics() {
                 }
                 await fetch('/api/toggle_symbol', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({ symbol: symbol, active: active })
                 });
                 await syncBackendState();
@@ -19273,7 +19289,7 @@ async function loadAdminMetrics() {
                 }
                 await fetch('/api/set_active_symbols', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({ symbols: selected })
                 });
                 await syncBackendState();
@@ -20066,7 +20082,7 @@ async function loadAdminMetrics() {
             try {
                 const res = await fetch('/api/close_position_manual', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({ symbol: symbol })
                 });
                 const data = await res.json();
@@ -21335,7 +21351,7 @@ function downloadExcelReport() {
             try {
                 const res = await fetch('/api/live/test_connection', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({ api_key: apiKey, api_secret: apiSecret })
                 });
                 const data = await res.json();
@@ -21374,7 +21390,7 @@ function downloadExcelReport() {
             try {
                 const res = await fetch('/api/live/save_config', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({
                         mode: selectedTradingMode,
                         api_key: apiKey,

@@ -13,15 +13,66 @@ class SecurityVault:
     AES-256 API Sifreleme, Portfoy Marjin Tavan Kilidi,
     Gunluk Devre Kesici (Circuit Breaker) ve Binance UID Anti-Abuse Modulu.
     """
-    def __init__(self, master_secret: str = "Valkyrie-Master-Quantum-Shield-2026-Quant"):
-        self.salt = b"valkyrie_quant_vault_salt_2026"
+    def __init__(self, master_secret: str = None):
+        env_secret = os.environ.get("VALKYRIE_VAULT_MASTER_SECRET")
+        env_salt = os.environ.get("VALKYRIE_VAULT_SALT")
+
+        # 1. Salt: Environment -> Yerel .vault_salt dosyası -> Güvenli Rastgele Üretim
+        if env_salt:
+            self.salt = env_salt.encode('utf-8')
+        else:
+            salt_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".vault_salt")
+            if os.path.exists(salt_file):
+                try:
+                    with open(salt_file, "rb") as sf:
+                        self.salt = sf.read()
+                except Exception:
+                    self.salt = b"valkyrie_quant_vault_salt_2026"
+            else:
+                import secrets
+                self.salt = secrets.token_bytes(16)
+                try:
+                    with open(salt_file, "wb") as sf:
+                        sf.write(self.salt)
+                    if hasattr(os, "chmod"):
+                        try:
+                            os.chmod(salt_file, 0o600)
+                        except Exception:
+                            pass
+                except Exception:
+                    self.salt = b"valkyrie_quant_vault_salt_2026"
+
+        # 2. Master Secret: Parametre -> Environment -> Yerel .vault_key dosyası -> Güvenli Rastgele Üretim
+        actual_secret = master_secret or env_secret
+        if not actual_secret:
+            key_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".vault_key")
+            if os.path.exists(key_file):
+                try:
+                    with open(key_file, "r", encoding="utf-8") as kf:
+                        actual_secret = kf.read().strip()
+                except Exception:
+                    pass
+            if not actual_secret:
+                import secrets
+                actual_secret = secrets.token_urlsafe(32)
+                try:
+                    with open(key_file, "w", encoding="utf-8") as kf:
+                        kf.write(actual_secret)
+                    if hasattr(os, "chmod"):
+                        try:
+                            os.chmod(key_file, 0o600)
+                        except Exception:
+                            pass
+                except Exception:
+                    actual_secret = "Valkyrie-Master-Quantum-Shield-2026-Quant"
+
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,
             salt=self.salt,
             iterations=100000,
         )
-        self.key = base64.urlsafe_b64encode(kdf.derive(master_secret.encode('utf-8')))
+        self.key = base64.urlsafe_b64encode(kdf.derive(actual_secret.encode('utf-8')))
         self.cipher = Fernet(self.key)
         self._circuit_breaker_active = False
         self._circuit_breaker_date = None

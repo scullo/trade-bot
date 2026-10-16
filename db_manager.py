@@ -8,7 +8,47 @@ from valkyrie_logger import get_logger
 
 logger = get_logger("db_manager")
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'valkyrie_platform.db')
+import hmac
+import secrets
+
+def hash_password(password_raw: str) -> str:
+    """Tuzlu (salted) PBKDF2-HMAC-SHA256 ile şifreyi kriptografik olarak özetler."""
+    if not password_raw:
+        return ""
+    salt = secrets.token_bytes(16)
+    pwd_hash = hashlib.pbkdf2_hmac('sha256', password_raw.encode('utf-8'), salt, 100000)
+    return f"pbkdf2:sha256:100000${salt.hex()}${pwd_hash.hex()}"
+
+def verify_password(password_raw: str, stored_hash: str) -> bool:
+    """PBKDF2 ve eski SHA-256 şifre özetlerini zamanlama saldırısına dayanıklı doğrular."""
+    if not password_raw or not stored_hash:
+        return False
+    # Geriye dönük uyumluluk: Eski tuzsuz 64 karakterli SHA-256
+    if "$" not in stored_hash and len(stored_hash) == 64:
+        computed = hashlib.sha256(password_raw.encode('utf-8')).hexdigest()
+        return hmac.compare_digest(computed, stored_hash)
+
+    try:
+        parts = stored_hash.split("$")
+        # Format 1: pbkdf2:sha256:100000$salt$hash (len == 3)
+        if len(parts) == 3 and parts[0].startswith("pbkdf2:sha256:"):
+            iters = int(parts[0].split(":")[2])
+            salt = bytes.fromhex(parts[1])
+            expected = bytes.fromhex(parts[2])
+            computed = hashlib.pbkdf2_hmac('sha256', password_raw.encode('utf-8'), salt, iters)
+            return hmac.compare_digest(computed, expected)
+        # Format 2: pbkdf2$sha256$100000$salt$hash (len == 5)
+        if len(parts) == 5 and parts[0] == "pbkdf2":
+            iters = int(parts[2])
+            salt = bytes.fromhex(parts[3])
+            expected = bytes.fromhex(parts[4])
+            computed = hashlib.pbkdf2_hmac('sha256', password_raw.encode('utf-8'), salt, iters)
+            return hmac.compare_digest(computed, expected)
+    except Exception as e:
+        logger.debug(f"Şifre doğrulama istisnası: {e}")
+    return False
+
+DB_PATH = os.environ.get("VALKYRIE_DB_PATH", os.path.join(os.path.dirname(__file__), 'valkyrie_platform.db'))
 
 class DatabaseManager:
     """
@@ -160,7 +200,7 @@ class DatabaseManager:
     def register_user(self, email: str, password_raw: str, telegram_chat_id: str = None, raw_binance_uid: str = None) -> tuple:
         """Yeni kullanici kaydeder ve 48 Saatlik Ücretsiz Demo (Paper Trading)yi baslatir."""
         clean_email = email.strip().lower()
-        pwd_hash = hashlib.sha256(password_raw.encode('utf-8')).hexdigest()
+        pwd_hash = hash_password(password_raw)
         uid_hash = self.vault.hash_binance_uid(raw_binance_uid) if raw_binance_uid else None
 
         if uid_hash:
@@ -257,10 +297,16 @@ class DatabaseManager:
             return subscribers
 
 
-    def seed_admin_account(self, email: str = "admin@valkyriequant.com", password_raw: str = "AdminValkyrie2026!"):
-        """Sistem ilk baslatildiginda Master Admin hesabini otomatik olusturur."""
-        clean_email = email.strip().lower()
-        pwd_hash = hashlib.sha256(password_raw.encode('utf-8')).hexdigest()
+    def seed_admin_account(self, email: str = None, password_raw: str = None):
+        """Sistem ilk başlatıldığında Master Admin hesabını güvenli oluşturur."""
+        clean_email = (email or os.environ.get("ADMIN_EMAIL", "admin@valkyriequant.com")).strip().lower()
+        admin_pwd = password_raw or os.environ.get("ADMIN_PASSWORD")
+        if not admin_pwd:
+            import secrets
+            admin_pwd = secrets.token_urlsafe(16)
+            logger.warning(f">> [GÜVENLİK]: ADMIN_PASSWORD ortam değişkeni bulunamadı. Üretilen güvenli geçici şifre: {admin_pwd}")
+
+        pwd_hash = hash_password(admin_pwd)
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT id FROM users WHERE email = ?", (clean_email,))
@@ -268,8 +314,8 @@ class DatabaseManager:
             if not row:
                 cursor.execute("""
                     INSERT INTO users (email, password_hash, role, telegram_chat_id)
-                    VALUES (?, ?, 'ADMIN', '829687700')
-                """, (clean_email, pwd_hash))
+                    VALUES (?, ?, 'ADMIN', ?)
+                """, (clean_email, pwd_hash, os.environ.get("TELEGRAM_CHAT_ID", "")))
                 user_id = cursor.lastrowid
                 now_tsi = datetime.now(timezone(timedelta(hours=3)))
                 expires_tsi = now_tsi + timedelta(days=3650)
@@ -278,27 +324,36 @@ class DatabaseManager:
                     VALUES (?, 'VIP', ?, ?, 'ACTIVE')
                 """, (user_id, now_tsi.strftime('%Y-%m-%d %H:%M:%S'), expires_tsi.strftime('%Y-%m-%d %H:%M:%S')))
                 conn.commit()
-                print(">> [MASTER ADMIN] admin@valkyriequant.com hesabi basariyla olusturuldu!")
+                logger.info(f">> [MASTER ADMIN] {clean_email} hesabı tuzlu PBKDF2 şifresi ile oluşturuldu.")
 
     def authenticate_user(self, email: str, password_raw: str) -> tuple:
         """Kullanici girisini dogrular ve oturum bilgilerini dondurur."""
         clean_email = email.strip().lower()
-        pwd_hash = hashlib.sha256(password_raw.encode('utf-8')).hexdigest()
         now_str = datetime.now(timezone(timedelta(hours=3))).strftime('%Y-%m-%d %H:%M:%S')
 
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT u.id, u.email, u.role, u.telegram_chat_id, u.created_at,
+                SELECT u.id, u.email, u.password_hash, u.role, u.telegram_chat_id, u.created_at,
                        s.plan_type, s.expires_at, s.status as sub_status
                 FROM users u
                 LEFT JOIN subscriptions s ON u.id = s.user_id
-                WHERE u.email = ? AND u.password_hash = ?
+                WHERE u.email = ?
                 ORDER BY s.id DESC LIMIT 1
-            """, (clean_email, pwd_hash))
+            """, (clean_email,))
             row = cursor.fetchone()
-            if not row:
+            if not row or not verify_password(password_raw, row['password_hash']):
                 return False, "E-posta veya şifre hatalı!", None
+
+            # Eski tuzsuz şifre ise, başarıyla giriş yapıldığında otomatik PBKDF2'ye terfi et
+            if "$" not in row['password_hash']:
+                try:
+                    new_salted = hash_password(password_raw)
+                    cursor.execute("UPDATE users SET password_hash = ? WHERE id = ?", (new_salted, row['id']))
+                    conn.commit()
+                    logger.info(f"Kullanıcı {clean_email} şifresi güvenli PBKDF2 formatına terfi ettirildi.")
+                except Exception as e:
+                    logger.debug(f"Otomatik şifre terfi hatası: {e}")
 
             # 24 Saatlik deneme kalan suresi
             expires_at_str = row['expires_at']

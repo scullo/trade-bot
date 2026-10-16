@@ -12,6 +12,10 @@ live_positions_state.json
 .env.*
 !.env.example
 !live_config.example.json
+.admin_secret
+.vault_key
+.vault_salt
+*.key
 
 # Scratch Directory & Temporary Artifacts
 scratch/
