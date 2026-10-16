@@ -154,10 +154,11 @@ def run_dashboard_and_vault_audit():
     print(f"  • macro_hud Büyüklüğü: {len(json.dumps(parsed['macro_hud']))} bayt (Kompakt ve Hızlı)")
     print("  ✅ Kanıtlandı: Veri boru hattında çökme riski taşıyan hiçbir geçersiz değer sızmıyor.")
 
-    print("\n" + "=" * 80)
-    print("🏆 GENEL DENETİM SONUCU: 15 SEKME, DASHBOARD, KASA VE TÜM SİSTEM %100 KUSURSUZ!")
     print("=" * 80)
     return True
+
+def test_full_system_and_dashboard_integrity():
+    assert run_dashboard_and_vault_audit() is True
 
 if __name__ == "__main__":
     run_dashboard_and_vault_audit()

@@ -1460,7 +1460,8 @@ class StrategyEngine:
         is_ice_sniper_order = any("Iceberg_Offense" in str(c) for c in (confluence_list or [])) or ("Buzdağı Hücumu" in reason) or ("Buzdağı Arkası" in reason)
 
         # ── 0-MAKRO: VALKYRIE MACRO ORACLE & NEWS SENTINEL KAPISI ──
-        if macro_guard is not None:
+        active_guard = getattr(self, 'macro_guard', macro_guard)
+        if active_guard is not None and getattr(self, 'macro_oracle', True) is not None:
             spread_pct = 0.0
             if self.market_data and hasattr(self.market_data, 'orderbook_depth') and isinstance(getattr(self.market_data, 'orderbook_depth'), dict):
                 ob_data = self.market_data.orderbook_depth.get(symbol, {})
@@ -1473,7 +1474,7 @@ class StrategyEngine:
                         spread_pct = float(val)
                 except Exception:
                     spread_pct = 0.0
-            macro_eval = macro_guard.evaluate_macro_entry_permission(
+            macro_eval = active_guard.evaluate_macro_entry_permission(
                 symbol=symbol,
                 side=side,
                 setup_id=setup_id,

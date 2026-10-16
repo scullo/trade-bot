@@ -152,5 +152,8 @@ def run_phase3_verification():
     print("=" * 80)
     return True
 
+def test_phase3_anti_manipulation():
+    assert run_phase3_verification() is True
+
 if __name__ == "__main__":
     run_phase3_verification()

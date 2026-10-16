@@ -112,5 +112,8 @@ async def run_phase4b_verification():
     print("=" * 80)
     return True
 
+def test_phase4b_macro_health_sentinel():
+    assert asyncio.run(run_phase4b_verification()) is True
+
 if __name__ == "__main__":
     asyncio.run(run_phase4b_verification())

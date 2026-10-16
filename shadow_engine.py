@@ -32,9 +32,12 @@ from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Any
 
 try:
-    from paper_trader import _get_gh_token, GITHUB_REPO, GITHUB_BRANCH
+    from paper_trader import _get_gh_token, GITHUB_REPO, GITHUB_BRANCH, _is_test_env
     GITHUB_TOKEN = _get_gh_token()
 except Exception:
+    def _is_test_env():
+        import sys
+        return bool(os.environ.get("UNITTEST_MODE") or os.environ.get("PYTEST_CURRENT_TEST") or any("test" in str(a).lower() for a in sys.argv))
     GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
     GITHUB_REPO = os.environ.get("GITHUB_REPO", "scullo/trade-bot")
     GITHUB_BRANCH = os.environ.get("GITHUB_STATE_BRANCH", "state")
@@ -52,7 +55,7 @@ class ShadowExecutionEngine:
         self.history_file = os.path.join(os.path.dirname(__file__), history_file)
         self.max_active = max_active
         self.max_history = max_history
-        self.is_test = "test" in os.path.basename(self.history_file).lower()
+        self.is_test = _is_test_env() or ("test" in os.path.basename(self.history_file).lower())
 
         # Bulut Kalıcılık (GitHub State Dalı) ve Sağlık Koruması
         self._github_sha: Optional[str] = None
@@ -1692,12 +1695,13 @@ class ShadowExecutionEngine:
 
         premature_exits = [g for g in coin_ghosts if g.get("verdict") == "ERKEN_CIKIS_KACAN_DALGA"]
         sniper_exits = [g for g in coin_ghosts if g.get("verdict") in ("SNIPER_TEPE_CIKISI", "KUSURSUZ_STOP_KORUMASI")]
+        all_display_ghosts = coin_ghosts + active_coin_ghosts
         post_exit_summary = {
             "total_tracked": len(coin_ghosts),
             "premature_exit_count": len(premature_exits),
             "sniper_exit_count": len(sniper_exits),
             "active_tracking_count": len(active_coin_ghosts),
-            "recent_ghosts": coin_ghosts[-5:]
+            "recent_ghosts": all_display_ghosts[-5:]
         }
 
         # Zıt Yön (Inversion Counterfactual) Analizi
@@ -1943,14 +1947,15 @@ class ShadowExecutionEngine:
             "post_exit_ghosts": dict(self.post_exit_ghosts)
         }
 
-        # 1. Lokal Dosyaya Atomik Yazma
-        try:
-            tmp_file = self.history_file + ".tmp"
-            with open(tmp_file, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            os.replace(tmp_file, self.history_file)
-        except Exception:
-            pass
+        # 1. Lokal Dosyaya Atomik Yazma (Test modunda gerçek geçmiş dosyasını ezme)
+        if not self.is_test or ("test" in os.path.basename(self.history_file).lower()):
+            try:
+                tmp_file = self.history_file + ".tmp"
+                with open(tmp_file, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                os.replace(tmp_file, self.history_file)
+            except Exception:
+                pass
 
         # 2. GitHub Uzak Kalıcılık (İzole state dalı - Render restart döngüsünü tetiklemez)
         if GITHUB_TOKEN and not self.is_test:

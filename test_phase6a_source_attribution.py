@@ -166,5 +166,8 @@ def run_phase6a_tests():
     print("✅ [FAZ 6A TESTİ BAŞARIYLA GEÇTİ] TÜM ELO VE OTONOM KARANTİNA TESTLERİ %100 BAŞARILI!")
     print("=" * 80 + "\n")
 
+def test_phase6a_source_attribution():
+    run_phase6a_tests()
+
 if __name__ == "__main__":
     run_phase6a_tests()

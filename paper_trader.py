@@ -33,8 +33,21 @@ def _sanitize_floats(obj):
 
 HISTORY_FILE = "trade_history.json"
 
+def _is_test_env() -> bool:
+    import sys
+    if os.environ.get("UNITTEST_MODE") or os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("TEST_MODE"):
+        return True
+    if "pytest" in sys.modules or "unittest" in sys.modules:
+        return True
+    if any("test" in str(arg).lower() for arg in sys.argv):
+        return True
+    return False
+
+
 # GitHub Remote Persistence Config
 def _get_gh_token():
+    if _is_test_env():
+        return ""
     tok = os.environ.get("GITHUB_TOKEN", "")
     if not tok:
         try:
@@ -83,14 +96,8 @@ class PaperTrader:
         self.trading_halted = False
         self._last_checked_funding_epoch = int(time.time()) // 28800  # 8H UTC fonlama yerleşim takipçisi
 
-        # Test Modu Tespiti: Testler sırasında canlı GitHub state dalına veya diske yazmayı engeller
-        import sys
-        self.is_test = (
-            "test" in sys.argv[0].lower() or
-            any("test" in str(arg).lower() for arg in sys.argv) or
-            bool(os.environ.get("UNITTEST_MODE")) or
-            bool(os.environ.get("PYTEST_CURRENT_TEST"))
-        )
+        # Test Modu Tespiti: Testler sırasında canlı GitHub state dalına veya diske yazmayı kesinlikle engeller
+        self.is_test = _is_test_env()
 
         self.load_history()
 

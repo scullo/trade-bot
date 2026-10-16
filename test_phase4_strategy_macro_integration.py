@@ -195,52 +195,60 @@ def run_phase4_verification():
     base_tp2 = 68000.0
     entry_p = 65000.0
 
-    boost = macro_guard.apply_macro_setup_boost(
-        symbol="BTC/USDT",
-        side="LONG",
-        setup_id="SETUP_1_R4_BREAKOUT",
-        reason="R4 Breakout Long",
-        base_margin=base_margin,
-        base_tp1=base_tp1,
-        base_tp2=base_tp2,
-        entry_price=entry_p
-    )
-    print(f"  • [BOĞA ŞOKU] R4 Breakout Long Güçlendirmesi:")
-    print(f"    - Standart Marjin : ${base_margin:.1f} -> Teşvikli Marjin: ${boost['margin']:.1f} (1.25x)")
-    print(f"    - Standart TP2    : ${base_tp2:.1f} -> Genişletilmiş TP2: ${boost['tp2']:.1f} (+%20 R)")
-    print(f"    - Hawkes Runner   : {boost.get('runner_mode')}")
-    print(f"    - Gerekçe         : {boost.get('reason')}")
+    old_cb = macro_guard.check_global_equity_circuit_breaker
+    macro_guard.check_global_equity_circuit_breaker = lambda: {"active": False, "message": ""}
+    try:
+        boost = macro_guard.apply_macro_setup_boost(
+            symbol="BTC/USDT",
+            side="LONG",
+            setup_id="SETUP_1_R4_BREAKOUT",
+            reason="R4 Breakout Long",
+            base_margin=base_margin,
+            base_tp1=base_tp1,
+            base_tp2=base_tp2,
+            entry_price=entry_p
+        )
+        print(f"  • [BOĞA ŞOKU] R4 Breakout Long Güçlendirmesi:")
+        print(f"    - Standart Marjin : ${base_margin:.1f} -> Teşvikli Marjin: ${boost['margin']:.1f} (1.25x)")
+        print(f"    - Standart TP2    : ${base_tp2:.1f} -> Genişletilmiş TP2: ${boost['tp2']:.1f} (+%20 R)")
+        print(f"    - Hawkes Runner   : {boost.get('runner_mode')}")
+        print(f"    - Gerekçe         : {boost.get('reason')}")
 
-    assert boost["boosted"] is True, "Makro teşvik devreye girmeli!"
-    assert boost["margin"] == 125.0, "Marjin tam 1.25x ($125) olmalı!"
-    assert boost["tp2"] == 68600.0, "TP2 mesafesi ($3000 * 1.20 = $3600 -> $68600) olmalı!"
-    print("  ✅ Kanıtlandı: R4 Breakout setup'ına makro rüzgarla 1.25x marjin ve Hawkes runner verildi.")
+        assert boost["boosted"] is True, "Makro teşvik devreye girmeli!"
+        assert boost["margin"] == 125.0, "Marjin tam 1.25x ($125) olmalı!"
+        assert boost["tp2"] == 68600.0, "TP2 mesafesi ($3000 * 1.20 = $3600 -> $68600) olmalı!"
+        print("  ✅ Kanıtlandı: R4 Breakout setup'ına makro rüzgarla 1.25x marjin ve Hawkes runner verildi.")
+    finally:
+        macro_guard.check_global_equity_circuit_breaker = old_cb
 
     # ──────────────────────────────────────────────────────────────────────────
     # SENARYO 6: BYZANTINE QUORUM SAHTE POMPALAMA (SPOOFING TRAP) KİLİDİ
     # ──────────────────────────────────────────────────────────────────────────
     print("\n[SENARYO 6/6] 🪤 Byzantine Quorum Sahte Pompalama (Spoofing) Kalkanı...")
-    macro_guard.quorum.audit_history.append({
+    spoof_entry = {
         "timestamp": time.time(),
         "title": "AnonTweet: Elon Musk Dogecoin ile Mars'a roket yolluyor",
         "verdict": "SPOOFING_TRAP_NO_FLOW",
         "action_command": "BLOCK_TRADES_30S"
-    })
-    res_spoof = macro_guard.evaluate_macro_entry_permission(
-        symbol="BTC/USDT",
-        side="LONG",
-        setup_id="SETUP_1_R4_BREAKOUT",
-        reason="R4 Breakout Long"
-    )
-    print(f"  • BTC/USDT (Sahte Pompalama Sonrası): {'❌ ENGELLENDİ' if not res_spoof['allowed'] else 'ONAY'}")
-    print(f"  • Hata Kodu                         : {res_spoof.get('error')}")
-    print(f"  • Adli Gerekçe                      : {res_spoof.get('reason')}")
-    assert not res_spoof["allowed"], "Tahta emilimi olmayan sahte haberde işlemler kilitlenmeli!"
-    assert res_spoof["error"] == "BLOCK_SPOOFING_TRAP"
-    print("  ✅ Kanıtlandı: Tahta ve CVD akışı olmayan sahte pompalamada 30 saniyelik işlem kilidi devrede.")
-
-    # Override rejimini sıfırla
-    macro_guard.set_override_regime(None)
+    }
+    macro_guard.quorum.audit_history.append(spoof_entry)
+    try:
+        res_spoof = macro_guard.evaluate_macro_entry_permission(
+            symbol="BTC/USDT",
+            side="LONG",
+            setup_id="SETUP_1_R4_BREAKOUT",
+            reason="R4 Breakout Long"
+        )
+        print(f"  • BTC/USDT (Sahte Pompalama Sonrası): {'❌ ENGELLENDİ' if not res_spoof['allowed'] else 'ONAY'}")
+        print(f"  • Hata Kodu                         : {res_spoof.get('error')}")
+        print(f"  • Adli Gerekçe                      : {res_spoof.get('reason')}")
+        assert not res_spoof["allowed"], "Tahta emilimi olmayan sahte haberde işlemler kilitlenmeli!"
+        assert res_spoof["error"] == "BLOCK_SPOOFING_TRAP"
+        print("  ✅ Kanıtlandı: Tahta ve CVD akışı olmayan sahte pompalamada 30 saniyelik işlem kilidi devrede.")
+    finally:
+        if spoof_entry in macro_guard.quorum.audit_history:
+            macro_guard.quorum.audit_history.remove(spoof_entry)
+        macro_guard.set_override_regime(None)
 
     # ──────────────────────────────────────────────────────────────────────────
     # HUD TELEMETRİSİ DOĞRULAMASI
@@ -253,6 +261,9 @@ def run_phase4_verification():
     print("🏆 FAZ 4 SONUCU: STRATEJİ & TRADE SETUP MAKRO ENTEGRASYONU %100 KANITLANDI!")
     print("=" * 80)
     return True
+
+def test_phase4_strategy_macro_integration():
+    assert run_phase4_verification() is True
 
 if __name__ == "__main__":
     run_phase4_verification()

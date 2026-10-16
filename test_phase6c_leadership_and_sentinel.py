@@ -95,5 +95,8 @@ async def run_phase6c_tests():
     print("✅ [FAZ 6C TESTİ BAŞARIYLA GEÇTİ] DİNAMİK LİDERLİK & AEGIS SENTINEL %100 KUSURSUZ!")
     print("=" * 80 + "\n")
 
+def test_phase6c_leadership_and_sentinel():
+    asyncio.run(run_phase6c_tests())
+
 if __name__ == "__main__":
     asyncio.run(run_phase6c_tests())

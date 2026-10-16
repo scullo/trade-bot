@@ -121,5 +121,8 @@ def run_phase6b_tests():
     print("✅ [FAZ 6B TESTİ BAŞARIYLA GEÇTİ] ALINTI GRAFİĞİ VE GÖLGE HAVUZ %100 KUSURSUZ ÇALIŞIYOR!")
     print("=" * 80 + "\n")
 
+def test_phase6b_citation_discovery():
+    run_phase6b_tests()
+
 if __name__ == "__main__":
     run_phase6b_tests()

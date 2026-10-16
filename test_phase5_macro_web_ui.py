@@ -147,5 +147,8 @@ async def verify_phase5_architecture():
     print("=" * 80)
     return True
 
+def test_phase5_macro_web_ui():
+    assert asyncio.run(verify_phase5_architecture()) is True
+
 if __name__ == "__main__":
     asyncio.run(verify_phase5_architecture())

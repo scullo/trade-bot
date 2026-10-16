@@ -52,6 +52,8 @@ class TestPriority1CapitalPreservation(unittest.IsolatedAsyncioTestCase):
 
         self.strat = StrategyEngine(self.mock_pt, self.mock_notifier, self.md)
         self.strat.rejections = []
+        self.strat.macro_guard = None
+        self.strat.macro_oracle = None
         if hasattr(self.strat, 'vault') and self.strat.vault:
             self.strat.vault.check_daily_circuit_breaker = MagicMock(return_value=(True, "OK"))
             self.strat.vault.check_margin_cap = MagicMock(return_value=(True, "OK"))

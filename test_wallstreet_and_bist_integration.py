@@ -160,5 +160,8 @@ async def run_integration_tests():
     print("🏆 TÜM TESTLER %100 BAŞARIYLA TAMAMLANDI! TÜRKİYE BORSASI & DEVRE KESİCİ KUSURSUZ AKTİF.")
     print("=" * 80)
 
+def test_wallstreet_and_bist_integration():
+    asyncio.run(run_integration_tests())
+
 if __name__ == "__main__":
     asyncio.run(run_integration_tests())
