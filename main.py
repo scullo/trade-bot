@@ -20,6 +20,29 @@ from strategy import StrategyEngine
 from web_server import start_server, broadcast_tick
 
 async def main():
+    # Render bulut sistemi uzerinden bot devre disi birakildi ve sifirlandi (Decommissioned)
+    if os.environ.get("RENDER") or os.environ.get("RENDER_SERVICE_ID") or os.environ.get("RENDER_DECOMMISSIONED", "1") == "1":
+        from aiohttp import web
+        app = web.Application()
+        html_decom = """<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><title>Sistem Kapatıldı ve Sıfırlandı</title>
+        <style>body{background:#080c14;color:#e2e8f0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;}
+        .box{border:1px solid #334155;background:#0f172a;padding:40px;border-radius:12px;max-width:540px;box-shadow:0 10px 30px rgba(0,0,0,0.5);}
+        h1{color:#f87171;margin-top:0;font-size:22px;}p{color:#94a3b8;line-height:1.6;font-size:14px;}</style></head>
+        <body><div class="box"><h1>🛑 Eski Trade-Bot Render Sisteminden Kaldırıldı</h1>
+        <p>Bu bot tamamen sıfırlanmış ve devre dışı bırakılmıştır.<br>Tüm WebSocket bağlantıları, sinyal taramaları, veritabanı yedeklemeleri ve işlemler kalıcı olarak durdurulmuştur.</p></div></body></html>"""
+        app.router.add_get("/", lambda r: web.Response(text=html_decom, content_type="text/html"))
+        app.router.add_get("/health", lambda r: web.Response(text="OK", status=200))
+        app.router.add_get("/ping", lambda r: web.Response(text="OK", status=200))
+        app.router.add_get("/api/data", lambda r: web.json_response({"status": "decommissioned", "balance": 0.0, "open_positions": {}, "history": []}))
+        port = int(os.environ.get("PORT", 5000))
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, "0.0.0.0", port)
+        await site.start()
+        print(f">> [DECOMMISSIONED] Eski bot Render uzerinden kaldirildi ve sifirlandi. Port {port} pasif.")
+        while True:
+            await asyncio.sleep(3600)
+
     print("=" * 65)
     print("      CANLI GRAFIK IZLEME & AL-SAT ROBOTU (VALKYRIE QUANT)      ")
     print("=" * 65)
